@@ -5,7 +5,7 @@ const startKeyboard = {
         keyboard: [
             [{ text: "🏃 Ajouter un contact" }, { text: "🔎 Rechercher" }],
             [{ text: "✋ Supprimer un contact" }, { text: "🧐 Lister mes contacts" }],
-            [{ text: "🐞 Un bug ?"}, { text: "❓ Aide"}],
+            [{ text: "🐞 Un bug ?" }, { text: "❓ Aide" }],
         ],
     })
 }
