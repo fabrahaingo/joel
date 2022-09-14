@@ -20,6 +20,8 @@ mongoose
         bot.onText(/🏃 Ajouter un contact$/, commands.follow(bot))
         bot.onText(/✋ Supprimer un contact$/, commands.unfollow(bot))
         bot.onText(/🧐 Lister mes contacts$/, commands.list(bot))
+        bot.onText(/🐞 Un bug ?$/, commands.bug(bot))
+        bot.onText(/❓ Aide$/, commands.help(bot))
 
         // Handlers
         // bot.on("callback_query", handlers.callbackQuery(bot))
