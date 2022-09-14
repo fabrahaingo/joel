@@ -1,4 +1,3 @@
-const { startKeyboard } = require("../utils/keyboards")
 const User = require("../models/User")
 const People = require("../models/People")
 const { formatSearchResult } = require("../utils/formatSearchResult")
