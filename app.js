@@ -11,7 +11,8 @@ const commands = require("./commands")
 
 const bot = new TelegramBot(env.BOT_TOKEN, config.bot)
 
-mongoose
+try {
+    mongoose
     .connect(env.MONGODB_URI, config.mongodb)
     .then(() => {
         // Commands
@@ -36,3 +37,6 @@ mongoose
         console.log(`\u{1F41D} ${env.BOT_NAME} started successfully`)
     })
     .catch(error => console.error(error))
+} catch (err) {
+    console.log(err)
+}

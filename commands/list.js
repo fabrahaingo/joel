@@ -1,6 +1,6 @@
 const User = require("../models/User")
 const People = require("../models/People")
-const { formatSearchResult } = require("../utils/formatSearchResult")
+// const { formatSearchResult } = require("../utils/formatSearchResult")
 const { sendLongText } = require("../utils/handleLongText")
 
 module.exports = bot => async msg => {
@@ -23,8 +23,9 @@ module.exports = bot => async msg => {
             } else {
                 text += "Voici les personnes que vous suivez :\n\n"
                 for (let i = 0; i < peoples.length; i++) {
-                    text += `${i + 1}. *${peoples[i].nom} ${peoples[i].prenom}*\n\n`
-                    text += formatSearchResult([peoples[i].JORFSearchData[0]], { isListing: true })
+                    let nomPrenom = `${peoples[i].nom} ${peoples[i].prenom}`
+                    text += `${i + 1}. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(nomPrenom)})\n`
+                    // text += formatSearchResult([peoples[i].JORFSearchData[0]], { isListing: true })
                     if (peoples[i + 1]) {
                         text += `\n`
                     }
