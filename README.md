@@ -49,5 +49,5 @@ JOEL c’est aussi: 
 <li> 💸 Un outil d’intérêt général sans but lucratif </li>
 <li>🛡 Aucune donnée personnelle stockée </li>
 <li>🧩 Un nouvel élément de transparence et d’accessibilité du JO, dans la logique initiée par l’outil Jorfsearch de <a href="https://github.com/nathanncohen">Nathann Cohen</a> sur lequel est construit JOEL </li>
-🤔 Et pourquoi « JOEL »? 
-En hommage au « 3615 JOEL», qui permettait de consulter le *J*ournal *O*fficiel *EL*ectronique sur Minitel 😉
+</br> 🤔 Et pourquoi « JOEL »? 
+En hommage au <a href="https://fr.wikipedia.org/wiki/Fichier:Publicit%C3%A9_3615_JOEL.png">3615 JOEL </a>, qui permettait de consulter le *J*ournal *O*fficiel *EL*ectronique sur Minitel 😉 </br>
