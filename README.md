@@ -71,7 +71,7 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 ### Utilisation
 #### Rechercher un contact
 
-![Rechercher un contact](img/tuto/rechercher.png)
+![Rechercher un contact](./img/tuto/rechercher.png)
 
 #### Ajouter un contact
 #### Supprimer un contact
