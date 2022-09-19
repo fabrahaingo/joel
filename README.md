@@ -73,8 +73,14 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 
 ![Rechercher un contact](./img/tuto/rechercher.png)
 
+
+
+<p align="center">
+  <a href="./img/logo.png">
+    <img src="img/logo.png" alt="Logo" width="100" height="100">
+  </a>
+</p>
 <a>
-<img src="img/tuto/rechercher.png" alt="Logo" width="100" height="100"></a>
 #### Ajouter un contact
 #### Supprimer un contact
 #### Lister mes contacts
