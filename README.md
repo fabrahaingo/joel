@@ -51,3 +51,10 @@ JOEL c’est aussi: 
 <li>🧩 Un nouvel élément de transparence et d’accessibilité du JO, dans la logique initiée par l’outil Jorfsearch de <a href="https://github.com/nathanncohen">Nathann Cohen</a> sur lequel est construit JOEL </li>
 </br> 🤔 Et pourquoi « JOEL »? 
 En hommage au <a href="https://fr.wikipedia.org/wiki/Fichier:Publicit%C3%A9_3615_JOEL.png">3615 JOEL </a>, qui permettait de consulter le <b>J</b>ournal <b>O</b>fficiel <b>EL</b>ectronique sur Minitel 😉 </br>
+
+### Built With
+
+JOEL se base sur le travail de  <a href="https://github.com/nathanncohen">Nathann Cohen</a> qui a développé l'outil <a href="https://jorfsearch.steinertriples.ch/">JORFSearch</a> qui permet, entre autres, de faire des recherches nominatives sur le JO.</br>
+
+<!-- Démarrer -->
+
