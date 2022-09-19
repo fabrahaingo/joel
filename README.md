@@ -106,6 +106,8 @@ Pour lister vos contacts, cliquez sur le bouton "🧐 Lister mes contacts"
   </a>
 </p>
 
+
+
 ## Bug
 
 En cas de bug, contactez @hellofabien ou hellofabien@pm.me en mentionnant votre identifiant Telegram (obtenu en cliquant sur le bouton "🐞")

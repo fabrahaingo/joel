@@ -3,3 +3,5 @@ package-lock.json
 /node_modules
 key.pem
 crt.pem
+.DS_STORE
+.README.md.swp
