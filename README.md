@@ -90,4 +90,11 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 #### Supprimer un contact
 #### Lister mes contacts
 
+
+<p align="center">
+  <a href="./img/tuto/list-delete.png">
+    <img src="img/tuto/list-delete.png" alt="Logo" width="250" height="500">
+  </a>
+</p>
+
 ## Bug
