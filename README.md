@@ -40,15 +40,14 @@ Du coup, on a développé JOEL, un outil qui nous permet d'être informés des n
  
 En effet, à l’heure actuelle, la version électronique du JO ne permet pas de faire une veille personnalisée des nominations. 🤷‍♂️
 </br> </br>
-Bien sûr, Linkedin permet déjà un meilleur suivi de son réseau, mais les changements de poste y sont souvent signalés en décalé et certaines mentions n’y figurent presque jamais (🎖), sans compter tous les collègues qui n’utilisent pas Linkedin…</br></br>
-On a donc créé (enfin, surtout @Fabien 🤓) un bot sur Télégram pour être tenus au courant quotidiennement des mentions au JO des personnes qu’on voulait suivre. 
+On a donc créé un bot sur Télégram pour être tenus au courant quotidiennement des mentions au JO des personnes qu’on voulait suivre. 
 </br></br>
  
  
-JOEL c’est aussi: 
-⌨️ Une solution 100% open source</br>
-💸 Un outil d’intérêt général sans but lucratif </br>
-🛡 Aucune donnée personnelle stockée </br>
+JOEL c’est aussi:</br> 
+<li> ⌨️ Une solution 100% open source</li>
+<li> 💸 Un outil d’intérêt général sans but lucratif </li>
+<li>🛡 Aucune donnée personnelle stockée </li>
 🧩 Un nouvel élément de transparence et d’accessibilité du JO, dans la logique initiée par l’outil Jorfsearch de <a href="https://github.com/nathanncohen">Nathann Cohen</a> sur lequel est construit JOEL </br>
 🤔 Et pourquoi « JOEL »? 
 En hommage au « 3615 JOEL», qui permettait de consulter le *J*ournal *O*fficiel *EL*ectronique sur Minitel 😉
