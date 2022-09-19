@@ -1,1 +1,6 @@
-![Alt text](./img/logo.png?raw=true "Title")
+<!-- PROJECT LOGO -->
+<br />
+<p align="center">
+  <a href="./img/logo.png">
+    <img src="img/logo.png" alt="Logo" width="80" height="80">
+  </a>
