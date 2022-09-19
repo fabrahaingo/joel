@@ -110,7 +110,7 @@ module.exports = bot => async msg => {
     try {
         const chatId = msg.chat.id
         const text = `Bienvenue sur la *fonctionnalité secrète* de JOEL ! 🤫
-Entrez le nom de votre promo (ENA) et l'*intégralité des élèves de l'année* sera ajoutée à la liste de vos contacts.`
+Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.`
         const question = await bot.sendMessage(
             msg.chat.id,
             text,
@@ -198,7 +198,7 @@ Entrez le nom de votre promo (ENA) et l'*intégralité des élèves de l'année*
                 } else {
                     await bot.sendMessage(
                         chatId,
-                        `Votre réponse n'a pas été reconnue. 👎 Veuillez réssayer de nouveau la commande /secret.`,
+                        `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /secret.`,
                     )
                 }
             })
