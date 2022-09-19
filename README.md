@@ -100,3 +100,10 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 ## Bug
 
 En cas de bug, contactez @hellofabien ou hellofabien@pm.me en mentionnant votre identifiant Telegram (obtenu en cliquant sur le bouton "🐞")
+
+## Contact
+
+<a href="https://www.linkedin.com/in/fabien-rahaingomanana/">Fabien RAHAINGOMANANA</a>
+
+<a href="https://www.linkedin.com/in/philemon-perrot/">Philémon PERROT</a>
+
