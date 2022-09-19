@@ -20,6 +20,7 @@
     <li>
       <a href="#getting-started">Démarrer</a>
       <ul>
+        <li><a href="#prérequis">Prérequis</a></li>
         <li><a href="#installation">Installation</a></li>
       	<li><a href="#utilisation">Utilisation</a></li>
 	  </ul>
@@ -58,5 +59,13 @@ JOEL se base sur le travail de  <a href="https://github.com/nathanncohen">Nathan
 
 <!-- Démarrer -->
 ## Démarrer
+### Prérequis
 
+JOEL requiert d'avoir téléchargé l'application Telegram. 
+
+### Installation
+
+Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofabot</a>
+
+### Utilisation
 
