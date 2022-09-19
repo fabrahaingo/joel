@@ -74,7 +74,7 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 
 <p align="center">
   <a href="./img/tuto/logo1.png">
-    <img src="img/tuto/logo1.png" alt="Logo" width="1125" height="2436">
+    <img src="img/tuto/logo1.png" alt="Logo" width="500" height="1000">
   </a>
 </p>
 <a>
