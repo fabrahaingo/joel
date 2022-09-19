@@ -20,9 +20,9 @@
     <li>
       <a href="#getting-started">Démarrer</a>
       <ul>
-        <li><a href="#prerequisites">Prérequis</a></li>
         <li><a href="#installation">Installation</a></li>
-      </ul>
+      	<li><a href="#utilisation">Utilisation</a></li>
+	  </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
@@ -57,4 +57,6 @@ En hommage au <a href="https://fr.wikipedia.org/wiki/Fichier:Publicit%C3%A9_3615
 JOEL se base sur le travail de  <a href="https://github.com/nathanncohen">Nathann Cohen</a> qui a développé l'outil <a href="https://jorfsearch.steinertriples.ch/">JORFSearch</a> qui permet, entre autres, de faire des recherches nominatives sur le JO.</br>
 
 <!-- Démarrer -->
+## Démarrer
+
 
