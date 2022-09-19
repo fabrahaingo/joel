@@ -32,9 +32,9 @@
   </ol>
 </details>
 
-## About The Project
+## A propos de ce projet
 
-Avec @Fabien, on en avait marre de passer à côté de certaines nominations au Journal officiel de nos amis et collègues. </br>
+On en avait marre de passer à côté de certaines nominations au Journal officiel de nos amis et collègues. </br>
  
 Du coup, on a développé JOEL, un outil qui nous permet d'être informés des nominations au JO qui nous intéressent 👇 </br>
  
