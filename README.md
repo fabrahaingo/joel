@@ -71,13 +71,10 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 ### Utilisation
 #### Rechercher un contact
 
-![Rechercher un contact](./img/tuto/rechercher.png)
-
-
 
 <p align="center">
   <a href="./img/tuto/logo1.png">
-    <img src="img/tuto/logo1.png" alt="Logo" width="100" height="100">
+    <img src="img/tuto/logo1.png" alt="Logo" width="1125" height="2436">
   </a>
 </p>
 <a>
