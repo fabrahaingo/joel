@@ -93,7 +93,7 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 
 <p align="center">
   <a href="./img/tuto/list-delete.png">
-    <img src="img/tuto/list-delete.png" alt="Logo" width=30% height="500">
+    <img src="img/tuto/list-delete.png" alt="Logo" width=40% height="500">
   </a>
 </p>
 
