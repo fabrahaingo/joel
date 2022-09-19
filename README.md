@@ -73,8 +73,8 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 
 
 <p align="center">
-  <a href="./img/tuto/rechercher.png">
-    <img src="img/tuto/rechercher.png" alt="Logo" width="250" height="500">
+  <a href="./img/tuto/search.png">
+    <img src="img/tuto/search.png" alt="Logo" width="250" height="500">
   </a>
 </p>
 
