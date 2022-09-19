@@ -80,6 +80,9 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 
 #### Ajouter un contact
 
+Pour ajouter un contact, cliquez sur le bouton 🏃‍♀️ puis insérer le prénom et le nom de la personne que vous souhaitez suivre.
+JOEL vous demandera une confirmation du profil que vous souhaitez suivre. Si vous répondez oui, vous suivez désormais cette personne.
+
 <p align="center">
   <a href="./img/tuto/add1.png">
     <img src="img/tuto/add1.png" alt="Logo" width=40% height=40%>
@@ -88,8 +91,13 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 <p>
 
 #### Supprimer un contact
+
+Si vous souhaitez supprimer un contact, cliquez sur le bouton "🤚 Supprimer un contact". 
+La liste de vos contacts apparaît, il vous suffit alors d'entrer le numéro associé au contact à supprimer dans la liste.
+
 #### Lister mes contacts
 
+Pour lister vos contacts, cliquez sur le bouton "🧐 Lister mes contacts"
 
 <p align="center">
   <a href="./img/tuto/list-delete.png">
