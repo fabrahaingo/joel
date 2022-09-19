@@ -80,7 +80,7 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 
 #### Ajouter un contact
 
-<p align="left">
+<p align="center">
   <a href="./img/tuto/add1.png">
     <img src="img/tuto/add1.png" alt="Logo" width="250" height="500">
     <img src="img/tuto/add2.png" alt="Logo" width="250" height="500">
