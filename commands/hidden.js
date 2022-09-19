@@ -81,7 +81,6 @@ function findPromoName(input) {
 }
 
 async function getJORFSearchResult(year) {
-    console.log(year)
     let url = `https://jorfsearch.steinertriples.ch/tag/eleve_ena=%22${year}%22?format=JSON`
     const res = await axios.get(url)
         .then(response => {
@@ -91,7 +90,12 @@ async function getJORFSearchResult(year) {
 }
 
 function capitalizeFirstLetters(string) {
-    return string.replace(/\b\w/g, l => l.toUpperCase())
+    try {
+        return string.replace(/\b\w/g, l => l.toUpperCase())
+    } catch (e) {
+        // catching errors in case characters are not letters
+        return false
+    }
 }
 
 async function searchPersonOnJORF(personString) {
@@ -106,11 +110,16 @@ async function searchPersonOnJORF(personString) {
         })
 }
 
+function isPersonAlreadyFollowed(id, followedPeople) {
+    return followedPeople.some(person => person.peopleId.equals(id))
+}
+
 module.exports = bot => async msg => {
     try {
         const chatId = msg.chat.id
-        const text = `Bienvenue sur la *fonctionnalité secrète* de JOEL ! 🤫
-Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.`
+        const text = `Bienvenue sur la *fonctionnalité secrète* de JOEL ! 🤫\n
+Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
+⚠️ Attention, beaucoup de personnes seront ajoutées en même temps, *les retirer peut ensuite prendre du temps* ⚠️`
         const question = await bot.sendMessage(
             msg.chat.id,
             text,
@@ -127,12 +136,11 @@ Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajo
             JORFSearchRes = await getJORFSearchResult(yearString)
             const promoName = Object.keys(ENAPromoNames).find(key => ENAPromoNames[key] === yearString)
             let text = `La promotion *${capitalizeFirstLetters(promoName)}* contient *${JORFSearchRes.length} élèves*:`
-            await sendLongText(
-                bot,
-                chatId,
-                `${JORFSearchRes.length ? text : `Promo introuvable.`}`,
-                { parse_mode: "Markdown" }
-            )
+            if (JORFSearchRes.length > 0) {
+                await sendLongText(bot, chatId, text, { parse_mode: "Markdown" })
+            } else {
+                return await bot.sendMessage(chatId, 'Promo introuvable', { parse_mode: "Markdown" })
+            }
             // wait 2 seconds
             await new Promise(resolve => setTimeout(resolve, 2000))
             // sort JORFSearchRes by last name
@@ -155,8 +163,9 @@ Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajo
             )
             const followConfirmation = await bot.sendMessage(
                 chatId,
-                `Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)`,
-                { 
+                `Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *les retirer peut ensuite prendre du temps*`,
+                {
+                    parse_mode: "Markdown",
                     reply_markup: {
                         force_reply: true
                     }
@@ -166,7 +175,7 @@ Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajo
                 if (new RegExp(/oui/i).test(msg.text)) {
                     await bot.sendMessage(
                         chatId,
-                        `Ajout en cours... Cela peut prendre jusqu'à 1 minute. ⏰`
+                        `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
                     )
                     const tgUser = msg.from
                     let user = await User.firstOrCreate(tgUser, chatId)
@@ -180,8 +189,8 @@ Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajo
                         })
                         await people.save()
                         // only add to followedPeople if user is not already following this person
-                        if (!user.followedPeople.includes(people.id)) {
-                            user.followedPeople.push({ peopleId: people.id, lastUdpate: Date.now() })
+                        if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
+                            user.followedPeople.push({ peopleId: people._id, lastUdpate: Date.now() })
                         }
                     }
                     await user.save()

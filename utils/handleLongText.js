@@ -14,10 +14,13 @@ function handleLongText(longText) {
             message = longText.slice(i * max, (i + 1) * max)
         }
 
-        // to prevent markdown error, we must make sure the message is not split in the middle of a markdown element
-        nbOfCharsToLastNewLine = message.lastIndexOf("\n\n")
-        stringToAddToNextMessage = message.substring(nbOfCharsToLastNewLine)
-        message = message.slice(0, nbOfCharsToLastNewLine)
+        // dont do that if it's the last message
+        if (i < slices - 1) {
+            // to prevent markdown error, we must make sure the message is not split in the middle of a markdown element
+            nbOfCharsToLastNewLine = message.lastIndexOf("\n\n")
+            stringToAddToNextMessage = message.substring(nbOfCharsToLastNewLine)
+            message = message.slice(0, nbOfCharsToLastNewLine)
+        }
 
         messagesArray.push(message)
     }
