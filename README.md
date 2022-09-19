@@ -77,7 +77,7 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
     <img src="img/tuto/logo1.png" alt="Logo" width="250" height="500">
   </a>
 </p>
-<a>
+
 #### Ajouter un contact
 #### Supprimer un contact
 #### Lister mes contacts
