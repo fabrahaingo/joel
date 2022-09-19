@@ -69,8 +69,9 @@ JOEL requiert d'avoir téléchargé l'application Telegram.
 Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofabot</a>.
 
 ### Utilisation
-#### Rechercher un contact
+#### Rechercher une personne
 
+Pour rechercher une personne, vous pouvez cliquer sur le bouton "🔍 Rechercher" qui vous renverra sa dernière nomination au JO.
 
 <p align="center">
   <a href="./img/tuto/search.png">
