@@ -98,3 +98,5 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 </p>
 
 ## Bug
+
+En cas de bug, contactez @hellofabien ou hellofabien@pm.me en mentionnant votre identifiant Telegram (obtenu en cliquant sur le bouton "🐞")
