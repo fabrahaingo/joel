@@ -28,6 +28,7 @@
     <li><a href="#usage">Usage</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contributing">Contributing</a></li>
+	<li><a href="#bug"> Bug </a></li>
     <li><a href="#contact">Contact</a></li>
     <!-- <li><a href="#acknowledgements">Acknowledgements</a></li> -->
   </ol>
@@ -69,6 +70,11 @@ Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofab
 
 ### Utilisation
 #### Rechercher un contact
+
+![Rechercher un contact](./img/tuto/rechercher.png)
+
 #### Ajouter un contact
 #### Supprimer un contact
 #### Lister mes contacts
+
+## Bug
