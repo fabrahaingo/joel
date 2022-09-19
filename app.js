@@ -22,6 +22,10 @@ mongoose
         bot.onText(/🧐 Lister mes contacts$/, commands.list(bot))
         bot.onText(/🐞 Un bug ?/, commands.bug(bot))
         bot.onText(/❓ Aide/, commands.help(bot))
+        bot.onText(/\/secret/, commands.hidden(bot))
+
+        // in any other case
+        bot.onText(/[\s\S]*/, commands.default(bot))
 
         // Handlers
         // bot.on("callback_query", handlers.callbackQuery(bot))

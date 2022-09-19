@@ -16,13 +16,18 @@ module.exports = bot => async msg => {
         } else {
             // get array of ids of people
             let peopleIds = user.followedPeople.map(p => p.peopleId)
-            let peoples = await People.find({ _id: { $in: peopleIds } })
-            text += "Voici les personnes que vous suivez :\n\n"
-            for (let i = 0; i < peoples.length; i++) {
-                text += `${i + 1}. *${peoples[i].prenom} ${peoples[i].nom}*\n\n`
-                text += formatSearchResult([peoples[i].JORFSearchData[0]], { isListing: true })
-                if (peoples[i + 1]) {
-                    text += `\n`
+            let peoples = await People.find({ _id: { $in: peopleIds } }).sort({ nom: 1 })
+
+            if (peoples.length === 0) {
+                text = `Vous ne suivez aucun contact pour le moment. Tapez /start puis cliquez sur *🏃 Ajouter un contact* pour commencer à suivre des contacts.` 
+            } else {
+                text += "Voici les personnes que vous suivez :\n\n"
+                for (let i = 0; i < peoples.length; i++) {
+                    text += `${i + 1}. *${peoples[i].nom} ${peoples[i].prenom}*\n\n`
+                    text += formatSearchResult([peoples[i].JORFSearchData[0]], { isListing: true })
+                    if (peoples[i + 1]) {
+                        text += `\n`
+                    }
                 }
             }
         }

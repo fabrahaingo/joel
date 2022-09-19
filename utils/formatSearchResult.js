@@ -48,14 +48,14 @@ function addPoste(elem, message) {
     } else if (elem.autorite_delegation) {
         message += `👉 par le _${elem.autorite_delegation}_\n`
     } else {
-        message += `👉 [Voir sur legifrance](https://www.legifrance.gouv.ch/jorf/id/${elem.source_id})\n`
+        message += `👉 [Voir sur legifrance](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`
     }
     return message
 }
 
-function addStartFunction(elem, message) {
+function addLinkJO(elem, message) {
     if (elem.date_debut) {
-        message += `⚖️ _Effectif le_:  ${convertToFrenchDate(elem.date_debut)}\n`
+        message += `🔗 _Lien JO_:  [cliquez ici](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`
     }
     return message
 }
@@ -83,7 +83,7 @@ function formatSearchResult(result, options) {
         message = addTypeOrdre(elem, message)
         message = addPoste(elem, message)
         message = addPublishDate(elem, message)
-        message = addStartFunction(elem, message)
+        message = addLinkJO(elem, message)
         message += '\n'
     }
     return message

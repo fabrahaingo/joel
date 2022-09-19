@@ -7,15 +7,6 @@ const UserSchema = new Schema(
             type: Number,
             required: true,
         },
-        first_name: {
-            type: String,
-            required: true,
-        },
-        last_name: {
-            type: String,
-            required: true,
-        },
-        username: String,
         // to send notifications later on
         chatId: Number,
         language_code: String,
@@ -44,9 +35,6 @@ UserSchema.statics.firstOrCreate = async function (tgUser, chatId) {
         user = await new this({
             _id: tgUser.id,
             chatId: chatId,
-            first_name: tgUser.first_name,
-            last_name: tgUser.last_name,
-            username: tgUser.username,
             language_code: tgUser.language_code,
         }).save()
     }

@@ -1,23 +1,23 @@
 const { startKeyboard } = require("../utils/keyboards")
-const tgMaxLength = 4096
+const max = 4096
 
 function handleLongText(longText) {
     let messagesArray = []
     let message = ''
     let nbOfCharsToLastNewLine = 0
     let stringToAddToNextMessage = ''
-    let amountSliced = longText.length / tgMaxLength
-    for (let i = 0; i < amountSliced; i++) {
+    let slices = longText.length / max
+    for (let i = 0; i < slices; i++) {
         if (stringToAddToNextMessage.length > 0) {
-            message = stringToAddToNextMessage + longText.slice(i * tgMaxLength, (i + 1) * tgMaxLength)
+            message = stringToAddToNextMessage + longText.slice(i * max, (i + 1) * max)
         } else {
-            message = longText.slice(i * tgMaxLength, (i + 1) * tgMaxLength)
+            message = longText.slice(i * max, (i + 1) * max)
         }
 
         // to prevent markdown error, we must make sure the message is not split in the middle of a markdown element
         nbOfCharsToLastNewLine = message.lastIndexOf("\n\n")
+        stringToAddToNextMessage = message.substring(nbOfCharsToLastNewLine)
         message = message.slice(0, nbOfCharsToLastNewLine)
-        stringToAddToNextMessage = longText.slice(nbOfCharsToLastNewLine, (i + 1) * tgMaxLength)
 
         messagesArray.push(message)
     }

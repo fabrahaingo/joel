@@ -69,7 +69,6 @@ async function checkOutdatedUsers(user, people) {
             }
         }
     }
-    // TODO: send message to user and tell person has new publication X ❌
     if (usersUpdated.length) {
         await sendUpdate(user, usersUpdated)
     }

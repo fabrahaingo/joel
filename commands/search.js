@@ -4,8 +4,8 @@ const { formatSearchResult } = require("../utils/formatSearchResult")
 const { sendLongText } = require("../utils/handleLongText")
 
 module.exports = bot => async msg => {
-    const chatId = msg.chat.id
     try {
+        const chatId = msg.chat.id
         bot.sendChatAction(chatId, "typing")
         const question = await bot.sendMessage(chatId, "De quelle personne souhaitez-vous voir l'historique des nominations ?", {
             reply_markup: {
@@ -26,7 +26,6 @@ module.exports = bot => async msg => {
                 .catch((err) => {
                     console.log(err)
                 })
-
             if (JORFRes?.data?.length === 0) {
                 bot.sendMessage(chatId, "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement", startKeyboard)
             } else {
