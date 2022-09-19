@@ -65,7 +65,10 @@ JOEL requiert d'avoir téléchargé l'application Telegram.
 
 ### Installation
 
-Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofabot</a>
+Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofabot</a>.
 
 ### Utilisation
-
+#### Rechercher un contact
+#### Ajouter un contact
+#### Supprimer un contact
+#### Lister mes contacts
