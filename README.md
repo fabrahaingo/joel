@@ -25,9 +25,7 @@
       	<li><a href="#utilisation">Utilisation</a></li>
 	  </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#contribuer">Contribuer</a></li>
 	<li><a href="#bug"> Bug </a></li>
     <li><a href="#contact">Contact</a></li>
     <!-- <li><a href="#acknowledgements">Acknowledgements</a></li> -->
@@ -111,6 +109,15 @@ Pour lister vos contacts, cliquez sur le bouton "🧐 Lister mes contacts"
 ## Bug
 
 En cas de bug, contactez @hellofabien ou hellofabien@pm.me en mentionnant votre identifiant Telegram (obtenu en cliquant sur le bouton "🐞")
+
+## Contribuer
+
+Toute contribution sera **grandement appréciée** 🤗
+1. Forker le projet
+2. Créer une branche feature ('git checkout -b feature/AmazingFeature')
+3. Commiter les changement ('git commit -m 'Add some AmazingFeature')
+4. Pusher dans la branche ('git push origin feature/AmazingFeature')
+5. Ouvrir une Pull Request
 
 ## Contact
 
