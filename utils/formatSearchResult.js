@@ -71,14 +71,12 @@ function addPoste(elem, message) {
 		message += `${elem.nomme_par ? ` par le _${elem.nomme_par}_` : ''}\n`
     } else if (elem.autorite_delegation) {
         message += `👉 par le _${elem.autorite_delegation}_\n`
-    } else {
-        message += `👉 [Voir sur legifrance](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`
-    }
+    } 
     return message
 }
 
 function addLinkJO(elem, message) {
-    if (elem.date_debut) {
+    if (elem.source_id) {
         message += `🔗 _Lien JO_:  [cliquez ici](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`
     }
     return message
