@@ -29,6 +29,8 @@ function addTypeOrdre(elem, message) {
             break
         case "inscription":
             message += `📝 A été _inscrit_ à:\n`
+		case "désignation":
+			message += '📝 A été _désigné_ à:\n'
             break
         default:
             message += `📝 A été _${elem.type_ordre}_ à:\n`
@@ -44,7 +46,13 @@ function addPoste(elem, message) {
     } else if (elem.inspecteur_general) {
         message += `*👉 Inspecteur général des ${elem.inspecteur_general}*\n`
     } else if (elem.grade) {
-        message += `👉 au grade de *${elem.grade}* ${elem.nomme_par ? `par le _${elem.nomme_par}_` : ''}\n`
+        message += `👉 au grade de *${elem.grade}*`
+			if (elem.ordre_merite){
+			message += ` de l'Ordre national du mérite`
+			}	else if (elem.legion_honneur){
+			message += ` de la Légion d'honneur`
+			}
+		message += `${elem.nomme_par ? ` par le _${elem.nomme_par}_` : ''}\n`
     } else if (elem.autorite_delegation) {
         message += `👉 par le _${elem.autorite_delegation}_\n`
     } else {
