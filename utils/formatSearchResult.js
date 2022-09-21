@@ -48,6 +48,10 @@ function addTypeOrdre(elem, message) {
 		case "élection":
 			message += `📝 A été _élu${elem.sexe=='F'?'e':''}_ à:\n`
            	break
+		case "admissibilite":
+			message += `📝 A été _admissible_ à:\n`
+           	break
+
         default:
             message += `📝 A été _${elem.type_ordre}_ à:\n`
     }
@@ -84,7 +88,7 @@ function addLinkJO(elem, message) {
 
 function addPublishDate(elem, message) {
     if (elem.source_date) {
-        message += `🗓 _Publié le_:  ${convertToFrenchDate(elem.source_date)}\n`
+        message += `🗓 _Publié le_:  ${convertToFrenchDate(elem.source_date)} \n`
     }
     return message
 }
