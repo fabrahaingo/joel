@@ -8,11 +8,11 @@ module.exports = bot => async msg => {
         if (!msg.reply_to_message) {
             const usersCount = await Users.countDocuments()
             const peopleCount = await People.countDocuments()
-            let msg = '📈 JOEL aujourd’hui c’est :\n'
-            msg += `👨‍💻 ${usersCount} utilisateurs\n`
-            msg += `🕵️ ${peopleCount} personnes suivies \n`
-            msg += `JOÉL sait combien vous êtes à l'utiliser mais il ne sait pas qui vous êtes... et il ne cherchera jamais à le savoir! 🛡`
-            await bot.sendMessage(msg.chat.id, msg, startKeyboard)
+            let text = '📈 JOEL aujourd’hui c’est\n'
+            text += `👨‍💻 ${usersCount} utilisateurs\n`
+            text += `🕵️ ${peopleCount} personnes suivies\n\n`
+            text += `JOÉL sait combien vous êtes à l'utiliser mais il ne sait pas qui vous êtes... et il ne cherchera jamais à le savoir! 🛡`
+            await bot.sendMessage(msg.chat.id, text, startKeyboard)
         }
     } catch (error) {
         console.log(error)
