@@ -11,7 +11,7 @@ module.exports = bot => async msg => {
             let text = '📈 JOEL aujourd’hui c’est\n'
             text += `👨‍💻 ${usersCount} utilisateurs\n`
             text += `🕵️ ${peopleCount} personnes suivies\n\n`
-            text += `JOÉL sait combien vous êtes à l'utiliser mais il ne sait pas qui vous êtes... et il ne cherchera jamais à le savoir! 🛡`
+            text += `JOEL sait combien vous êtes à l'utiliser mais il ne sait pas qui vous êtes... et il ne cherchera jamais à le savoir! 🛡`
             await bot.sendMessage(msg.chat.id, text, startKeyboard)
         }
     } catch (error) {
