@@ -27,6 +27,7 @@
     </li>
     <li><a href="#contribuer">Contribuer</a></li>
 	<li><a href="#bug"> Bug </a></li>
+	<li><a href="#confidentialité"> Confidentialité </a></li>
     <li><a href="#contact">Contact</a></li>
     <!-- <li><a href="#acknowledgements">Acknowledgements</a></li> -->
   </ol>
@@ -109,6 +110,10 @@ Pour lister vos contacts, cliquez sur le bouton "🧐 Lister mes contacts"
 ## Bug
 
 En cas de bug, contactez @hellofabien ou hellofabien@pm.me en mentionnant votre identifiant Telegram (obtenu en cliquant sur le bouton "🐞")
+
+## Confidentialité 
+
+JOEL ne cherchera jamais à vous identifier. Vos données sont anonymisées et ne seront jamais réutilisées. 🛡
 
 ## Contribuer
 
