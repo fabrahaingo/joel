@@ -183,7 +183,7 @@ Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajo
                         const contact = JORFSearchRes[i]
                         const search = await searchPersonOnJORF(`${contact.nom} ${contact.prenom}`)
                         const people = await People.firstOrCreate({
-                            nom: search.data[0].nom,
+                            nom: search.data[0].nom.toUpperCase(),
                             prenom: search.data[0].prenom,
                             JORFSearchData: search.data,
                         })

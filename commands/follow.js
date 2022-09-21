@@ -29,7 +29,7 @@ module.exports = bot => async msg => {
             } else {
                 let formattedData = formatSearchResult(JORFRes.data.slice(0, 3), { isConfirmation: true })
                 const people = await People.firstOrCreate({
-                    nom: JORFRes.data[0].nom,
+                    nom: JORFRes.data[0].nom.toUpperCase(),
                     prenom: JORFRes.data[0].prenom,
                     JORFSearchData: JORFRes.data,
                 })
