@@ -16,7 +16,7 @@ module.exports = bot => async msg => {
         } else {
             // get array of ids of people
             let peopleIds = user.followedPeople.map(p => p.peopleId)
-            let peoples = await People.find({ _id: { $in: peopleIds } }).sort({ nom: 1 })
+            let peoples = await People.find({ _id: { $in: peopleIds } }).collation({locale: "fr"}).sort({ nom: 1 })
 
             if (peoples.length === 0) {
                 text = `Vous ne suivez aucun contact pour le moment. Tapez /start puis cliquez sur *🏃 Ajouter un contact* pour commencer à suivre des contacts.` 
