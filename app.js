@@ -23,7 +23,7 @@ try {
         bot.onText(/🧐 Lister mes contacts$/, commands.list(bot))
         bot.onText(/🐞 Un bug ?/, commands.bug(bot))
         bot.onText(/❓ Aide/, commands.help(bot))
-        bot.onText(/\/secret/, commands.hidden(bot))
+        bot.onText(/\/secret|\/ena/, commands.hidden(bot))
         bot.onText(/\/stats/, commands.stats(bot))
 
         // in any other case
