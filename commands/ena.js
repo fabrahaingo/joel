@@ -57,6 +57,7 @@ function cleanInput(input) {
     input = input.replace(/[ìíîï]/g, "i")
     input = input.replace(/[òóôõö]/g, "o")
     input = input.replace(/[ùúûü]/g, "u")
+    input = input.replace(/[ç]/g, "c")
     // split input into array of words
     input = input.split(' ')
     return input
@@ -117,8 +118,7 @@ function isPersonAlreadyFollowed(id, followedPeople) {
 module.exports = bot => async msg => {
     try {
         const chatId = msg.chat.id
-        const text = `Bienvenue sur la *fonctionnalité secrète* de JOEL ! 🤫\n
-Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
+        const text = `Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
 ⚠️ Attention, beaucoup de personnes seront ajoutées en même temps, *les retirer peut ensuite prendre du temps* ⚠️`
         const question = await bot.sendMessage(
             msg.chat.id,
@@ -207,7 +207,7 @@ Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajo
                 } else {
                     await bot.sendMessage(
                         chatId,
-                        `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /secret.`,
+                        `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
                     )
                 }
             })

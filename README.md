@@ -4,7 +4,7 @@
   <a href="./img/logo.png">
     <img src="img/logo.png" alt="Logo" width="100" height="100">
   </a>
-  <h3 align="center">Restez informés des nominations au JO de votre réseau	</h3>
+  <h3 align="center">Restez informé des nominations au JO de votre réseau	</h3>
 </p>
 
 <!-- TABLE OF CONTENTS -->
