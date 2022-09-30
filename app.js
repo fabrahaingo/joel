@@ -18,7 +18,7 @@ try {
         // Commands
         bot.onText(/\/start$/, commands.start(bot))
         bot.onText(/🔎 Rechercher$/, commands.search(bot))
-        bot.onText(/🏃 Ajouter un contact$/, commands.follow(bot))
+        bot.onText(/🧩 Ajouter un contact$/, commands.follow(bot))
         bot.onText(/✋ Supprimer un contact$/, commands.unfollow(bot))
         bot.onText(/🧐 Lister mes contacts$/, commands.list(bot))
         bot.onText(/🐞 Un bug ?/, commands.bug(bot))
