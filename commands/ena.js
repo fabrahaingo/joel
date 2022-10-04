@@ -182,12 +182,14 @@ module.exports = bot => async msg => {
                     for (let i = 0; i < JORFSearchRes.length; i++) {
                         const contact = JORFSearchRes[i]
                         const search = await searchPersonOnJORF(`${contact.nom} ${contact.prenom}`)
-                        const people = await People.firstOrCreate({
-                            nom: search.data[0].nom,
-                            prenom: search.data[0].prenom,
-                            JORFSearchData: search.data,
-                        })
-                        await people.save()
+                        if (search.data?.length) {
+                            const people = await People.firstOrCreate({
+                                nom: search.data[0].nom,
+                                prenom: search.data[0].prenom,
+                                JORFSearchData: search.data,
+                            })
+                            await people.save()
+                        }
                         // only add to followedPeople if user is not already following this person
                         if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
                             user.followedPeople.push({ peopleId: people._id, lastUdpate: Date.now() })
