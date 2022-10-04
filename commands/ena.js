@@ -189,10 +189,10 @@ module.exports = bot => async msg => {
                                 JORFSearchData: search.data,
                             })
                             await people.save()
-                        }
-                        // only add to followedPeople if user is not already following this person
-                        if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
-                            user.followedPeople.push({ peopleId: people._id, lastUdpate: Date.now() })
+                            // only add to followedPeople if user is not already following this person
+                            if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
+                                user.followedPeople.push({ peopleId: people._id, lastUdpate: Date.now() })
+                            }
                         }
                     }
                     await user.save()
