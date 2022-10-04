@@ -181,6 +181,7 @@ module.exports = bot => async msg => {
                     let user = await User.firstOrCreate(tgUser, chatId)
                     for (let i = 0; i < JORFSearchRes.length; i++) {
                         const contact = JORFSearchRes[i]
+                        console.log(`ENA - Searching for ${contact.nom} ${contact.prenom} on JORFSearch...`)
                         const search = await searchPersonOnJORF(`${contact.nom} ${contact.prenom}`)
                         if (search.data?.length) {
                             const people = await People.firstOrCreate({
