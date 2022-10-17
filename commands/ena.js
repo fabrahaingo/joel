@@ -173,6 +173,7 @@ module.exports = bot => async msg => {
             )
             await bot.onReplyToMessage(chatId, followConfirmation.message_id, async msg => {
                 if (new RegExp(/oui/i).test(msg.text)) {
+                    console.log(`ENA function was used for promo ${promoName}`)
                     await bot.sendMessage(
                         chatId,
                         `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
@@ -181,7 +182,6 @@ module.exports = bot => async msg => {
                     let user = await User.firstOrCreate(tgUser, chatId)
                     for (let i = 0; i < JORFSearchRes.length; i++) {
                         const contact = JORFSearchRes[i]
-                        console.log(`ENA - Searching for ${contact.nom} ${contact.prenom} on JORFSearch...`)
                         const search = await searchPersonOnJORF(`${contact.nom} ${contact.prenom}`)
                         if (search.data?.length) {
                             const people = await People.firstOrCreate({

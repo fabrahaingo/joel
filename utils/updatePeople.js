@@ -27,9 +27,6 @@ async function updatePeopleInDB() {
                 person.JORFSearchData = JORFRes.data
                 await person.save()
                 console.log(`${person.nom} ${person.prenom} was updated`)
-            } else {
-                console.log(`${person.nom} ${person.prenom} is up to date`)
-            }
         }
         await new Promise(resolve => setTimeout(resolve, 1000))
     }

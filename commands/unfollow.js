@@ -1,4 +1,5 @@
 const { startKeyboard } = require("../utils/keyboards")
+const { sendLongText }  = require("../utils/handleLongText")
 const User = require("../models/User")
 const People = require("../models/People")
 
@@ -24,9 +25,9 @@ module.exports = bot => async msg => {
             }
         }
 
-        const question = await bot.sendMessage(chatId, text, { parse_mode: "Markdown", reply_markup: { force_reply: true } })
+        const question_id = await sendLongText(bot, chatId, text, { returnLastMessageId: true })
 
-        return await bot.onReplyToMessage(chatId, question.message_id, async msg => {
+        return await bot.onReplyToMessage(chatId, question_id, async msg => {
             const userAnswer = parseInt(msg.text)
             if (isNaN(userAnswer)) {
                 // TODO: handle that case

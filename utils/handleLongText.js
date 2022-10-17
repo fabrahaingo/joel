@@ -27,10 +27,22 @@ function handleLongText(longText) {
     return messagesArray
 }
 
-async function sendLongText(bot, chatId, formattedData) {
+async function sendLongText(bot, chatId, formattedData, { returnLastMessageId = false } = {}) {
     const messagesArray = handleLongText(formattedData)
+    let lastMessage = null
     for await (let message of messagesArray) {
-        await bot.sendMessage(chatId, message, startKeyboard)
+        if (returnLastMessageId && messagesArray.indexOf(message) === messagesArray.length - 1) {
+            lastMessage = await bot.sendMessage(chatId, message, {
+                parse_mode: "Markdown",
+                reply_markup: {
+                    force_reply: true
+                }
+            })
+            return lastMessage.message_id
+        }
+        else {
+            await bot.sendMessage(chatId, message, startKeyboard)
+        }
     }
 }
 
