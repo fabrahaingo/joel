@@ -21,7 +21,7 @@ const PeopleSchema = new Schema(
 // Return the people if exists else create a new people
 PeopleSchema.statics.firstOrCreate = async function (tgPeople) {
     let people = await this.findOne({ nom: tgPeople.nom, prenom: tgPeople.prenom })
-    if (!people & tgPeople.nom && tgPeople.prenom && tgPeople.JORFSearchData) {
+    if (!people) {
         people = await new this({
             nom: tgPeople.nom,
             prenom: tgPeople.prenom,
