@@ -40,4 +40,5 @@ try {
     .catch(error => console.error(error))
 } catch (err) {
     console.log(err)
+    process.exit(1)
 }
