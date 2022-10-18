@@ -28,6 +28,10 @@ module.exports = bot => async msg => {
                 await bot.sendMessage(chatId, "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement", startKeyboard)
             } else {
                 let formattedData = formatSearchResult(JORFRes.data.slice(0, 2), { isConfirmation: true })
+                if (!formattedData) {
+                    await bot.sendMessage(chatId, "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement", startKeyboard)
+                    return
+                }
                 const people = await People.firstOrCreate({
                     nom: JORFRes.data[0].nom,
                     prenom: JORFRes.data[0].prenom,
