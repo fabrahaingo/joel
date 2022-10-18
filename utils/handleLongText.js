@@ -32,6 +32,8 @@ async function sendLongText(bot, chatId, formattedData, { returnLastMessageId = 
     let lastMessage = null
     for await (let message of messagesArray) {
         if (returnLastMessageId && messagesArray.indexOf(message) === messagesArray.length - 1) {
+            if (!message)
+                message = '...'
             lastMessage = await bot.sendMessage(chatId, message, {
                 parse_mode: "Markdown",
                 reply_markup: {
@@ -41,6 +43,8 @@ async function sendLongText(bot, chatId, formattedData, { returnLastMessageId = 
             return lastMessage.message_id
         }
         else {
+            if (!message)
+                message = '...'
             await bot.sendMessage(chatId, message, startKeyboard)
         }
     }
