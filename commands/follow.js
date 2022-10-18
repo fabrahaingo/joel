@@ -43,9 +43,8 @@ module.exports = bot => async msg => {
                 }
                 await bot.sendMessage(chatId, `${formattedData}`, startKeyboard)
                 // wait 500 ms before sending the next message
-                setTimeout(async () => {
-                    await bot.sendMessage(chatId, `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`, startKeyboard)
-                }, 500)
+                await new Promise(resolve => setTimeout(resolve, 500))
+                await bot.sendMessage(chatId, `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`, startKeyboard)
             }
         })
     } catch (error) {
