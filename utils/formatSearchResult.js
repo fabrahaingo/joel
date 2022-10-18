@@ -95,12 +95,11 @@ function addPublishDate(elem, message) {
 
 function formatSearchResult(result, options) {
     let message = ''
-    let defaultPart = 'Est-ce bien la personne que vous souhaitez suivre ?\n\n*Répondez "oui" ou "non"*\n\n'
     if (options?.isConfirmation) {
         if (result.length === 1)
-            message += `Voici la dernière information que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n${defaultPart}`
+            message += `Voici la dernière information que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n\n$`
         else
-            message += `Voici les ${result.length} dernières informations que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n${defaultPart}`
+            message += `Voici les ${result.length} dernières informations que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n\n`
 
     } else if (!options?.isListing) {
         message += `Voici la liste des postes connus pour ${result[0].prenom} ${result[0].nom}:\n\n`

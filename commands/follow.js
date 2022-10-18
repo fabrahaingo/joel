@@ -27,29 +27,25 @@ module.exports = bot => async msg => {
             if (JORFRes?.data?.length === 0 || !JORFRes.data[0]?.nom || !JORFRes.data[0]?.prenom) {
                 await bot.sendMessage(chatId, "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement", startKeyboard)
             } else {
-                let formattedData = formatSearchResult(JORFRes.data.slice(0, 3), { isConfirmation: true })
+                let formattedData = formatSearchResult(JORFRes.data.slice(0, 2), { isConfirmation: true })
                 const people = await People.firstOrCreate({
                     nom: JORFRes.data[0].nom,
                     prenom: JORFRes.data[0].prenom,
                     JORFSearchData: JORFRes.data,
                 })
                 await people.save()
-                const confirmation = await bot.sendMessage(chatId, formattedData, yesNoKeyboard)
-                await bot.onReplyToMessage(chatId, confirmation.message_id, async msg => {
-                    // if user confirms that he wants to follow this person
-                    if (new RegExp(/oui/i).test(msg.text)) {
-                        const tgUser = msg.from
-                        let user = await User.firstOrCreate(tgUser, chatId)
-                        // only add to followedPeople if user is not already following this person
-                        if (!user.followedPeople.includes(people.id)) {
-                            user.followedPeople.push({ peopleId: people.id, lastUdpate: Date.now() })
-                            await user.save()
-                        }
-                        await bot.sendMessage(chatId, `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`, startKeyboard)
-                    } else {
-                        await bot.sendMessage(chatId, "Suivi abandonné 🙅‍♂️", startKeyboard)
-                    }
-                })
+                const tgUser = msg.from
+                let user = await User.firstOrCreate(tgUser, chatId)
+                // only add to followedPeople if user is not already following this person
+                if (!user.followedPeople.includes(people.id)) {
+                    user.followedPeople.push({ peopleId: people.id, lastUdpate: Date.now() })
+                    await user.save()
+                }
+                await bot.sendMessage(chatId, `${formattedData}`, startKeyboard)
+                // wait 500 ms before sending the next message
+                setTimeout(async () => {
+                    await bot.sendMessage(chatId, `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`, startKeyboard)
+                }, 500)
             }
         })
     } catch (error) {

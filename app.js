@@ -37,7 +37,10 @@ try {
         // Successful connection
         console.log(`\u{1F41D} ${env.BOT_NAME} started successfully`)
     })
-    .catch(error => console.error(error))
+    .catch(error => {
+        console.error(error)
+        process.exit(1)
+    })
 } catch (err) {
     console.log(err)
     process.exit(1)
