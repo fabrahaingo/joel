@@ -80,7 +80,7 @@ async function notifyUsers(users, people) {
         await checkOutdatedUsers(user, people)
 
         // prevent hitting Telegram API rate limit
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise(resolve => setTimeout(resolve, 500))
     }
 }
 
