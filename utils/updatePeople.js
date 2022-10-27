@@ -1,61 +1,93 @@
-require("dotenv").config();
-const mongoose = require("mongoose");
-const env = process.env;
-const config = require("../config");
-const People = require("../models/People");
-const axios = require("axios");
+require('dotenv').config()
+const mongoose = require('mongoose')
+const env = process.env
+const config = require('../config')
+const People = require('../models/People')
+const axios = require('axios')
 
-async function updatePeopleInDB() {
-  const people = await People.find();
-  // for loop that iterates each second
-  for await (let person of people) {
-    const JORFRes = await axios
-      .get(
-        `https://jorfsearch.steinertriples.ch/name/${encodeURI(
-          `${person.prenom} ${person.nom}`
-        )}?format=JSON`
-      )
-      .then(async (res) => {
-        if (res.data?.length === 0) {
-          return res;
-        }
-        if (res.request.res.responseUrl) {
-          let result = await axios.get(
-            res.request.res.responseUrl.endsWith("?format=JSON")
-              ? res.request.res.responseUrl
-              : `${res.request.res.responseUrl}?format=JSON`
-          );
-          return result;
-        }
-      })
-      .catch((err) => {
-        console.log("Unable to fetch JORF data for person", person);
-        console.log(err.message);
-      });
-    if (JORFRes?.data?.length === 0) {
-      console.log(
-        `${person.nom} ${person.prenom} is stored in db but was not found on JORFSearch`
-      );
-    } else {
-      if (
-        JSON.stringify(JORFRes.data) !== JSON.stringify(person.JORFSearchData)
-      ) {
-        person.JORFSearchData = JORFRes.data;
-        await person.save();
-        console.log(`${person.nom} ${person.prenom} was updated`);
-      }
-    }
-  }
-  return;
+const termColors = {
+	black: '\x1b[30m%s\x1b[30m',
+	red: '\x1b[31m%s\x1b[31m',
+	green: '\x1b[32m%s\x1b[32m',
+	yellow: '\x1b[33m%s\x1b[33m',
+	blue: '\x1b[34m%s\x1b[34m',
+	magenta: '\x1b[35m%s\x1b[35m',
+	cyan: '\x1b[36m%s\x1b[36m',
+	white: '\x1b[37m%s\x1b[37m',
+}
+
+async function getUpdatedUsers() {
+	// get todays date in DD-MM-YYYY format (separator is a dash)
+	const today = new Date().toLocaleDateString('fr-FR').split('/').join('-')
+	return await axios
+		.get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
+		.then((res) => res.data)
+}
+
+async function getAllPeople() {
+	return await People.find({}, { _id: 1, prenom: 1, nom: 1 })
+}
+
+async function updatePeople(updatedUsers, allPeople) {
+	let countUpdated = 0
+	for await (let user of updatedUsers) {
+		for await (let person of allPeople) {
+			const foundCondition =
+				person.prenom === user.prenom && person.nom === user.nom
+			if (foundCondition) {
+				const jorfInfo = await getJORFInfo(person.prenom, person.nom)
+				// if person was (still) not found in JORF
+				if (typeof jorfInfo.data !== 'object') {
+					console.log(
+						`${person.nom} ${person.prenom} is stored in db but was not found on JORFSearch`
+					)
+					continue
+				}
+				person.JORFSearchData = jorfInfo.data
+				await person.save()
+				console.log(`${person.nom} ${person.prenom} was updated`)
+				countUpdated++
+			}
+		}
+	}
+	console.log(termColors.green, `${countUpdated} people were updated`)
+	return
+}
+
+async function getJORFInfo(firstName, lastName) {
+	return await axios
+		.get(
+			`https://jorfsearch.steinertriples.ch/name/${encodeURI(
+				`${firstName} ${lastName}`
+			)}?format=JSON`
+		)
+		.then(async (res) => {
+			if (typeof res.data !== 'object') {
+				const redirectedTo = res.request.res.responseUrl
+				// if the person was not found or not well formatted, the API redirects
+				res = await axios.get(
+					redirectedTo.endsWith('?format=JSON')
+						? redirectedTo
+						: `${redirectedTo}?format=JSON`
+				)
+			}
+			return res
+		})
+		.catch((err) => {
+			console.log(`Unable to fetch JORF data for ${firstName} ${lastName}`)
+			console.log(err.message)
+		})
 }
 
 mongoose
-  .connect(env.MONGODB_URI, config.mongodb)
-  .then(async () => {
-    await updatePeopleInDB();
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.log(err);
-    process.exit(1);
-  });
+	.connect(env.MONGODB_URI, config.mongodb)
+	.then(async () => {
+		const updatedUsers = await getUpdatedUsers()
+		const allPeople = await getAllPeople()
+		await updatePeople(updatedUsers, allPeople)
+		process.exit(0)
+	})
+	.catch((err) => {
+		console.log(err)
+		process.exit(1)
+	})
