@@ -7,7 +7,6 @@ const User = require('../models/User')
 const axios = require('axios')
 const { formatSearchResult } = require('../utils/formatSearchResult')
 const { handleLongText } = require('../utils/handleLongText')
-const { db } = require('../models/People')
 
 // only retrive people who have been updated on same day
 async function getPeople() {
