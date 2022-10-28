@@ -173,6 +173,7 @@ mongoose
 		const peopleIds = returnIdsArray(peoples)
 		// 2. get all users who follow at least one of these people
 		const users = await getUsers(peopleIds)
+		// 3. send notification to users
 		await notifyUsers(users, peoples)
 		process.exit(0)
 	})
