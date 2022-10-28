@@ -103,7 +103,7 @@ function formatSearchResult(result, options) {
 	let message = ''
 	if (options?.isConfirmation) {
 		if (result.length === 1)
-			message += `Voici la dernière information que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n\n$`
+			message += `Voici la dernière information que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n\n`
 		else
 			message += `Voici les ${result.length} dernières informations que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n\n`
 	} else if (!options?.isListing) {
