@@ -10,7 +10,9 @@
     "got": "^12.5.0",
     "mongodb": "^4.9.1",
     "mongoose": "^6.6.1",
-    "node-telegram-bot-api": "^0.59.0",
+    "node-telegram-bot-api": "^0.59.0"
+  },
+  "devDependencies": {
     "nodemon": "^2.0.20"
   }
 }

@@ -7,18 +7,58 @@ const User = require('../models/User')
 const axios = require('axios')
 const { formatSearchResult } = require('../utils/formatSearchResult')
 const { handleLongText } = require('../utils/handleLongText')
+const { db } = require('../models/People')
 
-// TODO: optimize this and only retrieve people updated after X time ago
+// only retrive people who have been updated on same day
 async function getPeople() {
+	// get date in format YYYY-MM-DD
+	const currentDate = new Date().toISOString().split('T')[0]
 	const people = await People.find(
-		{},
-		{ _id: 1, JORFSearchData: 1, updatedAt: 1 }
+		{
+			updatedAt: {
+				$gte: new Date(currentDate),
+			},
+		},
+		{ _id: 1, JORFSearchData: { $slice: 1 }, updatedAt: 1 }
 	)
 	return people
 }
 
-async function getUsers() {
-	const users = await User.find({}, { _id: 1, chatId: 1, followedPeople: 1 })
+// the argument is a list of _id of people who have been updated
+// retrieve all users who follow at least one of these people
+async function getUsers(updatedPeople) {
+	const peopleIdStringArray = returnIdsArray(updatedPeople).map((id) =>
+		id.toString()
+	)
+	const currentDate = new Date().toISOString().split('T')[0]
+	const users = await User.find(
+		{
+			'followedPeople.peopleId': {
+				$in: updatedPeople,
+			},
+		},
+		{
+			_id: 1,
+			chatId: 1,
+			followedPeople: 1,
+		}
+	)
+
+	for (let user of users) {
+		let followed = []
+		for (let followedPerson of user.followedPeople) {
+			const idUpdated = peopleIdStringArray.includes(
+				followedPerson.peopleId.toString()
+			)
+			const lastUpdate = new Date(followedPerson.lastUpdate)
+				.toISOString()
+				.split('T')[0]
+			if (idUpdated && lastUpdate !== currentDate) {
+				followed.push(followedPerson)
+			}
+		}
+		user.followedPeople = followed
+	}
 	return users
 }
 
@@ -57,51 +97,83 @@ async function sendUpdate(user, usersUpdated) {
 	console.log(`Sent notification to ${user._id}`)
 }
 
-// check if user is following someone and if he is, check if he is up to date
-// this function returns an array of people who are not up to date for a specific user
-async function checkOutdatedUsers(user, people) {
-	let usersUpdated = []
-
-	for await (let personFollowed of user.followedPeople) {
-		let personInDB = await people.find(
-			(person) => person._id.toString() === personFollowed.peopleId.toString()
+async function populatePeople(user, peoples) {
+	const peopleUpdated = []
+	for await (let followedPerson of user.followedPeople) {
+		const person = peoples.find(
+			(person) => person._id.toString() === followedPerson.peopleId.toString()
 		)
-		// user followed is not in db anymore
-		// in that case, we remove it from followedPeople list
-		if (!personInDB) {
-			const indexToRemove = user.followedPeople.indexOf(personFollowed)
-			user.followedPeople.splice(indexToRemove, 1)
-		} else {
-			// personFollowed is outdated
-			if (
-				new Date(personFollowed.lastUpdate) < new Date(personInDB.updatedAt)
-			) {
-				usersUpdated.push(personInDB)
-				personFollowed.lastUpdate = personInDB.updatedAt
-			}
+		// format YYYY-MM-DD
+		const today = new Date().toISOString().split('T')[0]
+		if (person) {
+			peopleUpdated.push(person)
 		}
 	}
-	if (usersUpdated.length) {
-		await sendUpdate(user, usersUpdated)
-	}
-	await user.save()
+	return peopleUpdated
 }
 
-async function notifyUsers(users, people) {
-	for await (let user of users) {
-		await checkOutdatedUsers(user, people)
+async function updateUser(user, peoples) {
+	// get array of ids from peoples
+	const peoplesIdArray = returnIdsArray(peoples).map((id) => id.toString())
+	// get user from db
+	const userFromDb = await User.findById(user._id)
+	// update followedPeople
+	for (let followedPerson of userFromDb.followedPeople) {
+		if (peoplesIdArray.includes(followedPerson.peopleId.toString())) {
+			followedPerson.lastUpdate = new Date()
+		}
+	}
+	// remove duplicated in followedPeople array that have same peopleId (can happen if user has followed a person twice)
+	userFromDb.followedPeople = userFromDb.followedPeople.filter(
+		(followedPerson, index, self) =>
+			index ===
+			self.findIndex(
+				(t) => t.peopleId.toString() === followedPerson.peopleId.toString()
+			)
+	)
+	// save user
+	await userFromDb.save()
+}
 
+async function notifyUsers(users, peoples) {
+	for await (let user of users) {
+		// create an array of people who have been updated
+		let peopleUpdated = await populatePeople(user, peoples)
+		if (peopleUpdated.length) {
+			// remove duplicates from peopleUpdated array
+			peopleUpdated = peopleUpdated.filter(
+				(person, index, self) =>
+					index ===
+					self.findIndex((t) => t._id.toString() === person._id.toString())
+			)
+			// update field updatedAt in followedPeople
+			await updateUser(user, peoples)
+			// send notification to user
+			await sendUpdate(user, peopleUpdated)
+		}
 		// prevent hitting Telegram API rate limit
 		await new Promise((resolve) => setTimeout(resolve, 500))
 	}
 }
 
+function returnIdsArray(arr) {
+	let res = []
+	for (let item of arr) {
+		res.push(item._id)
+	}
+	return res
+}
+
 mongoose
 	.connect(env.MONGODB_URI, config.mongodb)
 	.then(async () => {
-		const users = await getUsers()
-		const people = await getPeople()
-		await notifyUsers(users, people)
+		// 1. get all people who have been updated today
+		// only retrieve last element of JORFSearchData array
+		const peoples = await getPeople()
+		const peopleIds = returnIdsArray(peoples)
+		// 2. get all users who follow at least one of these people
+		const users = await getUsers(peopleIds)
+		await notifyUsers(users, peoples)
 		process.exit(0)
 	})
 	.catch((err) => {
