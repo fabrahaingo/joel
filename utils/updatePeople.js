@@ -16,16 +16,57 @@ const termColors = {
 	white: '\x1b[37m%s\x1b[37m',
 }
 
-async function getUpdatedUsers() {
+async function getUpdatedPeople() {
 	// get todays date in DD-MM-YYYY format (separator is a dash)
 	const today = new Date().toLocaleDateString('fr-FR').split('/').join('-')
-	return await axios
+	let updatedPeople = await axios
 		.get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
 		.then((res) => res.data)
+	// remove duplicate people (the ones who have the same nom and prenom)
+	updatedPeople = updatedPeople.filter(
+		(person, index, self) =>
+			index ===
+			self.findIndex((t) => t.nom === person.nom && t.prenom === person.prenom)
+	)
+	return updatedPeople
 }
 
-async function getAllPeople() {
-	return await People.find({}, { _id: 1, prenom: 1, nom: 1 })
+async function getRelevantPeopleFromDb(list) {
+	// only get people from db that match the list of people from JORF (same nom and prenom)
+	return await People.find(
+		{
+			$or: list.map((person) => ({
+				nom: person.nom,
+				prenom: person.prenom,
+			})),
+		},
+		{ _id: 1, prenom: 1, nom: 1 }
+	)
+}
+
+async function getJORFInfo(firstName, lastName) {
+	return await axios
+		.get(
+			`https://jorfsearch.steinertriples.ch/name/${encodeURI(
+				`${firstName} ${lastName}`
+			)}?format=JSON`
+		)
+		.then(async (res) => {
+			if (typeof res.data !== 'object') {
+				const redirectedTo = res.request.res.responseUrl
+				// if the person was not found or not well formatted, the API redirects
+				res = await axios.get(
+					redirectedTo.endsWith('?format=JSON')
+						? redirectedTo
+						: `${redirectedTo}?format=JSON`
+				)
+			}
+			return res
+		})
+		.catch((err) => {
+			console.log(`Unable to fetch JORF data for ${firstName} ${lastName}`)
+			console.log(err.message)
+		})
 }
 
 async function updatePeople(updatedUsers, allPeople) {
@@ -54,37 +95,12 @@ async function updatePeople(updatedUsers, allPeople) {
 	return
 }
 
-async function getJORFInfo(firstName, lastName) {
-	return await axios
-		.get(
-			`https://jorfsearch.steinertriples.ch/name/${encodeURI(
-				`${firstName} ${lastName}`
-			)}?format=JSON`
-		)
-		.then(async (res) => {
-			if (typeof res.data !== 'object') {
-				const redirectedTo = res.request.res.responseUrl
-				// if the person was not found or not well formatted, the API redirects
-				res = await axios.get(
-					redirectedTo.endsWith('?format=JSON')
-						? redirectedTo
-						: `${redirectedTo}?format=JSON`
-				)
-			}
-			return res
-		})
-		.catch((err) => {
-			console.log(`Unable to fetch JORF data for ${firstName} ${lastName}`)
-			console.log(err.message)
-		})
-}
-
 mongoose
 	.connect(env.MONGODB_URI, config.mongodb)
 	.then(async () => {
-		const updatedUsers = await getUpdatedUsers()
-		const allPeople = await getAllPeople()
-		await updatePeople(updatedUsers, allPeople)
+		const updatedPeople = await getUpdatedPeople()
+		const relevantPeople = await getRelevantPeopleFromDb(updatedPeople)
+		await updatePeople(updatedPeople, relevantPeople)
 		process.exit(0)
 	})
 	.catch((err) => {
