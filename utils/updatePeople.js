@@ -33,6 +33,8 @@ async function getUpdatedPeople() {
 
 async function getRelevantPeopleFromDb(list) {
 	// only get people from db that match the list of people from JORF (same nom and prenom)
+	// if list is empty, dont get anything from db
+	if (list.length === 0) return []
 	return await People.find(
 		{
 			$or: list.map((person) => ({
