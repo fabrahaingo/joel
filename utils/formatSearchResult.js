@@ -80,12 +80,10 @@ function addPoste(elem, message) {
 }
 
 function addLinkJO(elem, message) {
-<<<<<<< HEAD
     if (elem.source_name == "JORF") {
         message += `🔗 _Lien JO_:  [cliquez ici](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`
     }
     return message
-=======
 	if (elem.source_id) {
 		switch (elem.source_name) {
 			case 'BOMI':
@@ -96,7 +94,6 @@ function addLinkJO(elem, message) {
 		}
 	}
 	return message
->>>>>>> c22ff7b7144d64df350bbcc2c5e691da35d6de77
 }
 
 function addPublishDate(elem, message) {
