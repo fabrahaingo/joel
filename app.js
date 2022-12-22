@@ -22,7 +22,7 @@ try {
         bot.onText(/✋ Supprimer un contact$/, commands.unfollow(bot))
         bot.onText(/🧐 Lister mes contacts$/, commands.list(bot))
         bot.onText(/🐞 Un bug ?/, commands.bug(bot))
-        bot.onText(/❓ Aide/, commands.help(bot))
+        bot.onText(/❓ C''est quoi JOEL/, commands.help(bot))
         bot.onText(/\/secret|\/ena|\/ENA/, commands.ena(bot))
         bot.onText(/\/stats/, commands.stats(bot))
 
