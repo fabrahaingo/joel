@@ -199,7 +199,7 @@ module.exports = (bot) => async (msg) => {
 								const people = await People.firstOrCreate({
 									nom: search.data[0].nom,
 									prenom: search.data[0].prenom,
-									JORFSearchData: search.data,
+									lastKnownPosition: search.data,
 								})
 								await people.save()
 								// only add to followedPeople if user is not already following this person

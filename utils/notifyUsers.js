@@ -8,7 +8,7 @@ const axios = require('axios')
 const { formatSearchResult } = require('../utils/formatSearchResult')
 const { handleLongText } = require('../utils/handleLongText')
 
-// only retrive people who have been updated on same day
+// only retrieve people who have been updated on same day
 async function getPeople() {
 	// get date in format YYYY-MM-DD
 	const currentDate = new Date().toISOString().split('T')[0]
@@ -18,7 +18,7 @@ async function getPeople() {
 				$gte: new Date(currentDate),
 			},
 		},
-		{ _id: 1, JORFSearchData: { $slice: 1 }, updatedAt: 1 }
+		{ _id: 1, lastKnownPosition: 1, updatedAt: 1 }
 	)
 	return people
 }
@@ -61,7 +61,7 @@ async function getUsers(updatedPeople) {
 	return users
 }
 
-async function sendUpdate(user, usersUpdated) {
+async function sendUpdate(user, peopleUpdated) {
 	if (!user.chatId) {
 		console.log(
 			`Can't send notifications to ${user._id}. Must run /start again to update his chatId.`
@@ -71,12 +71,12 @@ async function sendUpdate(user, usersUpdated) {
 
 	let notification_text =
 		"📢 Aujourd'hui, il y a eu de nouvelles publications pour les personnes que vous suivez !\n\n"
-	for (let user of usersUpdated) {
-		notification_text += `Nouvelle publication pour *${user.JORFSearchData[0].prenom} ${user.JORFSearchData[0].nom}*\n`
-		notification_text += formatSearchResult([user.JORFSearchData[0]], {
+	for (let user of peopleUpdated) {
+		notification_text += `Nouvelle publication pour *${user.prenom} ${user.nom}*\n`
+		notification_text += formatSearchResult([user.lastKnownPosition], {
 			isListing: true,
 		})
-		if (usersUpdated.indexOf(user) + 1 !== usersUpdated.length)
+		if (peopleUpdated.indexOf(user) + 1 !== peopleUpdated.length)
 			notification_text += '\n'
 	}
 
@@ -167,7 +167,6 @@ mongoose
 	.connect(env.MONGODB_URI, config.mongodb)
 	.then(async () => {
 		// 1. get all people who have been updated today
-		// only retrieve last element of JORFSearchData array
 		const peoples = await getPeople()
 		const peopleIds = returnIdsArray(peoples)
 		// 2. get all users who follow at least one of these people

@@ -68,7 +68,7 @@ module.exports = (bot) => async (msg) => {
 				const people = await People.firstOrCreate({
 					nom: JORFRes.data[0].nom,
 					prenom: JORFRes.data[0].prenom,
-					JORFSearchData: JORFRes.data,
+					lastKnownPosition: JORFRes.data[0],
 				})
 				await people.save()
 				const tgUser = msg.from

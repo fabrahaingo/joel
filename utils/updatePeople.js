@@ -71,29 +71,22 @@ async function getJORFInfo(firstName, lastName) {
 		})
 }
 
-async function updatePeople(updatedUsers, allPeople) {
-	let countUpdated = 0
+async function updatePeople(updatedUsers, relevantPeople) {
+	let total = 0
 	for await (let user of updatedUsers) {
-		for await (let person of allPeople) {
-			const foundCondition =
-				person.prenom === user.prenom && person.nom === user.nom
-			if (foundCondition) {
-				const jorfInfo = await getJORFInfo(person.prenom, person.nom)
-				// if person was (still) not found in JORF
-				if (typeof jorfInfo.data !== 'object') {
-					console.log(
-						`${person.nom} ${person.prenom} is stored in db but was not found on JORFSearch`
-					)
-					continue
-				}
-				person.JORFSearchData = jorfInfo.data
+		for await (let person of relevantPeople) {
+			if (person.prenom === user.prenom && person.nom === user.nom) {
+				person.lastKnownPosition = user
 				await person.save()
-				console.log(`${person.nom} ${person.prenom} was updated`)
-				countUpdated++
+				console.log(
+					termColors.white,
+					`${person.nom} ${person.prenom} was updated`
+				)
+				total++
 			}
 		}
 	}
-	console.log(termColors.green, `${countUpdated} people were updated`)
+	console.log(termColors.green, `${total} people were updated`)
 	return
 }
 

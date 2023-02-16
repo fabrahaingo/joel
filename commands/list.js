@@ -27,14 +27,13 @@ module.exports = (bot) => async (msg) => {
 				text += 'Voici les personnes que vous suivez :\n\n'
 				for (let i = 0; i < peoples.length; i++) {
 					let nomPrenom = `${peoples[i].nom} ${peoples[i].prenom}`
-					// create string in this order to prevent JORFSearch from returning someones else's results
+					// JORFSearch needs a search query in this specific order
 					let prenomNom = `${peoples[i].prenom} ${peoples[i].nom}`
 					text += `${
 						i + 1
 					}. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
 						prenomNom
 					)})\n`
-					// text += formatSearchResult([peoples[i].JORFSearchData[0]], { isListing: true })
 					if (peoples[i + 1]) {
 						text += `\n`
 					}
