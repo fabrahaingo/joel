@@ -8,7 +8,7 @@ mongoose
 	.connect(process.env.MONGODB_URI, config.mongodb)
 	.then(async () => {
 		await People.updateMany({}, { $unset: ['JORFSearchData'] })
-		console.log(termColors.green, `Fields were removed`)
+		console.log(`Fields were removed`)
 		process.exit(0)
 	})
 	.catch((err) => {
