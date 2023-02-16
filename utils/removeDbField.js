@@ -7,7 +7,7 @@ const config = require('../config')
 mongoose
 	.connect(process.env.MONGODB_URI, config.mongodb)
 	.then(async () => {
-		await People.updateMany({}, { $unset: ['JORFSearchData'] })
+		await People.updateMany({}, { $unset: { JORFSearchData: '' } })
 		console.log(`Fields were removed`)
 		process.exit(0)
 	})
