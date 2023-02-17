@@ -71,12 +71,12 @@ async function sendUpdate(user, peopleUpdated) {
 
 	let notification_text =
 		"📢 Aujourd'hui, il y a eu de nouvelles publications pour les personnes que vous suivez !\n\n"
-	for (let user of peopleUpdated) {
-		notification_text += `Nouvelle publication pour *${user.prenom} ${user.nom}*\n`
-		notification_text += formatSearchResult([user.lastKnownPosition], {
+	for (let person of peopleUpdated) {
+		notification_text += `Nouvelle publication pour *${person.lastKnownPosition.prenom} ${person.lastKnownPosition.nom}*\n`
+		notification_text += formatSearchResult([person.lastKnownPosition], {
 			isListing: true,
 		})
-		if (peopleUpdated.indexOf(user) + 1 !== peopleUpdated.length)
+		if (peopleUpdated.indexOf(person) + 1 !== peopleUpdated.length)
 			notification_text += '\n'
 	}
 

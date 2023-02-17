@@ -52,7 +52,10 @@ mongoose
 				person.lastKnownPosition = jorfData.data[0]
 				await person.save()
 				total++
-				console.log(`${person.nom} ${person.prenom} was updated`)
+				console.log(
+					termColors.white,
+					`${person.nom} ${person.prenom} was updated`
+				)
 			}
 			if (total % 50 === 0) {
 				console.log(termColors.green, `${total} people were updated`)

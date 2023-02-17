@@ -18,7 +18,8 @@ const termColors = {
 
 async function getUpdatedPeople() {
 	// get todays date in DD-MM-YYYY format (separator is a dash)
-	const today = new Date().toLocaleDateString('fr-FR').split('/').join('-')
+	// const today = new Date().toLocaleDateString('fr-FR').split('/').join('-')
+	const today = '16-02-2023'
 	let updatedPeople = await axios
 		.get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
 		.then((res) => res.data)

@@ -1,0 +1,12 @@
+{
+	"cron": [
+		{
+			"command": "node ./utils/updatePeople.js",
+			"schedule": "0 8 * * *"
+		},
+		{
+			"command": "node ./utils/notifyUsers.js",
+			"schedule": "0 9 * * *"
+		}
+	]
+}
