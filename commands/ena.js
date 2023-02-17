@@ -5,6 +5,7 @@ const People = require('../models/People')
 const { startKeyboard } = require('../utils/keyboards')
 
 const ENAPromoNames = {
+	2023: '2022-2023',
 	'germaine tillion': '2021-2022',
 	'aime cesaire': '2020-2021',
 	'hannah arendt': '2019-2020',
