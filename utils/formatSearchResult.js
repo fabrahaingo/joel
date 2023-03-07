@@ -80,6 +80,10 @@ function addPoste(elem, message) {
 }
 
 function addLinkJO(elem, message) {
+    if (elem.source_name == "JORF") {
+        message += `🔗 _Lien JO_:  [cliquez ici](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`
+    }
+    return message
 	if (elem.source_id) {
 		switch (elem.source_name) {
 			case 'BOMI':

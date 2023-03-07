@@ -17,7 +17,8 @@ module.exports = bot => async msg => {
         const botChannel = process.env.BOT_CHANNEL
 
         const text = `\n\u{1F41D} ${botName} vous permet de *consulter et suivre les évolutions de postes* de vos collègues et connaissances au sein de l'administration française.
-		\nPour rester au courant des *nouveautés*, des *corrections* de bugs ainsi que des *améliorations* de JOEL, rejoignez notre channel officiel [@${botChannel}](https://t.me/${botChannel})`
+		\nPour rester au courant des *nouveautés*, des *corrections* de bugs ainsi que des *améliorations* de JOEL, rejoignez notre channel officiel [@${botChannel}](https://t.me/${botChannel})\n\n
+[Fabien](https://www.hellofabien.fr/) & [Philémon](https://www.linkedin.com/in/philemon-perrot/)`
 
         await bot.sendMessage(chatId, text, startKeyboard)
     } catch (error) {
