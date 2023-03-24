@@ -4,6 +4,9 @@ module.exports = {
 		onlyFirstMatch: true,
 		filepath: false,
 	},
+	script: {
+		polling: false,
+	},
 	mongodb: {
 		useNewUrlParser: true,
 		useUnifiedTopology: true,

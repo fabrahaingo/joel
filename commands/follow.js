@@ -1,10 +1,10 @@
-const { startKeyboard, yesNoKeyboard } = require('../utils/keyboards')
+const { startKeyboard } = require('../utils/keyboards')
 const { formatSearchResult } = require('../utils/formatSearchResult')
 const People = require('../models/People')
 const User = require('../models/User')
 const axios = require('axios')
 
-function personAleadyFollowed(person, followedPeople) {
+function isPersonAlreadyFollowed(person, followedPeople) {
 	return followedPeople.some((followedPerson) => {
 		return followedPerson.peopleId.toString() === person._id.toString()
 	})
@@ -74,7 +74,7 @@ module.exports = (bot) => async (msg) => {
 				const tgUser = msg.from
 				let user = await User.firstOrCreate(tgUser, chatId)
 				// only add to followedPeople if user is not already following this person
-				if (!personAleadyFollowed(people, user.followedPeople)) {
+				if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
 					user.followedPeople.push({
 						peopleId: people._id,
 						lastUdpate: Date.now(),

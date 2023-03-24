@@ -5,6 +5,10 @@
 			"schedule": "0 8 * * *"
 		},
 		{
+			"command": "node ./utils/updateFunctions.js",
+			"schedule": "15 8 * * *"
+		},
+		{
 			"command": "node ./utils/notifyUsers.js",
 			"schedule": "0 9 * * *"
 		}

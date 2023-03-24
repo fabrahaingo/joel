@@ -20,10 +20,10 @@ try {
 			bot.onText(/\/start$/, commands.start(bot))
 			bot.onText(/🔎 Rechercher$/, commands.search(bot))
 			bot.onText(/🧩 Ajouter un contact$/, commands.follow(bot))
-			bot.onText(/✋ Supprimer un contact$/, commands.unfollow(bot))
-			bot.onText(/🧐 Lister mes contacts$/, commands.list(bot))
-			bot.onText(/🐞 Un bug ?/, commands.bug(bot))
+			bot.onText(/✋ Retirer un suivi$/, commands.unfollow(bot))
+			bot.onText(/🧐 Lister mes suivis$/, commands.list(bot))
 			bot.onText(/❓ Aide/, commands.help(bot))
+			bot.onText(/👨‍💼 Ajouter une fonction/, commands.followFunction(bot))
 			bot.onText(/\/secret|\/ena|\/ENA/, commands.ena(bot))
 			bot.onText(/\/stats/, commands.stats(bot))
 

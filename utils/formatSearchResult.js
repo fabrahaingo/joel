@@ -110,9 +110,12 @@ function formatSearchResult(result, options) {
 		message += `Voici la liste des postes connus pour ${result[0].prenom} ${result[0].nom}:\n\n`
 	}
 	for (let elem of result) {
+		if (options?.displayName) {
+			message += `🕵️ *${elem.prenom} ${elem.nom}*\n`
+		}
 		message = addTypeOrdre(elem, message)
 		message = addPoste(elem, message)
-		message = addPublishDate(elem, message)
+		if (!options?.hidePublicationDate) message = addPublishDate(elem, message)
 		message = addLinkJO(elem, message)
 		message += '\n'
 	}
