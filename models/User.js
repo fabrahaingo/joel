@@ -29,20 +29,6 @@ const UserSchema = new Schema(
 		followedFunctions: {
 			type: [String],
 		},
-		lastNotification: {
-			date: {
-				type: Date,
-				default: Date.now,
-			},
-			messagesArray: {
-				type: Array,
-				default: [],
-			},
-			message_id: {
-				type: Number,
-				default: 0,
-			},
-		},
 	},
 	{ timestamps: true, _id: false }
 )
