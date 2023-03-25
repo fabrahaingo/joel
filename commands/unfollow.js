@@ -103,14 +103,16 @@ module.exports = (bot) => async (msg) => {
 						)})\n\n`
 					}
 				}
-				text += 'Voici les personnes que vous suivez :\n\n'
-				for (j; j < peoples.length; j++) {
-					let nomPrenom = `${peoples[j].nom} ${peoples[j].prenom}`
-					text += `${
-						j + 1 + i
-					}. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-						nomPrenom
-					)})\n\n`
+				if (peoples.length > 0) {
+					text += 'Voici les personnes que vous suivez :\n\n'
+					for (j; j < peoples.length; j++) {
+						let nomPrenom = `${peoples[j].nom} ${peoples[j].prenom}`
+						text += `${
+							j + 1 + i
+						}. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+							nomPrenom
+						)})\n\n`
+					}
 				}
 			}
 		}

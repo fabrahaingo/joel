@@ -8,6 +8,7 @@ const axios = require('axios')
 const PDFDocument = require('pdfkit')
 const fs = require('fs')
 const FormData = require('form-data')
+const { finished } = require('node:stream/promises')
 
 // only retrieve people who have been updated on same day
 async function getPeople() {
@@ -329,9 +330,9 @@ async function createPDFandSend(user, peopleFromFunctions, peopleUpdated) {
 		'caption',
 		'📢 Aujourd’hui, il y a eu de nouvelles publications au JO susceptibles de vous intéresser !'
 	)
-	formData.append('thumbnail', fs.createReadStream('./img/logo_lowres.png'))
+	let img = fs.createReadStream('./img/logo_thumbnail.jpg')
+	formData.append('thumbnail', img)
 	let pdf = fs.createReadStream(path)
-
 	formData.append('document', pdf, {
 		filename,
 		contentType: 'application/pdf',

@@ -45,7 +45,7 @@ module.exports = (bot) => async (msg) => {
 				.sort({ nom: 1 })
 				.lean()
 			let functions = sortArrayAlphabetically(user.followedFunctions)
-			if (peoples.length === 0) {
+			if (peoples.length === 0 && functions.length === 0) {
 				text = `Vous ne suivez aucun contact pour le moment. Tapez /start puis cliquez sur *🏃 Ajouter un contact* pour commencer à suivre des contacts.`
 			} else {
 				if (functions.length > 0) {
@@ -58,18 +58,20 @@ module.exports = (bot) => async (msg) => {
 						)})\n\n`
 					}
 				}
-				text += `Voici les personnes que vous suivez: \n\n`
-				for (let i = 0; i < peoples.length; i++) {
-					let nomPrenom = `${peoples[i].nom} ${peoples[i].prenom}`
-					// JORFSearch needs a search query in this specific order
-					let prenomNom = `${peoples[i].prenom} ${peoples[i].nom}`
-					text += `${
-						i + 1
-					}. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-						prenomNom
-					)})\n`
-					if (peoples[i + 1]) {
-						text += `\n`
+				if (peoples.length > 0) {
+					text += `Voici les personnes que vous suivez: \n\n`
+					for (let i = 0; i < peoples.length; i++) {
+						let nomPrenom = `${peoples[i].nom} ${peoples[i].prenom}`
+						// JORFSearch needs a search query in this specific order
+						let prenomNom = `${peoples[i].prenom} ${peoples[i].nom}`
+						text += `${
+							i + 1
+						}. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+							prenomNom
+						)})\n`
+						if (peoples[i + 1]) {
+							text += `\n`
+						}
 					}
 				}
 			}
