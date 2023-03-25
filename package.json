@@ -12,9 +12,8 @@
 		"mongodb": "^5.1.0",
 		"mongoose": "^7.0.0",
 		"node-telegram-bot-api": "^0.61.0",
-		"pdfkit": "^0.13.0"
-	},
-	"devDependencies": {
+		"pdfkit": "^0.13.0",
 		"nodemon": "^2.0.22"
-	}
+	},
+	"devDependencies": {}
 }
