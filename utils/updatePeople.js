@@ -18,8 +18,8 @@ const termColors = {
 
 async function getUpdatedPeople() {
 	// get todays date in DD-MM-YYYY format (separator is a dash)
-	// const today = new Date().toLocaleDateString('fr-FR').split('/').join('-')
-	const today = '16-02-2023'
+	const today = new Date().toLocaleDateString('fr-FR').split('/').join('-')
+	// const today = '22-03-2023'
 	let updatedPeople = await axios
 		.get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
 		.then((res) => res.data)
@@ -47,31 +47,6 @@ async function getRelevantPeopleFromDb(list) {
 	)
 }
 
-async function getJORFInfo(firstName, lastName) {
-	return await axios
-		.get(
-			`https://jorfsearch.steinertriples.ch/name/${encodeURI(
-				`${firstName} ${lastName}`
-			)}?format=JSON`
-		)
-		.then(async (res) => {
-			if (typeof res.data !== 'object') {
-				const redirectedTo = res.request.res.responseUrl
-				// if the person was not found or not well formatted, the API redirects
-				res = await axios.get(
-					redirectedTo.endsWith('?format=JSON')
-						? redirectedTo
-						: `${redirectedTo}?format=JSON`
-				)
-			}
-			return res
-		})
-		.catch((err) => {
-			console.log(`Unable to fetch JORF data for ${firstName} ${lastName}`)
-			console.log(err.message)
-		})
-}
-
 async function updatePeople(updatedUsers, relevantPeople) {
 	let total = 0
 	for await (let user of updatedUsers) {
@@ -91,6 +66,7 @@ async function updatePeople(updatedUsers, relevantPeople) {
 	return
 }
 
+mongoose.set('strictQuery', false)
 mongoose
 	.connect(env.MONGODB_URI, config.mongodb)
 	.then(async () => {

@@ -25,7 +25,10 @@ PeopleSchema.statics.firstOrCreate = async function (tgPeople) {
 		nom: tgPeople.nom,
 		prenom: tgPeople.prenom,
 	})
-	if (!people) {
+	if (people && !people.lastKnownPosition) {
+		people.lastKnownPosition = tgPeople.lastKnownPosition
+		people = await people.save()
+	} else if (!people) {
 		people = await new this({
 			nom: tgPeople.nom,
 			prenom: tgPeople.prenom,
