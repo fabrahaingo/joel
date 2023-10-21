@@ -86,16 +86,7 @@ function getInlineButtons(maxIndex, chatId, messageId, messagePart = 0) {
 	return buttons
 }
 
-async function listenForCallback(bot, chatId, mArr, buttons) {
-	// send fist part of message
-	if (!mArr[0]) mArr[0] = '...'
-	message = await bot.sendMessage(chatId, mArr[0], {
-		parse_mode: 'Markdown',
-		reply_markup: {
-			inline_keyboard: [buttons],
-		},
-	})
-
+async function listenForCallback(bot, mArr, buttons) {
 	// prevent multiple listeners
 	await bot.off('callback_query')
 
@@ -159,24 +150,25 @@ async function sendLongText(
 	}
 	let buttons = getInlineButtons(mArr.length - 1, chatId, nextMessageId)
 
-	// in case user needs to reply, we need to return the message id
-	if (expectsAnswer) {
-		await listenForCallback(bot, chatId, mArr, buttons)
-	} else {
-		if (mArr.length > 1) {
-			await listenForCallback(bot, chatId, mArr, buttons)
+	if (mArr.length > 1) {
+		// send fist part of message
+		if (!mArr[0]) mArr[0] = '...'
+		await bot.sendMessage(chatId, mArr[0], {
+			parse_mode: 'Markdown',
+			reply_markup: {
+				inline_keyboard: [buttons],
+			},
+		})
+		await listenForCallback(bot, chatId, buttons)
 
-			if (!expectsAnswer) {
-				// update the normal keyboard so that the user still has the options to select
-				await bot.sendMessage(
-					chatId,
-					"Avez vous besoin d'autre chose ?",
-					keyboard ?? startKeyboard
-				)
-			}
-		} else if (mArr.length === 1) {
-			await bot.sendMessage(chatId, mArr[0], keyboard ?? startKeyboard)
-		}
+		// update the normal keyboard so that the user still has the options to select
+		await bot.sendMessage(
+			chatId,
+			"Avez vous besoin d'autre chose ?",
+			keyboard ?? startKeyboard
+		)
+	} else if (mArr.length === 1) {
+		await bot.sendMessage(chatId, mArr[0], keyboard ?? startKeyboard)
 	}
 }
 
