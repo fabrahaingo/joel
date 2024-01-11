@@ -1,175 +1,175 @@
-const { startKeyboard, yesNoKeyboard } = require('../utils/keyboards')
-const { sendLongText } = require('../utils/handleLongText')
-const User = require('../models/User')
-const People = require('../models/People')
-const functions = require('../json/functionTags.json')
+const { startKeyboard, yesNoKeyboard } = require("../utils/keyboards");
+const { sendLongText } = require("../utils/handleLongText");
+const User = require("../models/User");
+const People = require("../models/People");
+const functions = require("../json/functionTags.json");
 
 async function isWrongAnswer(chatId, bot, answer, peoples, followedFunctions) {
-	if (
-		isNaN(answer) ||
-		answer > peoples.length + followedFunctions.length ||
-		answer < 1
-	) {
-		await bot.sendMessage(
-			chatId,
-			"La réponse donnée n'est pas sous forme de nombre. Veuillez réessayer.",
-			startKeyboard
-		)
-		return true
-	}
-	return false
+  if (
+    isNaN(answer) ||
+    answer > peoples.length + followedFunctions.length ||
+    answer < 1
+  ) {
+    await bot.sendMessage(
+      chatId,
+      "La réponse donnée n'est pas sous forme de nombre. Veuillez réessayer.",
+      startKeyboard
+    );
+    return true;
+  }
+  return false;
 }
 
 function getKeyFromValue(object, value) {
-	return Object.keys(object).find((key) => object[key] === value)
+  return Object.keys(object).find((key) => object[key] === value);
 }
 
 function sortArrayAlphabetically(array) {
-	return array.sort((a, b) => {
-		if (a.nom < b.nom) {
-			return -1
-		}
-		if (a.nom > b.nom) {
-			return 1
-		}
-		return 0
-	})
+  return array.sort((a, b) => {
+    if (a.nom < b.nom) {
+      return -1;
+    }
+    if (a.nom > b.nom) {
+      return 1;
+    }
+    return 0;
+  });
 }
 
 async function unfollowFunctionAndConfirm(
-	bot,
-	chatId,
-	user,
-	functionToUnfollow
+  bot,
+  chatId,
+  user,
+  functionToUnfollow
 ) {
-	user.followedFunctions = await user.followedFunctions.filter((elem) => {
-		return elem !== functionToUnfollow
-	})
-	await user.save()
-	await bot.sendMessage(
-		chatId,
-		`Vous ne suivez plus la fonction *${getKeyFromValue(
-			functions,
-			functionToUnfollow
-		)}* 🙅‍♂️`,
-		startKeyboard
-	)
+  user.followedFunctions = await user.followedFunctions.filter((elem) => {
+    return elem !== functionToUnfollow;
+  });
+  await user.save();
+  await bot.sendMessage(
+    chatId,
+    `Vous ne suivez plus la fonction *${getKeyFromValue(
+      functions,
+      functionToUnfollow
+    )}* 🙅‍♂️`,
+    startKeyboard
+  );
 }
 
 async function unfollowPeopleAndConfirm(bot, chatId, user, peopleToUnfollow) {
-	user.followedPeople = await user.followedPeople.filter((elem) => {
-		return !elem.peopleId.equals(peopleToUnfollow._id)
-	})
-	await user.save()
-	await bot.sendMessage(
-		chatId,
-		`Vous ne suivez plus le contact *${peopleToUnfollow.nom} ${peopleToUnfollow.prenom}* 🙅‍♂️`,
-		startKeyboard
-	)
+  user.followedPeople = await user.followedPeople.filter((elem) => {
+    return !elem.peopleId.equals(peopleToUnfollow._id);
+  });
+  await user.save();
+  await bot.sendMessage(
+    chatId,
+    `Vous ne suivez plus le contact *${peopleToUnfollow.nom} ${peopleToUnfollow.prenom}* 🙅‍♂️`,
+    startKeyboard
+  );
 }
 
 module.exports = (bot) => async (msg) => {
-	try {
-		const chatId = msg.chat.id
-		let i = 0
-		let j = 0
-		bot.sendChatAction(chatId, 'typing')
-		let text = ''
-		let user = await User.findOne({ _id: msg.from.id })
-		let peopleIds = user.followedPeople.map((p) => p.peopleId)
-		let peoples = await People.find({ _id: { $in: peopleIds } })
-			.collation({ locale: 'fr' })
-			.sort({ nom: 1 })
-		let followedFunctions = sortArrayAlphabetically(user.followedFunctions)
-		if (!user || user.length === 0) {
-			text =
-				"Une erreur s'est produite avec votre profil. Merci d'envoyer /start pour réessayer."
-		} else {
-			if (peoples.length === 0 && followedFunctions.length === 0) {
-				return bot.sendMessage(
-					chatId,
-					`Vous ne suivez aucun contact ni fonctions pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`,
-					startKeyboard
-				)
-			} else {
-				if (followedFunctions.length > 0) {
-					text += 'Voici les fonctions que vous suivez :\n\n'
-					for (i; i < followedFunctions.length; i++) {
-						let functionName = getKeyFromValue(functions, followedFunctions[i])
-						text += `${
-							i + 1
-						}. *${functionName}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
-							followedFunctions[i]
-						)})\n\n`
-					}
-				}
-				if (peoples.length > 0) {
-					text += 'Voici les personnes que vous suivez :\n\n'
-					for (j; j < peoples.length; j++) {
-						let nomPrenom = `${peoples[j].nom} ${peoples[j].prenom}`
-						text += `${
-							j + 1 + i
-						}. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-							nomPrenom
-						)})\n\n`
-					}
-				}
-			}
-		}
+  try {
+    const chatId = msg.chat.id;
+    let i = 0;
+    let j = 0;
+    bot.sendChatAction(chatId, "typing");
+    let text = "";
+    let user = await User.findOne({ _id: msg.from.id });
+    let peopleIds = user.followedPeople.map((p) => p.peopleId);
+    let peoples = await People.find({ _id: { $in: peopleIds } })
+      .collation({ locale: "fr" })
+      .sort({ nom: 1 });
+    let followedFunctions = sortArrayAlphabetically(user.followedFunctions);
+    if (!user || user.length === 0) {
+      text =
+        "Une erreur s'est produite avec votre profil. Merci d'envoyer /start pour réessayer.";
+    } else {
+      if (peoples.length === 0 && followedFunctions.length === 0) {
+        return bot.sendMessage(
+          chatId,
+          `Vous ne suivez aucun contact ni fonctions pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`,
+          startKeyboard
+        );
+      } else {
+        if (followedFunctions.length > 0) {
+          text += "Voici les fonctions que vous suivez :\n\n";
+          for (i; i < followedFunctions.length; i++) {
+            let functionName = getKeyFromValue(functions, followedFunctions[i]);
+            text += `${
+              i + 1
+            }. *${functionName}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
+              followedFunctions[i]
+            )})\n\n`;
+          }
+        }
+        if (peoples.length > 0) {
+          text += "Voici les personnes que vous suivez :\n\n";
+          for (j; j < peoples.length; j++) {
+            let nomPrenom = `${peoples[j].nom} ${peoples[j].prenom}`;
+            text += `${
+              j + 1 + i
+            }. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+              nomPrenom
+            )})\n\n`;
+          }
+        }
+      }
+    }
 
-		await sendLongText(bot, chatId, text, {
-			expectsAnswer: true,
-			maxLength: 700,
-		})
+    await sendLongText(bot, chatId, text, {
+      expectsAnswer: true,
+      maxLength: 3000,
+    });
 
-		const question = await bot.sendMessage(
-			chatId,
-			'Entrez le nombre correspondant au contact à supprimer',
-			{
-				parse_mode: 'Markdown',
-				reply_markup: {
-					force_reply: true,
-				},
-			}
-		)
+    const question = await bot.sendMessage(
+      chatId,
+      "Entrez le nombre correspondant au contact à supprimer",
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          force_reply: true,
+        },
+      }
+    );
 
-		return await bot.onReplyToMessage(
-			chatId,
-			question.message_id,
-			async (msg) => {
-				const userAnswer = parseInt(msg.text)
-				if (
-					await isWrongAnswer(
-						chatId,
-						bot,
-						userAnswer,
-						peoples,
-						followedFunctions
-					)
-				)
-					return
-				if (
-					followedFunctions.length > 0 &&
-					userAnswer <= followedFunctions.length
-				) {
-					await unfollowFunctionAndConfirm(
-						bot,
-						chatId,
-						user,
-						followedFunctions[userAnswer - 1]
-					)
-					return
-				}
-				await unfollowPeopleAndConfirm(
-					bot,
-					chatId,
-					user,
-					peoples[userAnswer - 1 - followedFunctions.length]
-				)
-				return
-			}
-		)
-	} catch (error) {
-		console.log(error)
-	}
-}
+    return await bot.onReplyToMessage(
+      chatId,
+      question.message_id,
+      async (msg) => {
+        const userAnswer = parseInt(msg.text);
+        if (
+          await isWrongAnswer(
+            chatId,
+            bot,
+            userAnswer,
+            peoples,
+            followedFunctions
+          )
+        )
+          return;
+        if (
+          followedFunctions.length > 0 &&
+          userAnswer <= followedFunctions.length
+        ) {
+          await unfollowFunctionAndConfirm(
+            bot,
+            chatId,
+            user,
+            followedFunctions[userAnswer - 1]
+          );
+          return;
+        }
+        await unfollowPeopleAndConfirm(
+          bot,
+          chatId,
+          user,
+          peoples[userAnswer - 1 - followedFunctions.length]
+        );
+        return;
+      }
+    );
+  } catch (error) {
+    console.log(error);
+  }
+};
