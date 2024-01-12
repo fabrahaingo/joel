@@ -1,5 +1,5 @@
 const { startKeyboard, yesNoKeyboard } = require("../utils/keyboards");
-const { sendLongText } = require("../utils/handleLongText");
+const { sendLongText } = require("../utils/sendLongText");
 const User = require("../models/User");
 const People = require("../models/People");
 const functions = require("../json/functionTags.json");

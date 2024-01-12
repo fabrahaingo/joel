@@ -7,7 +7,6 @@ const mongoose = require("mongoose");
 const env = process.env;
 const config = require("./config");
 const commands = require("./commands");
-// const handlers = require("./handlers")
 
 const bot = new TelegramBot(env.BOT_TOKEN, config.bot);
 
@@ -29,11 +28,6 @@ try {
 
       // in any other case
       bot.onText(/[\s\S]*/, commands.default(bot));
-
-      // Handlers
-      // bot.on("callback_query", handlers.callbackQuery(bot))
-      // bot.on("polling_error", handlers.botError)
-      // bot.on("error", handlers.botError)
 
       // Successful connection
       console.log(`\u{1F41D} ${env.BOT_NAME} started successfully`);

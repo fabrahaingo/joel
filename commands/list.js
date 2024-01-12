@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const People = require("../models/People");
-const { sendLongText } = require("../utils/handleLongText");
+const { sendLongText } = require("../utils/sendLongText");
 const functions = require("../json/functionTags.json");
 
 // return the first key matching the given value

@@ -2,7 +2,7 @@ const { startKeyboard } = require("../utils/keyboards");
 const User = require("../models/User");
 const functionsJSON = require("../json/functionTags.json");
 const functions = Object.keys(functionsJSON);
-const { sendLongText } = require("../utils/handleLongText");
+const { sendLongText } = require("../utils/sendLongText");
 
 // build message string along with its index
 function buildSuggestions() {
