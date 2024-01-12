@@ -4,6 +4,7 @@ const User = require("../models/User");
 const People = require("../models/People");
 const { startKeyboard } = require("../utils/keyboards");
 const ENAPromoNames = require("../json/promosEna.json");
+const INSPPromoNames = require("../json/promosINSP.json");
 
 function cleanInput(input) {
   input = input.trim().toLowerCase();
@@ -22,13 +23,10 @@ function cleanInput(input) {
 // https://stackoverflow.com/questions/53606337/check-if-array-contains-all-elements-of-another-array
 let checker = (arr, target) => target.every((v) => arr.includes(v));
 
-// find corresponding promo value depending on user input.
-// if not found, return false
 // user can enter either first name, last name or full name
-function findPromoName(input) {
+function findENAPromoName(input) {
   let promoNames = Object.keys(ENAPromoNames).map((name) => name.split(" "));
   input = cleanInput(input);
-  // TODO: check if multiple promo names have the same first name => eg: 'georges' is in 'georges clemenceau' and 'georges orwell'
   for (let i = 0; i < promoNames.length; i++) {
     if (checker(promoNames[i], input)) {
       return ENAPromoNames[Object.keys(ENAPromoNames)[i]];
@@ -37,12 +35,38 @@ function findPromoName(input) {
   return false;
 }
 
-async function getJORFSearchResult(year) {
-  let url = `https://jorfsearch.steinertriples.ch/tag/eleve_ena=%22${year}%22?format=JSON`;
-  const res = await axios.get(url).then((response) => {
-    return response.data;
-  });
-  return res;
+function findINSPPromoName(input) {
+  let promoNames = Object.keys(INSPPromoNames).map((name) => name.split(" "));
+  input = cleanInput(input);
+  for (let i = 0; i < promoNames.length; i++) {
+    if (checker(promoNames[i], input)) {
+      return INSPPromoNames[Object.keys(INSPPromoNames)[i]];
+    }
+  }
+  return false;
+}
+
+async function getJORFSearchResult(year, institution) {
+  if (institution === "ENA") {
+    let url = `https://jorfsearch.steinertriples.ch/tag/eleve_ena=%22${year}%22?format=JSON`;
+    const res = await axios.get(url).then((response) => {
+      return response.data;
+    });
+    return res;
+  } else {
+    const inspId = "Q109039648";
+    let url = `https://jorfsearch.steinertriples.ch/${inspId}?format=JSON`;
+    const res = await axios.get(url).then((response) => {
+      return response.data.filter((publication) => {
+        // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
+        return (
+          publication.type_ordre === "admission" &&
+          publication.date_fin.slice(0, 4) === year.slice(-4)
+        );
+      });
+    });
+    return res;
+  }
 }
 
 function capitalizeFirstLetters(string) {
@@ -82,7 +106,7 @@ function isPersonAlreadyFollowed(id, followedPeople) {
 module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
-    const text = `Entrez le nom de votre promo (ENA) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
+    const text = `Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
 ⚠️ Attention, beaucoup de personnes seront ajoutées en même temps, *les retirer peut ensuite prendre du temps* ⚠️`;
     const question = await bot.sendMessage(msg.chat.id, text, {
       parse_mode: "Markdown",
@@ -92,17 +116,32 @@ module.exports = (bot) => async (msg) => {
     });
     let JORFSearchRes;
     await bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
-      const yearString = findPromoName(msg.text);
-      let studentsList;
-      JORFSearchRes = await getJORFSearchResult(yearString);
-      const promoName = Object.keys(ENAPromoNames).find(
-        (key) => ENAPromoNames[key] === yearString
-      );
+      let institution = "";
+      let yearString = "";
+      let promoName = "";
+
+      if (findENAPromoName(msg.text)) {
+        institution = "ENA";
+        yearString = findENAPromoName(msg.text);
+        promoName = Object.keys(ENAPromoNames).find(
+          (key) => ENAPromoNames[key] === yearString
+        );
+      }
+      if (findINSPPromoName(msg.text)) {
+        institution = "INSP";
+        yearString = findINSPPromoName(msg.text);
+        promoName = Object.keys(INSPPromoNames).find(
+          (key) => INSPPromoNames[key] === yearString
+        );
+      }
+
+      JORFSearchRes = await getJORFSearchResult(yearString, institution);
+
       let text = `La promotion *${capitalizeFirstLetters(
         promoName
       )}* contient *${JORFSearchRes.length} élèves*:`;
       if (JORFSearchRes.length > 0) {
-        studentsList = await bot.sendMessage(chatId, text, {
+        await bot.sendMessage(chatId, text, {
           parse_mode: "Markdown",
         });
       } else {
@@ -124,12 +163,7 @@ module.exports = (bot) => async (msg) => {
       const contacts = JORFSearchRes.map((contact) => {
         return `${contact.nom} ${contact.prenom}`;
       });
-      await sendLongText(bot, chatId, contacts.join("\n"), {
-        expectsAnswer: true,
-        nextMessageId: studentsList.message_id + 1,
-        returnMessageId: true,
-        maxLength: 3000,
-      });
+      await sendLongText(bot, chatId, contacts.join("\n"));
       const followConfirmation = await bot.sendMessage(
         chatId,
         `Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *les retirer peut ensuite prendre du temps*`,
@@ -145,7 +179,7 @@ module.exports = (bot) => async (msg) => {
         followConfirmation.message_id,
         async (msg) => {
           if (new RegExp(/oui/i).test(msg.text)) {
-            console.log(`ENA function was used for promo ${promoName}`);
+            console.log(`ENA/INSP function was used for promo ${promoName}`);
             await bot.sendMessage(
               chatId,
               `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
