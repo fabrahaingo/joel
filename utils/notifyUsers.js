@@ -6,7 +6,9 @@ const People = require("../models/People");
 const User = require("../models/User");
 const axios = require("axios");
 const { formatSearchResult } = require("../utils/formatSearchResult");
-const { sendLongText } = require("../utils/sendLongText");
+const { splitText } = require("../utils/sendLongText");
+const { createHash } = require("node:crypto");
+const { send } = require("./umami");
 
 // only retrieve people who have been updated on same day
 async function getPeople() {
@@ -80,7 +82,9 @@ async function sendUpdate(user, peopleUpdated) {
       notification_text += "\n";
   }
 
-  const messagesArray = handleLongText(notification_text);
+  const messagesArray = splitText(notification_text, 3000);
+  console.log(notification_text);
+  console.log(messagesArray);
 
   for await (let message of messagesArray) {
     await axios.post(
@@ -89,9 +93,16 @@ async function sendUpdate(user, peopleUpdated) {
         chat_id: user.chatId,
         text: message,
         parse_mode: "markdown",
+        link_preview_options: {
+          is_disabled: true,
+        },
       }
     );
   }
+
+  await send("/notification-update", {
+    chatId: createHash("sha256").update(user.chatId.toString()).digest("hex"),
+  });
 
   console.log(`Sent notification to ${user._id}`);
 }

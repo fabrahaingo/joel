@@ -6,7 +6,7 @@ module.exports = (bot) => async (msg) => {
   try {
     // only answer to messages are not replies
     if (!msg.reply_to_message) {
-      send("/default_message", {
+      send("/default-message", {
         chatId: createHash("sha256")
           .update(msg.chat.id.toString())
           .digest("hex"),

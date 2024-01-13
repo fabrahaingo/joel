@@ -34,4 +34,4 @@ async function sendLongText(bot, chatId, formattedData) {
   }
 }
 
-module.exports = { sendLongText };
+module.exports = { sendLongText, splitText };
