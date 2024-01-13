@@ -14,7 +14,7 @@ function isPersonAlreadyFollowed(person, followedPeople) {
 
 module.exports = (bot) => async (msg) => {
   const chatId = msg.chat.id;
-  send("/follow", {
+  await send("/follow", {
     chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
   });
   try {

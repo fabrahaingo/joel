@@ -31,7 +31,7 @@ function sortArrayAlphabetically(array) {
 module.exports = (bot) => async (msg) => {
   const chatId = msg.chat.id;
 
-  send("/list", {
+  await send("/list", {
     chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
   });
 

@@ -108,7 +108,7 @@ function isPersonAlreadyFollowed(id, followedPeople) {
 module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
-    send("/ena", {
+    await send("/ena", {
       chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
     });
     const text = `Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n

@@ -35,7 +35,7 @@ async function isWrongAnswer(chatId, bot, answer) {
 
 module.exports = (bot) => async (msg) => {
   const chatId = msg.chat.id;
-  send("/follow-function", {
+  await send("/follow-function", {
     chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
   });
   try {

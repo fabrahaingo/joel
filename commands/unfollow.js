@@ -74,7 +74,7 @@ module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
 
-    send("/unfollow", {
+    await send("/unfollow", {
       chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
     });
 

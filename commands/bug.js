@@ -4,7 +4,7 @@ const { send } = require("../utils/umami");
 
 module.exports = (bot) => async (msg) => {
   const chatId = msg.chat.id;
-  send("/bug", {
+  await send("/bug", {
     chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
   });
   try {

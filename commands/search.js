@@ -9,7 +9,7 @@ module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
 
-    send("/search", {
+    await send("/search", {
       chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
     });
 
