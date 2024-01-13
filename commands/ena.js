@@ -5,6 +5,8 @@ const People = require("../models/People");
 const { startKeyboard } = require("../utils/keyboards");
 const ENAPromoNames = require("../json/promosEna.json");
 const INSPPromoNames = require("../json/promosINSP.json");
+const { createHash } = require("node:crypto");
+const { send } = require("../utils/umami");
 
 function cleanInput(input) {
   input = input.trim().toLowerCase();
@@ -106,6 +108,9 @@ function isPersonAlreadyFollowed(id, followedPeople) {
 module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
+    send("/ena", {
+      chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
+    });
     const text = `Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
 ⚠️ Attention, beaucoup de personnes seront ajoutées en même temps, *les retirer peut ensuite prendre du temps* ⚠️`;
     const question = await bot.sendMessage(msg.chat.id, text, {

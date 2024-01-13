@@ -1,9 +1,14 @@
 const Users = require("../models/User.js");
 const People = require("../models/People.js");
 const { startKeyboard } = require("../utils/keyboards");
+const { createHash } = require("node:crypto");
+const { send } = require("../utils/umami");
 
 module.exports = (bot) => async (msg) => {
   try {
+    send("/stats", {
+      chatId: createHash("sha256").update(msg.chat.id.toString()).digest("hex"),
+    });
     if (!msg.reply_to_message) {
       const usersCount = await Users.countDocuments();
       const peopleCount = await People.countDocuments();

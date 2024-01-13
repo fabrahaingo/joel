@@ -2,10 +2,17 @@ const axios = require("axios");
 const { startKeyboard } = require("../utils/keyboards");
 const { formatSearchResult } = require("../utils/formatSearchResult");
 const { sendLongText } = require("../utils/sendLongText");
+const { createHash } = require("node:crypto");
+const { send } = require("../utils/umami");
 
 module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
+
+    send("/search", {
+      chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
+    });
+
     bot.sendChatAction(chatId, "typing");
     const question = await bot.sendMessage(
       chatId,

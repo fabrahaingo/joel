@@ -2,6 +2,8 @@ const User = require("../models/User");
 const People = require("../models/People");
 const { sendLongText } = require("../utils/sendLongText");
 const functions = require("../json/functionTags.json");
+const { createHash } = require("node:crypto");
+const { send } = require("../utils/umami");
 
 // return the first key matching the given value
 function getKeyName(value) {
@@ -28,6 +30,11 @@ function sortArrayAlphabetically(array) {
 
 module.exports = (bot) => async (msg) => {
   const chatId = msg.chat.id;
+
+  send("/list", {
+    chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
+  });
+
   try {
     await bot.sendChatAction(chatId, "typing");
 

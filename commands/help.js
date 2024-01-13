@@ -1,7 +1,12 @@
 const { sendLongText } = require("../utils/sendLongText");
+const { createHash } = require("node:crypto");
+const { send } = require("../utils/umami");
 
 module.exports = (bot) => async (msg) => {
   const chatId = msg.chat.id;
+  send("/help", {
+    chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
+  });
   try {
     await bot.sendChatAction(chatId, "typing");
     const what = `JOEL est un robot Telegram sans but lucratif qui permet de suivre les nominations de vos contacts au [Journal Officiel](https://www.journal-officiel.gouv.fr/pages/accueil/) 👀\n`;

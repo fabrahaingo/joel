@@ -3,6 +3,8 @@ const User = require("../models/User");
 const functionsJSON = require("../json/functionTags.json");
 const functions = Object.keys(functionsJSON);
 const { sendLongText } = require("../utils/sendLongText");
+const { createHash } = require("node:crypto");
+const { send } = require("../utils/umami");
 
 // build message string along with its index
 function buildSuggestions() {
@@ -33,6 +35,9 @@ async function isWrongAnswer(chatId, bot, answer) {
 
 module.exports = (bot) => async (msg) => {
   const chatId = msg.chat.id;
+  send("/follow-function", {
+    chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
+  });
   try {
     await bot.sendChatAction(chatId, "typing");
     await sendLongText(

@@ -3,6 +3,8 @@ const { sendLongText } = require("../utils/sendLongText");
 const User = require("../models/User");
 const People = require("../models/People");
 const functions = require("../json/functionTags.json");
+const { createHash } = require("node:crypto");
+const { send } = require("../utils/umami");
 
 async function isWrongAnswer(chatId, bot, answer, peoples, followedFunctions) {
   if (
@@ -71,6 +73,11 @@ async function unfollowPeopleAndConfirm(bot, chatId, user, peopleToUnfollow) {
 module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
+
+    send("/unfollow", {
+      chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
+    });
+
     let i = 0;
     let j = 0;
     bot.sendChatAction(chatId, "typing");
