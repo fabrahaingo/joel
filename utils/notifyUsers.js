@@ -4,82 +4,21 @@ const env = process.env;
 const config = require("../config");
 const People = require("../models/People");
 const User = require("../models/User");
+const Blocked = require("../models/Blocked");
 const axios = require("axios");
 const { formatSearchResult } = require("../utils/formatSearchResult");
 const { splitText } = require("../utils/sendLongText");
 const { createHash } = require("node:crypto");
 const { send } = require("./umami");
 
-function addTypeOrdre(elem) {
-  const female = elem.sexe == "F";
-  switch (elem.type_ordre) {
-    case "nomination":
-      return `A été nommé${female ? "e" : ""} à:`;
-    case "réintégration":
-      return `A été réintégré${female ? "e" : ""} à:`;
-    case "cessation de fonction":
-      return `A cessé ses fonctions à:`;
-    case "affectation":
-      return `A été affecté${female ? "e" : ""} à:`;
-    case "délégation de signature":
-      return `A reçu une délégation de signature à:`;
-    case "promotion":
-      return `A été promu${female ? "e" : ""}:`;
-    case "admission":
-      return `A été admis${female ? "e" : ""} à:`;
-    case "inscription":
-      return `A été inscrit${female ? "e" : ""} à:`;
-    case "désignation":
-      return `A été désigné${female ? "e" : ""} à:`;
-    case "détachement":
-      return `A été détaché${female ? "e" : ""} à:`;
-    case "radiation":
-      return `A été radié${female ? "e" : ""} à:`;
-    case "renouvellement":
-      return `A été renouvelé${female ? "e" : ""} à:`;
-    case "reconduction":
-      return `A été reconduit${female ? "e" : ""} à:`;
-    case "élection":
-      return `A été élu${female ? "e" : ""} à:`;
-    case "admissibilite":
-      return `A été admissible à:\n`;
-    default:
-      return `A été ${elem.type_ordre} à:`;
+async function filterOutBlockedUsers(users) {
+  const blockedUsers = await Blocked.find({}, { chatId: 1 });
+  for (let blockedUser of blockedUsers) {
+    users = users.filter(
+      (user) => user.chatId.toString() !== blockedUser.chatId.toString()
+    );
   }
-}
-
-function addPoste(elem) {
-  let message = "";
-  if (elem.organisations && elem.organisations[0]?.nom) {
-    return elem.organisations[0].nom;
-  } else if (elem.ministre) {
-    return elem.ministre;
-  } else if (elem.inspecteur_general) {
-    return `Inspecteur général des ${elem.inspecteur_general}`;
-  } else if (elem.grade) {
-    message += `au grade de ${elem.grade}`;
-    if (elem.ordre_merite) {
-      message += ` de l'Ordre national du mérite`;
-    } else if (elem.legion_honneur) {
-      message += ` de la Légion d'honneur`;
-    }
-    return (message += `${elem.nomme_par ? ` par le ${elem.nomme_par}` : ""}`);
-  } else if (elem.autorite_delegation) {
-    return `par le ${elem.autorite_delegation}`;
-  }
-  return message;
-}
-
-function addLinkJO(elem) {
-  if (elem.source_id) {
-    switch (elem.source_name) {
-      case "BOMI":
-        return `https://bodata.steinertriples.ch/${elem.source_id}.pdf`;
-      default:
-        return `https://www.legifrance.gouv.fr/jorf/id/${elem.source_id}`;
-    }
-  }
-  return "https://www.legifrance.gouv.fr/";
+  return users;
 }
 
 // only retrieve people who have been updated on same day
@@ -125,7 +64,9 @@ async function getUsers(updatedPeople) {
       ],
     },
     { _id: 1, followedPeople: 1, followedFunctions: 1, chatId: 1 }
-  );
+  ).then(async (res) => {
+    return await filterOutBlockedUsers(res);
+  });
 
   for (let user of users) {
     let followed = [];
@@ -215,18 +156,39 @@ async function sendUpdate(user, peopleUpdated) {
 
     const messagesArray = splitText(notification_text, 3000);
 
+    let blocked = false;
     for await (let message of messagesArray) {
-      await axios.post(
-        `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
-        {
-          chat_id: user.chatId,
-          text: message,
-          parse_mode: "markdown",
-          link_preview_options: {
-            is_disabled: true,
-          },
-        }
-      );
+      if (blocked) return;
+      await axios
+        .post(
+          `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
+          {
+            chat_id: user.chatId,
+            text: message,
+            parse_mode: "markdown",
+            link_preview_options: {
+              is_disabled: true,
+            },
+          }
+        )
+        .catch(async (err) => {
+          if (
+            err.response.data.description ===
+            "Forbidden: bot was blocked by the user"
+          ) {
+            await send("/user-blocked-joel", {
+              chatId: createHash("sha256")
+                .update(user.chatId.toString())
+                .digest("hex"),
+            });
+            await new Blocked({
+              chatId: user.chatId,
+            }).save();
+            blocked = true;
+            return;
+          }
+          console.log(err.message);
+        });
     }
 
     await send("/notification-update", {
