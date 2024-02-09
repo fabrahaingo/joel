@@ -87,7 +87,7 @@ async function updateTags(tagsToUpdate) {
         total++;
         await send("/person-added", {
           name: createHash("sha256")
-            .update(`${person.nom} ${person.prenom}`)
+            .update(`${newPerson.nom} ${newPerson.prenom}`)
             .digest("hex"),
         });
       }

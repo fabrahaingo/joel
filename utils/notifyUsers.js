@@ -14,6 +14,7 @@ const { send } = require("./umami");
 async function getPeople() {
   // get date in format YYYY-MM-DD
   const currentDate = new Date().toISOString().split("T")[0];
+  // const currentDate = "2024-02-09";
   const people = await People.find(
     {
       updatedAt: {
@@ -83,8 +84,7 @@ async function sendUpdate(user, peopleUpdated) {
   }
 
   const messagesArray = splitText(notification_text, 3000);
-  console.log(notification_text);
-  console.log(messagesArray);
+  console.log(`User ${user.chatId} has received a notification`, messagesArray);
 
   for await (let message of messagesArray) {
     await axios.post(
@@ -113,8 +113,6 @@ async function populatePeople(user, peoples) {
     const person = peoples.find(
       (person) => person._id.toString() === followedPerson.peopleId.toString()
     );
-    // format YYYY-MM-DD
-    const today = new Date().toISOString().split("T")[0];
     if (person) {
       peopleUpdated.push(person);
     }
@@ -123,11 +121,9 @@ async function populatePeople(user, peoples) {
 }
 
 async function updateUser(user, peoples) {
-  // get array of ids from peoples
   const peoplesIdArray = returnIdsArray(peoples).map((id) => id.toString());
-  // get user from db
   const userFromDb = await User.findById(user._id);
-  // update followedPeople
+
   for (let followedPerson of userFromDb.followedPeople) {
     if (peoplesIdArray.includes(followedPerson.peopleId.toString())) {
       followedPerson.lastUpdate = new Date();
@@ -188,4 +184,5 @@ mongoose
   })
   .catch((err) => {
     console.log(err);
+    process.exit(1);
   });
