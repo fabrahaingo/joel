@@ -10,6 +10,78 @@ const { splitText } = require("../utils/sendLongText");
 const { createHash } = require("node:crypto");
 const { send } = require("./umami");
 
+function addTypeOrdre(elem) {
+  const female = elem.sexe == "F";
+  switch (elem.type_ordre) {
+    case "nomination":
+      return `A été nommé${female ? "e" : ""} à:`;
+    case "réintégration":
+      return `A été réintégré${female ? "e" : ""} à:`;
+    case "cessation de fonction":
+      return `A cessé ses fonctions à:`;
+    case "affectation":
+      return `A été affecté${female ? "e" : ""} à:`;
+    case "délégation de signature":
+      return `A reçu une délégation de signature à:`;
+    case "promotion":
+      return `A été promu${female ? "e" : ""}:`;
+    case "admission":
+      return `A été admis${female ? "e" : ""} à:`;
+    case "inscription":
+      return `A été inscrit${female ? "e" : ""} à:`;
+    case "désignation":
+      return `A été désigné${female ? "e" : ""} à:`;
+    case "détachement":
+      return `A été détaché${female ? "e" : ""} à:`;
+    case "radiation":
+      return `A été radié${female ? "e" : ""} à:`;
+    case "renouvellement":
+      return `A été renouvelé${female ? "e" : ""} à:`;
+    case "reconduction":
+      return `A été reconduit${female ? "e" : ""} à:`;
+    case "élection":
+      return `A été élu${female ? "e" : ""} à:`;
+    case "admissibilite":
+      return `A été admissible à:\n`;
+    default:
+      return `A été ${elem.type_ordre} à:`;
+  }
+}
+
+function addPoste(elem) {
+  let message = "";
+  if (elem.organisations && elem.organisations[0]?.nom) {
+    return elem.organisations[0].nom;
+  } else if (elem.ministre) {
+    return elem.ministre;
+  } else if (elem.inspecteur_general) {
+    return `Inspecteur général des ${elem.inspecteur_general}`;
+  } else if (elem.grade) {
+    message += `au grade de ${elem.grade}`;
+    if (elem.ordre_merite) {
+      message += ` de l'Ordre national du mérite`;
+    } else if (elem.legion_honneur) {
+      message += ` de la Légion d'honneur`;
+    }
+    return (message += `${elem.nomme_par ? ` par le ${elem.nomme_par}` : ""}`);
+  } else if (elem.autorite_delegation) {
+    return `par le ${elem.autorite_delegation}`;
+  }
+  return message;
+}
+
+function addLinkJO(elem) {
+  if (elem.source_id) {
+    switch (elem.source_name) {
+      case "BOMI":
+        return `https://bodata.steinertriples.ch/${elem.source_id}.pdf`;
+      default:
+        return `https://www.legifrance.gouv.fr/jorf/id/${elem.source_id}`;
+    }
+  }
+  return "https://www.legifrance.gouv.fr/";
+}
+
 // only retrieve people who have been updated on same day
 async function getPeople() {
   // get date in format YYYY-MM-DD
@@ -35,15 +107,24 @@ async function getUsers(updatedPeople) {
   const currentDate = new Date().toISOString().split("T")[0];
   const users = await User.find(
     {
-      "followedPeople.peopleId": {
-        $in: updatedPeople,
-      },
+      $or: [
+        {
+          followedPeople: {
+            $elemMatch: {
+              peopleId: {
+                $in: peopleIdStringArray,
+              },
+            },
+          },
+        },
+        {
+          followedFunctions: {
+            $ne: [],
+          },
+        },
+      ],
     },
-    {
-      _id: 1,
-      chatId: 1,
-      followedPeople: 1,
-    }
+    { _id: 1, followedPeople: 1, followedFunctions: 1, chatId: 1 }
   );
 
   for (let user of users) {
@@ -72,39 +153,92 @@ async function sendUpdate(user, peopleUpdated) {
     return;
   }
 
-  let notification_text =
-    "📢 Aujourd'hui, il y a eu de nouvelles publications pour les personnes que vous suivez !\n\n";
-  for (let person of peopleUpdated) {
-    notification_text += `Nouvelle publication pour *${person.lastKnownPosition.prenom} ${person.lastKnownPosition.nom}*\n`;
-    notification_text += formatSearchResult([person.lastKnownPosition], {
-      isListing: true,
-    });
-    if (peopleUpdated.indexOf(person) + 1 !== peopleUpdated.length)
-      notification_text += "\n";
-  }
-
-  const messagesArray = splitText(notification_text, 3000);
-  console.log(`User ${user.chatId} has received a notification`, messagesArray);
-
-  for await (let message of messagesArray) {
-    await axios.post(
-      `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
-      {
-        chat_id: user.chatId,
-        text: message,
-        parse_mode: "markdown",
-        link_preview_options: {
-          is_disabled: true,
+  // use mongoose to retrive all people that the user follows using a tag
+  // tags are stored in the user.followedFunctions array
+  // we know a person belongs to a tag if the tag is a key in the person lastKnownPosition object which equals to the string "true"
+  const tagsList = user.followedFunctions;
+  let peopleFromFunctions = {};
+  if (tagsList) {
+    for (let tag of tagsList) {
+      // get all people that have a lastKnownPosition object with a key that equals to the tag
+      // and that have been updated today
+      let listOfPeopleFromTag = await People.find(
+        {
+          [`lastKnownPosition.${tag}`]: {
+            $exists: true,
+          },
+          updatedAt: {
+            $gte: new Date(new Date().toISOString().split("T")[0]),
+          },
         },
+        { _id: 1, lastKnownPosition: 1, updatedAt: 1 }
+      );
+      if (listOfPeopleFromTag.length > 0) {
+        peopleFromFunctions[tag] = listOfPeopleFromTag;
       }
-    );
+    }
   }
 
-  await send("/notification-update", {
-    chatId: createHash("sha256").update(user.chatId.toString()).digest("hex"),
-  });
+  if (Object.keys(peopleFromFunctions).length > 0 || peopleUpdated.length > 0) {
+    let notification_text =
+      "📢 Aujourd'hui, il y a eu de nouvelles publications pour les personnes que vous suivez !\n\n";
 
-  console.log(`Sent notification to ${user._id}`);
+    for (let person of peopleUpdated) {
+      notification_text += `Nouvelle publication pour *${person.lastKnownPosition.prenom} ${person.lastKnownPosition.nom}*\n`;
+      notification_text += formatSearchResult([person.lastKnownPosition], {
+        isListing: true,
+      });
+      if (peopleUpdated.indexOf(person) + 1 !== peopleUpdated.length)
+        notification_text += "\n";
+    }
+
+    for (let tag in peopleFromFunctions) {
+      notification_text += "====================\n\n";
+      notification_text += `Nouvelle publication pour les personnes suivies avec le tag *${tag}*:\n\n`;
+      for (let person of peopleFromFunctions[tag]) {
+        notification_text += `*${person.lastKnownPosition.prenom} ${person.lastKnownPosition.nom}*\n`;
+        notification_text += formatSearchResult([person.lastKnownPosition], {
+          isListing: true,
+        });
+        if (
+          peopleFromFunctions[tag].indexOf(person) + 1 ===
+          peopleFromFunctions[tag].length
+        )
+          notification_text += "\n";
+      }
+      if (
+        Object.keys(peopleFromFunctions).indexOf(tag) + 1 !==
+        Object.keys(peopleFromFunctions).length
+      )
+        notification_text += "\n";
+    }
+
+    const messagesArray = splitText(notification_text, 3000);
+    console.log(
+      `User ${user.chatId} has received a notification`,
+      messagesArray
+    );
+
+    for await (let message of messagesArray) {
+      await axios.post(
+        `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
+        {
+          chat_id: user.chatId,
+          text: message,
+          parse_mode: "markdown",
+          link_preview_options: {
+            is_disabled: true,
+          },
+        }
+      );
+    }
+
+    await send("/notification-update", {
+      chatId: createHash("sha256").update(user.chatId.toString()).digest("hex"),
+    });
+
+    console.log(`Sent notification to ${user._id}`);
+  }
 }
 
 async function populatePeople(user, peoples) {
@@ -145,7 +279,7 @@ async function notifyUsers(users, peoples) {
   for await (let user of users) {
     // create an array of people who have been updated
     let peopleUpdated = await populatePeople(user, peoples);
-    if (peopleUpdated.length) {
+    if (peopleUpdated.length || user.followedFunctions.length) {
       // remove duplicates from peopleUpdated array
       peopleUpdated = peopleUpdated.filter(
         (person, index, self) =>
@@ -170,6 +304,7 @@ function returnIdsArray(arr) {
   return res;
 }
 
+mongoose.set("strictQuery", false);
 mongoose
   .connect(env.MONGODB_URI, config.mongodb)
   .then(async () => {
