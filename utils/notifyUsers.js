@@ -86,7 +86,7 @@ function addLinkJO(elem) {
 async function getPeople() {
   // get date in format YYYY-MM-DD
   const currentDate = new Date().toISOString().split("T")[0];
-  // const currentDate = "2024-02-09";
+  // const currentDate = "2024-02-08";
   const people = await People.find(
     {
       updatedAt: {
@@ -214,10 +214,6 @@ async function sendUpdate(user, peopleUpdated) {
     }
 
     const messagesArray = splitText(notification_text, 3000);
-    console.log(
-      `User ${user.chatId} has received a notification`,
-      messagesArray
-    );
 
     for await (let message of messagesArray) {
       await axios.post(

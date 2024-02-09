@@ -1,6 +1,10 @@
 const axios = require("axios");
 
 const send = async (name, data) => {
+  if (process.env.UMAMI_ID === "test") {
+    return;
+  }
+
   const payload = {
     payload: {
       hostname: process.env.UMAMI_HOST,

@@ -21,7 +21,7 @@ const termColors = {
 
 async function getPeopleToAddOrUpdate() {
   const today = new Date().toLocaleDateString("fr-FR").split("/").join("-");
-  // const today = '22-03-2023'
+  // const today = "08-02-2024";
   let dailyUpdates = await axios
     .get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
     .then((res) => res.data);
