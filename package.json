@@ -3,8 +3,8 @@
     "start": "nodemon app.ts"
   },
   "engines": {
-    "node": "19.x",
-    "npm": "9.x"
+    "node": "^20.11.1",
+    "npm": "^10.4.0"
   },
   "dependencies": {
     "axios": "^1.6.7",
@@ -18,7 +18,9 @@
     "mongoose": "^8.1.2",
     "node-telegram-bot-api": "^0.64.0",
     "nodemon": "^3.0.3",
-    "pdfkit": "^0.14.0"
+    "pdfkit": "^0.14.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "devDependencies": {
     "@types/node-telegram-bot-api": "^0.64.2"
