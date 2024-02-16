@@ -3,26 +3,22 @@
     "start": "nodemon app.ts"
   },
   "engines": {
-    "node": "^20.11.1",
-    "npm": "^10.4.0"
+    "node": "20.3.1",
+    "npm": "9.6.7"
   },
   "dependencies": {
-    "axios": "^1.6.7",
-    "bluebird": "^3.7.2",
-    "crypto": "^1.0.1",
-    "dotenv": "^16.4.4",
-    "express": "^4.18.2",
-    "form-data": "^4.0.0",
-    "got": "^14.2.0",
-    "mongodb": "^6.3.0",
-    "mongoose": "^8.1.2",
-    "node-telegram-bot-api": "^0.64.0",
-    "nodemon": "^3.0.3",
-    "pdfkit": "^0.14.0",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "axios": "1.6.7",
+    "crypto": "1.0.1",
+    "dotenv": "16.4.4",
+    "express": "4.18.2",
+    "mongodb": "6.3.0",
+    "mongoose": "8.1.2",
+    "node-telegram-bot-api": "0.64.0",
+    "nodemon": "3.0.3",
+    "ts-node": "10.9.2",
+    "typescript": "5.3.3"
   },
   "devDependencies": {
-    "@types/node-telegram-bot-api": "^0.64.2"
+    "@types/node-telegram-bot-api": "0.64.2"
   }
 }
