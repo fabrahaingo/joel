@@ -3,8 +3,8 @@
     "start": "nodemon app.ts"
   },
   "engines": {
-    "node": "20.x",
-    "npm": "10.x"
+    "node": "19.x",
+    "npm": "9.x"
   },
   "dependencies": {
     "axios": "^1.6.7",
