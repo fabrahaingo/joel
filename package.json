@@ -2,6 +2,10 @@
   "scripts": {
     "start": "nodemon app.ts"
   },
+  "engines": {
+    "node": "20.x",
+    "npm": "10.x"
+  },
   "dependencies": {
     "axios": "^1.6.7",
     "bluebird": "^3.7.2",
