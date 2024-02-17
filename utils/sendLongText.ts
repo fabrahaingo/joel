@@ -1,7 +1,8 @@
+import { Keyboard } from "../types";
 import { startKeyboard } from "./keyboards";
 
-function splitText(text, max) {
-  const chunks = [];
+function splitText(text: string, max: number): string[] {
+  const chunks: string[] = [];
   let startIndex = 0;
 
   while (startIndex < text.length) {
@@ -26,8 +27,12 @@ function splitText(text, max) {
   return chunks;
 }
 
-async function sendLongText(bot, chatId, formattedData) {
-  const mArr = splitText(formattedData, 3000);
+async function sendLongText(
+  bot: { sendMessage: (arg0: any, arg1: string, arg2: Keyboard) => any },
+  chatId: any,
+  formattedData: any
+) {
+  const mArr: string[] = splitText(formattedData, 3000);
 
   for (let i = 0; i < mArr.length; i++) {
     await bot.sendMessage(chatId, mArr[i], startKeyboard);
