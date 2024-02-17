@@ -1,7 +1,6 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const env = process.env;
-const config = require("../config");
 const People = require("../models/People");
 const axios = require("axios");
 const { createHash } = require("node:crypto");
