@@ -1,7 +1,6 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const env = process.env;
-const config = require("../config");
 const People = require("../models/People");
 const axios = require("axios");
 const functions = require("../json/functionTags.json");
@@ -97,9 +96,8 @@ async function updateTags(tagsToUpdate) {
   return;
 }
 
-mongoose.set("strictQuery", false);
 mongoose
-  .connect(env.MONGODB_URI, config.mongodb)
+  .connect(env.MONGODB_URI)
   .then(async () => {
     const dailyUpdates = await getPeopleToAddOrUpdate();
     const tagsToUpdate = await extractRelevantTags(dailyUpdates);

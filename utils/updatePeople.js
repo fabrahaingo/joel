@@ -71,9 +71,8 @@ async function updatePeople(updatedUsers, relevantPeople) {
   return;
 }
 
-mongoose.set("strictQuery", false);
 mongoose
-  .connect(env.MONGODB_URI, config.mongodb)
+  .connect(env.MONGODB_URI)
   .then(async () => {
     const updatedPeople = await getUpdatedPeople();
     const relevantPeople = await getRelevantPeopleFromDb(updatedPeople);

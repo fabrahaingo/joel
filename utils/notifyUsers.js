@@ -1,7 +1,6 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const env = process.env;
-const config = require("../config");
 const People = require("../models/People");
 const User = require("../models/User");
 const Blocked = require("../models/Blocked");
@@ -262,9 +261,8 @@ function returnIdsArray(arr) {
   return res;
 }
 
-mongoose.set("strictQuery", false);
 mongoose
-  .connect(env.MONGODB_URI, config.mongodb)
+  .connect(env.MONGODB_URI)
   .then(async () => {
     // 1. get all people who have been updated today
     const peoples = await getPeople();
