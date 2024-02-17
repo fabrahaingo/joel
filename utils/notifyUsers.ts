@@ -1,16 +1,29 @@
+import { ChatId } from "node-telegram-bot-api";
 require("dotenv").config();
 const mongoose = require("mongoose");
-const env = process.env;
 const People = require("../models/People");
 const User = require("../models/User");
 const Blocked = require("../models/Blocked");
-const axios = require("axios");
-const { formatSearchResult } = require("../utils/formatSearchResult");
-const { splitText } = require("../utils/sendLongText").default;
-const { createHash } = require("node:crypto");
+import axios from "axios";
+const { formatSearchResult } = require("./formatSearchResult");
+import { splitText } from "./sendLongText";
+import { Types } from "mongoose";
+const { createHash } = require("crypto");
 const { send } = require("./umami");
+const { ChatId } = require("node-telegram-bot-api");
 
-async function filterOutBlockedUsers(users) {
+type IUser = {
+  chatId: number;
+  _id: number;
+  followedPeople: {
+    peopleId: string;
+    lastUpdate: Date;
+  }[];
+  followedFunctions: string[];
+  save: () => any;
+};
+
+async function filterOutBlockedUsers(users: any[]): Promise<IUser[]> {
   const blockedUsers = await Blocked.find({}, { chatId: 1 });
   for (let blockedUser of blockedUsers) {
     users = users.filter(
@@ -38,12 +51,12 @@ async function getPeople() {
 
 // the argument is a list of _id of people who have been updated
 // retrieve all users who follow at least one of these people
-async function getUsers(updatedPeople) {
-  const peopleIdStringArray = returnIdsArray(updatedPeople).map((id) =>
+async function getUsers(updatedPeople: string[]) {
+  const peopleIdStringArray = returnIdsArray(updatedPeople).map((id: any) =>
     id.toString()
   );
   const currentDate = new Date().toISOString().split("T")[0];
-  const users = await User.find(
+  const users: IUser[] = await User.find(
     {
       $or: [
         {
@@ -63,12 +76,15 @@ async function getUsers(updatedPeople) {
       ],
     },
     { _id: 1, followedPeople: 1, followedFunctions: 1, chatId: 1 }
-  ).then(async (res) => {
+  ).then(async (res: any[]) => {
     return await filterOutBlockedUsers(res);
   });
 
   for (let user of users) {
-    let followed = [];
+    let followed: {
+      peopleId: string;
+      lastUpdate: Date;
+    }[] = [];
     for (let followedPerson of user.followedPeople) {
       const idUpdated = peopleIdStringArray.includes(
         followedPerson.peopleId.toString()
@@ -85,7 +101,7 @@ async function getUsers(updatedPeople) {
   return users;
 }
 
-async function sendUpdate(user, peopleUpdated) {
+async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
   if (!user.chatId) {
     console.log(
       `Can't send notifications to ${user._id}. Must run /start again to update his chatId.`
@@ -97,7 +113,11 @@ async function sendUpdate(user, peopleUpdated) {
   // tags are stored in the user.followedFunctions array
   // we know a person belongs to a tag if the tag is a key in the person lastKnownPosition object which equals to the string "true"
   const tagsList = user.followedFunctions;
-  let peopleFromFunctions = {};
+  let peopleFromFunctions:
+    | {
+        [x: string]: any;
+      }
+    | any = {};
   if (tagsList) {
     for (let tag of tagsList) {
       // get all people that have a lastKnownPosition object with a key that equals to the tag
@@ -198,8 +218,14 @@ async function sendUpdate(user, peopleUpdated) {
   }
 }
 
-async function populatePeople(user, peoples) {
-  const peopleUpdated = [];
+async function populatePeople(user: IUser, peoples: any[]) {
+  const peopleUpdated: {
+    _id: any;
+    lastKnownPosition: {
+      prenom: string;
+      nom: string;
+    };
+  }[] = [];
   for await (let followedPerson of user.followedPeople) {
     const person = peoples.find(
       (person) => person._id.toString() === followedPerson.peopleId.toString()
@@ -211,9 +237,19 @@ async function populatePeople(user, peoples) {
   return peopleUpdated;
 }
 
-async function updateUser(user, peoples) {
-  const peoplesIdArray = returnIdsArray(peoples).map((id) => id.toString());
-  const userFromDb = await User.findById(user._id);
+async function updateUser(
+  user: IUser,
+  peoples: {
+    _id: Types.ObjectId;
+    nom: string;
+    prenom: string;
+    lastKnownPosition: any[];
+  }[]
+) {
+  const peoplesIdArray: string[] = returnIdsArray(peoples).map((id) =>
+    (id as ChatId).toString()
+  );
+  const userFromDb: IUser = (await User.findById(user._id)) as IUser;
 
   for (let followedPerson of userFromDb.followedPeople) {
     if (peoplesIdArray.includes(followedPerson.peopleId.toString())) {
@@ -222,7 +258,11 @@ async function updateUser(user, peoples) {
   }
   // remove duplicated in followedPeople array that have same peopleId (can happen if user has followed a person twice)
   userFromDb.followedPeople = userFromDb.followedPeople.filter(
-    (followedPerson, index, self) =>
+    (
+      followedPerson: { peopleId: { toString: () => any } },
+      index: any,
+      self: any[]
+    ) =>
       index ===
       self.findIndex(
         (t) => t.peopleId.toString() === followedPerson.peopleId.toString()
@@ -232,7 +272,15 @@ async function updateUser(user, peoples) {
   await userFromDb.save();
 }
 
-async function notifyUsers(users, peoples) {
+async function notifyUsers(
+  users: IUser[],
+  peoples: {
+    _id: Types.ObjectId;
+    nom: string;
+    prenom: string;
+    lastKnownPosition: any;
+  }[]
+) {
   for await (let user of users) {
     // create an array of people who have been updated
     let peopleUpdated = await populatePeople(user, peoples);
@@ -253,8 +301,14 @@ async function notifyUsers(users, peoples) {
   }
 }
 
-function returnIdsArray(arr) {
-  let res = [];
+function returnIdsArray(
+  arr:
+    | {
+        _id: any;
+      }[]
+    | any[]
+) {
+  let res: string[] = [];
   for (let item of arr) {
     res.push(item._id);
   }
@@ -262,7 +316,7 @@ function returnIdsArray(arr) {
 }
 
 mongoose
-  .connect(env.MONGODB_URI)
+  .connect(process.env.MONGODB_URI || "")
   .then(async () => {
     // 1. get all people who have been updated today
     const peoples = await getPeople();
@@ -273,7 +327,7 @@ mongoose
     await notifyUsers(users, peoples);
     process.exit(0);
   })
-  .catch((err) => {
+  .catch((err: any) => {
     console.log(err);
     process.exit(1);
   });
