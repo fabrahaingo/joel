@@ -57,16 +57,11 @@ async function updatePeople(updatedUsers, relevantPeople) {
             .digest("hex"),
         });
         await person.save();
-        console.log(
-          termColors.white,
-          `${person.nom} ${person.prenom} was updated`
-        );
 
         total++;
       }
     }
   }
-  console.log(termColors.green, `${total} people were updated`);
   return;
 }
 

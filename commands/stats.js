@@ -1,5 +1,5 @@
-const Users = require("../models/User.js");
-const People = require("../models/People.js");
+const Users = require("../models/User");
+const People = require("../models/People").default;
 const { startKeyboard } = require("../utils/keyboards");
 const { createHash } = require("node:crypto");
 const { send } = require("../utils/umami");

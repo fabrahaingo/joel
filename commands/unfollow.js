@@ -1,8 +1,7 @@
-const { startKeyboard, yesNoKeyboard } = require("../utils/keyboards");
+const { startKeyboard } = require("../utils/keyboards");
 const { sendLongText } = require("../utils/sendLongText");
-const User = require("../models/User");
-const People = require("../models/People");
-const functions = require("../json/functionTags.json");
+const User = require("../models/User").default;
+const People = require("../models/People").default;
 const { createHash } = require("node:crypto");
 const { send } = require("../utils/umami");
 
@@ -14,7 +13,7 @@ async function isWrongAnswer(chatId, bot, answer, peoples, followedFunctions) {
   ) {
     await bot.sendMessage(
       chatId,
-      "La réponse donnée n'est pas sous forme de nombre. Veuillez réessayer.",
+      "La réponse donnée n'est pas sous forme de nombre.",
       startKeyboard
     );
     return true;
@@ -82,7 +81,7 @@ module.exports = (bot) => async (msg) => {
     let j = 0;
     bot.sendChatAction(chatId, "typing");
     let text = "";
-    let user = await User.findOne({ _id: msg.from.id });
+    let user = await User.firstOrCreate({ tgUser: msg.from, chatId });
     let peopleIds = user.followedPeople.map((p) => p.peopleId);
     let peoples = await People.find({ _id: { $in: peopleIds } })
       .collation({ locale: "fr" })
@@ -95,7 +94,7 @@ module.exports = (bot) => async (msg) => {
       if (peoples.length === 0 && followedFunctions.length === 0) {
         return bot.sendMessage(
           chatId,
-          `Vous ne suivez aucun contact ni fonctions pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`,
+          `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`,
           startKeyboard
         );
       } else {
@@ -132,12 +131,7 @@ module.exports = (bot) => async (msg) => {
     const question = await bot.sendMessage(
       chatId,
       "Entrez le nombre correspondant au contact à supprimer",
-      {
-        parse_mode: "Markdown",
-        reply_markup: {
-          force_reply: true,
-        },
-      }
+      startKeyboard
     );
 
     return await bot.onReplyToMessage(

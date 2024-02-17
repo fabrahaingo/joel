@@ -1,0 +1,107 @@
+import { startKeyboard } from "../utils/keyboards";
+import User from "../models/User";
+import { sendLongText } from "../utils/sendLongText";
+import { createHash } from "node:crypto";
+import umami from "../utils/umami";
+import { FunctionTags, IUser } from "../types";
+import TelegramBot, {
+  ChatId,
+  Message,
+  SendMessageOptions,
+} from "node-telegram-bot-api";
+
+// build message string along with its index
+function buildSuggestions() {
+  let suggestion = "";
+  for (let key in FunctionTags) {
+    suggestion += `${
+      // number in the array of keys
+      Object.keys(FunctionTags).indexOf(key) + 1
+    }. *${key}*\n\n`;
+  }
+  return suggestion;
+}
+
+function isTagAlreadyFollowed(user: IUser, functionToFollow: string) {
+  return user.followedFunctions.some((elem) => {
+    return elem === functionToFollow;
+  });
+}
+
+async function isWrongAnswer(
+  chatId: ChatId,
+  bot: {
+    sendMessage: (
+      arg0: ChatId,
+      arg1: string,
+      arg2: SendMessageOptions
+    ) => Promise<Message>;
+  },
+  answer: string | undefined
+) {
+  if (
+    isNaN(Number(answer)) ||
+    Number(answer) > Object.keys(FunctionTags).length ||
+    Number(answer) < 1
+  ) {
+    await bot.sendMessage(
+      chatId,
+      "La réponse donnée n'est pas au format numérique. Veuillez réessayer.",
+      startKeyboard
+    );
+    return true;
+  }
+  return false;
+}
+
+module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
+  const chatId = msg.chat.id;
+  await umami.log({ event: "/follow-function" });
+  try {
+    await bot.sendChatAction(chatId, "typing");
+    await sendLongText(
+      bot,
+      chatId,
+      `Voici la liste des fonctions que vous pouvez suivre:\n\n${buildSuggestions()}`
+    );
+    const question = await bot.sendMessage(
+      chatId,
+      "Entrez le numéro de la fonction que vous souhaitez suivre:",
+      {
+        reply_markup: {
+          force_reply: true,
+        },
+      }
+    );
+    bot.onReplyToMessage(
+      chatId,
+      question.message_id,
+      async (msg: TelegramBot.Message) => {
+        if (await isWrongAnswer(chatId, bot, msg.text)) return;
+        if (msg.text === undefined) return;
+
+        let answer = parseInt(msg.text);
+        const functionToFollow = Object.values(FunctionTags)[answer - 1];
+        const functionTag = Object.keys(FunctionTags)[
+          answer - 1
+        ] as keyof typeof FunctionTags;
+        const tgUser = msg.from;
+        let user = await User.firstOrCreate({ tgUser, chatId });
+
+        if (!isTagAlreadyFollowed(user, functionTag)) {
+          user.followedFunctions.push(functionTag);
+          await user.save();
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await bot.sendMessage(
+          chatId,
+          `Vous suivez maintenant la fonction *${functionTag}* ✅`,
+          startKeyboard
+        );
+      }
+    );
+  } catch (error) {
+    console.log(error);
+  }
+};
