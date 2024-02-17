@@ -1,4 +1,4 @@
-const { startKeyboard } = require("./keyboards");
+import { startKeyboard } from "./keyboards";
 
 function splitText(text, max) {
   const chunks = [];
@@ -34,4 +34,4 @@ async function sendLongText(bot, chatId, formattedData) {
   }
 }
 
-module.exports = { sendLongText, splitText };
+export default { sendLongText, splitText };

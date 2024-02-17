@@ -6,7 +6,7 @@ const User = require("../models/User");
 const Blocked = require("../models/Blocked");
 const axios = require("axios");
 const { formatSearchResult } = require("../utils/formatSearchResult");
-const { splitText } = require("../utils/sendLongText");
+const { splitText } = require("../utils/sendLongText").default;
 const { createHash } = require("node:crypto");
 const { send } = require("./umami");
 
