@@ -1,4 +1,4 @@
-import { TypeOrdre } from "../types.d";
+import { TypeOrdre } from "../types";
 import { dateToFrenchString } from "./date.utils";
 
 export const textTypeOrdre = (

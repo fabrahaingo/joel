@@ -1,4 +1,4 @@
-import { textTypeOrdre, textPublishDate } from "./notification.utils";
+import { textTypeOrdre, textPublishDate } from "./formatting.utils";
 
 function addPoste(
   elem: {

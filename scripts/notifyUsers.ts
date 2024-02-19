@@ -1,5 +1,5 @@
-import { ChatId } from "node-telegram-bot-api";
 require("dotenv").config();
+import { ChatId } from "node-telegram-bot-api";
 const mongoose = require("mongoose");
 import People from "../models/People";
 import User from "../models/User";
@@ -119,7 +119,7 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
             $exists: true,
           },
           updatedAt: {
-            $gte: new Date(new Date().toISOString().split("T")[0]),
+            $gte: new Date(new Date().setHours(0, 0, 0, 0)),
           },
         },
         { _id: 1, lastKnownPosition: 1, updatedAt: 1 }
@@ -307,6 +307,9 @@ mongoose
   .then(async () => {
     // 1. get all people who have been updated today
     const peoples = await getPeople();
+    if (peoples.length === 0) {
+      process.exit(0);
+    }
     const peopleIds = returnIdsArray(peoples);
     // 2. get all users who follow at least one of these people
     const users = await getUsers(peopleIds);
