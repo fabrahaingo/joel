@@ -1,17 +1,15 @@
-const axios = require("axios");
-const { startKeyboard } = require("../utils/keyboards");
-const { formatSearchResult } = require("../utils/formatSearchResult");
-const { sendLongText } = require("../utils/sendLongText");
-const { createHash } = require("node:crypto");
-const { send } = require("../utils/umami");
+import axios from "axios";
+import { startKeyboard } from "../utils/keyboards";
+import { formatSearchResult } from "../utils/formatSearchResult";
+import { sendLongText } from "../utils/sendLongText";
+import umami from "../utils/umami";
+import TelegramBot from "node-telegram-bot-api";
 
-module.exports = (bot) => async (msg) => {
+module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   try {
     const chatId = msg.chat.id;
 
-    await send("/search", {
-      chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
-    });
+    await umami.log({ event: "/search" });
 
     bot.sendChatAction(chatId, "typing");
     const question = await bot.sendMessage(
@@ -23,7 +21,23 @@ module.exports = (bot) => async (msg) => {
         },
       }
     );
-    await bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
+    bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
+      if (!msg.text)
+        return bot.sendMessage(
+          chatId,
+          "Veuillez entrer un nom et un prénom valide",
+          startKeyboard
+        );
+      // if msg.text is not a text, return error. This should authorize accents and special characters used in names like an apostrophe or hyphen
+      const validText = /^[a-zA-ZÀ-ÿ\s-']+$/.test(msg.text);
+      if (!validText) {
+        bot.sendMessage(
+          chatId,
+          "Veuillez entrer un nom et un prénom valide",
+          startKeyboard
+        );
+        return;
+      }
       let JORFRes = await axios
         .get(
           `https://jorfsearch.steinertriples.ch/name/${encodeURI(
@@ -53,9 +67,8 @@ module.exports = (bot) => async (msg) => {
           startKeyboard
         );
       } else {
-        let nextMessageId = question.message_id + 2;
         let formattedData = formatSearchResult(JORFRes.data);
-        sendLongText(bot, chatId, formattedData, { nextMessageId });
+        sendLongText(bot, chatId, formattedData);
       }
     });
   } catch (error) {

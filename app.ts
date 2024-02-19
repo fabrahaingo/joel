@@ -59,7 +59,4 @@ const commands: CommandType = [
   });
 
   console.log(`\u{2705} JOEL started successfully`);
-})().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+})();

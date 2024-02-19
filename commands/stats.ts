@@ -1,14 +1,12 @@
-const Users = require("../models/User");
-const People = require("../models/People").default;
-const { startKeyboard } = require("../utils/keyboards");
-const { createHash } = require("node:crypto");
-const { send } = require("../utils/umami");
+import Users from "../models/User";
+import People from "../models/People";
+import { startKeyboard } from "../utils/keyboards";
+import umami from "../utils/umami";
+import TelegramBot from "node-telegram-bot-api";
 
-module.exports = (bot) => async (msg) => {
+module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   try {
-    await send("/stats", {
-      chatId: createHash("sha256").update(msg.chat.id.toString()).digest("hex"),
-    });
+    await umami.log({ event: "/stats" });
     if (!msg.reply_to_message) {
       const usersCount = await Users.countDocuments();
       const peopleCount = await People.countDocuments();

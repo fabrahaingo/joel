@@ -1,10 +1,9 @@
 import User from "../models/User";
 import People from "../models/People";
 import { sendLongText } from "../utils/sendLongText";
-import { createHash } from "node:crypto";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
-import { FunctionTags } from "../types";
+import { FunctionTags } from "../entities/FunctionTags";
 
 // return the first key matching the given value
 function getKeyName(value: string) {

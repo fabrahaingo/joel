@@ -3,7 +3,6 @@ import { formatSearchResult } from "../utils/formatSearchResult";
 import People from "../models/People";
 import User from "../models/User";
 import get from "axios";
-import { createHash } from "node:crypto";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
 import { Types } from "mongoose";

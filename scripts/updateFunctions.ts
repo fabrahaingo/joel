@@ -1,18 +1,19 @@
+require("dotenv").config();
 import People from "../models/People";
 import axios from "axios";
-import { FunctionTags } from "../types";
-import umami from "./umami";
+import { FunctionTags } from "../entities/FunctionTags";
+import umami from "../utils/umami";
 import { mongodbConnect } from "../db";
 
 async function getPeopleToAddOrUpdate() {
   const today = new Date().toLocaleDateString("fr-FR").split("/").join("-");
-  // const today = "08-02-2024";
+  // const today = "18-02-2024";
   let dailyUpdates = await axios
     .get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
     .then((res) => res.data);
   // remove duplicate people (the ones who have the same nom and prenom)
   return dailyUpdates.filter(
-    (contact, index, self) =>
+    (contact: { nom: any; prenom: any }, index: any, self: any[]) =>
       index ===
       self.findIndex(
         (t) => t.nom === contact.nom && t.prenom === contact.prenom
@@ -23,7 +24,7 @@ async function getPeopleToAddOrUpdate() {
 // extracts the relevant tags from the daily updates
 // format: {tag: [contacts], tag2: [contacts]}
 async function extractRelevantTags(dailyUpdates: any[]) {
-  let newObj = {};
+  let newObj: any = {};
   let tags = Object.values(FunctionTags);
   for (let contact of dailyUpdates) {
     for (let tag of tags) {
@@ -77,7 +78,4 @@ async function updateTags(tagsToUpdate: any) {
   const tagsToUpdate = await extractRelevantTags(dailyUpdates);
   await updateTags(tagsToUpdate);
   process.exit(0);
-})().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+})();

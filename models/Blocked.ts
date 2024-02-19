@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { model } from "mongoose";
 import { IBlocked } from "../types";
 const Schema = mongoose.Schema;
 
@@ -13,4 +13,4 @@ const BlockedSchema = new Schema<IBlocked>(
   { timestamps: true }
 );
 
-module.exports = mongoose.model<IBlocked>("Blocked", BlockedSchema);
+export default model<IBlocked>("Blocked", BlockedSchema);

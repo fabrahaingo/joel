@@ -1,15 +1,14 @@
 import { ChatId } from "node-telegram-bot-api";
 require("dotenv").config();
 const mongoose = require("mongoose");
-const People = require("../models/People");
-const User = require("../models/User");
-const Blocked = require("../models/Blocked");
+import People from "../models/People";
+import User from "../models/User";
+import Blocked from "../models/Blocked";
 import axios from "axios";
-const { formatSearchResult } = require("./formatSearchResult");
-import { splitText } from "./sendLongText";
+const { formatSearchResult } = require("../utils/formatSearchResult");
+import { splitText } from "../utils/sendLongText";
 import { Types } from "mongoose";
-const { createHash } = require("crypto");
-const { send } = require("./umami");
+const umami = require("../utils/umami");
 const { ChatId } = require("node-telegram-bot-api");
 
 type IUser = {
@@ -37,7 +36,7 @@ async function filterOutBlockedUsers(users: any[]): Promise<IUser[]> {
 async function getPeople() {
   // get date in format YYYY-MM-DD
   const currentDate = new Date().toISOString().split("T")[0];
-  // const currentDate = "2024-02-08";
+  // const currentDate = "2024-02-18";
   const people = await People.find(
     {
       updatedAt: {
@@ -168,8 +167,12 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
     const messagesArray = splitText(notification_text, 3000);
 
     let blocked = false;
+    let alreadyNotified: ChatId[] = [];
     for await (let message of messagesArray) {
       if (blocked) return;
+      if (alreadyNotified.includes(user.chatId)) {
+        return;
+      }
       await axios
         .post(
           `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
@@ -187,11 +190,7 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
             err.response.data.description ===
             "Forbidden: bot was blocked by the user"
           ) {
-            await send("/user-blocked-joel", {
-              chatId: createHash("sha256")
-                .update(user.chatId.toString())
-                .digest("hex"),
-            });
+            await umami.log({ event: "/user-blocked-joel" });
             await new Blocked({
               chatId: user.chatId,
             }).save();
@@ -202,9 +201,7 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
         });
     }
 
-    await send("/notification-update", {
-      chatId: createHash("sha256").update(user.chatId.toString()).digest("hex"),
-    });
+    await umami.log({ event: "/notification-update" });
   }
 }
 

@@ -3,10 +3,10 @@ import { sendLongText } from "../utils/sendLongText";
 import User from "../models/User";
 import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
-import { createHash } from "node:crypto";
 import umami from "../utils/umami";
 import { Types } from "mongoose";
-import { IUser, PromoENA, PromoINSP } from "../types";
+import { IUser } from "../types";
+import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 
 function removeAccents(input: string): string {
@@ -132,7 +132,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     let JORFSearchRes: any[] = [];
     bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
       let institution = "";
-      let promoName: string | undefined = undefined;
+      let promoName: string = "";
 
       const ENAPromo = findPromoName({
         input: msg.text,
@@ -140,9 +140,17 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       });
       if (ENAPromo) {
         institution = "ENA";
-        promoName = Object.keys(PromoENA).find(
-          (key) => PromoENA[key as keyof typeof PromoENA] === ENAPromo
-        );
+        promoName = (() => {
+          for (let key in PromoENA) {
+            if (
+              PromoENA[key as keyof typeof PromoENA] ===
+              PromoENA[ENAPromo as keyof typeof PromoENA]
+            ) {
+              return key;
+            }
+          }
+          return "";
+        })();
       }
 
       const INSPPromo = findPromoName({
@@ -151,9 +159,17 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       });
       if (INSPPromo) {
         institution = "INSP";
-        promoName = Object.keys(PromoINSP).find(
-          (key) => PromoINSP[key as keyof typeof PromoINSP] === INSPPromo
-        );
+        promoName = (() => {
+          for (let key in PromoINSP) {
+            if (
+              PromoINSP[key as keyof typeof PromoINSP] ===
+              PromoINSP[INSPPromo as keyof typeof PromoINSP]
+            ) {
+              return key;
+            }
+          }
+          return "";
+        })();
       }
 
       JORFSearchRes = await getJORFSearchResult(
@@ -249,12 +265,14 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
           } else if (new RegExp(/non/i).test(msg.text)) {
             return await bot.sendMessage(
               chatId,
-              `Ok, aucun ajout n'a été effectué. 👌`
+              `Ok, aucun ajout n'a été effectué. 👌`,
+              startKeyboard
             );
           }
           await bot.sendMessage(
             chatId,
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`
+            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
+            startKeyboard
           );
         }
       );

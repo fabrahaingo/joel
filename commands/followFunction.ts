@@ -1,9 +1,9 @@
 import { startKeyboard } from "../utils/keyboards";
 import User from "../models/User";
 import { sendLongText } from "../utils/sendLongText";
-import { createHash } from "node:crypto";
 import umami from "../utils/umami";
-import { FunctionTags, IUser } from "../types";
+import { IUser } from "../types";
+import { FunctionTags } from "../entities/FunctionTags";
 import TelegramBot, {
   ChatId,
   Message,
@@ -88,8 +88,8 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const tgUser = msg.from;
         let user = await User.firstOrCreate({ tgUser, chatId });
 
-        if (!isTagAlreadyFollowed(user, functionTag)) {
-          user.followedFunctions.push(functionTag);
+        if (!isTagAlreadyFollowed(user, functionToFollow)) {
+          user.followedFunctions.push(functionToFollow);
           await user.save();
         }
 

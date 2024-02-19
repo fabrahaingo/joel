@@ -2,8 +2,8 @@ const { startKeyboard } = require("../utils/keyboards");
 const { sendLongText } = require("../utils/sendLongText");
 const User = require("../models/User").default;
 const People = require("../models/People").default;
-const { createHash } = require("node:crypto");
-const { send } = require("../utils/umami");
+const umami = require("../utils/umami");
+const { FunctionTags } = require("../entities/FunctionTags");
 
 async function isWrongAnswer(chatId, bot, answer, peoples, followedFunctions) {
   if (
@@ -50,7 +50,7 @@ async function unfollowFunctionAndConfirm(
   await bot.sendMessage(
     chatId,
     `Vous ne suivez plus la fonction *${getKeyFromValue(
-      functions,
+      FunctionTags,
       functionToUnfollow
     )}* 🙅‍♂️`,
     startKeyboard
@@ -73,9 +73,7 @@ module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
 
-    await send("/unfollow", {
-      chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
-    });
+    await umami.log({ event: "/unfollow" });
 
     let i = 0;
     let j = 0;
@@ -101,7 +99,10 @@ module.exports = (bot) => async (msg) => {
         if (followedFunctions.length > 0) {
           text += "Voici les fonctions que vous suivez :\n\n";
           for (i; i < followedFunctions.length; i++) {
-            let functionName = getKeyFromValue(functions, followedFunctions[i]);
+            let functionName = getKeyFromValue(
+              FunctionTags,
+              followedFunctions[i]
+            );
             text += `${
               i + 1
             }. *${functionName}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
@@ -131,7 +132,11 @@ module.exports = (bot) => async (msg) => {
     const question = await bot.sendMessage(
       chatId,
       "Entrez le nombre correspondant au contact à supprimer",
-      startKeyboard
+      {
+        reply_markup: {
+          force_reply: true,
+        },
+      }
     );
 
     return await bot.onReplyToMessage(

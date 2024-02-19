@@ -2,6 +2,7 @@ import axios from "axios";
 
 export const log = async (args: { event: string; data?: any }) => {
   if (process.env.NODE_ENV === "development") {
+    console.log("Umami event", args.event);
     return;
   }
 
