@@ -1,10 +1,9 @@
-const { startKeyboard, yesNoKeyboard } = require("../utils/keyboards");
+const { startKeyboard } = require("../utils/keyboards");
 const { sendLongText } = require("../utils/sendLongText");
-const User = require("../models/User");
-const People = require("../models/People");
-const functions = require("../json/functionTags.json");
-const { createHash } = require("node:crypto");
-const { send } = require("../utils/umami");
+const User = require("../models/User").default;
+const People = require("../models/People").default;
+const umami = require("../utils/umami");
+const { FunctionTags } = require("../entities/FunctionTags");
 
 async function isWrongAnswer(chatId, bot, answer, peoples, followedFunctions) {
   if (
@@ -14,7 +13,7 @@ async function isWrongAnswer(chatId, bot, answer, peoples, followedFunctions) {
   ) {
     await bot.sendMessage(
       chatId,
-      "La réponse donnée n'est pas sous forme de nombre. Veuillez réessayer.",
+      "La réponse donnée n'est pas sous forme de nombre.",
       startKeyboard
     );
     return true;
@@ -51,7 +50,7 @@ async function unfollowFunctionAndConfirm(
   await bot.sendMessage(
     chatId,
     `Vous ne suivez plus la fonction *${getKeyFromValue(
-      functions,
+      FunctionTags,
       functionToUnfollow
     )}* 🙅‍♂️`,
     startKeyboard
@@ -74,15 +73,13 @@ module.exports = (bot) => async (msg) => {
   try {
     const chatId = msg.chat.id;
 
-    await send("/unfollow", {
-      chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
-    });
+    await umami.log({ event: "/unfollow" });
 
     let i = 0;
     let j = 0;
     bot.sendChatAction(chatId, "typing");
     let text = "";
-    let user = await User.findOne({ _id: msg.from.id });
+    let user = await User.firstOrCreate({ tgUser: msg.from, chatId });
     let peopleIds = user.followedPeople.map((p) => p.peopleId);
     let peoples = await People.find({ _id: { $in: peopleIds } })
       .collation({ locale: "fr" })
@@ -95,14 +92,17 @@ module.exports = (bot) => async (msg) => {
       if (peoples.length === 0 && followedFunctions.length === 0) {
         return bot.sendMessage(
           chatId,
-          `Vous ne suivez aucun contact ni fonctions pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`,
+          `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`,
           startKeyboard
         );
       } else {
         if (followedFunctions.length > 0) {
           text += "Voici les fonctions que vous suivez :\n\n";
           for (i; i < followedFunctions.length; i++) {
-            let functionName = getKeyFromValue(functions, followedFunctions[i]);
+            let functionName = getKeyFromValue(
+              FunctionTags,
+              followedFunctions[i]
+            );
             text += `${
               i + 1
             }. *${functionName}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
@@ -133,7 +133,6 @@ module.exports = (bot) => async (msg) => {
       chatId,
       "Entrez le nombre correspondant au contact à supprimer",
       {
-        parse_mode: "Markdown",
         reply_markup: {
           force_reply: true,
         },

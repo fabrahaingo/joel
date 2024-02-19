@@ -1,19 +1,14 @@
 import "dotenv/config";
-import mongoose from "mongoose";
 import TelegramBot from "node-telegram-bot-api";
+import { CommandType } from "./types";
+import { mongodbConnect } from "./db";
 
-const bot = new TelegramBot(process.env.BOT_TOKEN || "", {
+const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
   onlyFirstMatch: true,
-  filepath: false,
 });
 
-const commands: {
-  regex: RegExp;
-  action: (
-    bot: TelegramBot
-  ) => (msg: TelegramBot.Message, match: RegExpExecArray | null) => void;
-}[] = [
+const commands: CommandType = [
   {
     regex: /\/start$/,
     action: require("./commands/start"),
@@ -57,14 +52,11 @@ const commands: {
 ];
 
 (async () => {
-  await mongoose.connect(process.env.MONGODB_URI || "");
+  await mongodbConnect();
 
   commands.forEach((command) => {
     bot.onText(command.regex, command.action(bot));
   });
 
-  console.log(`\u{1F41D} ${process.env.BOT_NAME} started successfully`);
-})().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+  console.log(`\u{2705} JOEL started successfully`);
+})();

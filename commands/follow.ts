@@ -1,22 +1,25 @@
-const { startKeyboard } = require("../utils/keyboards");
-const { formatSearchResult } = require("../utils/formatSearchResult");
-const People = require("../models/People");
-const User = require("../models/User");
-const axios = require("axios");
-const { createHash } = require("node:crypto");
-const { send } = require("../utils/umami");
+import { startKeyboard } from "../utils/keyboards";
+import { formatSearchResult } from "../utils/formatSearchResult";
+import People from "../models/People";
+import User from "../models/User";
+import get from "axios";
+import umami from "../utils/umami";
+import TelegramBot from "node-telegram-bot-api";
+import { Types } from "mongoose";
+import { IPeople } from "../types";
 
-function isPersonAlreadyFollowed(person, followedPeople) {
+const isPersonAlreadyFollowed = (
+  person: IPeople,
+  followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
+) => {
   return followedPeople.some((followedPerson) => {
     return followedPerson.peopleId.toString() === person._id.toString();
   });
-}
+};
 
-module.exports = (bot) => async (msg) => {
+module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
-  await send("/follow", {
-    chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
-  });
+  await umami.log({ event: "/follow" });
   try {
     await bot.sendChatAction(chatId, "typing");
     const question = await bot.sendMessage(
@@ -28,29 +31,27 @@ module.exports = (bot) => async (msg) => {
         },
       }
     );
-    await bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
-      let JORFRes = await axios
-        .get(
-          encodeURI(
-            `https://jorfsearch.steinertriples.ch/name/${msg.text}?format=JSON`
-          )
+    bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
+      let JORFRes = await get(
+        encodeURI(
+          `https://jorfsearch.steinertriples.ch/name/${msg.text}?format=JSON`
         )
-        .then(async (res) => {
-          if (res.data?.length === 0) {
-            return res;
-          }
-          if (res.request.res.responseUrl) {
-            return await axios.get(
-              res.request.res.responseUrl.endsWith("?format=JSON")
-                ? res.request.res.responseUrl
-                : `${res.request.res.responseUrl}?format=JSON`
-            );
-          }
-        });
+      ).then(async (res) => {
+        if (res.data?.length === 0) {
+          return res;
+        }
+        if (res.request.res.responseUrl) {
+          return await get(
+            res.request.res.responseUrl.endsWith("?format=JSON")
+              ? res.request.res.responseUrl
+              : `${res.request.res.responseUrl}?format=JSON`
+          );
+        }
+      });
 
       if (
         JORFRes?.data?.length === 0 ||
-        !JORFRes.data[0]?.nom ||
+        !JORFRes?.data[0]?.nom ||
         !JORFRes.data[0]?.prenom
       ) {
         await bot.sendMessage(
@@ -76,19 +77,23 @@ module.exports = (bot) => async (msg) => {
           lastKnownPosition: JORFRes.data[0],
         });
         await people.save();
-        const tgUser = msg.from;
-        let user = await User.firstOrCreate(tgUser, chatId);
-        // only add to followedPeople if user is not already following this person
+        const tgUser: TelegramBot.User | undefined = msg.from;
+        let user = await User.firstOrCreate({
+          tgUser,
+          chatId,
+        });
+
         if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
           user.followedPeople.push({
             peopleId: people._id,
-            lastUdpate: Date.now(),
+            lastUpdate: new Date(Date.now()),
           });
           await user.save();
         }
         await bot.sendMessage(chatId, `${formattedData}`, startKeyboard);
-        // wait 500 ms before sending the next message
+
         await new Promise((resolve) => setTimeout(resolve, 500));
+
         await bot.sendMessage(
           chatId,
           `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,

@@ -1,32 +1,19 @@
 require("dotenv").config();
-const mongoose = require("mongoose");
-const env = process.env;
-const People = require("../models/People");
-const axios = require("axios");
-const functions = require("../json/functionTags.json");
-const { createHash } = require("node:crypto");
-const { send } = require("../utils/umami");
-
-const termColors = {
-  black: "\x1b[30m%s\x1b[30m",
-  red: "\x1b[31m%s\x1b[31m",
-  green: "\x1b[32m%s\x1b[32m",
-  yellow: "\x1b[33m%s\x1b[33m",
-  blue: "\x1b[34m%s\x1b[34m",
-  magenta: "\x1b[35m%s\x1b[35m",
-  cyan: "\x1b[36m%s\x1b[36m",
-  white: "\x1b[37m%s\x1b[37m",
-};
+import People from "../models/People";
+import axios from "axios";
+import { FunctionTags } from "../entities/FunctionTags";
+import umami from "../utils/umami";
+import { mongodbConnect } from "../db";
 
 async function getPeopleToAddOrUpdate() {
   const today = new Date().toLocaleDateString("fr-FR").split("/").join("-");
-  // const today = "08-02-2024";
+  // const today = "18-02-2024";
   let dailyUpdates = await axios
     .get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
     .then((res) => res.data);
   // remove duplicate people (the ones who have the same nom and prenom)
   return dailyUpdates.filter(
-    (contact, index, self) =>
+    (contact: { nom: any; prenom: any }, index: any, self: any[]) =>
       index ===
       self.findIndex(
         (t) => t.nom === contact.nom && t.prenom === contact.prenom
@@ -36,9 +23,9 @@ async function getPeopleToAddOrUpdate() {
 
 // extracts the relevant tags from the daily updates
 // format: {tag: [contacts], tag2: [contacts]}
-async function extractRelevantTags(dailyUpdates) {
-  let newObj = {};
-  let tags = Object.values(functions);
+async function extractRelevantTags(dailyUpdates: any[]) {
+  let newObj: any = {};
+  let tags = Object.values(FunctionTags);
   for (let contact of dailyUpdates) {
     for (let tag of tags) {
       if (contact.hasOwnProperty(tag)) {
@@ -53,7 +40,7 @@ async function extractRelevantTags(dailyUpdates) {
   return newObj;
 }
 
-async function updateTags(tagsToUpdate) {
+async function updateTags(tagsToUpdate: any) {
   let total = 0;
   for await (let tag of Object.keys(tagsToUpdate)) {
     for await (let contact of tagsToUpdate[tag]) {
@@ -66,13 +53,8 @@ async function updateTags(tagsToUpdate) {
       if (person) {
         person.lastKnownPosition = contact;
         await person.save();
-        console.log(`${person.nom} ${person.prenom} was updated`);
         total++;
-        await send("/person-updated", {
-          name: createHash("sha256")
-            .update(`${person.nom} ${person.prenom}`)
-            .digest("hex"),
-        });
+        await umami.log({ event: "/person-updated" });
       }
       // if the person doesnt exist, create a new one
       else {
@@ -82,29 +64,18 @@ async function updateTags(tagsToUpdate) {
           lastKnownPosition: contact,
         });
         await newPerson.save();
-        console.log(`${newPerson.nom} ${newPerson.prenom} was added`);
         total++;
-        await send("/person-added", {
-          name: createHash("sha256")
-            .update(`${newPerson.nom} ${newPerson.prenom}`)
-            .digest("hex"),
-        });
+        await umami.log({ event: "/person-added" });
       }
     }
   }
-  console.log(termColors.green, `${total} people were updated`);
   return;
 }
 
-mongoose
-  .connect(env.MONGODB_URI)
-  .then(async () => {
-    const dailyUpdates = await getPeopleToAddOrUpdate();
-    const tagsToUpdate = await extractRelevantTags(dailyUpdates);
-    await updateTags(tagsToUpdate);
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.log(err);
-    process.exit(1);
-  });
+(async () => {
+  await mongodbConnect();
+  const dailyUpdates = await getPeopleToAddOrUpdate();
+  const tagsToUpdate = await extractRelevantTags(dailyUpdates);
+  await updateTags(tagsToUpdate);
+  process.exit(0);
+})();

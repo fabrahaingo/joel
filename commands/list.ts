@@ -1,21 +1,21 @@
-const User = require("../models/User");
-const People = require("../models/People");
-const { sendLongText } = require("../utils/sendLongText");
-const functions = require("../json/functionTags.json");
-const { createHash } = require("node:crypto");
-const { send } = require("../utils/umami");
+import User from "../models/User";
+import People from "../models/People";
+import { sendLongText } from "../utils/sendLongText";
+import umami from "../utils/umami";
+import TelegramBot from "node-telegram-bot-api";
+import { FunctionTags } from "../entities/FunctionTags";
 
 // return the first key matching the given value
-function getKeyName(value) {
-  for (let key in functions) {
-    if (functions[key] === value) {
+function getKeyName(value: string) {
+  for (let key in FunctionTags) {
+    if (FunctionTags[key as keyof typeof FunctionTags] === value) {
       return key;
     }
   }
   return value;
 }
 
-function sortArrayAlphabetically(array) {
+function sortArrayAlphabetically(array: string[]) {
   array.sort((a, b) => {
     if (a < b) {
       return -1;
@@ -28,20 +28,21 @@ function sortArrayAlphabetically(array) {
   return array;
 }
 
-module.exports = (bot) => async (msg) => {
+module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
 
-  await send("/list", {
-    chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
-  });
+  await umami.log({ event: "/list" });
 
   try {
     await bot.sendChatAction(chatId, "typing");
 
     let text = "";
-    let user = await User.findOne({ _id: msg.from.id });
+    let user = await User.firstOrCreate({
+      tgUser: msg.from,
+      chatId: msg.chat.id,
+    });
 
-    if (!user || user.length === 0) {
+    if (!user) {
       text =
         "Une erreur s'est produite avec votre profil. Merci d'envoyer /start pour réessayer.";
     } else {
@@ -53,7 +54,7 @@ module.exports = (bot) => async (msg) => {
         .lean();
       let functions = sortArrayAlphabetically(user.followedFunctions);
       if (peoples.length === 0 && functions.length === 0) {
-        text = `Vous ne suivez aucun contact pour le moment. Tapez /start puis cliquez sur *🏃 Ajouter un contact* pour commencer à suivre des contacts.`;
+        text = `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
       } else {
         if (functions.length > 0) {
           text += `Voici les fonctions que vous suivez: \n\n`;
@@ -84,7 +85,7 @@ module.exports = (bot) => async (msg) => {
       }
     }
 
-    await sendLongText(bot, chatId, text, { maxLength: 3000 });
+    await sendLongText(bot, chatId, text);
   } catch (error) {
     console.log(error);
   }
