@@ -1,18 +1,17 @@
-const User = require("../models/User");
-const { startKeyboard } = require("../utils/keyboards");
-const { createHash } = require("node:crypto");
-const { send } = require("../utils/umami");
+import User from "../models/User";
+import { startKeyboard } from "../utils/keyboards";
+import umami from "../utils/umami";
+import TelegramBot from "node-telegram-bot-api";
+import { IUser } from "../types";
 
-module.exports = (bot) => async (msg) => {
+module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
-  await send("/new-user", {
-    chatId: createHash("sha256").update(chatId.toString()).digest("hex"),
-  });
+  await umami.log({ event: "/start" });
   try {
     bot.sendChatAction(chatId, "typing");
-    // Activate / create a new user
+
     const tgUser = msg.from;
-    const user = await User.firstOrCreate(tgUser, chatId);
+    const user: IUser = await User.firstOrCreate({ tgUser, chatId });
     if (user.status === "blocked") {
       user.status = "active";
       await user.save();

@@ -1,16 +1,16 @@
 {
-	"cron": [
-		{
-			"command": "node ./utils/updatePeople.js",
-			"schedule": "0 8 * * *"
-		},
-		{
-			"command": "node ./utils/updateFunctions.js",
-			"schedule": "15 8 * * *"
-		},
-		{
-			"command": "node ./utils/notifyUsers.js",
-			"schedule": "0 9 * * *"
-		}
-	]
+  "cron": [
+    {
+      "command": "ts-node ./scripts/updatePeople.ts",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "command": "ts-node ./scripts/updateFunctions.ts",
+      "schedule": "15 8 * * *"
+    },
+    {
+      "command": "ts-node ./scripts/notifyUsers.ts",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }

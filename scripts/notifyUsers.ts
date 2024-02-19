@@ -1,15 +1,14 @@
 import { ChatId } from "node-telegram-bot-api";
 require("dotenv").config();
 const mongoose = require("mongoose");
-const People = require("../models/People");
-const User = require("../models/User");
-const Blocked = require("../models/Blocked");
+import People from "../models/People";
+import User from "../models/User";
+import Blocked from "../models/Blocked";
 import axios from "axios";
-const { formatSearchResult } = require("./formatSearchResult");
-import { splitText } from "./sendLongText";
+const { formatSearchResult } = require("../utils/formatSearchResult");
+import { splitText } from "../utils/sendLongText";
 import { Types } from "mongoose";
-const { createHash } = require("crypto");
-const { send } = require("./umami");
+const umami = require("../utils/umami");
 const { ChatId } = require("node-telegram-bot-api");
 
 type IUser = {
@@ -37,7 +36,7 @@ async function filterOutBlockedUsers(users: any[]): Promise<IUser[]> {
 async function getPeople() {
   // get date in format YYYY-MM-DD
   const currentDate = new Date().toISOString().split("T")[0];
-  // const currentDate = "2024-02-08";
+  // const currentDate = "2024-02-18";
   const people = await People.find(
     {
       updatedAt: {
@@ -103,15 +102,9 @@ async function getUsers(updatedPeople: string[]) {
 
 async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
   if (!user.chatId) {
-    console.log(
-      `Can't send notifications to ${user._id}. Must run /start again to update his chatId.`
-    );
     return;
   }
 
-  // use mongoose to retrive all people that the user follows using a tag
-  // tags are stored in the user.followedFunctions array
-  // we know a person belongs to a tag if the tag is a key in the person lastKnownPosition object which equals to the string "true"
   const tagsList = user.followedFunctions;
   let peopleFromFunctions:
     | {
@@ -120,8 +113,6 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
     | any = {};
   if (tagsList) {
     for (let tag of tagsList) {
-      // get all people that have a lastKnownPosition object with a key that equals to the tag
-      // and that have been updated today
       let listOfPeopleFromTag = await People.find(
         {
           [`lastKnownPosition.${tag}`]: {
@@ -176,8 +167,12 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
     const messagesArray = splitText(notification_text, 3000);
 
     let blocked = false;
+    let alreadyNotified: ChatId[] = [];
     for await (let message of messagesArray) {
       if (blocked) return;
+      if (alreadyNotified.includes(user.chatId)) {
+        return;
+      }
       await axios
         .post(
           `https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`,
@@ -195,11 +190,7 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
             err.response.data.description ===
             "Forbidden: bot was blocked by the user"
           ) {
-            await send("/user-blocked-joel", {
-              chatId: createHash("sha256")
-                .update(user.chatId.toString())
-                .digest("hex"),
-            });
+            await umami.log({ event: "/user-blocked-joel" });
             await new Blocked({
               chatId: user.chatId,
             }).save();
@@ -210,11 +201,7 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
         });
     }
 
-    await send("/notification-update", {
-      chatId: createHash("sha256").update(user.chatId.toString()).digest("hex"),
-    });
-
-    console.log(`Sent notification to ${user._id}`);
+    await umami.log({ event: "/notification-update" });
   }
 }
 
