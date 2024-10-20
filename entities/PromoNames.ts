@@ -46,5 +46,5 @@ export enum PromoENA {
 }
 
 export enum PromoINSP {
-  "2024 " = "2023-2024",
+  "josephine baker" = "2023-2024",
 }
