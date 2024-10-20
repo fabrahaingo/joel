@@ -113,11 +113,10 @@ module.exports = (bot) => async (msg) => {
         if (peoples.length > 0) {
           text += "Voici les personnes que vous suivez :\n\n";
           for (j; j < peoples.length; j++) {
-            let nomPrenom = `${peoples[j].nom} ${peoples[j].prenom}`;
             text += `${
-              j + 1 + i
-            }. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-              nomPrenom
+                j + 1 + i
+            }. *${peoples[j].nom} ${peoples[j].prenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+                `${peoples[j].prenom} ${peoples[j].nom}`
             )})\n\n`;
           }
         }

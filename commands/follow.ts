@@ -24,7 +24,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     await bot.sendChatAction(chatId, "typing");
     const question = await bot.sendMessage(
       chatId,
-      "Entrez le nom et prénom de la personne que vous souhaitez suivre:",
+      "Entrez le prénom et nom de la personne que vous souhaitez suivre:",
       {
         reply_markup: {
           force_reply: true,
