@@ -135,7 +135,10 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
       "📢 Aujourd'hui, il y a eu de nouvelles publications pour les personnes que vous suivez !\n\n";
 
     for (let person of peopleUpdated) {
-      notification_text += `Nouvelle publication pour *${person.lastKnownPosition.prenom} ${person.lastKnownPosition.nom}*\n`;
+      let prenomNom = `${person.lastKnownPosition.prenom} ${person.lastKnownPosition.nom}`;
+      let prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+          prenomNom)})`;
+      notification_text += `Nouvelle publication pour ${prenomNomLink}\n`;
       notification_text += formatSearchResult([person.lastKnownPosition], {
         isListing: true,
       });
@@ -147,7 +150,10 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
       notification_text += "====================\n\n";
       notification_text += `Nouvelle publication pour les personnes suivies avec le tag *${tag}*:\n\n`;
       for (let person of peopleFromFunctions[tag]) {
-        notification_text += `*${person.lastKnownPosition.prenom} ${person.lastKnownPosition.nom}*\n`;
+        let prenomNom = `${person.lastKnownPosition.prenom} ${person.lastKnownPosition.nom}`;
+        let prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+            prenomNom)})`;
+        notification_text += `${prenomNomLink}\n`;
         notification_text += formatSearchResult([person.lastKnownPosition], {
           isListing: true,
         });

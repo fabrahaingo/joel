@@ -58,13 +58,16 @@ export function formatSearchResult(
   }
 ) {
   let message = "";
+  let prenomNom = `${result[0].prenom} ${result[0].nom}`;
+  let prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+      prenomNom)})`;
   if (options?.isConfirmation) {
     if (result.length === 1)
-      message += `Voici la dernière information que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n\n`;
+      message += `Voici la dernière information que nous avons sur ${prenomNomLink}.\n\n`;
     else
-      message += `Voici les ${result.length} dernières informations que nous avons sur *${result[0].prenom} ${result[0].nom}*.\n\n`;
+      message += `Voici les ${result.length} dernières informations que nous avons sur ${prenomNomLink}.\n\n`;
   } else if (!options?.isListing) {
-    message += `Voici la liste des postes connus pour ${result[0].prenom} ${result[0].nom}:\n\n`;
+    message += `Voici la liste des postes connus pour ${prenomNomLink}:\n\n`;
   }
   for (let elem of result) {
     if (options?.displayName) {
