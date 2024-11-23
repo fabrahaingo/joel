@@ -47,7 +47,9 @@ if (elem.armee_grade) {
     message += `${elem.nomme_par ? ` par le _${elem.nomme_par}_` : ""}\n`;
   } else if (elem.autorite_delegation) {
     message += `👉 par le _${elem.autorite_delegation}_\n`;
-  }
+  } else if (elem.corps) {
+    message += `👉 Corps des ${elem.corps}\n`;
+}
   return message;
 }
 
