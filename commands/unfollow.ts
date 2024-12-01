@@ -33,15 +33,9 @@ function getFunctionFromValue(value: string) {
     return Object.keys(FunctionTags).find((key) => FunctionTags[key] === value);
 }
 
-function sortArrayAlphabetically(array: any[]) {
+function sortArrayAlphabetically(array: string[]) {
     return array.sort((a, b) => {
-        if (a.nom < b.nom) {
-            return -1;
-        }
-        if (a.nom > b.nom) {
-            return 1;
-        }
-        return 0;
+        return a.localeCompare(b)
     });
 }
 
