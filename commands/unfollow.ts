@@ -10,7 +10,7 @@ import { IPeople, IUser } from "../types";
 async function isWrongAnswer(
     chatId: ChatId,
     bot: TelegramBot,
-    answer: string | any,
+    answer: number,
     peoples: IPeople[],
     followedFunctions: Array<string>
 ){
