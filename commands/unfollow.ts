@@ -10,7 +10,7 @@ import { IPeople, IUser } from "../types";
 async function isWrongAnswer(
     chatId: ChatId,
     bot: TelegramBot,
-    answer: String | any,
+    answer: string | any,
     peoples: IPeople[],
     followedFunctions: Array<string>
 ){
@@ -92,12 +92,12 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         let j = 0;
         await bot.sendChatAction(chatId, "typing");
         let text = "";
-        let user = await User.firstOrCreate({ tgUser: msg.from, chatId });
-        let peopleIds = user.followedPeople.map((p) => p.peopleId);
-        let peoples = await People.find({ _id: { $in: peopleIds } })
+        const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
+        const peopleIds = user.followedPeople.map((p) => p.peopleId);
+        const peoples = await People.find({ _id: { $in: peopleIds } })
             .collation({ locale: "fr" })
             .sort({ nom: 1 });
-        let followedFunctions = sortArrayAlphabetically(user.followedFunctions);
+        const followedFunctions = sortArrayAlphabetically(user.followedFunctions);
 
         if (peoples.length === 0 && followedFunctions.length === 0) {
             return await bot.sendMessage(
@@ -109,7 +109,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             if (followedFunctions.length > 0) {
                 text += "Voici les fonctions que vous suivez :\n\n";
                 for (i; i < followedFunctions.length; i++) {
-                    let functionName = getKeyFromValue(
+                    const functionName = getKeyFromValue(
                         FunctionTags,
                         followedFunctions[i]
                     );
