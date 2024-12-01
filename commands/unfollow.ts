@@ -45,7 +45,7 @@ async function unfollowFunctionAndConfirm(
     user: IUser,
     functionToUnfollow: string
 ) {
-    user.followedFunctions = await user.followedFunctions.filter((elem) => {
+    user.followedFunctions = user.followedFunctions.filter((elem) => {
         return elem !== functionToUnfollow;
     });
     await user.save();
@@ -64,7 +64,7 @@ async function unfollowPeopleAndConfirm(
     user: IUser,
     peopleToUnfollow: IPeople
 ) {
-    user.followedPeople = await user.followedPeople.filter((elem) => {
+    user.followedPeople = user.followedPeople.filter((elem) => {
         return !elem.peopleId.equals(peopleToUnfollow._id);
     });
     await user.save();
