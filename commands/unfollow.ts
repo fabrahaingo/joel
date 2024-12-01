@@ -29,8 +29,8 @@ async function isWrongAnswer(
     return false;
 }
 
-function getKeyFromValue(object: any, value: any) {
-    return Object.keys(object).find((key) => object[key] === value);
+function getFunctionFromValue(value: string) {
+    return Object.keys(FunctionTags).find((key) => FunctionTags[key] === value);
 }
 
 function sortArrayAlphabetically(array: any[]) {
@@ -57,8 +57,7 @@ async function unfollowFunctionAndConfirm(
     await user.save();
     await bot.sendMessage(
         chatId,
-        `Vous ne suivez plus la fonction *${getKeyFromValue(
-            FunctionTags,
+        `Vous ne suivez plus la fonction *${getFunctionFromValue(
             functionToUnfollow
         )}* 🙅‍♂️`,
         startKeyboard
@@ -109,8 +108,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             if (followedFunctions.length > 0) {
                 text += "Voici les fonctions que vous suivez :\n\n";
                 for (i; i < followedFunctions.length; i++) {
-                    const functionName = getKeyFromValue(
-                        FunctionTags,
+                    const functionName = getFunctionFromValue(
                         followedFunctions[i]
                     );
                     text += `${
