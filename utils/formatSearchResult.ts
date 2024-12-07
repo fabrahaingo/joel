@@ -6,6 +6,10 @@ function addPoste(
     ministre: any;
     inspecteur_general: any;
     grade: any;
+    armee: any;
+    corps: any;
+    armee_grade: any;
+    type_ordre: any;
     ordre_merite: any;
     legion_honneur: any;
     nomme_par: any;
@@ -13,7 +17,21 @@ function addPoste(
   },
   message: string
 ) {
-  if (elem.organisations && elem.organisations[0]?.nom) {
+if (elem.armee_grade) {
+    if (elem.type_ordre == "nomination") {
+        message += `👉 au grade de *${elem.armee_grade}*`;
+    } else if (elem.type_ordre == "promotion") {
+        message += ` (TA)`;
+    }
+    if (elem.armee === "réserve") {
+        message += ` de réserve`;
+    }
+    if (elem.organisations && elem.organisations[0]?.nom) {
+        message += `\n🪖 *${elem.organisations[0].nom}*\n`;
+    } else {
+        message += `\n🪖 *${elem.corps}*\n`;
+    }
+} else if (elem.organisations && elem.organisations[0]?.nom) {
     message += `*👉 ${elem.organisations[0].nom}*\n`;
   } else if (elem.ministre) {
     message += `*👉 ${elem.ministre}*\n`;
@@ -29,7 +47,9 @@ function addPoste(
     message += `${elem.nomme_par ? ` par le _${elem.nomme_par}_` : ""}\n`;
   } else if (elem.autorite_delegation) {
     message += `👉 par le _${elem.autorite_delegation}_\n`;
-  }
+  } else if (elem.corps) {
+    message += `👉 Corps des ${elem.corps}\n`;
+}
   return message;
 }
 
