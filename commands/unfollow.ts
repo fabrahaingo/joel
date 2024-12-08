@@ -140,7 +140,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             chatId,
             question.message_id,
             async (msg: TelegramBot.Message) => {
-                const userAnswer = parseInt(msg.text);
+                const userAnswer = parseInt(msg.text || "");
                 if (
                     await isWrongAnswer(
                         chatId,
