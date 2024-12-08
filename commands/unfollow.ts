@@ -136,7 +136,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             }
         );
 
-        return await bot.onReplyToMessage(
+        return bot.onReplyToMessage(
             chatId,
             question.message_id,
             async (msg: TelegramBot.Message) => {
