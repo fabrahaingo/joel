@@ -21,7 +21,7 @@ if (elem.armee_grade) {
     if (elem.type_ordre == "nomination") {
         message += `👉 au grade de *${elem.armee_grade}*`;
     } else if (elem.type_ordre == "promotion") {
-        message += ` (TA)`;
+        message += `👉 au grade de *${elem.armee_grade}* (TA)`;
     }
     if (elem.armee === "réserve") {
         message += ` de réserve`;
