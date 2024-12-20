@@ -83,22 +83,28 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
           chatId,
         });
 
+        await bot.sendMessage(chatId, `${formattedData}`, startKeyboard);
+
         if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
           user.followedPeople.push({
             peopleId: people._id,
             lastUpdate: new Date(Date.now()),
           });
           await user.save();
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          await bot.sendMessage(
+              chatId,
+              `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
+              startKeyboard
+          );
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          await bot.sendMessage(
+              chatId,
+              `Vous suivez déjà *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
+              startKeyboard
+          );
         }
-        await bot.sendMessage(chatId, `${formattedData}`, startKeyboard);
-
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        await bot.sendMessage(
-          chatId,
-          `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
-          startKeyboard
-        );
       }
     });
   } catch (error) {
