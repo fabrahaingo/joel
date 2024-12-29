@@ -18,21 +18,21 @@ function addPoste(
   },
   message: string
 ) {
-if (elem.armee_grade) {
+  if (elem.armee_grade) {
     if (elem.type_ordre == "nomination") {
-        message += `👉 au grade de *${elem.armee_grade}*`;
+      message += `👉 au grade de *${elem.armee_grade}*`;
     } else if (elem.type_ordre == "promotion") {
-        message += `👉 au grade de *${elem.armee_grade}* (TA)`;
+      message += `👉 au grade de *${elem.armee_grade}* (TA)`;
     }
     if (elem.armee === "réserve") {
-        message += ` de réserve`;
+      message += ` de réserve`;
     }
     if (elem.organisations && elem.organisations[0]?.nom) {
-        message += `\n🪖 *${elem.organisations[0].nom}*\n`;
+      message += `\n🪖 *${elem.organisations[0].nom}*\n`;
     } else {
-        message += `\n🪖 *${elem.corps}*\n`;
+      message += `\n🪖 *${elem.corps}*\n`;
     }
-} else if (elem.organisations && elem.organisations[0]?.nom) {
+  } else if (elem.organisations && elem.organisations[0]?.nom) {
     message += `*👉 ${elem.organisations[0].nom}*\n`;
   } else if (elem.ministre) {
     message += `*👉 ${elem.ministre}*\n`;
@@ -50,17 +50,16 @@ if (elem.armee_grade) {
     message += `👉 par le _${elem.autorite_delegation}_\n`;
   } else if (elem.corps) {
     message += `👉 Corps des ${elem.corps}\n`;
-}
+  }
   return message;
 }
 
 function addLinkJO(
-  elem: { source_id: any; source_name: any ; source_date: any },
+  elem: { source_id: any; source_name: any; source_date: any },
   message: string
 ) {
-
-  if (elem.source_id && !elem.source_date) {
-      message += `🔗 _JO du ${dateToFrenchString(elem.source_date)}_: `;
+  if (elem.source_id && elem.source_date) {
+    message += `🔗 _JO du ${dateToFrenchString(elem.source_date)}_: `;
 
     switch (elem.source_name) {
       case "BOMI":
@@ -84,7 +83,8 @@ export function formatSearchResult(
   let message = "";
   let prenomNom = `${result[0].prenom} ${result[0].nom}`;
   let prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-      prenomNom)})`;
+    prenomNom
+  )})`;
   if (options?.isConfirmation) {
     if (result.length === 1)
       message += `Voici la dernière information que nous avons sur ${prenomNomLink}.\n\n`;
@@ -101,14 +101,21 @@ export function formatSearchResult(
     message = addPoste(elem, message);
 
     if (elem?.date_debut) {
-      if (elem.type_ordre === "nomination" && (elem?.armee_grade || elem?.grade)) {
-          message += `🗓 Pour prendre rang du ${dateToFrenchString(elem.date_debut)}\n`;
+      if (
+        elem.type_ordre === "nomination" &&
+        (elem?.armee_grade || elem?.grade)
+      ) {
+        message += `🗓 Pour prendre rang du ${dateToFrenchString(
+          elem.date_debut
+        )}\n`;
       } else {
-          if (elem?.date_fin)
-              message += `🗓 Du ${dateToFrenchString(elem.date_debut)} au ${dateToFrenchString(elem.date_fin)}\n`;
-          else {
-            message += `🗓 À compter du ${dateToFrenchString(elem.date_debut)}\n`;
-            }
+        if (elem?.date_fin)
+          message += `🗓 Du ${dateToFrenchString(
+            elem.date_debut
+          )} au ${dateToFrenchString(elem.date_fin)}\n`;
+        else {
+          message += `🗓 À compter du ${dateToFrenchString(elem.date_debut)}\n`;
+        }
       }
     }
     message = addLinkJO(elem, message);
