@@ -1,5 +1,4 @@
 import { TypeOrdre } from "../types";
-import { dateToFrenchString } from "./date.utils";
 
 export const textTypeOrdre = (
   type_ordre: TypeOrdre,
@@ -43,11 +42,4 @@ export const textTypeOrdre = (
     default:
       return `📝 A été _${type_ordre}_ à:\n`;
   }
-};
-
-export const textPublishDate = (date: string): string => {
-  if (date) {
-    return `🗓 _Publié le_:  ${dateToFrenchString(date)} \n`;
-  }
-  return "";
 };

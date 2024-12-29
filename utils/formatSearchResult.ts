@@ -1,4 +1,5 @@
-import { textTypeOrdre, textPublishDate } from "./formatting.utils";
+import { textTypeOrdre } from "./formatting.utils";
+import { dateToFrenchString } from "./date.utils";
 
 function addPoste(
   elem: {
@@ -54,16 +55,19 @@ if (elem.armee_grade) {
 }
 
 function addLinkJO(
-  elem: { source_id: any; source_name: any },
+  elem: { source_id: any; source_name: any ; source_date: any },
   message: string
 ) {
-  if (elem.source_id) {
+
+  if (elem.source_id && !elem.source_date) {
+      message += `🔗 _JO du ${dateToFrenchString(elem.source_date)}_: `;
+
     switch (elem.source_name) {
       case "BOMI":
-        message += `🔗 _Lien JO_:  [cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}.pdf)\n`;
+        message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}.pdf)\n`;
         break;
       default:
-        message += `🔗 _Lien JO_:  [cliquez ici](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`;
+        message += `[cliquez ici](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`;
     }
   }
   return message;
@@ -95,7 +99,18 @@ export function formatSearchResult(
     }
     message += textTypeOrdre(elem.type_ordre || "nomination", elem.sexe || "M");
     message = addPoste(elem, message);
-    message += textPublishDate(elem.source_date);
+
+    if (elem?.date_debut) {
+      if (elem.type_ordre === "nomination" && (elem?.armee_grade || elem?.grade)) {
+          message += `🗓 Pour prendre rang du ${dateToFrenchString(elem.date_debut)}\n`;
+      } else {
+          if (elem?.date_fin)
+              message += `🗓 Du ${dateToFrenchString(elem.date_debut)} au ${dateToFrenchString(elem.date_fin)}\n`;
+          else {
+            message += `🗓 À compter du ${dateToFrenchString(elem.date_debut)}\n`;
+            }
+      }
+    }
     message = addLinkJO(elem, message);
     message += "\n";
   }
