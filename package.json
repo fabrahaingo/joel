@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "start": "ts-node app.ts"
+    "start": "tsx app.ts"
   },
   "license": "MIT",
   "engines": {
@@ -18,7 +18,7 @@
     "mongoose": "8.9.0",
     "node-telegram-bot-api": "0.66.0",
     "nodemon": "3.1.9",
-    "ts-node": "10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "5.7.2"
   }
 }

@@ -1,15 +1,15 @@
 {
   "cron": [
     {
-      "command": "ts-node ./scripts/updatePeople.ts",
+      "command": "tsx ./scripts/updatePeople.ts",
       "schedule": "0 8 * * *"
     },
     {
-      "command": "ts-node ./scripts/updateFunctions.ts",
+      "command": "tsx ./scripts/updateFunctions.ts",
       "schedule": "15 8 * * *"
     },
     {
-      "command": "ts-node ./scripts/notifyUsers.ts",
+      "command": "tsx ./scripts/notifyUsers.ts",
       "schedule": "0 9 * * *"
     }
   ]
