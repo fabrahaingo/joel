@@ -117,6 +117,8 @@ export function formatSearchResult(
           message += `🗓 À compter du ${dateToFrenchString(elem.date_debut)}\n`;
         }
       }
+    } else if (elem?.date_fin) {
+      message += `🗓 Jusqu'au ${dateToFrenchString(elem.date_fin)}\n`;
     }
     message = addLinkJO(elem, message);
     message += "\n";

@@ -34,7 +34,7 @@ export const textTypeOrdre = (
     case "renouvellement":
       return `📝 A été _renouvelé${agree(sex)}_ à:\n`;
     case "reconduction":
-      return `📝 A été _reconduit${agree(sex)}_ à:\n`;
+      return `📝 A été _reconduit${agree(sex)}_ dans ses fonctions\n`;
     case "élection":
       return `📝 A été _élu${agree(sex)}_ à:\n`;
     case "admissibilite":
