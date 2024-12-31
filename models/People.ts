@@ -1,8 +1,9 @@
 import { Schema as _Schema, model } from "mongoose";
 import { IPeople, PeopleModel } from "../types";
+import { JORFSearchItem } from "../entities/JORFSearchResponse";
 const Schema = _Schema;
 
-const PeopleSchema = new Schema<IPeople, PeopleModel>(
+export const PeopleSchema = new Schema<IPeople, PeopleModel>(
   {
     nom: {
       type: String,
@@ -17,7 +18,7 @@ const PeopleSchema = new Schema<IPeople, PeopleModel>(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 PeopleSchema.static(
@@ -25,7 +26,7 @@ PeopleSchema.static(
   async function (tgPeople: {
     nom: string;
     prenom: string;
-    lastKnownPosition: Object;
+    lastKnownPosition: JORFSearchItem;
   }) {
     let people = await this.findOne({
       nom: tgPeople.nom,
@@ -43,7 +44,7 @@ PeopleSchema.static(
     }
 
     return people;
-  }
+  },
 );
 
 export default model<IPeople, PeopleModel>("People", PeopleSchema);
