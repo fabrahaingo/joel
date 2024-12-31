@@ -4,7 +4,6 @@ import { mongodbConnect } from "../db";
 import { ErrorMessages } from "../entities/ErrorMessages";
 import {
   forceNotifyTagUpdates,
-  forceNotifyTagUpdatesFromDate,
   getJORFRecordsFromDate,
   notifyPeopleUpdates,
   updatePeopleFromTags,

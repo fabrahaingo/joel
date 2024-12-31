@@ -192,9 +192,11 @@ async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
 async function updateUserFollows(user: IUser, peoples: IPeople[]) {
   const peoplesIdArray = peoples.map((people) => people._id);
 
+  const currentDate = new Date();
+
   for (const followedPerson of user.followedPeople) {
     if (peoplesIdArray.includes(followedPerson.peopleId)) {
-      followedPerson.lastUpdate = new Date();
+      followedPerson.lastUpdate = currentDate;
     }
   }
   // remove duplicated in followedPeople array that have same peopleId (can happen if user has followed a person twice)
@@ -331,7 +333,7 @@ async function sendPeopleUpdate(
 
     const pluralHandler = peopleUpdate.records.length > 1 ? "s" : "";
 
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${prenomNomLink}\n`;
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${prenomNomLink}\n\n`;
     notification_text += formatSearchResult(peopleUpdate.records, {
       isListing: true,
     });
@@ -368,7 +370,7 @@ async function sendForcedTagUpdates(
     const records: JORFSearchItem[] = tagMap[tag];
     const pluralHandler = records.length > 1 ? "s" : "";
 
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${tag}*\n`;
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${tag}*\n\n`;
 
     for (const record of records) {
       const prenomNom = `${record.prenom} ${record.nom}`;
