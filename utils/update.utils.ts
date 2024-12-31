@@ -331,10 +331,14 @@ async function sendPeopleUpdate(
       prenomNom,
     )})`;
 
+    const records = peopleUpdate.records;
+    // Reverse array to freshest records at the bottom
+    records.reverse();
+
     const pluralHandler = peopleUpdate.records.length > 1 ? "s" : "";
 
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${prenomNomLink}\n\n`;
-    notification_text += formatSearchResult(peopleUpdate.records, {
+    notification_text += formatSearchResult(records, {
       isListing: true,
     });
 
@@ -368,8 +372,10 @@ async function sendForcedTagUpdates(
 
   for (const tag of tagList) {
     const records: JORFSearchItem[] = tagMap[tag];
-    const pluralHandler = records.length > 1 ? "s" : "";
+    // Reverse array to freshest records at the bottom
+    records.reverse();
 
+    const pluralHandler = records.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${tag}*\n\n`;
 
     for (const record of records) {
