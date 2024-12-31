@@ -22,14 +22,16 @@ function addPoste(
   if (elem.grade) {
     message += `👉 au grade de *${elem.grade}*`;
     if (elem.ordre_merite) {
-      message += ` de l'Ordre national du mérite`;
+      message += ` de l'Ordre national du mérite\n`;
     } else if (elem.legion_honneur) {
-      message += ` de la Légion d'honneur`;
+      message += ` de la Légion d'honneur\n`;
+    } else {
+      message += `\n`;
     }
     if (elem.nomme_par) {
-      message += `${elem.nomme_par ? `🏛️ par le *${elem.nomme_par}*` : ""}\n`;
+      message += `🏛️ par le *${elem.nomme_par}*\n`;
     } else if (elem.cabinet) {
-      message += `\n*🏛️ Cabinet du ${elem.cabinet}*\n`;
+      message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
     }
   } else if (elem.armee_grade) {
     if (elem.type_ordre == "nomination") {
