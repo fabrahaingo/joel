@@ -5,6 +5,7 @@ function addPoste(
   elem: {
     organisations: { nom: any }[];
     ministre: any;
+    cabinet: string;
     inspecteur_general: any;
     grade: any;
     armee: any;
@@ -18,7 +19,7 @@ function addPoste(
   },
   message: string
 ) {
-if (elem.grade) {
+  if (elem.grade) {
     message += `👉 au grade de *${elem.grade}*`;
     if (elem.ordre_merite) {
       message += ` de l'Ordre national du mérite`;
@@ -40,7 +41,9 @@ if (elem.grade) {
     } else {
       message += `\n🪖 *${elem.corps}*\n`;
     }
-  } else if (elem.organisations && elem.organisations[0]?.nom) {
+  } else if (elem.cabinet) {
+    message += `*👉 ${elem.cabinet}*\n`;
+  } else if (elem.organisations[0]?.nom) {
     message += `*👉 ${elem.organisations[0].nom}*\n`;
   } else if (elem.ministre) {
     message += `*👉 ${elem.ministre}*\n`;
