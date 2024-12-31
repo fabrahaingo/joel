@@ -27,9 +27,9 @@ function addPoste(
       message += ` de la Légion d'honneur`;
     }
     if (elem.nomme_par) {
-      message += `${elem.nomme_par ? ` par le _${elem.nomme_par}_` : ""}\n`;
+      message += `${elem.nomme_par ? `🏛️ par le *${elem.nomme_par}*` : ""}\n`;
     } else if (elem.cabinet) {
-      message += `\n*👉 Cabinet du ${elem.cabinet}*\n`;
+      message += `\n*🏛️ Cabinet du ${elem.cabinet}*\n`;
     }
   } else if (elem.armee_grade) {
     if (elem.type_ordre == "nomination") {
