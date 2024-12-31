@@ -308,7 +308,7 @@ async function sendPeopleUpdate(
       }
       const lastUpdateDate = user.followedPeople[idPeople].lastUpdate;
       const relevantRecords = peopleUpdate.records.filter(
-        (r) => JORFtoDate(r.source_date).getTime() > lastUpdateDate.getTime(),
+        (r) => JORFtoDate(r.source_date).getTime() < lastUpdateDate.getTime(),
       );
 
       // If records are left, we had the people to the notification pile
