@@ -9,8 +9,14 @@ export function dateToFrenchString(date: string): string {
 }
 
 export function dateTOJORFFormat(date: Date): string {
-  const dateISO = date.toISOString().split(/[-T]/);
-  return `${dateISO[2]}-${dateISO[1]}-${dateISO[0]}`;
+  date.setHours(0, 0, 0, 0);
+  return date
+    .toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+    })
+    .replaceAll("/", "-");
 }
 
 export function JORFtoDate(dateStr: string): Date {
