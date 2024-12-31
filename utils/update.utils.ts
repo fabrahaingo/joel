@@ -364,17 +364,18 @@ async function sendForcedTagUpdates(
   tagMap: [[FunctionTags], JORFSearchItem[]][],
   BOT_TOKEN: string,
 ) {
-  if (tagMap.length == 0) {
-    return;
-  }
   let notification_text = "📢 ";
 
-  if (tagMap.length > 1) {
+  const tagList = Object.keys(tagMap) as FunctionTags[];
+
+  if (tagList.length == 0) {
+    return;
+  }
+
+  if (tagList.length > 1) {
     notification_text +=
       "Nouvelles publications pour les fonctions que suivez :\n\n";
   }
-
-  const tagList = Object.keys(tagMap) as FunctionTags[];
 
   for (const tag of tagList) {
     const records: JORFSearchItem[] = tagMap[tag];
