@@ -232,8 +232,14 @@ export async function forceNotifyTagUpdates(
   });
 
   for (const user of updatedUsers) {
+    const relevantTagsUpdates: [[FunctionTags], JORFSearchItem[]][] = [];
+    for (const tag of user.followedFunctions) {
+      const tagStack: JORFSearchItem[] = tagMap[tag];
+      if (tagStack !== undefined && tagStack.length > 0)
+        relevantTagsUpdates[tag] = tagStack;
+    }
     // send notification to user
-    await sendForcedTagUpdates(user, tagMap, BOT_TOKEN);
+    await sendForcedTagUpdates(user, relevantTagsUpdates, BOT_TOKEN);
   }
 }
 
