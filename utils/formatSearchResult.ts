@@ -26,7 +26,11 @@ function addPoste(
     } else if (elem.legion_honneur) {
       message += ` de la Légion d'honneur`;
     }
-    message += `${elem.nomme_par ? ` par le _${elem.nomme_par}_` : ""}\n`;
+    if (elem.nomme_par) {
+      message += `${elem.nomme_par ? ` par le _${elem.nomme_par}_` : ""}\n`;
+    } else if (elem.cabinet) {
+      message += `\n*👉 Cabinet du ${elem.cabinet}*\n`;
+    }
   } else if (elem.armee_grade) {
     if (elem.type_ordre == "nomination") {
       message += `👉 au grade de *${elem.armee_grade}*`;
@@ -42,7 +46,7 @@ function addPoste(
       message += `\n🪖 *${elem.corps}*\n`;
     }
   } else if (elem.cabinet) {
-    message += `*👉 ${elem.cabinet}*\n`;
+    message += `👉 Cabinet du *${elem.cabinet}*\n`;
   } else if (elem.organisations[0]?.nom) {
     message += `*👉 ${elem.organisations[0].nom}*\n`;
   } else if (elem.ministre) {
