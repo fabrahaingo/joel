@@ -30,28 +30,29 @@ if (MONGODB_URI === undefined) {
 // Require to load all users, all people, compare update and notification time
 
 (async () => {
-  // Number of months to go back
-  const shiftDays = 5;
+  // Connect to DB
+  await mongodbConnect();
 
   // currentDate is today
   const currentDate = new Date();
+  const JORFUpdateToday = await getJORFRecordsFromDate(currentDate);
+
+  // From Today only: Update and return tags
+  const updatedTagMap = await updatePeopleFromTags(JORFUpdateToday);
+
+  // Number of months to go back
+  const shiftDays = 60;
+
   const startDate = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth(),
     currentDate.getDate() - shiftDays,
   );
-
   startDate.setHours(0, 0, 0, 0);
-  const JORFUpdate = await getJORFRecordsFromDate(startDate);
+  const JORFUpdateBacklog = await getJORFRecordsFromDate(startDate);
 
-  // Connect to DB
-  await mongodbConnect();
-
-  // Update people and return all people records to be sent to users
-  const updatedPeopleRecords = await updatePeopleInDB(JORFUpdate);
-
-  // Update and return tags
-  const updatedTagMap = await updatePeopleFromTags(JORFUpdate);
+  // Through the backlog : Update people and return all people records to be sent to users
+  const updatedPeopleRecords = await updatePeopleInDB(JORFUpdateBacklog);
 
   // Notify users
   const BOT_TOKEN = process.env.BOT_TOKEN;
