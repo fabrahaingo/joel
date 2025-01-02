@@ -378,13 +378,17 @@ async function sendForcedTagUpdates(
       "Nouvelles publications pour les fonctions que suivez :\n\n";
   }
 
+  const tagValues = Object.values(FunctionTags);
+  const tagKeys = Object.keys(FunctionTags);
+
   for (const tag of tagList) {
+    const tagName = tagKeys[tagValues.indexOf(tag)];
     const records: JORFSearchItem[] = tagMap[tag];
     // Reverse array to freshest records at the bottom
     records.reverse();
 
     const pluralHandler = records.length > 1 ? "s" : "";
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${tag}*\n\n`;
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${tagName}*\n\n`;
 
     for (const record of records) {
       const prenomNom = `${record.prenom} ${record.nom}`;
