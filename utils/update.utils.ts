@@ -149,29 +149,34 @@ async function updatePeople(
   }
 }
 
-export async function getDailyUpdate(date: Date): Promise<JORFSearchItem[]> {
+export async function getDailyUpdate(
+  date: Date,
+): Promise<JORFSearchItem[] | null> {
+  date.setHours(0, 0, 0, 0);
+
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
 
   if (date.getTime() > todayDate.getTime()) {
     throw Error("Unable to fetch JORF updates in future dates");
   }
-  const dailyUpdates = await axios
-    .get<JORFSearchResponse>(
-      `https://jorfsearch.steinertriples.ch/${dateTOJORFFormat(date)}?format=JSON`,
-    )
-    .then((res) => res.data)
-    .catch((err: unknown) => {
-      console.log(err);
-      return [];
-    });
 
-  if (dailyUpdates === null || typeof dailyUpdates === "string") {
-    return [];
+  try {
+    return await axios
+      .get<JORFSearchResponse>(
+        `https://jorfsearch.steinertriples.ch/${dateTOJORFFormat(date)}?format=JSON`,
+      )
+      .then((res) => {
+        if (typeof res.data === "string") {
+          return null;
+        }
+        // Do not filter out duplicates: only the first item of each people will be keep for record keeping;
+        return res.data;
+      });
+  } catch (e) {
+    console.log(e);
   }
-
-  return dailyUpdates;
-  // Do not filter out duplicates: only the first item of each people will be keep for record keeping;
+  return null;
 }
 
 // Update people in DB from starting date and return JORFItems of updated
