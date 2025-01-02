@@ -79,19 +79,20 @@ export async function getJORFRecordsFromDate(
   startDate.setHours(0, 0, 0, 0);
   todayDate.setHours(0, 0, 0, 0);
 
-  const startDateStr = dateTOJORFFormat(startDate);
+  const targetDateStr = dateTOJORFFormat(startDate);
 
   // From today, until the start
   // Order is important to keep record sorted, and remove later ones as duplicates
   let updatedPeople: JORFSearchItem[] = [];
-  for (
-    const currentDate = new Date(todayDate);
-    dateTOJORFFormat(currentDate) !== startDateStr;
-    currentDate.setDate(currentDate.getDate() - 1)
-  ) {
+
+  const currentDate = new Date(todayDate);
+  let running = true;
+  while (running) {
     const JORFPeople: JORFSearchItem[] = await getDailyUpdate(currentDate);
 
     updatedPeople = updatedPeople.concat(JORFPeople);
+    running = dateTOJORFFormat(currentDate) !== targetDateStr;
+    currentDate.setDate(currentDate.getDate() - 1);
   }
   return updatedPeople;
 }
