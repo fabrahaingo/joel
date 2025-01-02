@@ -48,7 +48,7 @@ function addPoste(
       message += `\n🪖 *${elem.corps}*\n`;
     }
   } else if (elem.cabinet) {
-    message += `👉 Cabinet du *${elem.cabinet}*\n`;
+    message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
   } else if (elem.organisations[0]?.nom) {
     message += `*👉 ${elem.organisations[0].nom}*\n`;
   } else if (elem.ministre) {
