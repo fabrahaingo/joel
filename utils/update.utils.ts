@@ -411,7 +411,7 @@ async function sendForcedTagUpdates(
 
   await sendLongMessageFromAxios(user, notification_text, BOT_TOKEN);
 
-  await umami.log({ event: "/notification-update-tag" });
+  await umami.log({ event: "/notification-update-function" });
 }
 
 async function sendLongMessageFromAxios(
