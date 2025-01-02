@@ -5,6 +5,7 @@ function addPoste(
   elem: {
     organisations: { nom: any }[];
     ministre: any;
+    cabinet: string;
     inspecteur_general: any;
     grade: any;
     armee: any;
@@ -18,7 +19,21 @@ function addPoste(
   },
   message: string
 ) {
-  if (elem.armee_grade) {
+  if (elem.grade) {
+    message += `👉 au grade de *${elem.grade}*`;
+    if (elem.ordre_merite) {
+      message += ` de l'Ordre national du mérite\n`;
+    } else if (elem.legion_honneur) {
+      message += ` de la Légion d'honneur\n`;
+    } else {
+      message += `\n`;
+    }
+    if (elem.nomme_par) {
+      message += `🏛️ par le *${elem.nomme_par}*\n`;
+    } else if (elem.cabinet) {
+      message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+    }
+  } else if (elem.armee_grade) {
     if (elem.type_ordre == "nomination") {
       message += `👉 au grade de *${elem.armee_grade}*`;
     } else if (elem.type_ordre == "promotion") {
@@ -32,20 +47,14 @@ function addPoste(
     } else {
       message += `\n🪖 *${elem.corps}*\n`;
     }
-  } else if (elem.organisations && elem.organisations[0]?.nom) {
+  } else if (elem.cabinet) {
+    message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+  } else if (elem.organisations[0]?.nom) {
     message += `*👉 ${elem.organisations[0].nom}*\n`;
   } else if (elem.ministre) {
     message += `*👉 ${elem.ministre}*\n`;
   } else if (elem.inspecteur_general) {
     message += `*👉 Inspecteur général des ${elem.inspecteur_general}*\n`;
-  } else if (elem.grade) {
-    message += `👉 au grade de *${elem.grade}*`;
-    if (elem.ordre_merite) {
-      message += ` de l'Ordre national du mérite`;
-    } else if (elem.legion_honneur) {
-      message += ` de la Légion d'honneur`;
-    }
-    message += `${elem.nomme_par ? ` par le _${elem.nomme_par}_` : ""}\n`;
   } else if (elem.autorite_delegation) {
     message += `👉 par le _${elem.autorite_delegation}_\n`;
   } else if (elem.corps) {
