@@ -1,9 +1,15 @@
-export type JORFSearchResponse = {
-  [key: string]: string | undefined | { nom: string }[];
+export type JORFSearchResponse = null | string | JORFSearchItem[];
 
+export interface JORFSearchItem {
   organisations: {
     nom: string;
+    wikidata_id?: string;
+    tribunal?: string;
+    organisation_militaire?: string;
+    ecole?: string;
+    etablissement_enseignement_superieur?: string;
   }[];
+
   source_date: string;
   source_id: string;
   source_name: string;
@@ -128,4 +134,4 @@ export type JORFSearchResponse = {
   tribunal_grande_instance?: string;
   centre_detention?: string;
   notaire_tranfert_office?: string;
-};
+}
