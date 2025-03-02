@@ -3,25 +3,9 @@ import People from "../models/People";
 import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
-import { FunctionTags } from "../entities/FunctionTags";
+import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
 import { IOrganisation, IPeople } from "../types";
 import Organisation from "../models/Organisation";
-
-export function getFunctionsFromValues(
-  values: FunctionTags[],
-): (keyof typeof FunctionTags)[] {
-  if (values.length === 0) return [];
-
-  const tagValues = Object.values(FunctionTags);
-  const tagKeys = Object.keys(FunctionTags) as (keyof typeof FunctionTags)[];
-
-  return values.map((tag) => tagKeys[tagValues.indexOf(tag)]);
-}
-
-// return the first key matching the given value
-function getKeyName(value: FunctionTags): keyof typeof FunctionTags {
-  return getFunctionsFromValues[value];
-}
 
 function sortArrayAlphabetically(array: string[]) {
   array.sort((a, b) => {
@@ -72,7 +56,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       organisations.length === 0 &&
       functions.length === 0
     ) {
-      text = `Vous ne suivez aucun contact, fonction, ni organisation pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
+      text = `Vous ne suivez aucun contact, fonction, ni organisation pour le moment.\nCliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
     } else {
       if (functions.length > 0) {
         text += `Voici les fonctions que vous suivez: \n\n`;
@@ -95,20 +79,20 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             text += `\n`;
           }
         }
-        if (peoples.length > 0) {
-          text += `Voici les personnes que vous suivez: \n\n`;
-          for (let i = 0; i < peoples.length; i++) {
-            const nomPrenom = `${peoples[i].nom} ${peoples[i].prenom}`;
-            // JORFSearch needs a search query in this specific order
-            const prenomNom = `${peoples[i].prenom} ${peoples[i].nom}`;
-            text += `${
-              i + 1
-            }. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-              prenomNom,
-            )})\n`;
-            if (peoples[i + 1]) {
-              text += `\n`;
-            }
+      }
+      if (peoples.length > 0) {
+        text += `Voici les personnes que vous suivez: \n\n`;
+        for (let i = 0; i < peoples.length; i++) {
+          const nomPrenom = `${peoples[i].nom} ${peoples[i].prenom}`;
+          // JORFSearch needs a search query in this specific order
+          const prenomNom = `${peoples[i].prenom} ${peoples[i].nom}`;
+          text += `${String(
+            i + 1,
+          )}. *${nomPrenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+            prenomNom,
+          )})\n`;
+          if (peoples[i + 1]) {
+            text += `\n`;
           }
         }
       }
