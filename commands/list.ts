@@ -4,6 +4,8 @@ import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
 import { FunctionTags } from "../entities/FunctionTags";
+import { IOrganisation, IPeople } from "../types";
+import Organisation from "../models/Organisation";
 
 // return the first key matching the given value
 function getKeyName(value: string) {
@@ -42,28 +44,48 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       chatId: msg.chat.id,
     });
 
-    if (!user) {
-      text =
-        "Une erreur s'est produite avec votre profil. Merci d'envoyer /start pour réessayer.";
-    } else {
-      // get array of ids of people
-      let peopleIds = user.followedPeople.map((p) => p.peopleId);
-      let peoples = await People.find({ _id: { $in: peopleIds } })
+    const peoples: IPeople[] = await People.find({
+      _id: { $in: user.followedPeople.map((p) => p.peopleId) },
+    })
         .collation({ locale: "fr" })
         .sort({ nom: 1 })
         .lean();
-      let functions = sortArrayAlphabetically(user.followedFunctions);
-      if (peoples.length === 0 && functions.length === 0) {
-        text = `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
-      } else {
-        if (functions.length > 0) {
-          text += `Voici les fonctions que vous suivez: \n\n`;
-          for (let j = 0; j < functions.length; j++) {
-            text += `${j + 1}. *${getKeyName(
-              functions[j]
-            )}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
-              functions[j]
-            )})\n\n`;
+    const functions = sortArrayAlphabetically(user.followedFunctions);
+    const organisations: IOrganisation[] = await Organisation.find({
+      wikidata_id: {
+        $in: user.followedOrganisations.map((o) => o.wikidata_id),
+      },
+    })
+        .collation({ locale: "fr" })
+        .sort({ nom: 1 })
+        .lean();
+    if (
+        peoples.length === 0 &&
+        organisations.length === 0 &&
+        functions.length === 0
+    ) {
+      text = `Vous ne suivez aucun contact, fonction, ni organisation pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
+    } else {
+      if (functions.length > 0) {
+        text += `Voici les fonctions que vous suivez: \n\n`;
+        for (let j = 0; j < functions.length; j++) {
+          text += `${String(j + 1)}. *${getKeyName(
+              functions[j],
+          )}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
+              functions[j],
+          )})\n\n`;
+        }
+      }
+      if (organisations.length > 0) {
+        text += `Voici les organisations que vous suivez: \n\n`;
+        for (let k = 0; k < organisations.length; k++) {
+          text += `${String(
+              k + 1,
+          )}. *${organisations[k].nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(
+              organisations[k].wikidata_id,
+          )})\n`;
+          if (peoples[k + 1]) {
+            text += `\n`;
           }
         }
         if (peoples.length > 0) {
