@@ -1,12 +1,18 @@
 import axios from "axios";
+import { ErrorMessages } from "../entities/ErrorMessages";
 
-export const log = async (args: { event: string; data?: any }) => {
+export const log = async (args: { event: string; data?: never }) => {
   if (process.env.NODE_ENV === "development") {
     console.log("Umami event", args.event);
     return;
   }
 
-  const endpoint = `https://${process.env.UMAMI_HOST}/api/send`;
+  const UMAMI_HOST = process.env.UMAMI_HOST;
+  if (!UMAMI_HOST) {
+    throw new Error(ErrorMessages.UMAMI_HOST_NOT_SET);
+  }
+
+  const endpoint = `https://${UMAMI_HOST}/api/send`;
   const payload = {
     payload: {
       hostname: process.env.UMAMI_HOST,

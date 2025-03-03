@@ -10,7 +10,7 @@ export function splitText(text: string, max: number): string[] {
 
     if (endIndex < text.length) {
       // Check for markdown element or word boundary within the chunk
-      while (endIndex > startIndex && !/\n/.test(text.charAt(endIndex))) {
+      while (endIndex > startIndex && !text.charAt(endIndex).includes("\n")) {
         endIndex--;
       }
     }
@@ -19,7 +19,7 @@ export function splitText(text: string, max: number): string[] {
     chunks.push(chunk);
 
     startIndex = endIndex;
-    while (startIndex < text.length && /\n/.test(text.charAt(startIndex))) {
+    while (startIndex < text.length && text.charAt(startIndex).includes("\n")) {
       startIndex++;
     }
   }
@@ -32,15 +32,15 @@ export async function sendLongText(
     sendMessage: (
       arg0: ChatId,
       arg1: string,
-      arg2: SendMessageOptions
+      arg2: SendMessageOptions,
     ) => Promise<Message>;
   },
-  chatId: any,
-  formattedData: string
+  chatId: ChatId,
+  formattedData: string,
 ): Promise<void> {
   const mArr = splitText(formattedData, 3000);
 
-  for (let i = 0; i < mArr.length; i++) {
-    await bot.sendMessage(chatId, mArr[i], startKeyboard);
+  for (const mElm of mArr) {
+    await bot.sendMessage(chatId, mElm, startKeyboard);
   }
 }

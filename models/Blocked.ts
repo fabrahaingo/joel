@@ -10,7 +10,7 @@ const BlockedSchema = new Schema<IBlocked>(
       unique: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default model<IBlocked>("Blocked", BlockedSchema);

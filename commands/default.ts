@@ -10,7 +10,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       await bot.sendMessage(
         msg.chat.id,
         `Je n'ai pas compris votre message 🥺\nMerci d'utiliser un des boutons ci-dessous pour interagir avec moi.`,
-        startKeyboard
+        startKeyboard,
       );
     }
   } catch (error) {
