@@ -1,3 +1,5 @@
+import { TypeOrdre } from "../types";
+
 export type JORFSearchResponse = null | string | JORFSearchItem[];
 
 export interface JORFSearchItem {
@@ -24,7 +26,7 @@ export interface JORFSearchItem {
   source_date: string;
   source_id: string;
   source_name: string;
-  type_ordre: string;
+  type_ordre: TypeOrdre;
 
   sexe: string;
   nom: string;
