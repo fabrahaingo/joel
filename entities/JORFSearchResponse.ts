@@ -1,6 +1,6 @@
-export type JORFSearchResponse = {
-  [key: string]: string | undefined | { nom: string }[];
+export type JORFSearchResponse = null | string | JORFSearchItem[];
 
+export interface JORFSearchItem {
   organisations: {
     nom: string;
   }[];
