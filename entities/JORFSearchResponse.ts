@@ -18,7 +18,7 @@ export interface JORFSearchItem {
   }[];
 
   remplacement?: {
-    sexe?: string;
+    sexe?: "F" | "M";
     nom?: string;
     prenom?: string;
     nom_alternatif?: string;
@@ -28,7 +28,7 @@ export interface JORFSearchItem {
   source_name: string;
   type_ordre: TypeOrdre;
 
-  sexe: string;
+  sexe?: "F" | "M";
   nom: string;
   prenom: string;
   date_naissance?: string;
