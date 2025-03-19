@@ -61,4 +61,4 @@ export type TypeOrdre =
   | "renouvellement"
   | "reconduction"
   | "élection"
-  | "admissibilite";
+  | "admissibilité";
