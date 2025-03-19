@@ -8,6 +8,7 @@ import { Types } from "mongoose";
 import { IUser } from "../types";
 import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
+import { cleanJORFItems } from "../entities/JORFSearchResponse";
 
 function removeAccents(input: string): string {
   input = input.trim().toLowerCase();
@@ -45,27 +46,28 @@ async function getJORFSearchResult(year: string, institution: string) {
   if (year === "") {
     return [];
   }
+  let res = [];
   if (institution === "ENA") {
     let url = `https://jorfsearch.steinertriples.ch/tag/eleve_ena=%22${year}%22?format=JSON`;
-    const res = await axios.get(url).then((response) => {
+    res = await axios.get(url).then((response) => {
       return response.data;
     });
-    return res;
+  } else {
+    const inspId = "Q109039648";
+    let url = `https://jorfsearch.steinertriples.ch/${inspId}?format=JSON`;
+    res = await axios.get(url).then((response) => {
+      return response.data.filter(
+        (publication: { type_ordre: string; date_fin: string }) => {
+          // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
+          return (
+            publication.type_ordre === "admission" &&
+            publication.date_fin.slice(0, 4) === year.slice(-4)
+          );
+        }
+      );
+    });
   }
-  const inspId = "Q109039648";
-  let url = `https://jorfsearch.steinertriples.ch/${inspId}?format=JSON`;
-  const res = await axios.get(url).then((response) => {
-    return response.data.filter(
-      (publication: { type_ordre: string; date_fin: string }) => {
-        // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
-        return (
-          publication.type_ordre === "admission" &&
-          publication.date_fin.slice(0, 4) === year.slice(-4)
-        );
-      }
-    );
-  });
-  return res;
+  return cleanJORFItems(res);
 }
 
 function capitalizeFirstLetters(str: string | undefined): string {
