@@ -10,7 +10,6 @@
   "dependencies": {
     "@types/node-telegram-bot-api": "0.64.7",
     "axios": "1.8.3",
-    "crypto": "1.0.1",
     "dotenv": "16.4.7",
     "express": "4.21.2",
     "moment": "^2.30.1",
