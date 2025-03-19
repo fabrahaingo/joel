@@ -1,7 +1,6 @@
 import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
 import umami from "../utils/umami";
-import { createHash } from "node:crypto";
 import { IUser, UserModel } from "../types";
 import TelegramBot from "node-telegram-bot-api";
 
