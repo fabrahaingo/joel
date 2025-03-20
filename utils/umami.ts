@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const log = async (args: { event: string; data?: any }) => {
+export const log = async (args: { event: UmamiEvent; data?: any }) => {
   if (process.env.NODE_ENV === "development") {
     console.log("Umami event", args.event);
     return;
@@ -29,3 +29,21 @@ export const log = async (args: { event: string; data?: any }) => {
 export default {
   log,
 };
+
+export type UmamiEvent =
+    | "/new-user"
+    | "/start"
+    | "/default-message"
+    | "/help"
+    | "/stats"
+    | "/list"
+    | "/search"
+    | "/follow"
+    | "/ena"
+    | "/follow-function"
+    | "/unfollow"
+    | "/user-blocked-joel"
+    | "/notification-update"
+    | "/person-updated"
+    | "/person-added"
+
