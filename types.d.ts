@@ -39,6 +39,7 @@ export interface IPeople {
   _id: Types.ObjectId;
   nom: string;
   prenom: string;
+  sexe?: "F" | "M";
   lastKnownPosition: JORFSearchItem;
   save: () => Promise<IPeople>;
   countDocuments: () => number;

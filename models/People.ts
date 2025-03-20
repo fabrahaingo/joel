@@ -13,6 +13,10 @@ const PeopleSchema = new Schema<IPeople, PeopleModel>(
       type: String,
       required: true,
     },
+    sexe: {
+      type: String,
+      enum: ['F', 'M'],
+    },
     lastKnownPosition: {
       type: Object,
       required: true,
