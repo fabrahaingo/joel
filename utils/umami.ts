@@ -50,4 +50,10 @@ export type UmamiEvent =
     | "/notification-update"
     | "/person-updated"
     | "/person-added"
+    | "/autom-update-people-start"
+    | "/autom-update-people-end"
+    | "/autom-update-functions-start"
+    | "/autom-update-functions-end"
+    | "/autom-notify-start"
+    | "/autom-notify-end"
 

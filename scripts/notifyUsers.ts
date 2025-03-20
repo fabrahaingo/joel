@@ -311,6 +311,8 @@ function returnIdsArray(
 mongoose
   .connect(process.env.MONGODB_URI || "")
   .then(async () => {
+    await umami.log({ event: "/autom-notify-start" });
+
     // 1. get all people who have been updated today
     const peoples = await getPeople();
     if (peoples.length === 0) {
@@ -321,6 +323,8 @@ mongoose
     const users = await getUsers(peopleIds);
     // 3. send notification to users
     await notifyUsers(users, peoples);
+
+    await umami.log({ event: "/autom-notify-end" });
     process.exit(0);
   })
   .catch((err: any) => {
