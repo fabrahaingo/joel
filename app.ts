@@ -2,6 +2,8 @@ import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { CommandType } from "./types";
 import { mongodbConnect } from "./db";
+import User from "./models/User";
+import umami from "./utils/umami";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -55,7 +57,31 @@ const commands: CommandType = [
   await mongodbConnect();
 
   commands.forEach((command) => {
-    bot.onText(command.regex, command.action(bot));
+    bot.onText(command.regex,
+        async (msg: TelegramBot.Message) => {
+          // Check if user is defined
+          const tgUser: TelegramBot.User | undefined = msg.from;
+          if (tgUser === undefined) return
+
+          // Fetch user from db
+          const user = await User.firstOrCreate({
+            tgUser: tgUser,
+            chatId: msg.chat.id,
+          });
+
+          // Update time of last interaction if before the current day
+          const currentDate=(new Date());
+          currentDate.setHours(0,12,0,0); // Prevents updating the user for each message
+          if (user.last_interaction.getTime() < currentDate.getTime()){
+              user.last_interaction=currentDate;
+              await user.save();
+              await umami.log({ event: "/user-active-day" });
+          }
+
+          // Process user message
+          command.action(bot)(msg)
+        })
+        ;
   });
 
   console.log(`\u{2705} JOEL started successfully`);

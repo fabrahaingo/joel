@@ -13,6 +13,7 @@ export type IUser = {
   chatId: number;
   language_code: string;
   status: string;
+  last_interaction: Date;
   followedPeople: Array<{
     peopleId: Types.ObjectId;
     lastUpdate: Date;
