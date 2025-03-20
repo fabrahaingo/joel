@@ -38,6 +38,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         );
         return;
       }
+      await umami.log({ event: "/jorfsearch-request-people" });
       let JORFRes = await axios
         .get(
           `https://jorfsearch.steinertriples.ch/name/${encodeURI(
@@ -49,6 +50,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             return res;
           }
           if (res.request.res.responseUrl) {
+            await umami.log({ event: "/jorfsearch-request-people" });
             let result = await axios.get(
               res.request.res.responseUrl.endsWith("?format=JSON")
                 ? res.request.res.responseUrl

@@ -32,6 +32,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       }
     );
     bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
+      await umami.log({ event: "/jorfsearch-request-people" });
       let JORFRes = await get(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/name/${msg.text}?format=JSON`
@@ -41,6 +42,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
           return res;
         }
         if (res.request.res.responseUrl) {
+          await umami.log({ event: "/jorfsearch-request-people" });
           return await get(
             res.request.res.responseUrl.endsWith("?format=JSON")
               ? res.request.res.responseUrl

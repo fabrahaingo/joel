@@ -8,6 +8,7 @@ import { mongodbConnect } from "../db";
 async function getPeopleToAddOrUpdate() {
   const today = new Date().toLocaleDateString("fr-FR").split("/").join("-");
   // const today = "18-02-2024";
+  await umami.log({ event: "/jorfsearch-request-date" });
   let dailyUpdates = await axios
     .get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
     .then((res) => res.data);
