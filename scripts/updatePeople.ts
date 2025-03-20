@@ -8,6 +8,7 @@ import { mongodbConnect } from "../db";
 async function getUpdatedPeople() {
   const today = moment().format("DD-MM-YYYY");
   // const today = "18-02-2024";
+  await umami.log({ event: "/jorfsearch-request-date" });
   let updatedPeople = await axios
     .get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
     .then((res) => res.data);
@@ -50,9 +51,11 @@ async function updatePeople(updatedUsers: any[], relevantPeople: any[]) {
 }
 
 (async () => {
+  await umami.log({ event: "/autom-update-people-start" });
   await mongodbConnect();
   const updatedPeople = await getUpdatedPeople();
   const relevantPeople = await getRelevantPeopleFromDb(updatedPeople);
   await updatePeople(updatedPeople, relevantPeople);
+  await umami.log({ event: "/autom-update-people-end" });
   process.exit(0);
 })();

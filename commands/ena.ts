@@ -47,6 +47,7 @@ async function getJORFSearchResult(year: string, institution: string) {
   }
   if (institution === "ENA") {
     let url = `https://jorfsearch.steinertriples.ch/tag/eleve_ena=%22${year}%22?format=JSON`;
+    await umami.log({ event: "/jorfsearch-request-ena" });
     const res = await axios.get(url).then((response) => {
       return response.data;
     });
@@ -54,6 +55,7 @@ async function getJORFSearchResult(year: string, institution: string) {
   }
   const inspId = "Q109039648";
   let url = `https://jorfsearch.steinertriples.ch/${inspId}?format=JSON`;
+  await umami.log({ event: "/jorfsearch-request-insp" });
   const res = await axios.get(url).then((response) => {
     return response.data.filter(
       (publication: { type_ordre: string; date_fin: string }) => {
@@ -79,6 +81,7 @@ function capitalizeFirstLetters(str: string | undefined): string {
 }
 
 async function searchPersonOnJORF(person: string): Promise<any> {
+  await umami.log({ event: "/jorfsearch-request-people" });
   return await axios
     .get(
       encodeURI(
@@ -90,6 +93,7 @@ async function searchPersonOnJORF(person: string): Promise<any> {
         return res;
       }
       if (res.request.res.responseUrl) {
+        await umami.log({ event: "/jorfsearch-request-people" });
         return await axios.get(
           res.request.res.responseUrl.endsWith("?format=JSON")
             ? res.request.res.responseUrl
