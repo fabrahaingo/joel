@@ -6,7 +6,7 @@ import {IUser} from "../types";
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
-  await umami.log({ event: "/supprimerCompte" });
+  await umami.log({ event: "/delete-account" });
   try {
     const tgUser: TelegramBot.User | undefined = msg.from;
     if (tgUser === undefined) return;
@@ -36,6 +36,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         chatId,
       });
       await bot.sendMessage(chatId, deletionConfirmationMessage, startKeyboard);
+      await umami.log({ event: "/user-deleted-self" });
 
     // Otherwise, we ask for confirmation from the user
     } else {
@@ -58,6 +59,7 @@ our confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce mes
             chatId,
           });
           await bot.sendMessage(chatId, deletionConfirmationMessage, startKeyboard);
+          await umami.log({ event: "/user-deletion-self" });
       } else {
           await bot.sendMessage(
               chatId,
