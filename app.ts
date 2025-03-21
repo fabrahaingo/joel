@@ -22,6 +22,10 @@ const commands: CommandType = [
     action: require("./commands/follow"),
   },
   {
+    regex: /Suivre \s*(.*)/i,
+    action: require("./commands/followDirect"),
+  },
+  {
     regex: /✋ Retirer un suivi$/,
     action: require("./commands/unfollow"),
   },
