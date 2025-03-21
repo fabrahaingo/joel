@@ -42,9 +42,9 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     } else {
       const question = await bot.sendMessage(
           chatId,
-          `*Vous êtes sur le point de supprimer votre compte JOEL*, comprenant l'ensemble de vos contacts, fonctions et organisations suivies.\n
+          `*Vous êtes sur le point de supprimer votre compte JOEL*, comprenant l'ensemble de vos contacts, fonctions et organisations suivis.\n
 ⚠️ *Attention, ces données ne sont pas récupérables par la suite* ⚠️
-our confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce message`,
+Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce message`,
           {
             parse_mode: "Markdown",
             reply_markup: {
