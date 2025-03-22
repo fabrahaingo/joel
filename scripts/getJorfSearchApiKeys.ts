@@ -27,20 +27,20 @@ function round(value: number, exp: number) {
 
 type StringToNumberMap={[key: string]:number}[];
 
-async function JORFSearchCall(currentDay: string): Promise<JORFSearchItem[]> {
+async function JORFSearchCallRaw(currentDay: string) {
   return await axios
     .get<JORFSearchResponse>(
       `https://jorfsearch.steinertriples.ch/${currentDay}?format=JSON`,
     )
     .then((res: AxiosResponse<JORFSearchResponse>) => {
-      if (res.data === null || typeof res.data == "string") {
+      if (res.data === null || typeof res.data === "string") {
         return [];
       }
       return res.data;
     });
 }
 
-function getOccurenceCount(values: string[]): StringToNumberMap {
+function getOccurrenceCount(values: string[]): StringToNumberMap {
   return values.reduce((acc , val) => {
     acc[val] = (acc[val] || 0) + 1;
     return acc;
@@ -87,7 +87,7 @@ async function main() {
     const day = new Date(currentDay);
     day.setDate(day.getDate() - i);
 
-    const res_day = await JORFSearchCall(dateTOJORFFormat(day));
+    const res_day = await JORFSearchCallRaw(dateTOJORFFormat(day));
     res_data = res_data.concat(res_day);
 
     console.log(`Day ${String(i)} done. ${String(nbDays - i)} days left.`);
@@ -95,7 +95,7 @@ async function main() {
   }
   const nbRecordsTotal = res_data.length;
 
-  const items_keys_occurs = getOccurenceCount(
+  const items_keys_occurs = getOccurrenceCount(
       res_data.map((i) => Object.keys(i)).flat(),
   );
 
@@ -115,7 +115,7 @@ async function main() {
     });
   }
 
-  const typeOrdre_keys = getOccurenceCount(
+  const typeOrdre_keys = getOccurrenceCount(
           res_data
               .filter((i) => i.type_ordre)
               .map((i) => i.type_ordre)
@@ -132,7 +132,7 @@ async function main() {
     });
   }
 
-  const sourceName_keys = getOccurenceCount(
+  const sourceName_keys = getOccurrenceCount(
       res_data
           .filter((i) => i.source_name)
           .map((i) => i.source_name)
@@ -157,7 +157,7 @@ async function main() {
 
   const res_org_keys = res_org.map((i) => Object.keys(i)).flat();
 
-  const org_keys_occurs: StringToNumberMap = getOccurenceCount(res_org_keys);
+  const org_keys_occurs: StringToNumberMap = getOccurrenceCount(res_org_keys);
 
   const org_keys_stats: JORFKeyStat[] = [];
 
@@ -182,7 +182,7 @@ async function main() {
 
   const res_rempl_keys = res_rempl.map((i) => Object.keys(i)).flat();
 
-  const rempl_keys_occurs = getOccurenceCount(res_rempl_keys);
+  const rempl_keys_occurs = getOccurrenceCount(res_rempl_keys);
 
   const rempl_keys_stats: JORFKeyStat[] = [];
 

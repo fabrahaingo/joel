@@ -1,7 +1,25 @@
 import { SourceName, TypeOrdre, WikiDataId } from "../types";
 
-export type JORFSearchResponse = null | string | JORFSearchItem[];
+export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
+// Minimal expected record from JORFSearch
+interface JORFSearchRawItem {
+  source_date?: string;
+  source_id?: string;
+  source_name?: string;
+  type_ordre?: string;
+  nom?: string;
+  prenom?: string;
+  remplacement?: {
+    sexe?: "F" | "M";
+    nom?: string;
+    prenom?: string;
+    nom_alternatif?: string;
+    autres_prenoms?: string;
+  };
+}
+
+// Record after parsing and data cleaning
 export interface JORFSearchItem {
   organisations: {
     nom: string;
