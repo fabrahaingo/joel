@@ -2,6 +2,24 @@ import { SourceName, TypeOrdre, WikiDataId } from "../types";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
+interface OrganisationRaw{
+  nom?: string;
+  wikidata_id?: WikiDataId;
+  organisation_militaire?: WikiDataId;
+  ecole?: WikiDataId;
+  etablissement_enseignement_superieur?: WikiDataId;
+  cour_appel?: WikiDataId;
+  autorite_administrative_independante?: WikiDataId;
+  academie?: WikiDataId;
+  tribunal?: WikiDataId;
+  tribunal_grande_instance?: WikiDataId;
+  tribunal_instance?: WikiDataId;
+}
+
+interface Organisation extends OrganisationRaw{
+  nom: string;
+}
+
 // Minimal expected record from JORFSearch
 interface JORFSearchRawItem {
   source_date?: string;
@@ -10,6 +28,7 @@ interface JORFSearchRawItem {
   type_ordre?: string;
   nom?: string;
   prenom?: string;
+  organisations: OrganisationRaw[];
   remplacement?: {
     sexe?: "F" | "M";
     nom?: string;
@@ -20,25 +39,12 @@ interface JORFSearchRawItem {
 }
 
 // Record after parsing and data cleaning
-export interface JORFSearchItem {
-  organisations: {
-    nom: string;
-    wikidata_id?: WikiDataId;
-    organisation_militaire?: WikiDataId;
-    ecole?: WikiDataId;
-    etablissement_enseignement_superieur?: WikiDataId;
-    cour_appel?: WikiDataId;
-    autorite_administrative_independante?: WikiDataId;
-    academie?: WikiDataId;
-    tribunal?: WikiDataId;
-    tribunal_grande_instance?: WikiDataId;
-    tribunal_instance?: WikiDataId;
-  }[];
-
+export interface JORFSearchItem extends JORFSearchRawItem {
+  organisations: Organisation[];
   remplacement?: {
     sexe?: "F" | "M";
-    nom?: string;
-    prenom?: string;
+    nom: string;
+    prenom: string;
     nom_alternatif?: string;
     autres_prenoms?: string;
   };
