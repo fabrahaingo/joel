@@ -10,7 +10,7 @@ export type CommandType = {
   };
 }[];
 
-export interface IUser = {
+export interface IUser {
   _id: number;
   chatId: number;
   language_code: string;
@@ -22,7 +22,7 @@ export interface IUser = {
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
-};
+}
 
 export interface UserModel extends Model<IUser> {
   firstOrCreate: (args: {
@@ -35,14 +35,14 @@ export type IBlocked = {
   chatId: string;
 };
 
-export interface IPeople = {
+export interface IPeople {
   _id: Types.ObjectId;
   nom: string;
   prenom: string;
   lastKnownPosition: JORFSearchItem;
   save: () => Promise<IPeople>;
   countDocuments: () => number;
-};
+}
 
 export interface PeopleModel extends Model<IPeople> {
   firstOrCreate: (people: {
