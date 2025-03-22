@@ -18,9 +18,27 @@ export type IUser = {
     lastUpdate: Date;
   }>;
   followedFunctions: Array<string>;
+  followedOrganisations: {
+    wikidata_id: string;
+    lastUpdate: Date;
+  }[];
   save: () => Promise<IUser>;
   countDocuments: () => any;
 };
+
+export interface IOrganisation {
+  nom: string;
+  wikidata_id: string;
+  save: () => Promise<IOrganisation>;
+  countDocuments: () => number;
+}
+
+export interface OrganisationModel extends Model<IOrganisation> {
+  firstOrCreate: (args: {
+    nom: string;
+    wikidata_id: string;
+  }) => Promise<IOrganisation>;
+}
 
 export interface UserModel extends Model<IUser> {
   firstOrCreate: (args: {
