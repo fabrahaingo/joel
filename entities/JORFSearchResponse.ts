@@ -22,6 +22,7 @@ export interface JORFSearchItem {
     nom?: string;
     prenom?: string;
     nom_alternatif?: string;
+    autres_prenoms?: string;
   };
   source_date: string;
   source_id: string;
