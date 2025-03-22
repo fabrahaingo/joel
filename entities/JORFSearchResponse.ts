@@ -1,20 +1,20 @@
-import { SourceName, TypeOrdre } from "../types";
+import { SourceName, TypeOrdre, WikiDataId } from "../types";
 
 export type JORFSearchResponse = null | string | JORFSearchItem[];
 
 export interface JORFSearchItem {
   organisations: {
     nom: string;
-    wikidata_id?: string;
-    organisation_militaire?: string;
-    ecole?: string;
-    etablissement_enseignement_superieur?: string;
-    cour_appel?: string;
-    autorite_administrative_independante?: string;
-    academie?: string;
-    tribunal?: string;
-    tribunal_grande_instance?: string;
-    tribunal_instance?: string;
+    wikidata_id?: WikiDataId;
+    organisation_militaire?: WikiDataId;
+    ecole?: WikiDataId;
+    etablissement_enseignement_superieur?: WikiDataId;
+    cour_appel?: WikiDataId;
+    autorite_administrative_independante?: WikiDataId;
+    academie?: WikiDataId;
+    tribunal?: WikiDataId;
+    tribunal_grande_instance?: WikiDataId;
+    tribunal_instance?: WikiDataId;
   }[];
 
   remplacement?: {
@@ -33,6 +33,7 @@ export interface JORFSearchItem {
   prenom: string;
   date_naissance?: string;
   lieu_naissance?: string;
+  nom_alternatif?: string;
   autres_prenoms?: string;
 
   ambassadeur_pays?: string;
@@ -77,7 +78,6 @@ export interface JORFSearchItem {
   ministre?: string;
   nigend?: string;
   nigendmedaille_securite_interieure?: string;
-  nom_alternatif?: string;
   nomme_par?: string;
   notaire_residence?: string;
   notaire_residence_departement_code?: number;

@@ -103,3 +103,5 @@ export type TypeOrdre =
   | "bourse"
   | "fin délégation signature"
   | "prime";
+
+export type WikiDataId = string;
