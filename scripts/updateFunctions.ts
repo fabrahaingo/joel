@@ -1,3 +1,4 @@
+import { cleanJORFItems } from "../entities/JORFSearchResponse";
 require("dotenv").config();
 import People from "../models/People";
 import axios from "axios";
@@ -12,6 +13,7 @@ async function getPeopleToAddOrUpdate() {
     .get(`https://jorfsearch.steinertriples.ch/${today}?format=JSON`)
     .then((res) => res.data);
   // remove duplicate people (the ones who have the same nom and prenom)
+  dailyUpdates=cleanJORFItems(dailyUpdates);
   return dailyUpdates.filter(
     (contact: { nom: any; prenom: any }, index: any, self: any[]) =>
       index ===

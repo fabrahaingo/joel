@@ -129,3 +129,39 @@ export type JORFSearchResponse = {
   centre_detention?: string;
   notaire_tranfert_office?: string;
 };
+
+export function cleanJORFItems(
+    jorf_items: {
+      source_date?: string,
+      source_id?: string,
+      source_name?: string,
+      type_ordre?: string,
+      nom?: string,
+      prenom?: string,
+      remplacement?: { nom?: string, prenom?: string },
+    }[]) {
+  return jorf_items
+      // remove record where any of the required fields is undefined
+      .filter(elem=> (
+          elem.source_date !== undefined &&
+          elem.source_id !== undefined &&
+          elem.source_name !== undefined &&
+          elem.type_ordre !== undefined &&
+          elem.nom !== undefined &&
+          elem.prenom !== undefined
+      ))
+      // correct type_ordre when wrong spelling is used
+      .map(elem=> {
+        if (elem.type_ordre === "admissibilite") {
+          return { ...elem, type_ordre: "admissibilité"}
+        }
+        return elem
+      })
+      // Drop remplacement field from records where the associated prenom or nom is missing
+      .map(elem=> {
+        if (elem?.remplacement?.nom === undefined || elem?.remplacement?.prenom === undefined) {
+          return { ...elem, remplacement: undefined}
+        }
+        return elem
+        });
+}
