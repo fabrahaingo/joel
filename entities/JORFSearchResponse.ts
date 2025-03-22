@@ -174,3 +174,35 @@ export interface JORFSearchItem extends JORFSearchRawItem {
   visa_emploi_superieur?: boolean;
   visa_grands_etablissements?: boolean;
 }
+
+export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchItem[] {
+  return jorf_items_raw.reduce(
+      (clean_items: JORFSearchItem[], item_raw)=> {
+
+        // drop records where any of the required fields is undefined
+        if (item_raw.source_date === undefined ||
+            item_raw.source_id === undefined ||
+            item_raw.source_name === undefined ||
+            item_raw.type_ordre === undefined ||
+            item_raw.nom === undefined ||
+            item_raw.prenom === undefined) {
+            return clean_items;
+        }
+        // Drop organisations if name is missing
+        const clean_organisations = item_raw.organisations.filter(
+            org_raw => org_raw.nom !== undefined
+        ) as Organisation[];
+
+        // Drop remplacement if name is missing
+        if (item_raw?.remplacement?.nom === undefined || item_raw?.remplacement?.prenom === undefined){
+          item_raw.remplacement = undefined;
+        }
+
+        // Replace potential mispelling of type_ordre "admissibilite" by correct "admissibilité"
+        if (item_raw?.type_ordre === "admissibilite") item_raw.type_ordre = "admissibilité";
+
+        clean_items.push({...item_raw, organisations: clean_organisations} as JORFSearchItem);
+        return clean_items;
+      },
+      []);
+}
