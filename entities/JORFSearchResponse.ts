@@ -140,6 +140,7 @@ export function cleanJORFItems(
       prenom?: string,
     }[]) {
   return jorf_items
+      // remove record where any of the required fields is undefined
       .filter(elem=> (
           elem.source_date !== undefined &&
           elem.source_id !== undefined &&
@@ -148,6 +149,7 @@ export function cleanJORFItems(
           elem.nom !== undefined &&
           elem.prenom !== undefined
       ))
+      // correct type_ordre when wrong spelling is used
       .map(elem=> {
         if (elem.type_ordre === "admissibilite") {
           return { ...elem, type_ordre: "admissibilité"}
