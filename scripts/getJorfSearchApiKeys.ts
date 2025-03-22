@@ -205,10 +205,6 @@ async function main() {
       (i, j) => j.nb_presence - i.nb_presence,
   );
 
-  const type_ordre_keys_stats_sort = typeOrdre_keys_stats.sort(
-      (i, j) => j.nb_presence - i.nb_presence,
-  );
-
   const org_keys_stats_sort = org_keys_stats.sort(
       (i, j) => j.nb_presence - i.nb_presence,
   );
