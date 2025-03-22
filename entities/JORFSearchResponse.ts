@@ -46,7 +46,7 @@ export interface JORFSearchItem {
   cabinet?: string;
   centre_detention?: string;
   commissaire_de_justice_residence?: string;
-  commissaire_de_justice_residence_departement_code?: string;
+  commissaire_de_justice_residence_departement_code?: number;
   commission_parlementaire?: string;
   conge_parental?: string;
   consul?: string;
@@ -66,9 +66,9 @@ export interface JORFSearchItem {
   grade_precedent?: string;
   grade_precedent_date?: string;
   greffier_residence?: string;
-  greffier_residence_departement_code?: string;
+  greffier_residence_departement_code?: number;
   huissier_residence?: string;
-  huissier_residence_departement_code?: string;
+  huissier_residence_departement_code?: number;
   inspecteur_general?: string;
   magistrat?: string;
   medaille_agrafe?: string;
@@ -80,12 +80,12 @@ export interface JORFSearchItem {
   nom_alternatif?: string;
   nomme_par?: string;
   notaire_residence?: string;
-  notaire_residence_departement_code?: string;
+  notaire_residence_departement_code?: number;
   numero_livret_de_solde?: string;
   ordre_nation?: boolean;
   parlement?: string;
   prefet_departement?: string;
-  prefet_departement_code?: string;
+  prefet_departement_code?: number;
   prefet_region?: string;
   professeur?: string;
   professeur_discipline?: string;
@@ -94,7 +94,7 @@ export interface JORFSearchItem {
   recteur_region_academique?: string;
   secretaire_affaires_etrangeres?: string;
   secretaire_etat?: string;
-  "sous-prefecture_departement_code"?: string;
+  "sous-prefecture_departement_code"?: number;
   "sous-prefet_sous-prefecture"?: string;
   tribunal?: string;
   tribunal_administratif?: string;
