@@ -1,4 +1,3 @@
-import axios from "axios";
 import { sendLongText } from "../utils/sendLongText";
 import User from "../models/User";
 import People from "../models/People";
@@ -9,7 +8,7 @@ import { IUser, WikiDataId } from "../types";
 import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
-import {callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag} from "../utils/JORFSearch.utils";
+import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
 
 function removeAccents(input: string): string {
   input = input.trim().toLowerCase();
