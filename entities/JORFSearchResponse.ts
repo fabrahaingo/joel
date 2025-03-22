@@ -138,6 +138,7 @@ export function cleanJORFItems(
       type_ordre?: string,
       nom?: string,
       prenom?: string,
+      remplacement?: { nom?: string, prenom?: string },
     }[]) {
   return jorf_items
       // remove record where any of the required fields is undefined
@@ -145,7 +146,7 @@ export function cleanJORFItems(
           elem.source_date !== undefined &&
           elem.source_id !== undefined &&
           elem.source_name !== undefined &&
-          elem.type_ordre !== undefined&&
+          elem.type_ordre !== undefined &&
           elem.nom !== undefined &&
           elem.prenom !== undefined
       ))
@@ -155,5 +156,12 @@ export function cleanJORFItems(
           return { ...elem, type_ordre: "admissibilité"}
         }
         return elem
-      });
+      })
+      // Drop remplacement field from records where the associated prenom or nom is missing
+      .map(elem=> {
+        if (elem?.remplacement?.nom === undefined || elem?.remplacement?.prenom === undefined) {
+          return { ...elem, remplacement: undefined}
+        }
+        return elem
+        });
 }
