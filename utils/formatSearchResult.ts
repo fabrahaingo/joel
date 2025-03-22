@@ -1,24 +1,8 @@
 import { textTypeOrdre } from "./formatting.utils";
 import { dateToFrenchString } from "./date.utils";
+import { JORFSearchItem } from "../entities/JORFSearchResponse";
 
-function addPoste(
-  elem: {
-    organisations: { nom: any }[];
-    ministre: any;
-    cabinet: string;
-    inspecteur_general: any;
-    grade: any;
-    armee: any;
-    corps: any;
-    armee_grade: any;
-    type_ordre: any;
-    ordre_merite: any;
-    legion_honneur: any;
-    nomme_par: any;
-    autorite_delegation: any;
-  },
-  message: string
-) {
+function addPoste(elem: JORFSearchItem, message: string) {
   if (elem.grade) {
     message += `👉 au grade de *${elem.grade}*`;
     if (elem.ordre_merite) {
@@ -42,9 +26,9 @@ function addPoste(
     if (elem.armee === "réserve") {
       message += ` de réserve`;
     }
-    if (elem.organisations && elem.organisations[0]?.nom) {
+    if (elem.organisations[0]?.nom) {
       message += `\n🪖 *${elem.organisations[0].nom}*\n`;
-    } else {
+    } else if (elem.corps) {
       message += `\n🪖 *${elem.corps}*\n`;
     }
   } else if (elem.cabinet) {
@@ -63,10 +47,7 @@ function addPoste(
   return message;
 }
 
-function addLinkJO(
-  elem: { source_id: any; source_name: any; source_date: any },
-  message: string
-) {
+function addLinkJO(elem: JORFSearchItem, message: string) {
   if (elem.source_id && elem.source_date) {
     message += `🔗 _JO du ${dateToFrenchString(elem.source_date)}_: `;
 
@@ -82,51 +63,51 @@ function addLinkJO(
 }
 
 export function formatSearchResult(
-  result: string | any[],
+  result: JORFSearchItem[],
   options?: {
     isConfirmation: any;
     isListing?: any;
     displayName?: any;
-  }
+  },
 ) {
   let message = "";
-  let prenomNom = `${result[0].prenom} ${result[0].nom}`;
-  let prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-    prenomNom
+  const prenomNom = `${result[0].prenom} ${result[0].nom}`;
+  const prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+    prenomNom,
   )})`;
   if (options?.isConfirmation) {
     if (result.length === 1)
       message += `Voici la dernière information que nous avons sur ${prenomNomLink}.\n\n`;
     else
-      message += `Voici les ${result.length} dernières informations que nous avons sur ${prenomNomLink}.\n\n`;
+      message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}.\n\n`;
   } else if (!options?.isListing) {
     message += `Voici la liste des postes connus pour ${prenomNomLink}:\n\n`;
   }
-  for (let elem of result) {
+  for (const elem of result) {
     if (options?.displayName) {
       message += `🕵️ *${elem.prenom} ${elem.nom}*\n`;
     }
     message += textTypeOrdre(elem.type_ordre || "nomination", elem.sexe || "M");
     message = addPoste(elem, message);
 
-    if (elem?.date_debut) {
+    if (elem.date_debut) {
       if (
         elem.type_ordre === "nomination" &&
-        (elem?.armee_grade || elem?.grade)
+        (elem.armee_grade || elem.grade)
       ) {
         message += `🗓 Pour prendre rang du ${dateToFrenchString(
-          elem.date_debut
+          elem.date_debut,
         )}\n`;
       } else {
-        if (elem?.date_fin)
+        if (elem.date_fin)
           message += `🗓 Du ${dateToFrenchString(
-            elem.date_debut
+            elem.date_debut,
           )} au ${dateToFrenchString(elem.date_fin)}\n`;
         else {
           message += `🗓 À compter du ${dateToFrenchString(elem.date_debut)}\n`;
         }
       }
-    } else if (elem?.date_fin) {
+    } else if (elem.date_fin) {
       message += `🗓 Jusqu'au ${dateToFrenchString(elem.date_fin)}\n`;
     }
     message = addLinkJO(elem, message);
