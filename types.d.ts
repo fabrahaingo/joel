@@ -94,7 +94,6 @@ export type TypeOrdre =
   | "décoration"
   | "élévation"
   | "transfert"
-  | "conférés"
   | "conféré"
   | "citation"
   | "démission"

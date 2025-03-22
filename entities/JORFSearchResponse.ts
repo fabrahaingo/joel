@@ -198,8 +198,15 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
           item_raw.remplacement = undefined;
         }
 
-        // Replace potential mispelling of type_ordre "admissibilite" by correct "admissibilité"
-        if (item_raw?.type_ordre === "admissibilite") item_raw.type_ordre = "admissibilité";
+        // Replace potential mispelling some type_ordre
+        switch (item_raw?.type_ordre) {
+          case "admissibilite":
+            item_raw.type_ordre = "admissibilité";
+            break
+          case "conférés":
+            item_raw.type_ordre = "conféré";
+            break
+        }
 
         clean_items.push({...item_raw, organisations: clean_organisations} as JORFSearchItem);
         return clean_items;
