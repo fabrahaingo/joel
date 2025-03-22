@@ -1,5 +1,6 @@
 import { Model, Types } from "mongoose";
 import TelegramBot from "node-telegram-bot-api";
+import { FunctionTags } from "./entities/FunctionTags";
 
 export type CommandType = {
   regex: RegExp;
@@ -17,7 +18,10 @@ export type IUser = {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }>;
-  followedFunctions: Array<string>;
+  followedFunctions: Array<{
+    functionTag: FunctionTags;
+    lastUpdate: Date;
+  }>;
   save: () => Promise<IUser>;
   countDocuments: () => any;
 };

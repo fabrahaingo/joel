@@ -3,6 +3,7 @@ const Schema = _Schema;
 import umami from "../utils/umami";
 import { IUser, UserModel } from "../types";
 import TelegramBot from "node-telegram-bot-api";
+import { FunctionTags } from "../entities/FunctionTags";
 
 const UserSchema = new Schema<IUser, UserModel>(
   {
@@ -39,7 +40,17 @@ const UserSchema = new Schema<IUser, UserModel>(
       default: [],
     },
     followedFunctions: {
-      type: [String],
+      type: [
+        {
+            functionTag: {
+              type: FunctionTags
+            },
+            lastUpdate: {
+              type: Date,
+              default: Date.now,
+            },
+        }
+      ],
       default: [],
     },
   },
