@@ -132,6 +132,23 @@ async function main() {
     });
   }
 
+  const sourceName_keys = getOccurenceCount(
+      res_data
+          .filter((i) => i.source_name)
+          .map((i) => i.source_name)
+          .flat(),
+  );
+
+  const sourceName_keys_stats= [];
+  for (const key of Object.keys(sourceName_keys)) {
+    sourceName_keys_stats.push({
+      field_name: key,
+      nb_presence: sourceName_keys[key],
+      is_boolean: false,
+      frequency: round(sourceName_keys[key]/nbRecordsTotal,3),
+    });
+  }
+
   const res_org = res_data
       .filter((i) => i.organisations.length > 0)
       .map((i) => i.organisations)
@@ -245,6 +262,11 @@ async function main() {
   const typeOrdre_stats_csv= convertToCSV(typeOrdre_keys_stats);
   if (typeOrdre_stats_csv !== null) {
     fs.writeFileSync('stats_type_ordre.csv', typeOrdre_stats_csv, 'utf8');
+  }
+
+  const sourceName_stats_csv= convertToCSV(sourceName_keys_stats);
+  if (sourceName_stats_csv !== null) {
+    fs.writeFileSync('stats_source_name.csv', sourceName_stats_csv, 'utf8');
   }
 
   const uncomplete_items: uncomplete[] = res_data.filter(i =>
