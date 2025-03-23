@@ -13,6 +13,18 @@ export type MessageApp =
 //| "WhatsApp";
 //| "Matrix";
 
+export interface ISession {
+  message_app: MessageApp;
+  chatId: number;
+  user: IUser | null | undefined;
+  language_code: string;
+  loadUser: () => Promise<void>;
+  createUser: () => Promise<void>;
+  sendMessage: (msg: string) => Promise<void>;
+  sendTypingAction: () => Promise<void>;
+  log: (args: { event: string; data?: any }) => Promise<void>;
+}
+
 export type IUser = {
   _id: number;
   message_app: MessageApp;
