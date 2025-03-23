@@ -27,7 +27,7 @@ const UserSchema = new Schema<IUser, UserModel>(
     last_interaction: {
       type: Date,
       required: true,
-      default: new Date(new Date().setHours(0,0,12,0)),
+      default: Date.now(),
       },
     followedPeople: {
       type: [
