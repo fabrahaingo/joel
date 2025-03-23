@@ -28,6 +28,7 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: String,
       enum: ["active", "blocked"],
       default: "active",
+      required: true,
     },
     followedPeople: {
       type: [
@@ -42,10 +43,12 @@ const UserSchema = new Schema<IUser, UserModel>(
         },
       ],
       default: [],
+      required: true,
     },
     followedFunctions: {
       type: [String],
       default: [],
+      required: true,
     },
   },
   {
