@@ -223,12 +223,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
                 });
                 await people.save();
 
-                if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
-                  user.followedPeople.push({
-                    peopleId: people._id,
-                    lastUpdate: new Date(),
-                  });
-                }
+                await user.addFollowedPeople(people);
               }
             }
             await user.save();
