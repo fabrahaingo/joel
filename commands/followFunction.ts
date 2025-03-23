@@ -81,9 +81,20 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const tgUser = msg.from;
         let user = await User.firstOrCreate({ tgUser, chatId });
 
-        if (!isTagAlreadyFollowed(user, functionToFollow)) {
-          user.followedFunctions.push(functionToFollow);
-          await user.save();
+        if (await user.addFollowedFunction(functionToFollow)) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            await bot.sendMessage(
+                chatId,
+                `Vous suivez maintenant la fonction *${functionTag}* ✅`,
+                startKeyboard
+            );
+        } else {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            await bot.sendMessage(
+                chatId,
+                `Vous suivez déjà la fonction *${functionTag}* ✅`,
+                startKeyboard
+            );
         }
       }
     );
