@@ -29,11 +29,13 @@ async function isWrongAnswer(
     return false;
 }
 
-function getFunctionFromValue(value: string) {
-    return Object.keys(FunctionTags).find((key) => FunctionTags[key] === value);
+function getFunctionFromValue(value: FunctionTags) {
+    const c = (Object.keys(FunctionTags)
+        .find(key => FunctionTags[key as keyof typeof FunctionTags] === value));
+    return c as undefined | keyof typeof FunctionTags;
 }
 
-function sortArrayAlphabetically(array: string[]) {
+function sortArrayAlphabetically(array: FunctionTags[]) {
     return array.sort((a, b) => {
         return a.localeCompare(b)
     });
@@ -43,12 +45,9 @@ async function unfollowFunctionAndConfirm(
     bot: TelegramBot,
     chatId: ChatId,
     user: IUser,
-    functionToUnfollow: string
+    functionToUnfollow: FunctionTags
 ) {
-    user.followedFunctions = user.followedFunctions.filter((elem) => {
-        return elem !== functionToUnfollow;
-    });
-    await user.save();
+    await user.removeFollowedFunction(functionToUnfollow);
     await bot.sendMessage(
         chatId,
         `Vous ne suivez plus la fonction *${getFunctionFromValue(
@@ -64,10 +63,7 @@ async function unfollowPeopleAndConfirm(
     user: IUser,
     peopleToUnfollow: IPeople
 ) {
-    user.followedPeople = user.followedPeople.filter((elem) => {
-        return !elem.peopleId.equals(peopleToUnfollow._id);
-    });
-    await user.save();
+    await user.removeFollowedPeople(peopleToUnfollow);
     await bot.sendMessage(
         chatId,
         `Vous ne suivez plus le contact *${peopleToUnfollow.nom} ${peopleToUnfollow.prenom}* 🙅‍♂️`,
