@@ -10,14 +10,14 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: Number,
       required: true,
     },
+    chatId: {
+      type: Number,
+      required: true,
+    },
     message_app: {
       type: String,
       required: true,
       default: "Telegram",
-    },
-    chatId: {
-      type: Number,
-      required: true,
     },
     language_code: {
       type: String,
