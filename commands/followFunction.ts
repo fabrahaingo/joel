@@ -2,7 +2,6 @@ import { startKeyboard } from "../utils/keyboards";
 import User from "../models/User";
 import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
-import { IUser } from "../types";
 import { FunctionTags } from "../entities/FunctionTags";
 import TelegramBot, {
   ChatId,
@@ -20,12 +19,6 @@ function buildSuggestions() {
     }. *${key}*\n\n`;
   }
   return suggestion;
-}
-
-function isTagAlreadyFollowed(user: IUser, functionToFollow: string) {
-  return user.followedFunctions.some((elem) => {
-    return elem === functionToFollow;
-  });
 }
 
 async function isWrongAnswer(
@@ -92,13 +85,6 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
           user.followedFunctions.push(functionToFollow);
           await user.save();
         }
-
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await bot.sendMessage(
-          chatId,
-          `Vous suivez maintenant la fonction *${functionTag}* ✅`,
-          startKeyboard
-        );
       }
     );
   } catch (error) {
