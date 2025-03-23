@@ -41,10 +41,7 @@ export type IUser = {
 };
 
 export interface UserModel extends Model<IUser> {
-  firstOrCreate: (args: {
-    tgUser: TelegramBot.User | undefined;
-    chatId: number;
-  }) => Promise<IUser>;
+  findOrCreate: (session: ISession) => Promise<IUser>;
 }
 
 export type IBlocked = {

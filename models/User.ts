@@ -1,15 +1,10 @@
 import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
 import umami from "../utils/umami";
-import { IUser, UserModel } from "../types";
-import TelegramBot from "node-telegram-bot-api";
+import { ISession, IUser, UserModel} from "../types";
 
 const UserSchema = new Schema<IUser, UserModel>(
   {
-    _id: {
-      type: Number,
-      required: true,
-    },
     message_app: {
       type: String,
       required: true,
@@ -48,28 +43,22 @@ const UserSchema = new Schema<IUser, UserModel>(
       default: [],
     },
   },
-  {
-    timestamps: true,
-    _id: false,
-  }
 );
 
 UserSchema.static(
-  "firstOrCreate",
-  async function (args: {
-    tgUser: TelegramBot.User | undefined;
-    chatId: number;
-  }) {
-    if (!args.tgUser) throw new Error("No user provided");
+  "findOrCreate",
+  async function (session: ISession): Promise<IUser> {
+    const user: IUser | null = await this.findOne({
+        message_app: session.message_app,
+        chatId : session.chatId
+    });
 
-    const user = await this.findOne({ _id: args.tgUser.id });
-
-    if (!user && !args.tgUser.is_bot && !isNaN(args.chatId)) {
+    if (user === null) {
       await umami.log({ event: "/new-user" });
       const newUser = new this({
-        _id: args.tgUser.id,
-        chatId: args.chatId,
-        language_code: args.tgUser.language_code,
+          message_app: session.message_app,
+          chatId : session.chatId,
+          language_code: session.language_code,
       });
       await newUser.save();
 

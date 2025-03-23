@@ -2,6 +2,7 @@ import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { CommandType } from "./types";
 import { mongodbConnect } from "./db";
+import { TelegramSession } from "./entities/TelegramSession";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -55,7 +56,19 @@ const commands: CommandType = [
   await mongodbConnect();
 
   commands.forEach((command) => {
-    bot.onText(command.regex, command.action(bot));
+    bot.onText(command.regex,
+        async (msg: TelegramBot.Message) => {
+          // Check if user is defined
+          const tgUser: TelegramBot.User | undefined = msg.from;
+          if (tgUser === undefined || tgUser.is_bot) return // Ignore bots
+
+          const tgSession = new TelegramSession(bot, msg.chat.id);
+          await tgSession.loadUser();
+
+          // Process user message
+          command.action(bot)(msg)
+        })
+    ;
   });
 
   console.log(`\u{2705} JOEL started successfully`);
