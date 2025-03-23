@@ -20,6 +20,12 @@ export interface IUser {
     lastUpdate: Date;
   }[];
   followedFunctions: FunctionTags[];
+  checkFollowFunction: () =>  boolean;
+  checkFollowPeople: (IPeople) => boolean;
+  addFollowedFunction: (FunctionTags) => Promise<boolean>;
+  addFollowedPeople: (IPeople) => Promise<boolean>;
+  removeFollowedFunction: (FunctionTags) => Promise<boolean>;
+  removeFollowedPeople: (IPeople) => Promise<boolean>;
   save: () => Promise<IUser>;
   countDocuments: () => number;
 }
