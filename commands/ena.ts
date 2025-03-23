@@ -4,8 +4,6 @@ import User from "../models/User";
 import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
-import { Types } from "mongoose";
-import { IUser } from "../types";
 import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 
@@ -97,13 +95,6 @@ async function searchPersonOnJORF(person: string): Promise<any> {
         );
       }
     });
-}
-
-function isPersonAlreadyFollowed(
-  id: Types.ObjectId,
-  followedPeople: IUser["followedPeople"]
-): boolean {
-  return followedPeople.some((person) => person.peopleId.equals(id));
 }
 
 function getYearFromPromo(promoName: string | undefined): string {
