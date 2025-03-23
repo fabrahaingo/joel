@@ -8,8 +8,14 @@ export type CommandType = {
   };
 }[];
 
+export type MessageApp =
+  | "Telegram";
+//| "WhatsApp";
+//| "Matrix";
+
 export type IUser = {
   _id: number;
+  message_app: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
