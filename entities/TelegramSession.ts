@@ -7,19 +7,20 @@ import umami from "../utils/umami";
 export class TelegramSession implements ISession {
     message_app = "Telegram" as MessageApp;
     telegramBot: TelegramBot;
-    language_code = "fr"; // Messages in French by default
+    language_code: string;
     chatId: number;
     user: IUser | null | undefined = undefined;
 
-    constructor(telegramBot: TelegramBot, chatId: number) {
+    constructor(telegramBot: TelegramBot, chatId: number, language_code: string) {
         this.telegramBot = telegramBot;
         this.chatId = chatId;
+        this.language_code = language_code;
     }
 
     // try to fetch user from db
     async loadUser() {
         this.user = await User.findOne({ chatId: this.chatId, message_app: this.message_app });
-        if (this.user != null) {
+        if (this.user != null) { // If user is known, we update the session language code
             this.language_code=this.user.language_code;
         }
     }

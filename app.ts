@@ -62,7 +62,7 @@ const commands: CommandType = [
           const tgUser: TelegramBot.User | undefined = msg.from;
           if (tgUser === undefined || tgUser.is_bot) return // Ignore bots
 
-          const tgSession = new TelegramSession(bot, msg.chat.id);
+          const tgSession = new TelegramSession(bot, msg.chat.id, tgUser.language_code ?? "fr");
           await tgSession.loadUser();
 
           // Process user message

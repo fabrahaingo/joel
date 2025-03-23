@@ -16,8 +16,9 @@ export type MessageApp =
 export interface ISession {
   message_app: MessageApp;
   chatId: number;
-  user: IUser | null | undefined;
   language_code: string;
+  user: IUser | null | undefined;
+
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
   sendMessage: (msg: string) => Promise<void>;
