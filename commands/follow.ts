@@ -5,17 +5,6 @@ import User from "../models/User";
 import get from "axios";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
-import { Types } from "mongoose";
-import { IPeople } from "../types";
-
-const isPersonAlreadyFollowed = (
-  person: IPeople,
-  followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
-) => {
-  return followedPeople.some((followedPerson) => {
-    return followedPerson.peopleId.toString() === person._id.toString();
-  });
-};
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
@@ -85,13 +74,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
         await bot.sendMessage(chatId, `${formattedData}`, startKeyboard);
 
-        if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
-          user.followedPeople.push({
-            peopleId: people._id,
-            lastUpdate: new Date(Date.now()),
-          });
-          await user.save();
-          await new Promise((resolve) => setTimeout(resolve, 500));
+        if (await user.addFollowedPeople(people)){
           await bot.sendMessage(
               chatId,
               `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
