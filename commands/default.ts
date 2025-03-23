@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
-import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
+import {startKeyboard} from "../entities/TelegramSession";
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   try {

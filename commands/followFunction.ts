@@ -1,4 +1,3 @@
-import { startKeyboard } from "../utils/keyboards";
 import User from "../models/User";
 import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
@@ -9,6 +8,7 @@ import TelegramBot, {
   Message,
   SendMessageOptions,
 } from "node-telegram-bot-api";
+import {startKeyboard} from "../entities/TelegramSession";
 
 // build message string along with its index
 function buildSuggestions() {

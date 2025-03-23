@@ -1,4 +1,3 @@
-import { startKeyboard } from "../utils/keyboards";
 import { formatSearchResult } from "../utils/formatSearchResult";
 import People from "../models/People";
 import User from "../models/User";
@@ -7,6 +6,7 @@ import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
 import { Types } from "mongoose";
 import { IPeople } from "../types";
+import {startKeyboard} from "../entities/TelegramSession";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,

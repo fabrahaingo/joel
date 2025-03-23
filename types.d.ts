@@ -6,7 +6,7 @@ export type CommandType = {
   action: (bot: TelegramBot) => (msg: TelegramBot.Message) => {
     default: void;
   };
-}[];
+};
 
 export type MessageApp =
   | "Telegram";
@@ -21,7 +21,7 @@ export interface ISession {
 
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
-  sendMessage: (msg: string) => Promise<void>;
+  sendMessage: (msg: string, sendKeyboard: boolean) => Promise<void>;
   sendTypingAction: () => Promise<void>;
   log: (args: { event: string; data?: any }) => Promise<void>;
 }

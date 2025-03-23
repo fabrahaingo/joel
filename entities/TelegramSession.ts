@@ -3,6 +3,19 @@ import TelegramBot from "node-telegram-bot-api";
 import User from "../models/User";
 import umami from "../utils/umami";
 
+export const startKeyboard: TelegramBot.SendMessageOptions = {
+    parse_mode: "Markdown",
+    disable_web_page_preview: true,
+    reply_markup: {
+        selective: true,
+        resize_keyboard: true,
+        keyboard: [
+            [{ text: "🧩 Ajouter un contact" }, { text: "👨‍💼 Ajouter une fonction" }],
+            [{ text: "✋ Retirer un suivi" }, { text: "🧐 Lister mes suivis" }],
+            [{ text: "🔎 Rechercher" }, { text: "❓ Aide / Contact" }],
+        ],
+    },
+};
 
 export class TelegramSession implements ISession {
     message_app = "Telegram" as MessageApp;
@@ -30,7 +43,8 @@ export class TelegramSession implements ISession {
         this.user = await User.findOrCreate(this);
     }
 
-    async sendMessage(msg: string) {
+    async sendMessage(msg: string, sendKeyboard: boolean) {
+        if (sendKeyboard) await this.telegramBot.sendMessage(this.chatId, msg, startKeyboard);
         await this.telegramBot.sendMessage(this.chatId, msg);
     }
 

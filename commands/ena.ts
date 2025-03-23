@@ -2,12 +2,12 @@ import axios from "axios";
 import { sendLongText } from "../utils/sendLongText";
 import User from "../models/User";
 import People from "../models/People";
-import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import { Types } from "mongoose";
 import { IUser } from "../types";
 import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
+import {startKeyboard, TelegramSession} from "../entities/TelegramSession";
 
 function removeAccents(input: string): string {
   input = input.trim().toLowerCase();
@@ -119,6 +119,12 @@ function getYearFromPromo(promoName: string | undefined): string {
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   try {
+    const tgUser: TelegramBot.User | undefined = msg.from;
+    if (tgUser === undefined || tgUser.is_bot) return // Ignore bots
+
+    const tgSession = new TelegramSession(bot, msg.chat.id, tgUser.language_code ?? "fr");
+    await tgSession.loadUser();
+
     const chatId = msg.chat.id;
     await umami.log({ event: "/ena" });
     const text = `Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n

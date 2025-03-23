@@ -3,13 +3,15 @@ import TelegramBot from "node-telegram-bot-api";
 import { CommandType } from "./types";
 import { mongodbConnect } from "./db";
 import { TelegramSession } from "./entities/TelegramSession";
+import { commandStart } from "./commands/start";
+import { commandStats } from "./commands/stats";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
   onlyFirstMatch: true,
 });
 
-const commands: CommandType = [
+const commands: CommandType[] = [
   {
     regex: /\/start$/,
     action: require("./commands/start"),
@@ -64,6 +66,20 @@ const commands: CommandType = [
 
           const tgSession = new TelegramSession(bot, msg.chat.id, tgUser.language_code ?? "fr");
           await tgSession.loadUser();
+
+          switch (msg.text){
+
+            case "/start":
+              await commandStart(tgSession);
+              break;
+
+            case "/stats":
+              await commandStats(tgSession);
+              break;
+
+            default:
+              return command.action(bot)(msg);
+          }
 
           // Process user message
           command.action(bot)(msg)

@@ -1,4 +1,3 @@
-import { startKeyboard } from "../utils/keyboards";
 import { sendLongText } from "../utils/sendLongText";
 import User from "../models/User";
 import People from "../models/People";
@@ -6,6 +5,7 @@ import umami from "../utils/umami";
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import { FunctionTags } from "../entities/FunctionTags";
 import { IPeople, IUser } from "../types";
+import {startKeyboard} from "../entities/TelegramSession";
 
 async function isWrongAnswer(
     chatId: ChatId,
