@@ -7,3 +7,27 @@ export function dateToFrenchString(date: string): string {
     day: "numeric",
   });
 }
+
+export function dateTOJORFFormat(date: Date): string {
+  date.setHours(0, 0, 0, 0);
+  return date
+    .toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "numeric",
+      year: "numeric",
+    })
+    .replaceAll("/", "-");
+}
+
+export function JORFtoDate(dateStr: string): Date {
+  const dateSplit = dateStr.split("-");
+
+  const date = new Date(
+    parseInt(dateSplit[0]),
+    parseInt(dateSplit[1]),
+    parseInt(dateSplit[2]),
+  );
+  date.setHours(0, 0, 0, 0);
+
+  return date;
+}
