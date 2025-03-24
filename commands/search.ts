@@ -1,4 +1,4 @@
-import { startKeyboard } from "../utils/keyboards";
+import {menuKeyboardPattern, startKeyboard} from "../utils/keyboards";
 import { formatSearchResult } from "../utils/formatSearchResult";
 import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
@@ -32,7 +32,10 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       }
       const JORFRes_data = await callJORFSearchPeople(msg.text);
       const formattedData = formatSearchResult(JORFRes_data);
-      await sendLongText(bot, chatId, formattedData);
+        const keyboard= JSON.parse(JSON.stringify(menuKeyboardPattern));
+        keyboard.unshift([{text: `Suivre ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`}]);
+
+        await sendLongText(bot, chatId, formattedData, keyboard);
     });
   } catch (error) {
     console.log(error);
