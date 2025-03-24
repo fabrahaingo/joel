@@ -172,7 +172,7 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
       ) {
         notification_text += "\n";
       } else {
-        await umami.log({ event: "/notification-function" });
+        await umami.log({ event: "/notification-functions" });
       }
     }
 
@@ -292,7 +292,7 @@ async function notifyUsers(
       );
       // update field updatedAt in followedPeople
       await updateUser(user, peoples);
-      // send notification to user
+      // send notification to user-
       await sendUpdate(user, peopleUpdated);
     }
     // prevent hitting Telegram API rate limit
