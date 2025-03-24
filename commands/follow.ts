@@ -4,18 +4,7 @@ import People from "../models/People";
 import User from "../models/User";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
-import { Types } from "mongoose";
-import { IPeople } from "../types";
 import { callJORFSearchPeople } from "../utils/JORFSearch.utils";
-
-const isPersonAlreadyFollowed = (
-  person: IPeople,
-  followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
-) => {
-  return followedPeople.some((followedPerson) => {
-    return followedPerson.peopleId.toString() === person._id.toString();
-  });
-};
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
@@ -70,14 +59,14 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         if (await user.addFollowedPeople(people)){
           await bot.sendMessage(
               chatId,
-              `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
+              `Vous suivez maintenant *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`,
               startKeyboard
           );
         } else {
           await new Promise((resolve) => setTimeout(resolve, 500));
           await bot.sendMessage(
               chatId,
-              `Vous suivez déjà *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
+              `Vous suivez déjà *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`,
               startKeyboard
           );
         }
