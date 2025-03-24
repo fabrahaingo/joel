@@ -1,13 +1,14 @@
-import axios from "axios";
 import { sendLongText } from "../utils/sendLongText";
 import User from "../models/User";
 import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import { Types } from "mongoose";
-import { IUser } from "../types";
+import { IUser, WikiDataId } from "../types";
 import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
+import { JORFSearchItem } from "../entities/JORFSearchResponse";
+import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
 
 function removeAccents(input: string): string {
   input = input.trim().toLowerCase();
@@ -41,33 +42,31 @@ function findPromoName(args: {
   return;
 }
 
-async function getJORFSearchResult(year: string, institution: string) {
+async function getJORFSearchResult(year: string, institution: string): Promise <JORFSearchItem[]> {
   if (year === "") {
     return [];
   }
-  if (institution === "ENA") {
-    let url = `https://jorfsearch.steinertriples.ch/tag/eleve_ena=%22${year}%22?format=JSON`;
-    await umami.log({ event: "/jorfsearch-request-ena" });
-    const res = await axios.get(url).then((response) => {
-      return response.data;
-    });
-    return res;
+  switch (institution) {
+
+    case "ENA": // If ENA, we can use the associated tag with the year as value
+        await umami.log({ event: "/jorfsearch-request-ena" });
+        return callJORFSearchTag("eleve_ena", year);
+
+    case "INSP": // If INSP, we can rely on the associated organisation
+        await umami.log({ event: "/jorfsearch-request-insp" });
+        const inspId = "Q109039648" as WikiDataId;
+      return (await callJORFSearchOrganisation(inspId))
+          // We filter to keep admissions to the INSP organisation from the relevant year
+          .filter(
+            (publication) => {
+              // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
+              return (
+                  publication?.type_ordre === "admission" && publication?.date_fin &&
+                  publication?.date_fin.slice(0, 4) === year.slice(-4)
+              );
+            });
   }
-  const inspId = "Q109039648";
-  let url = `https://jorfsearch.steinertriples.ch/${inspId}?format=JSON`;
-  await umami.log({ event: "/jorfsearch-request-insp" });
-  const res = await axios.get(url).then((response) => {
-    return response.data.filter(
-      (publication: { type_ordre: string; date_fin: string }) => {
-        // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
-        return (
-          publication.type_ordre === "admission" &&
-          publication.date_fin.slice(0, 4) === year.slice(-4)
-        );
-      }
-    );
-  });
-  return res;
+  return []
 }
 
 function capitalizeFirstLetters(str: string | undefined): string {
@@ -78,29 +77,6 @@ function capitalizeFirstLetters(str: string | undefined): string {
     console.log(e);
     return str;
   }
-}
-
-async function searchPersonOnJORF(person: string): Promise<any> {
-  await umami.log({ event: "/jorfsearch-request-people" });
-  return await axios
-    .get(
-      encodeURI(
-        `https://jorfsearch.steinertriples.ch/name/${person}?format=JSON`
-      )
-    )
-    .then(async (res) => {
-      if (res.data?.length === 0) {
-        return res;
-      }
-      if (res.request.res.responseUrl) {
-        await umami.log({ event: "/jorfsearch-request-people" });
-        return await axios.get(
-          res.request.res.responseUrl.endsWith("?format=JSON")
-            ? res.request.res.responseUrl
-            : `${res.request.res.responseUrl}?format=JSON`
-        );
-      }
-    });
 }
 
 function isPersonAlreadyFollowed(
@@ -233,18 +209,19 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
               chatId,
               `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
             );
+            await bot.sendChatAction(chatId, "typing");
             const tgUser = msg.from;
             let user = await User.firstOrCreate({ tgUser, chatId });
             for (let i = 0; i < JORFSearchRes.length; i++) {
               const contact = JORFSearchRes[i];
-              const search = await searchPersonOnJORF(
+              const people_data= await callJORFSearchPeople(
                 `${contact.prenom} ${contact.nom}`
               );
-              if (search.data?.length) {
+              if (people_data.length > 0) {
                 const people = await People.firstOrCreate({
-                  nom: search.data[0].nom,
-                  prenom: search.data[0].prenom,
-                  lastKnownPosition: search.data[0],
+                  nom: people_data[0].nom,
+                  prenom: people_data[0].prenom,
+                  lastKnownPosition: people_data[0],
                 });
                 await people.save();
 

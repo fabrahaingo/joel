@@ -2,11 +2,11 @@ import { startKeyboard } from "../utils/keyboards";
 import { formatSearchResult } from "../utils/formatSearchResult";
 import People from "../models/People";
 import User from "../models/User";
-import get from "axios";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
 import { Types } from "mongoose";
 import { IPeople } from "../types";
+import { callJORFSearchPeople } from "../utils/JORFSearch.utils";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -32,81 +32,60 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       }
     );
     bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
-      await umami.log({ event: "/jorfsearch-request-people" });
-      let JORFRes = await get(
-        encodeURI(
-          `https://jorfsearch.steinertriples.ch/name/${msg.text}?format=JSON`
-        )
-      ).then(async (res) => {
-        if (res.data?.length === 0) {
-          return res;
-        }
-        if (res.request.res.responseUrl) {
-          await umami.log({ event: "/jorfsearch-request-people" });
-          return await get(
-            res.request.res.responseUrl.endsWith("?format=JSON")
-              ? res.request.res.responseUrl
-              : `${res.request.res.responseUrl}?format=JSON`
-          );
-        }
-      });
+      if (msg.text === undefined) {
+        await bot.sendMessage(
+            chatId,
+            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /follow.`,
+            startKeyboard
+        );
+        return;
+      }
+      const JORFRes_data = await callJORFSearchPeople(msg.text);
 
-      if (
-        JORFRes?.data?.length === 0 ||
-        !JORFRes?.data[0]?.nom ||
-        !JORFRes.data[0]?.prenom
-      ) {
+      if (JORFRes_data.length === 0) {
         await bot.sendMessage(
           chatId,
-          "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement",
+          "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement",
           startKeyboard
         );
-      } else {
-        let formattedData = formatSearchResult(JORFRes.data.slice(0, 2), {
-          isConfirmation: true,
+        return;
+      }
+      const formattedData = formatSearchResult(JORFRes_data.slice(0, 2), {
+        isConfirmation: true,
+      });
+      const people = await People.firstOrCreate({
+        nom: JORFRes_data[0].nom,
+        prenom: JORFRes_data[0].prenom,
+        lastKnownPosition: JORFRes_data[0],
+      });
+      await people.save();
+      const tgUser: TelegramBot.User | undefined = msg.from;
+      let user = await User.firstOrCreate({
+        tgUser,
+        chatId,
+      });
+
+      await bot.sendMessage(chatId, `${formattedData}`, startKeyboard);
+
+      if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
+        user.followedPeople.push({
+          peopleId: people._id,
+          lastUpdate: new Date(Date.now()),
         });
-        if (!formattedData) {
-          await bot.sendMessage(
+        await user.save();
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await bot.sendMessage(
             chatId,
-            "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement",
+            `Vous suivez maintenant *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`,
             startKeyboard
-          );
-          return;
-        }
-        const people = await People.firstOrCreate({
-          nom: JORFRes.data[0].nom,
-          prenom: JORFRes.data[0].prenom,
-          lastKnownPosition: JORFRes.data[0],
-        });
-        await people.save();
-        const tgUser: TelegramBot.User | undefined = msg.from;
-        let user = await User.firstOrCreate({
-          tgUser,
-          chatId,
-        });
-
-        await bot.sendMessage(chatId, `${formattedData}`, startKeyboard);
-
-        if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
-          user.followedPeople.push({
-            peopleId: people._id,
-            lastUpdate: new Date(Date.now()),
-          });
-          await user.save();
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          await bot.sendMessage(
-              chatId,
-              `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
-              startKeyboard
-          );
-        } else {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          await bot.sendMessage(
-              chatId,
-              `Vous suivez déjà *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
-              startKeyboard
-          );
-        }
+        );
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        await bot.sendMessage(
+            chatId,
+            `Vous suivez déjà *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`,
+            startKeyboard
+        );
       }
     });
   } catch (error) {
