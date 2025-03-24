@@ -30,7 +30,7 @@ export async function callJORFSearchPeople(peopleName: string) {
                     });
             }
             return []
-        }).then(res=> cleanJORFItems(res));
+        }).then(async res => cleanJORFItems(res));
     } catch (error) {
         console.log(error);
         return [];
@@ -44,7 +44,7 @@ export async function callJORFSearchDay(day: Date){
             `https://jorfsearch.steinertriples.ch/${
             day.toLocaleDateString("fr-FR").split("/").join("-") // format day = "18-02-2024";
         }?format=JSON`))
-        .then((res) => {
+        .then(async (res) => {
             if (res.data === null || typeof res.data === "string") return [];
             return cleanJORFItems(res.data);
         });
@@ -61,7 +61,7 @@ export async function callJORFSearchTag(tag: string, tagValue?: string) {
                 `https://jorfsearch.steinertriples.ch/tag/${tag}${
                     tagValue !== undefined ? `="${tagValue}"` : ``
                 }?format=JSON`))
-            .then((res) => {
+            .then(async (res) => {
                 if (res.data === null || typeof res.data === "string") return [];
                 return cleanJORFItems(res.data);
             });
@@ -76,7 +76,7 @@ export async function callJORFSearchOrganisation(wikiId: WikiDataId) {
         return axios
         .get<JORFSearchResponse>(encodeURI(
             `https://jorfsearch.steinertriples.ch/${wikiId}?format=JSON`))
-        .then((res) => {
+        .then(async (res) => {
             if (res.data === null || typeof res.data === "string") return [];
             return cleanJORFItems(res.data);
         });

@@ -17,6 +17,10 @@ const PeopleSchema = new Schema<IPeople, PeopleModel>(
       type: Object,
       required: true,
     },
+    sexe: {
+      type: String,
+      enum: ['F', 'M'],
+    },
   },
   { timestamps: true },
 );
@@ -26,6 +30,7 @@ PeopleSchema.static(
   async function (tgPeople: {
     nom: string;
     prenom: string;
+    sexe?: "F" | "M";
     lastKnownPosition: JORFSearchItem;
   }) {
     let people = await this.findOne({
@@ -40,6 +45,7 @@ PeopleSchema.static(
         nom: tgPeople.nom,
         prenom: tgPeople.prenom,
         lastKnownPosition: tgPeople.lastKnownPosition,
+        sexe: tgPeople.sexe,
       }).save();
     }
 

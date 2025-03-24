@@ -87,7 +87,7 @@ export function formatSearchResult(
     if (options?.displayName) {
       message += `🕵️ *${elem.prenom} ${elem.nom}*\n`;
     }
-    message += textTypeOrdre(elem.type_ordre || "nomination", elem.sexe || "M");
+    message += textTypeOrdre(elem.type_ordre, elem.sexe);
     message = addPoste(elem, message);
 
     if (elem.date_debut) {

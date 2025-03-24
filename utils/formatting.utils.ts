@@ -2,10 +2,17 @@ import { TypeOrdre } from "../types";
 
 export const textTypeOrdre = (
   type_ordre: TypeOrdre,
-  sex: "F" | "M"
+  sex?: "F" | "M"
 ): string => {
-  const agree = (genre: "F" | "M"): string => {
-    return genre === "F" ? "e" : "";
+  const agree = (genre?: "F" | "M"): string => {
+    switch (genre) {
+      case "M":
+        return "";
+      case "F":
+        return "e";
+      default:
+        return ".e"; // point médian
+    }
   };
 
   switch (type_ordre) {

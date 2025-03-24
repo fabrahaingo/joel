@@ -56,6 +56,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       const people = await People.firstOrCreate({
         nom: JORFRes_data[0].nom,
         prenom: JORFRes_data[0].prenom,
+        sexe: JORFRes_data[0].sexe,
         lastKnownPosition: JORFRes_data[0],
       });
       await people.save();

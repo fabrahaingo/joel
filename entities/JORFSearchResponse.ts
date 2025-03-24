@@ -1,4 +1,5 @@
-import { SourceName, TypeOrdre, WikiDataId } from "../types";
+import {IPeople, SourceName, TypeOrdre, WikiDataId} from "../types";
+import People from "../models/People";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
@@ -175,9 +176,9 @@ export interface JORFSearchItem extends JORFSearchRawItem {
   visa_grands_etablissements?: boolean;
 }
 
-export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchItem[] {
-  return jorf_items_raw.reduce(
-      (clean_items: JORFSearchItem[], item_raw)=> {
+export async function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): Promise<JORFSearchItem[]> {
+  const cleanItems = jorf_items_raw.reduce(
+      (clean_items: JORFSearchItem[], item_raw) => {
 
         // drop records where any of the required fields is undefined
         if (item_raw.source_date === undefined ||
@@ -186,7 +187,7 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
             item_raw.type_ordre === undefined ||
             item_raw.nom === undefined ||
             item_raw.prenom === undefined) {
-            return clean_items;
+          return clean_items;
         }
         // Drop organisations if name is missing
         const clean_organisations = item_raw.organisations.filter(
@@ -194,7 +195,7 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
         ) as Organisation[];
 
         // Drop remplacement if name is missing
-        if (item_raw?.remplacement?.nom === undefined || item_raw?.remplacement?.prenom === undefined){
+        if (item_raw?.remplacement?.nom === undefined || item_raw?.remplacement?.prenom === undefined) {
           item_raw.remplacement = undefined;
         }
 
@@ -212,4 +213,47 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
         return clean_items;
       },
       []);
+
+  // We enrich the DB with the sexe from people in the JORFResponse
+  const peopleWithSexeUnique = cleanItems.reduce(
+      (list: { nom: string, prenom: string, sexe: "M" | "F" }[], i) => {
+        if (i.sexe === undefined || list.find(j => j.nom === i.nom && j.prenom === i.prenom)) return list
+        list.push({nom: i.nom, prenom: i.prenom, sexe: i.sexe})
+        return list;
+      }, []);
+
+  const peopleFromDbWithoutSexe: IPeople[] = await People.find({
+    nom: {$in: peopleWithSexeUnique.map(i => i.nom)},
+    prenom: {$in: peopleWithSexeUnique.map(i => i.prenom)},
+    sexe: {$exists: false}
+  });
+
+  for (const peopleDB of peopleFromDbWithoutSexe){
+    const peopleWithSexe = peopleWithSexeUnique
+        .find(i=>i.nom===peopleDB.nom && i.prenom === peopleDB.prenom);
+    if (peopleWithSexe===undefined || peopleWithSexe.sexe===undefined) continue; // that should never happen
+    peopleDB.sexe =peopleWithSexe.sexe;
+    await peopleDB.save();
+  }
+
+  // We enrich the people in the JORFResponse with the sexe from the people in the DB
+  const peopleFromResponseWithoutSexe = cleanItems.reduce(
+      (list: { nom: string, prenom: string}[], i) => {
+        if (i.sexe !== undefined || list.find(j => j.nom === i.nom && j.prenom === i.prenom)) return list
+        list.push({nom: i.nom, prenom: i.prenom})
+        return list;
+      }, []);
+
+  const peopleFromDbWithSexe: IPeople[] = await People.find({
+    nom: {$in: peopleFromResponseWithoutSexe.map(i => i.nom)},
+    prenom: {$in: peopleFromResponseWithoutSexe.map(i => i.prenom)},
+    sexe: {$exists: true}
+  });
+
+  return cleanItems.map(i=> {
+    if (i.sexe !== undefined) return i
+    const peopleDB=peopleFromDbWithSexe.find(j => j.nom === i.nom && j.prenom === i.prenom);
+    if (peopleDB === undefined || peopleDB.sexe === undefined) return i // that should never happen
+    return {...i , sexe: peopleDB.sexe}
+  });
 }
