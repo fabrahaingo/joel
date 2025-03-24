@@ -75,10 +75,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             k + 1,
           )}. *${organisations[k].nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(
             organisations[k].wikidata_id,
-          )})\n`;
-          if (peoples[k + 1]) {
-            text += `\n`;
-          }
+          )})\n\n`;
         }
       }
       if (peoples.length > 0) {
