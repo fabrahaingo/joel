@@ -13,7 +13,7 @@ export type IUser = {
   chatId: number;
   language_code: string;
   status: string;
-  last_interaction: Date;
+  last_interaction: Date | undefined; // undefined for user created before it was added
   followedPeople: Array<{
     peopleId: Types.ObjectId;
     lastUpdate: Date;
