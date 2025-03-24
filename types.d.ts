@@ -20,8 +20,8 @@ export interface IUser {
     lastUpdate: Date;
   }[];
     followedOrganisations: {
-        wikidata_id: string;
-        lastUpdate: WikiDataId;
+        wikidata_id: WikiDataId;
+        lastUpdate: Date;
     }[] | undefined; // undefined for user model create before organisations
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
