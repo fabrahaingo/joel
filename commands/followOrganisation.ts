@@ -45,7 +45,7 @@ Conseil constitutionnel : *Q1127218*\n
           return;
         }
 
-        const JORFRes = await getJORFOrganisationResult(msg.text);
+        const JORFRes = await callJORFSearchOrganisation(msg.text);
 
         if (
           JORFRes === null ||
