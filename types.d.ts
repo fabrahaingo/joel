@@ -70,6 +70,17 @@ export interface PeopleModel extends Model<IPeople> {
   }) => Promise<IPeople>;
 }
 
+export type SourceName =
+  | "JORF"
+  | "BOMI"
+  | "BOCNRS"
+  | "BOSanté"
+  | "BODD"
+  | "BOEN"
+  | "BOMJ"
+  | "BOESR"
+  | "BOAC";
+
 export type TypeOrdre =
   | "nomination"
   | "réintégration"
