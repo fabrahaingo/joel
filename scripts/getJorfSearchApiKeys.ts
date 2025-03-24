@@ -54,7 +54,7 @@ interface JORFKeyStat {
   is_boolean: boolean;
 }
 
-interface uncomplete {
+interface Incomplete {
   source_date: string,
   source_id: string,
   nb_occurences: number
@@ -265,7 +265,7 @@ async function main() {
     fs.writeFileSync('stats_source_name.csv', sourceName_stats_csv, 'utf8');
   }
 
-  const uncomplete_items: uncomplete[] = res_data.filter(i =>
+  const incomplete_items: Incomplete[] = res_data.filter(i =>
       i.nom === undefined ||
       i.prenom === undefined ||
       i.type_ordre === undefined
@@ -273,8 +273,8 @@ async function main() {
     source_date: i.source_date,
     source_id: i.source_id,
     nb_occurences: 1,
-  }) as uncomplete)
-      .reduce((accumulator: uncomplete[], currentItem) => {
+  }) as Incomplete)
+      .reduce((accumulator: Incomplete[], currentItem) => {
         // Check if the valueT already exists in the accumulator
         const existingItem = accumulator
             .find(item => item.source_id === currentItem.source_id);
@@ -290,12 +290,12 @@ async function main() {
         return accumulator;
       }, []);
 
-  const uncomplete_items_csv = convertToCSV(uncomplete_items);
-  if (uncomplete_items_csv !== null) {
-    fs.writeFileSync('uncomplete_items_nom_prenom.csv', uncomplete_items_csv, 'utf8');
+  const incomplete_items_csv = convertToCSV(incomplete_items);
+  if (incomplete_items_csv !== null) {
+    fs.writeFileSync('incomplete_items_nom_prenom.csv', incomplete_items_csv, 'utf8');
   }
 
-  const rempl_uncomplete_items: uncomplete[]=res_data.filter(i=>
+  const rempl_incomplete_items: Incomplete[]=res_data.filter(i=>
       !(i.remplacement === undefined) && (
         i.remplacement.nom === undefined ||
         i.remplacement.prenom === undefined)
@@ -303,8 +303,8 @@ async function main() {
     source_date: i.source_date,
     source_id: i.source_id,
     nb_occurences: 1,
-  }) as uncomplete)
-      .reduce((accumulator: uncomplete[], currentItem) => {
+  }) as Incomplete)
+      .reduce((accumulator: Incomplete[], currentItem) => {
         // Check if the valueT already exists in the accumulator
         const existingItem = accumulator
             .find(item  => item.source_id === currentItem.source_id);
@@ -320,17 +320,17 @@ async function main() {
         return accumulator;
       }, []);
 
-  const rempl_uncomplete_items_csv=convertToCSV(rempl_uncomplete_items);
-  if (rempl_uncomplete_items_csv !== null) {
-    fs.writeFileSync('uncomplete_remplacements_nom_prenom.csv', rempl_uncomplete_items_csv, 'utf8');
+  const rempl_incomplete_items_csv=convertToCSV(rempl_incomplete_items);
+  if (rempl_incomplete_items_csv !== null) {
+    fs.writeFileSync('incomplete_remplacements_nom_prenom.csv', rempl_incomplete_items_csv, 'utf8');
   }
 
   const missing_sexe=res_data.filter(i=>i.sexe === undefined).map(i=> ({
     source_date: i.source_date,
     source_id: i.source_id,
     nb_occurences: 1,
-  }) as uncomplete)
-      .reduce((accumulator: uncomplete[], currentItem) => {
+  }) as Incomplete)
+      .reduce((accumulator: Incomplete[], currentItem) => {
         // Check if the valueT already exists in the accumulator
         const existingItem = accumulator
             .find(item  => item.source_id === currentItem.source_id);
@@ -348,10 +348,8 @@ async function main() {
 
   const missing_sexe_csv=convertToCSV(missing_sexe);
   if (missing_sexe_csv !== null) {
-    fs.writeFileSync('uncomplete_items_sexe.csv', missing_sexe_csv, 'utf8');
+    fs.writeFileSync('incomplete_items_sexe.csv', missing_sexe_csv, 'utf8');
   }
-
-  1;
 }
 
 main();
