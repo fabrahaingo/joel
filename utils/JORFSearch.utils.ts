@@ -1,9 +1,11 @@
 import { cleanJORFItems, JORFSearchResponse } from "../entities/JORFSearchResponse";
 import { WikiDataId } from "../types";
 import axios from "axios";
+import umami from "./umami";
 
 export async function callJORFSearchPeople(peopleName: string) {
     try {
+        await umami.log({ event: "/jorfsearch-request-people" });
         return axios
             .get<JORFSearchResponse>(encodeURI(
                 `https://jorfsearch.steinertriples.ch/name/${
@@ -17,6 +19,7 @@ export async function callJORFSearchPeople(peopleName: string) {
             // If the peopleName had nom/prenom inverted or bad formatting:
             // we need to call JORFSearch again with the response url with correct format
             if (res1.request.res.responseUrl) {
+                await umami.log({ event: "/jorfsearch-request-people" });
                 return await axios
                     .get<JORFSearchResponse>(
                     res1.request.res.responseUrl.endsWith("?format=JSON")
@@ -39,6 +42,7 @@ export async function callJORFSearchPeople(peopleName: string) {
 
 export async function callJORFSearchDay(day: Date){
     try {
+        await umami.log({ event: "/jorfsearch-request-date" });
         return axios
         .get<JORFSearchResponse>(encodeURI(
             `https://jorfsearch.steinertriples.ch/${
@@ -56,6 +60,7 @@ export async function callJORFSearchDay(day: Date){
 
 export async function callJORFSearchTag(tag: string, tagValue?: string) {
     try {
+        await umami.log({ event: "/jorfsearch-request-tag" });
         return axios
             .get<JORFSearchResponse>(encodeURI(
                 `https://jorfsearch.steinertriples.ch/tag/${tag}${
@@ -73,6 +78,7 @@ export async function callJORFSearchTag(tag: string, tagValue?: string) {
 
 export async function callJORFSearchOrganisation(wikiId: WikiDataId) {
     try {
+        await umami.log({ event: "/jorfsearch-request-organisation" });
         return axios
         .get<JORFSearchResponse>(encodeURI(
             `https://jorfsearch.steinertriples.ch/${wikiId}?format=JSON`))
