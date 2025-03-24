@@ -51,6 +51,7 @@ const UserSchema = new Schema<IUser, UserModel>(
               },
           ],
           default: [],
+          required: true,
       },
     followedFunctions: {
       type: [String],
