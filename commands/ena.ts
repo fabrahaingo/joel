@@ -1,11 +1,10 @@
-import axios from "axios";
 import { sendLongText } from "../utils/sendLongText";
 import User from "../models/User";
 import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import { Types } from "mongoose";
-import { IUser } from "../types";
+import { IUser, WikiDataId } from "../types";
 import {
   Promo_ENA_INSP,
   ListPromos_INSP_ENA_all,
@@ -13,12 +12,10 @@ import {
   ListPromos_ENA_available,
   ListPromos_ENA_unavailable,
 } from "../entities/PromoNames";
-import {
-  JORFSearchItem,
-  JORFSearchResponse,
-} from "../entities/JORFSearchResponse";
 import { searchPersonOnJORF, removeAccents } from "../utils/searchPersonJORF";
 import TelegramBot from "node-telegram-bot-api";
+import { JORFSearchItem } from "../entities/JORFSearchResponse";
+import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
 
 function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
   const allPromos = ListPromos_INSP_ENA_all;
@@ -64,56 +61,39 @@ function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
 }
 
 async function getJORFPromoSearchResult(
-  promoInfo: Promo_ENA_INSP | null,
-): Promise<JORFSearchItem[] | null> {
-  if (promoInfo === null) {
-    return null;
-  }
-
-  let res_data: JORFSearchItem[] | null;
-
-  // ENA
-  if (promoInfo.promoType === "ENA") {
-    const url = `https://jorfsearch.steinertriples.ch/tag/eleve_ena=%22${promoInfo.formattedPeriod}%22?format=JSON`;
-
-    res_data = await axios.get<JORFSearchResponse>(url).then((res) => {
-      if (typeof res.data === "string") {
+    promoInfo: Promo_ENA_INSP | null,
+): Promise<JORFSearchItem[]> {
+    if (promoInfo === null) {
         return null;
-      }
-      return res.data;
-    });
-  } else {
-    // INSP
-    const inspId = "Q109039648";
-    const url = `https://jorfsearch.steinertriples.ch/${inspId}?format=JSON`;
-    res_data = await axios.get<JORFSearchResponse>(url).then((response) => {
-      if (response.data === null || typeof response.data === "string") {
-        return null;
-      }
-      return response.data.filter((publication: JORFSearchItem) => {
-        // only keep publications objects that contain "type_ordre":"admission" and where "date_début":"2024-10-31" the first 4 characters of date_fin are equal to the 4 first characters of year
-        return (
-          publication.type_ordre === "nomination" &&
-          publication.date_debut !== undefined &&
-          publication.date_debut.slice(0, 4) ===
-            promoInfo.formattedPeriod.slice(0, 4)
-        );
-      });
-    });
-  }
-  if (res_data === null) {
-    return null;
-  }
+    }
 
-  // Filter out some faulty records with missing info
-  return res_data.filter((i) => i.nom && i.prenom);
+
+  switch (promoInfo.promoType) {
+
+    case "ENA": // If ENA, we can use the associated tag with the year as value
+      return callJORFSearchTag("eleve_ena", promoInfo.formattedPeriod);
+
+    case "INSP": // If INSP, we can rely on the associated organisation
+      const inspId = "Q109039648" as WikiDataId;
+      return (await callJORFSearchOrganisation(inspId))
+          // We filter to keep admissions to the INSP organisation from the relevant year
+          .filter(
+            (publication) => {
+              // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
+              return (
+                  publication?.type_ordre === "admission" && publication?.date_fin &&
+                  publication?.date_fin.slice(0, 4) === promoInfo.formattedPeriod.slice(-4)
+              );
+            });
+  }
+  return []
 }
 
 function isPersonAlreadyFollowed(
-  id: Types.ObjectId,
-  followedPeople: IUser["followedPeople"],
+    id: Types.ObjectId,
+    followedPeople: IUser["followedPeople"],
 ): boolean {
-  return followedPeople.some((person) => person.peopleId.equals(id));
+    return followedPeople.some((person) => person.peopleId.equals(id));
 }
 
 export const enaCommand =
@@ -202,48 +182,46 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
               force_reply: true,
             },
           },
-        );
-        bot.onReplyToMessage(
-          chatId,
-          followConfirmation.message_id,
-          async (msg) => {
-            if (msg.text === undefined) {
-              await bot.sendMessage(
-                chatId,
-                `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande /ena.`,
-              );
-              return;
-            }
-            if (new RegExp(/oui/i).test(msg.text)) {
-              await bot.sendMessage(
-                chatId,
-                `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`,
-              );
-              const user = await User.firstOrCreate({
-                tgUser: msg.from,
-                chatId,
-              });
-              for (const contact of promoJORFList) {
-                const prenomNom = `${contact.prenom} ${contact.nom}`;
+      );
+      bot.onReplyToMessage(
+        chatId,
+        followConfirmation.message_id,
+        async (msg) => {
+          if (msg.text === undefined) {
+            await bot.sendMessage(
+              chatId,
+              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`
+            );
+            return;
+          }
+          if (new RegExp(/oui/i).test(msg.text)) {
+            await bot.sendMessage(
+              chatId,
+              `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
+            );
+            await bot.sendChatAction(chatId, "typing");
+            const user = await User.firstOrCreate({
+              tgUser: msg.from,
+              chatId,
+            });
+            for (const contact of promoJORFList) {
+                const people_data = await callJORFSearchPeople(
+                  `${contact.prenom} ${contact.nom}`
+                );
+                if (people_data.length > 0) {
+                    const people = await People.firstOrCreate({
+                        nom: people_data[0].nom,
+                        prenom: people_data[0].prenom,
+                        lastKnownPosition: people_data[0],
+                    });
+                    await people.save();
 
-                const JORFResContact = await searchPersonOnJORF(prenomNom);
-                if (JORFResContact === null) {
-                  console.log(`Error fetching person: ${prenomNom}`);
-                  return;
-                }
-
-                const people = await People.firstOrCreate({
-                  nom: JORFResContact[0].nom,
-                  prenom: JORFResContact[0].prenom,
-                  lastKnownPosition: JORFResContact[0],
-                });
-                await people.save();
-
-                if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
-                  user.followedPeople.push({
-                    peopleId: people._id,
-                    lastUpdate: new Date(),
-                  });
+                    if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
+                        user.followedPeople.push({
+                            peopleId: people._id,
+                            lastUpdate: new Date(),
+                        });
+                    }
                 }
               }
               await user.save();
