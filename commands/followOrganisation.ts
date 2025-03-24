@@ -1,38 +1,20 @@
 import { startKeyboard } from "../utils/keyboards";
-import get from "axios";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
-import {
-  JORFSearchItem,
-  JORFSearchResponse,
-} from "../entities/JORFSearchResponse";
 import Organisation from "../models/Organisation";
 import User from "../models/User";
 import { IOrganisation, IUser } from "../types";
+import { callJORFSearchOrganisation } from "../utils/JORFSearch.utils";
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
   organisation: IOrganisation,
 ) => {
+  if (user.followedOrganisations === undefined) return false;
   return user.followedOrganisations.some(
     (o) => o.wikidata_id === organisation.wikidata_id,
   );
 };
-
-async function getJORFOrganisationResult(
-  wikidata_id: string,
-): Promise<JORFSearchItem[] | null> {
-  return await get<JORFSearchResponse>(
-    encodeURI(
-      `https://jorfsearch.steinertriples.ch/${wikidata_id.toUpperCase()}?format=JSON`,
-    ),
-  ).then((res) => {
-    if (typeof res.data === "string") {
-      return null;
-    }
-    return res.data;
-  });
-}
 
 export const followOrganisationCommand =
   (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
@@ -87,6 +69,7 @@ Conseil constitutionnel : *Q1127218*\n
         const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
 
         if (!isOrganisationAlreadyFollowed(user, organisation)) {
+          if (user.followedOrganisations === undefined) user.followedOrganisations = [];
           user.followedOrganisations.push({
             wikidata_id: organisation.wikidata_id,
             lastUpdate: new Date(Date.now()),

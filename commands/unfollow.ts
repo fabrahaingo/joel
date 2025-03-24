@@ -5,7 +5,7 @@ import People from "../models/People";
 import umami from "../utils/umami";
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
-import { IOrganisation, IPeople } from "../types";
+import {IOrganisation, IPeople} from "../types";
 import Organisation from "../models/Organisation";
 
 export function parseIntAnswers(
@@ -45,6 +45,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       user.followedFunctions,
     ) as FunctionTags[];
 
+    if (user.followedOrganisations === undefined) user.followedOrganisations=[];
     const followedOrganisations: IOrganisation[] = await Organisation.find({
       wikidata_id: {
         $in: user.followedOrganisations.map((o) => o.wikidata_id),
@@ -126,9 +127,9 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       question.message_id,
       async (msg: TelegramBot.Message) => {
         const selectionIndexMax =
-          user.followedPeople.length +
-          user.followedFunctions.length +
-          user.followedOrganisations.length;
+            followedPeoples.length +
+            followedFunctions.length +
+            followedOrganisations.length;
         let answers = parseIntAnswers(msg.text, selectionIndexMax);
         if (answers === null) {
           await bot.sendMessage(
@@ -248,6 +249,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
               .includes(people.peopleId.toString()),
         );
 
+        if (user.followedOrganisations === undefined) user.followedOrganisations=[];
         user.followedOrganisations = user.followedOrganisations.filter(
           (org) =>
             !unfollowedOrganisations

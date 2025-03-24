@@ -43,6 +43,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     const functions = sortArrayAlphabetically(
       user.followedFunctions,
     ) as FunctionTags[];
+    if (user.followedOrganisations === undefined) user.followedOrganisations=[];
     const organisations: IOrganisation[] = await Organisation.find({
       wikidata_id: {
         $in: user.followedOrganisations.map((o) => o.wikidata_id),
