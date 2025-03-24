@@ -49,11 +49,9 @@ async function getJORFSearchResult(year: string, institution: string): Promise <
   switch (institution) {
 
     case "ENA": // If ENA, we can use the associated tag with the year as value
-        await umami.log({ event: "/jorfsearch-request-ena" });
         return callJORFSearchTag("eleve_ena", year);
 
     case "INSP": // If INSP, we can rely on the associated organisation
-        await umami.log({ event: "/jorfsearch-request-insp" });
         const inspId = "Q109039648" as WikiDataId;
       return (await callJORFSearchOrganisation(inspId))
           // We filter to keep admissions to the INSP organisation from the relevant year
