@@ -12,10 +12,23 @@ import {
   ListPromos_ENA_available,
   ListPromos_ENA_unavailable,
 } from "../entities/PromoNames";
-import { searchPersonOnJORF, removeAccents } from "../utils/searchPersonJORF";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
 import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
+
+export function removeAccents(input: string): string {
+    input = input.trim().toLowerCase();
+
+    input = input.replace(/[àáâãäå]/g, "a");
+    input = input.replace(/[èéêë]/g, "e");
+    input = input.replace(/[ìíîï]/g, "i");
+    input = input.replace(/[òóôõö]/g, "o");
+    input = input.replace(/[ùúûü]/g, "u");
+    input = input.replace(/[ç]/g, "c");
+    input = input.replace(/[œ]/g, "oe");
+
+    return input;
+}
 
 function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
   const allPromos = ListPromos_INSP_ENA_all;
@@ -62,11 +75,10 @@ function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
 
 async function getJORFPromoSearchResult(
     promoInfo: Promo_ENA_INSP | null,
-): Promise<JORFSearchItem[]> {
+): Promise<JORFSearchItem[] | null> {
     if (promoInfo === null) {
         return null;
     }
-
 
   switch (promoInfo.promoType) {
 
@@ -206,7 +218,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             });
             for (const contact of promoJORFList) {
                 const people_data = await callJORFSearchPeople(
-                  `${contact.prenom} ${contact.nom}`
+                    `${contact.prenom} ${contact.nom}`
                 );
                 if (people_data.length > 0) {
                     const people = await People.firstOrCreate({
@@ -223,7 +235,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                         });
                     }
                 }
-              }
+            }
               await user.save();
               await bot.sendMessage(
                 chatId,
