@@ -1,4 +1,6 @@
 import { Model, Types } from "mongoose";
+import { JORFSearchItem } from "./entities/JORFSearchResponse";
+import { FunctionTags } from "./entities/FunctionTags";
 import TelegramBot from "node-telegram-bot-api";
 
 export type CommandType = {
@@ -8,23 +10,23 @@ export type CommandType = {
   };
 }[];
 
-export type IUser = {
+export interface IUser {
   _id: number;
   chatId: number;
   language_code: string;
   status: string;
-  followedPeople: Array<{
+  followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
-  }>;
-  followedFunctions: Array<string>;
-  followedOrganisations: {
-    wikidata_id: string;
-    lastUpdate: Date;
   }[];
+    followedOrganisations: {
+        wikidata_id: string;
+        lastUpdate: WikiDataId;
+    }[] | undefined; // undefined for user model create before organisations
+  followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
-  countDocuments: () => any;
-};
+  countDocuments: () => number;
+}
 
 export interface IOrganisation {
   nom: string;
@@ -51,17 +53,21 @@ export type IBlocked = {
   chatId: string;
 };
 
-export type IPeople = {
+export interface IPeople {
   _id: Types.ObjectId;
   nom: string;
   prenom: string;
-  lastKnownPosition: Object;
+  lastKnownPosition: JORFSearchItem;
   save: () => Promise<IPeople>;
-  countDocuments: () => any;
-};
+  countDocuments: () => number;
+}
 
 export interface PeopleModel extends Model<IPeople> {
-  firstOrCreate: (people: any) => Promise<IPeople>;
+  firstOrCreate: (people: {
+    nom: string;
+    prenom: string;
+    lastKnownPosition: JORFSearchItem;
+  }) => Promise<IPeople>;
 }
 
 export type TypeOrdre =
@@ -79,4 +85,29 @@ export type TypeOrdre =
   | "renouvellement"
   | "reconduction"
   | "élection"
-  | "admissibilite";
+  | "admissibilité" // also exists in JORF as "admissibilite"
+  | "charge"
+  | "intégration"
+  | "composition"
+  | "habilitation"
+  | "titularisation"
+  | "recrutement"
+  | "disponibilité"
+  | "autorisation"
+  | "mise à disposition"
+  | "décharge"
+  | "diplome"
+  | "mutation"
+  | "décoration"
+  | "élévation"
+  | "transfert"
+  | "conféré"
+  | "citation"
+  | "démission"
+  | "attribution"
+  | "reprise de fonctions"
+  | "bourse"
+  | "fin délégation signature"
+  | "prime";
+
+export type WikiDataId = string;
