@@ -49,6 +49,7 @@ export interface PeopleModel extends Model<IPeople> {
   firstOrCreate: (people: {
     nom: string;
     prenom: string;
+    sexe?: "F" | "M";
     lastKnownPosition: JORFSearchItem;
   }) => Promise<IPeople>;
 }
