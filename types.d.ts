@@ -15,7 +15,7 @@ export type MessageApp =
 
 export type IUser = {
   _id: number;
-  message_app: MessageApp;
+  message_app: MessageApp | undefined; // undefined for user created before it was added
   chatId: number;
   language_code: string;
   status: string;
