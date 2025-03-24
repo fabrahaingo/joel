@@ -47,7 +47,7 @@ const commands: CommandType = [
   },
   {
     regex: /\/supprimerCompte/,
-    action: require("./commands/supprimerCompte"),
+    action: require("./commands/deleteProfile"),
   },
   {
     regex: /.*/,
