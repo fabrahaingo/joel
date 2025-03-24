@@ -69,7 +69,6 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
               `Vous suivez déjà *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`,
               startKeyboard
           );
-        }
       }
     });
   } catch (error) {
