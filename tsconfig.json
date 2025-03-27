@@ -3,6 +3,6 @@
   "compilerOptions": {
     "preserveConstEnums": true
   },
-  "include": ["**/*", ".prettierrc.ts"],
+  "include": ["**/*"],
   "exclude": ["**/*.spec.ts"]
 }
