@@ -300,13 +300,6 @@ if (MONGODB_URI === undefined) {
   throw new Error(ErrorMessages.MONGODB_URI_NOT_SET);
 }
 
-// Force :
-// - Update people from JORF
-// - Send notifications when lastUpdate does not match
-// - Send tag notifications for the past period
-
-// Require to load all users, all people, compare update and notification time
-
 (async () => {
   // Connect to DB
   await mongodbConnect();
@@ -335,7 +328,7 @@ if (MONGODB_URI === undefined) {
   // Send notifications to users on followed people
   await notifyPeopleUpdates(JORFAllRecordsFromDate);
 
-  // Send notifications to users on followed people
+  // Send notifications to users on followed functions
   await notifyFunctionTagsUpdates(JORFAllRecordsFromDate);
 
   process.exit(0);
