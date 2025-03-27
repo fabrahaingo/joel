@@ -208,8 +208,16 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
               `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
             );
             await bot.sendChatAction(chatId, "typing");
-            const tgUser = msg.from;
-            let user = await User.firstOrCreate({ tgUser, chatId });
+
+            const tgUser: TelegramBot.User | undefined = msg.from;
+            if (tgUser === undefined) return;
+            const user = await User.firstOrCreate({
+              tgUser,
+              chatId,
+              message_app: "Telegram"
+            });
+            if (user === null) return;
+
             for (let i = 0; i < JORFSearchRes.length; i++) {
               const contact = JORFSearchRes[i];
               const people_data= await callJORFSearchPeople(

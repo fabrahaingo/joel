@@ -32,10 +32,10 @@ export interface IUser {
 
 export interface UserModel extends Model<IUser> {
   firstOrCreate: (args: {
-    tgUser: TelegramBot.User | undefined;
+    tgUser: TelegramBot.User;
     chatId: number;
     message_app: MessageApp;
-  }) => Promise<IUser | null>;
+  }) => Promise<IUser | null>; // null means that the user is a bot or
 }
 
 export type IBlocked = {

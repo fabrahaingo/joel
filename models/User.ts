@@ -64,9 +64,11 @@ UserSchema.static(
     chatId: number;
     message_app: MessageApp;
   }): Promise<IUser | null> {
-    const user = await this.findOne({ _id: args.tgUser.id });
+    if (args.tgUser.is_bot || isNaN(args.chatId)) return null;
 
-    if (!user && !args.tgUser.is_bot && !isNaN(args.chatId)) {
+    const user: IUser | null = await this.findOne({ _id: args.tgUser.id });
+
+    if (user === null) {
       await umami.log({ event: "/new-user" });
       const newUser = new this({
         _id: args.tgUser.id,

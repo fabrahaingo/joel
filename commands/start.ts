@@ -10,8 +10,15 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   try {
     bot.sendChatAction(chatId, "typing");
 
-    const tgUser = msg.from;
-    const user: IUser = await User.firstOrCreate({ tgUser, chatId });
+    const tgUser: TelegramBot.User | undefined = msg.from;
+    if (tgUser === undefined) return;
+    const user = await User.firstOrCreate({
+      tgUser,
+      chatId,
+      message_app: "Telegram"
+    });
+    if (user === null) return;
+
     if (user.status === "blocked") {
       user.status = "active";
       await user.save();

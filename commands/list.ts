@@ -36,12 +36,15 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   try {
     await bot.sendChatAction(chatId, "typing");
 
-    let text = "";
-    let user = await User.firstOrCreate({
-      tgUser: msg.from,
-      chatId: msg.chat.id,
+    const tgUser: TelegramBot.User | undefined = msg.from;
+    if (tgUser === undefined) return;
+    const user = await User.firstOrCreate({
+      tgUser,
+      chatId,
+      message_app: "Telegram"
     });
 
+    let text = "";
     if (!user) {
       text =
         "Une erreur s'est produite avec votre profil. Merci d'envoyer /start pour réessayer.";
