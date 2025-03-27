@@ -91,7 +91,7 @@ export function formatSearchResult(
     if (options?.displayName === "all") {
       message += `🕵️ ${prenomNomLink}\n`;
     }
-    message += textTypeOrdre(elem.type_ordre || "nomination", elem.sexe || "M");
+    message += textTypeOrdre(elem.type_ordre, elem.sexe || "M");
     message = addPoste(elem, message);
 
     if (elem.date_debut) {
