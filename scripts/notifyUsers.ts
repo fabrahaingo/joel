@@ -211,7 +211,7 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
   const pluralHandler = updatedRecords.length > 1 ? "s" : "";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les personnes que vous suivez :\n\n`;
-  notification_text += formatSearchResult(updatedRecords, { isConfirmation: false, isListing: false, displayName: "all" });
+  notification_text += formatSearchResult(updatedRecords, { isConfirmation: false, isListing: true, displayName: "all" });
 
   await sendLongMessageFromAxios(user, notification_text);
 
@@ -243,7 +243,7 @@ async function sendTagUpdates(user: IUser, tagMap: [[FunctionTags], JORFSearchIt
     const pluralHandler = tagRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${tagKey}*\n\n`;
 
-    notification_text += formatSearchResult(tagRecords, { isConfirmation: false, isListing: false, displayName: "all" });
+    notification_text += formatSearchResult(tagRecords, { isConfirmation: false, isListing: true, displayName: "all" });
 
     if (tagList.indexOf(tagValue) + 1 !== tagList.length)
       notification_text += "====================\n\n";
