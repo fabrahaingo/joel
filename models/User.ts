@@ -1,7 +1,7 @@
 import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
 import umami from "../utils/umami";
-import { IUser, UserModel } from "../types";
+import { IUser, MessageApp, UserModel } from "../types";
 import TelegramBot from "node-telegram-bot-api";
 
 const UserSchema = new Schema<IUser, UserModel>(
@@ -60,11 +60,10 @@ const UserSchema = new Schema<IUser, UserModel>(
 UserSchema.static(
   "firstOrCreate",
   async function (args: {
-    tgUser: TelegramBot.User | undefined;
+    tgUser: TelegramBot.User;
     chatId: number;
-  }) {
-    if (!args.tgUser) throw new Error("No user provided");
-
+    message_app: MessageApp;
+  }): Promise<IUser | null> {
     const user = await this.findOne({ _id: args.tgUser.id });
 
     if (!user && !args.tgUser.is_bot && !isNaN(args.chatId)) {
@@ -72,6 +71,7 @@ UserSchema.static(
       const newUser = new this({
         _id: args.tgUser.id,
         chatId: args.chatId,
+        message_app: args.message_app,
         language_code: args.tgUser.language_code,
       });
       await newUser.save();
