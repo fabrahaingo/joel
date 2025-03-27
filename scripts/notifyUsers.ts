@@ -317,7 +317,7 @@ if (MONGODB_URI === undefined) {
   }
 
   // Number of days to go back : 0 means we just fetch today's info
-  const shiftDays = 2;
+  const shiftDays = 0;
 
   // currentDate is today
   const currentDate = new Date();
