@@ -3,7 +3,7 @@
 import { type Config } from "prettier";
 
 const config: Config = {
-  trailingComma: "none",
+  trailingComma: "none"
 };
 
 export default config;

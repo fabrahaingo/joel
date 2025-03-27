@@ -7,7 +7,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": "v22.14.0",
+    "node": "v23.7.0",
     "npm": "11.0.0"
   },
   "dependencies": {
@@ -21,13 +21,14 @@
     "tsx": "^4.19.2"
   },
   "devDependencies": {
-    "@types/node-telegram-bot-api": "0.64.8",
     "@eslint/js": "^9.18.0",
+    "@tsconfig/node22": "^22.0.1",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.1",
-    "prettier": "3.5.3",
     "typescript": "5.8.2",
-    "typescript-eslint": "^8.19.1"
+    "typescript-eslint": "^8.19.1",
+    "prettier": "3.5.3",
+    "@types/node-telegram-bot-api": "0.64.8"
   }
 }
