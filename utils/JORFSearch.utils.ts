@@ -104,3 +104,15 @@ function cleanPeopleName(input: string): string {
 
     return input;
 }
+
+interface NameInfo {
+    nom: string,
+    prenom: string
+}
+export function uniqueMinimalNameInfo(records: NameInfo[]) {
+    return records.reduce((infoList: { nom: string, prenom: string}[], item)=>{
+        if (infoList.find(i=> i.nom === item.nom && i.prenom == item.prenom) !== undefined) return infoList
+        infoList.push({nom: item.nom, prenom: item.prenom})
+        return infoList;
+    },[]);
+}
