@@ -175,7 +175,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
           if (followData === undefined) return recordList; // this should not happen
 
           // Check that the update is newer than lastUpdate
-          if(JORFtoDate(record.source_date).getTime() > followData.lastUpdate.getTime()) return recordList;
+          if(JORFtoDate(record.source_date).getTime() < followData.lastUpdate.getTime()) return recordList;
 
           // Record up to this point are associated to a followed People and newer than the last update
           recordList.push(record);
