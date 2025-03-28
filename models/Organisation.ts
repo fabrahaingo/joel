@@ -7,30 +7,30 @@ const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
   {
     nom: {
       type: String,
-      required: true,
+      required: true
     },
     wikidata_id: {
       type: String,
-      required: true,
-    },
+      required: true
+    }
   },
   {
-    timestamps: true,
-  },
+    timestamps: true
+  }
 );
 
 OrganisationSchema.static(
   "firstOrCreate",
   async function (args: { nom: string; wikidata_id: string }) {
     const organization: IOrganisation | null = await this.findOne({
-      wikidata_id: args.wikidata_id,
+      wikidata_id: args.wikidata_id
     });
 
     if (organization === null) {
       await umami.log({ event: "/new-organisation" });
       const newOrganization: IOrganisation = new this({
         nom: args.nom,
-        wikidata_id: args.wikidata_id,
+        wikidata_id: args.wikidata_id
       });
       await newOrganization.save();
       return newOrganization;
@@ -41,10 +41,10 @@ OrganisationSchema.static(
     }
 
     return organization;
-  },
+  }
 );
 
 export default model<IOrganisation, OrganisationModel>(
   "Organisation",
-  OrganisationSchema,
+  OrganisationSchema
 );
