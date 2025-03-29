@@ -59,11 +59,15 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         lastKnownPosition: JORFRes_data[0],
       });
       await people.save();
+
       const tgUser: TelegramBot.User | undefined = msg.from;
-      let user = await User.firstOrCreate({
+      if (tgUser === undefined) return;
+      const user = await User.firstOrCreate({
         tgUser,
         chatId,
+        message_app: "Telegram"
       });
+      if (user === null) return;
 
       await bot.sendMessage(chatId, `${formattedData}`, startKeyboard);
 

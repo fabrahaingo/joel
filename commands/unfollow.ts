@@ -85,7 +85,16 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         let j = 0;
         await bot.sendChatAction(chatId, "typing");
         let text = "";
-        const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
+
+        const tgUser: TelegramBot.User | undefined = msg.from;
+        if (tgUser === undefined) return;
+        const user = await User.firstOrCreate({
+            tgUser,
+            chatId,
+            message_app: "Telegram"
+        });
+        if (user === null) return;
+
         const peopleIds = user.followedPeople.map((p) => p.peopleId);
         const peoples = await People.find({ _id: { $in: peopleIds } })
             .collation({ locale: "fr" })

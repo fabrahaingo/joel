@@ -85,8 +85,15 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const functionTag = Object.keys(FunctionTags)[
           answer - 1
         ] as keyof typeof FunctionTags;
-        const tgUser = msg.from;
-        let user = await User.firstOrCreate({ tgUser, chatId });
+
+          const tgUser: TelegramBot.User | undefined = msg.from;
+          if (tgUser === undefined) return;
+          const user = await User.firstOrCreate({
+              tgUser,
+              chatId,
+              message_app: "Telegram"
+          });
+          if (user === null) return;
 
         if (!isTagAlreadyFollowed(user, functionToFollow)) {
           user.followedFunctions.push(functionToFollow);
