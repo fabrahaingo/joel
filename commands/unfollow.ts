@@ -29,11 +29,13 @@ async function isWrongAnswer(
     return false;
 }
 
-function getFunctionFromValue(value: string) {
-    return Object.keys(FunctionTags).find((key) => FunctionTags[key] === value);
+function getFunctionFromValue(value: FunctionTags) {
+    const c = (Object.keys(FunctionTags)
+        .find(key => FunctionTags[key as keyof typeof FunctionTags] === value));
+    return c as undefined | keyof typeof FunctionTags;
 }
 
-function sortArrayAlphabetically(array: string[]) {
+function sortArrayAlphabetically(array: FunctionTags[]) {
     return array.sort((a, b) => {
         return a.localeCompare(b)
     });
@@ -43,12 +45,9 @@ async function unfollowFunctionAndConfirm(
     bot: TelegramBot,
     chatId: ChatId,
     user: IUser,
-    functionToUnfollow: string
+    functionToUnfollow: FunctionTags
 ) {
-    user.followedFunctions = user.followedFunctions.filter((elem) => {
-        return elem !== functionToUnfollow;
-    });
-    await user.save();
+    await user.removeFollowedFunction(functionToUnfollow);
     await bot.sendMessage(
         chatId,
         `Vous ne suivez plus la fonction *${getFunctionFromValue(
@@ -64,10 +63,7 @@ async function unfollowPeopleAndConfirm(
     user: IUser,
     peopleToUnfollow: IPeople
 ) {
-    user.followedPeople = user.followedPeople.filter((elem) => {
-        return !elem.peopleId.equals(peopleToUnfollow._id);
-    });
-    await user.save();
+    await user.removeFollowedPeople(peopleToUnfollow);
     await bot.sendMessage(
         chatId,
         `Vous ne suivez plus le contact *${peopleToUnfollow.nom} ${peopleToUnfollow.prenom}* 🙅‍♂️`,
@@ -85,7 +81,18 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         let j = 0;
         await bot.sendChatAction(chatId, "typing");
         let text = "";
-        const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
+
+        const noDataText=
+            `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
+
+        // Search for user: don't create if it doesn't exist
+        const user: IUser | null = await User.findOne({ _id: chatId });
+
+        if (user === null) {
+            await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
+            return;
+        }
+
         const peopleIds = user.followedPeople.map((p) => p.peopleId);
         const peoples = await People.find({ _id: { $in: peopleIds } })
             .collation({ locale: "fr" })
@@ -93,34 +100,31 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const followedFunctions = sortArrayAlphabetically(user.followedFunctions);
 
         if (peoples.length === 0 && followedFunctions.length === 0) {
-            return await bot.sendMessage(
-                chatId,
-                `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`,
-                startKeyboard
-            );
-        } else {
-            if (followedFunctions.length > 0) {
-                text += "Voici les fonctions que vous suivez :\n\n";
-                for (i; i < followedFunctions.length; i++) {
-                    const functionName = getFunctionFromValue(
-                        followedFunctions[i]
-                    );
-                    text += `${
-                        i + 1
-                    }. *${functionName}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
-                        followedFunctions[i]
-                    )})\n\n`;
-                }
+            await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
+            return;
+        }
+
+        if (followedFunctions.length > 0) {
+            text += "Voici les fonctions que vous suivez :\n\n";
+            for (i; i < followedFunctions.length; i++) {
+                const functionName = getFunctionFromValue(
+                    followedFunctions[i]
+                );
+                text += `${
+                    i + 1
+                }. *${functionName}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
+                    followedFunctions[i]
+                )})\n\n`;
             }
-            if (peoples.length > 0) {
-                text += "Voici les personnes que vous suivez :\n\n";
-                for (j; j < peoples.length; j++) {
-                    text += `${
-                        j + 1 + i
-                    }. *${peoples[j].nom} ${peoples[j].prenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-                        `${peoples[j].prenom} ${peoples[j].nom}`
-                    )})\n\n`;
-                }
+        }
+        if (peoples.length > 0) {
+            text += "Voici les personnes que vous suivez :\n\n";
+            for (j; j < peoples.length; j++) {
+                text += `${
+                    j + 1 + i
+                }. *${peoples[j].nom} ${peoples[j].prenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+                    `${peoples[j].prenom} ${peoples[j].nom}`
+                )})\n\n`;
             }
         }
 
@@ -169,7 +173,12 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
                     user,
                     peoples[userAnswer - 1 - followedFunctions.length]
                 );
-                return;
+
+                // Delete user if it doesn't follow anything anymore
+                if (user.followedPeople.length === 0 && user.followedFunctions.length === 0) {
+                    await User.deleteOne({ _id: chatId });
+                    await umami.log({ event: "/user-deletion" });
+                }
             }
         );
     } catch (error) {
