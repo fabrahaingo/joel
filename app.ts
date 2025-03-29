@@ -2,6 +2,7 @@ import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { CommandType } from "./types";
 import { mongodbConnect } from "./db";
+import { followOrganisationCommand } from "./commands/followOrganisation";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -44,6 +45,10 @@ const commands: CommandType = [
   {
     regex: /\/stats/,
     action: require("./commands/stats"),
+  },
+  {
+    regex: /\/followOrganisation|\/followOrganization/i,
+    action: followOrganisationCommand,
   },
   {
     regex: /.*/,

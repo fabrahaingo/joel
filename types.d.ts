@@ -19,10 +19,28 @@ export interface IUser {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
-  followedNames: string[] | undefined; // undefined for user created before it was added
+    followedNames: string[] | undefined; // undefined for user created before it was added
+    followedOrganisations: {
+        wikidata_id: WikiDataId;
+        lastUpdate: Date;
+    }[] | undefined; // undefined for user model create before organisations
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
+}
+
+export interface IOrganisation {
+  nom: string;
+  wikidata_id: string;
+  save: () => Promise<IOrganisation>;
+  countDocuments: () => number;
+}
+
+export interface OrganisationModel extends Model<IOrganisation> {
+  firstOrCreate: (args: {
+    nom: string;
+    wikidata_id: string;
+  }) => Promise<IOrganisation>;
 }
 
 export interface UserModel extends Model<IUser> {

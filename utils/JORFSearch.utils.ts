@@ -75,7 +75,7 @@ export async function callJORFSearchOrganisation(wikiId: WikiDataId) {
     try {
         return axios
         .get<JORFSearchResponse>(encodeURI(
-            `https://jorfsearch.steinertriples.ch/${wikiId}?format=JSON`))
+            `https://jorfsearch.steinertriples.ch/${wikiId.toUpperCase()}?format=JSON`))
         .then((res) => {
             if (res.data === null || typeof res.data === "string") return [];
             return cleanJORFItems(res.data);
