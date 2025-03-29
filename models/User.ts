@@ -38,21 +38,26 @@ const UserSchema = new Schema<IUser, UserModel>(
       ],
       default: [],
     },
-      followedOrganisations: {
-          type: [
-              {
-                  wikidata_id: {
-                      type: String,
-                  },
-                  lastUpdate: {
-                      type: Date,
-                      default: Date.now,
-                  },
+    followedNames: {
+      type: [String],
+      default: [],
+      required: true,
+    },
+    followedOrganisations: {
+      type: [
+          {
+              wikidata_id: {
+                  type: String,
               },
-          ],
-          default: [],
-          required: true,
-      },
+              lastUpdate: {
+                  type: Date,
+                  default: Date.now,
+              },
+          },
+      ],
+      default: [],
+      required: true,
+    },
     followedFunctions: {
       type: [String],
       default: [],

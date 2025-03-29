@@ -19,6 +19,7 @@ export interface IUser {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
+    followedNames: string[] | undefined; // undefined for user created before it was added
     followedOrganisations: {
         wikidata_id: WikiDataId;
         lastUpdate: Date;
