@@ -142,8 +142,11 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
       notification_text += formatSearchResult([person.lastKnownPosition], {
         isListing: true,
       });
-      if (peopleUpdated.indexOf(person) + 1 !== peopleUpdated.length)
+      if (peopleUpdated.indexOf(person) + 1 !== peopleUpdated.length) {
         notification_text += "\n";
+      } else {
+        await umami.log({ event: "/notification-people" });
+      }
     }
 
     for (let tag in peopleFromFunctions) {
@@ -166,8 +169,11 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
       if (
         Object.keys(peopleFromFunctions).indexOf(tag) + 1 !==
         Object.keys(peopleFromFunctions).length
-      )
+      ) {
         notification_text += "\n";
+      } else {
+        await umami.log({ event: "/notification-functions" });
+      }
     }
 
     const messagesArray = splitText(notification_text, 3000);
@@ -207,7 +213,7 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
         });
     }
 
-    await umami.log({ event: "/notification-update" });
+    await umami.log({ event: "/notification-function" });
   }
 }
 
@@ -286,7 +292,7 @@ async function notifyUsers(
       );
       // update field updatedAt in followedPeople
       await updateUser(user, peoples);
-      // send notification to user
+      // send notification to user-
       await sendUpdate(user, peopleUpdated);
     }
     // prevent hitting Telegram API rate limit
@@ -311,6 +317,8 @@ function returnIdsArray(
 mongoose
   .connect(process.env.MONGODB_URI || "")
   .then(async () => {
+    await umami.log({ event: "/autom-notify-start" });
+
     // 1. get all people who have been updated today
     const peoples = await getPeople();
     if (peoples.length === 0) {
@@ -321,6 +329,8 @@ mongoose
     const users = await getUsers(peopleIds);
     // 3. send notification to users
     await notifyUsers(users, peoples);
+
+    await umami.log({ event: "/autom-notify-end" });
     process.exit(0);
   })
   .catch((err: any) => {
