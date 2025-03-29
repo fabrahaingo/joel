@@ -40,7 +40,6 @@ export interface IPeople {
   _id: Types.ObjectId;
   nom: string;
   prenom: string;
-  lastKnownPosition: JORFSearchItem;
   save: () => Promise<IPeople>;
   countDocuments: () => number;
 }
@@ -49,7 +48,6 @@ export interface PeopleModel extends Model<IPeople> {
   firstOrCreate: (people: {
     nom: string;
     prenom: string;
-    lastKnownPosition: JORFSearchItem;
   }) => Promise<IPeople>;
 }
 
