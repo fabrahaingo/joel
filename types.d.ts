@@ -20,6 +20,7 @@ export interface IUser {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
+  followedNames: string[] | undefined; // undefined for user created before it was added
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
