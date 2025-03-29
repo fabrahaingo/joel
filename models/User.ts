@@ -24,6 +24,11 @@ const UserSchema = new Schema<IUser, UserModel>(
       enum: ["active", "blocked"],
       default: "active",
     },
+    last_interaction: {
+      type: Date,
+      required: true,
+      default: Date.now,
+      },
     followedPeople: {
       type: [
         {
