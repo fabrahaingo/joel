@@ -2,6 +2,7 @@ import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { CommandType } from "./types";
 import { mongodbConnect } from "./db";
+import { enaCommand, promosCommand } from "./commands/ena";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -38,8 +39,12 @@ const commands: CommandType = [
     action: require("./commands/followFunction"),
   },
   {
-    regex: /\/secret|\/ena|\/ENA|\/insp|\/INSP/,
-    action: require("./commands/ena"),
+    regex: /\/secret|\/ENA|\/INSP/i,
+    action: enaCommand,
+  },
+  {
+    regex: /\/promos/,
+    action: promosCommand,
   },
   {
     regex: /\/stats/,

@@ -7,15 +7,14 @@ import TelegramBot from "node-telegram-bot-api";
 import { Types } from "mongoose";
 import { IPeople } from "../types";
 import { callJORFSearchPeople } from "../utils/JORFSearch.utils";
+import { IUser } from "../types";
 
-const isPersonAlreadyFollowed = (
-  person: IPeople,
-  followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
-) => {
-  return followedPeople.some((followedPerson) => {
-    return followedPerson.peopleId.toString() === person._id.toString();
-  });
-};
+export function isPersonAlreadyFollowed(
+  id: Types.ObjectId,
+  followedPeople: IUser["followedPeople"],
+): boolean {
+  return followedPeople.some((person) => person.peopleId.equals(id));
+}
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
@@ -29,7 +28,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         reply_markup: {
           force_reply: true,
         },
-      }
+      },
     );
     bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
       if (msg.text === undefined) {
@@ -67,7 +66,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
       await bot.sendMessage(chatId, `${formattedData}`, startKeyboard);
 
-      if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
+      if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
         user.followedPeople.push({
           peopleId: people._id,
           lastUpdate: new Date(Date.now()),
