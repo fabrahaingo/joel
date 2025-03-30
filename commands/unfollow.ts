@@ -8,7 +8,7 @@ import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
 import {IOrganisation, IPeople} from "../types";
 import Organisation from "../models/Organisation";
 
-export function parseIntAnswers(
+function parseIntAnswers(
   answer: string | undefined,
   selectionIndexMax: number,
 ) {
