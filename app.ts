@@ -72,12 +72,12 @@ const commands: CommandType = [
 
           if (user !== null) {
             // Update time of last interaction if before the current day
-            const currentDate = (new Date());
+            const currentDate = new Date();
             currentDate.setHours(0, 12, 0, 0); // Prevents updating the user for each message
             if (user.last_interaction === undefined || user.last_interaction.getTime() < currentDate.getTime()) {
               user.last_interaction = currentDate;
               await user.save();
-              await umami.log({event: "/user-active-day"});
+              await umami.log({event: "/daily-active-user"});
             }
           }
 

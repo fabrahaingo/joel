@@ -15,7 +15,7 @@ export interface IUser {
   chatId: number;
   language_code: string;
   status: string;
-  last_interaction: Date | undefined; // undefined for user created before it was added
+  last_interaction?: Date;
     followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
