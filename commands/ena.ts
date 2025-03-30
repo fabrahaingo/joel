@@ -143,10 +143,10 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
         const promoInfo = findENAINSPPromo(msg.text);
         const promoJORFList = await getJORFPromoSearchResult(promoInfo);
 
-        if (promoInfo && !promoInfo.onJORF) {
+        if (!promoInfo?.onJORF) {
           await bot.sendMessage(
             chatId,
-            `La promotion *${promoInfo.fullStr}* n'est pas disponible dans les archives du JO.
+            `La promotion *${promoInfo.fullStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
             startKeyboard,
           );
