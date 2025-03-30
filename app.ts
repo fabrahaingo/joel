@@ -10,11 +10,11 @@ const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
 
 const commands: CommandType = [
   {
-    regex: /\/start$/,
+    regex: /\/start$|🏠 Menu principal/,
     action: require("./commands/start"),
   },
   {
-    regex: /🔎 Rechercher$/,
+    regex: /🔎 Rechercher$|🔎 Nouvelle recherche$/,
     action: require("./commands/search"),
   },
   {
