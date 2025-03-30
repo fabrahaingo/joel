@@ -46,11 +46,9 @@ async function updatePeople(updatedUsers: any[], relevantPeople: any[]) {
 }
 
 (async () => {
-
   await mongodbConnect();
   const updatedPeople = await getUpdatedPeople();
   const relevantPeople = await getRelevantPeopleFromDb(updatedPeople);
   await updatePeople(updatedPeople, relevantPeople);
-
   process.exit(0);
 })();

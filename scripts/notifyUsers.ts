@@ -207,7 +207,7 @@ async function sendUpdate(user: IUser, peopleUpdated: string | any[]) {
         });
     }
 
-    await umami.log({ event: "/notification-function" });
+    await umami.log({ event: "/notification-update" });
   }
 }
 
@@ -311,7 +311,6 @@ function returnIdsArray(
 mongoose
   .connect(process.env.MONGODB_URI || "")
   .then(async () => {
-
     // 1. get all people who have been updated today
     const peoples = await getPeople();
     if (peoples.length === 0) {
@@ -322,7 +321,6 @@ mongoose
     const users = await getUsers(peopleIds);
     // 3. send notification to users
     await notifyUsers(users, peoples);
-
     process.exit(0);
   })
   .catch((err: any) => {

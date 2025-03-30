@@ -71,11 +71,9 @@ async function updateTags(tagsToUpdate: any) {
 }
 
 (async () => {
-
   await mongodbConnect();
   const dailyUpdates = await getPeopleToAddOrUpdate();
   const tagsToUpdate = await extractRelevantTags(dailyUpdates);
   await updateTags(tagsToUpdate);
-
   process.exit(0);
 })();

@@ -48,8 +48,7 @@ export type UmamiEvent =
     | "/follow-function"
     | "/unfollow"
     | "/user-blocked-joel"
-    | "/notification-functions"
-    | "/notification-people"
+    | "/notification-update"
     | "/person-updated"
     | "/person-added"
 
