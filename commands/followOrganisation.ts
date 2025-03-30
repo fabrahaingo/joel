@@ -4,7 +4,6 @@ import TelegramBot from "node-telegram-bot-api";
 import Organisation from "../models/Organisation";
 import User from "../models/User";
 import { IOrganisation, IUser, WikidataId } from "../types";
-import { callJORFSearchOrganisation } from "../utils/JORFSearch.utils";
 import axios from "axios";
 import { sendLongText } from "../utils/sendLongText";
 
@@ -106,7 +105,7 @@ Conseil constitutionnel : *Q1127218*`,
         }
 
         if (orgResults.length == 1) {
-          const user = await User.firstOrCreate({ tgUser: msg2.from, chatId });
+          const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
           if (user.followedOrganisations === undefined)
             user.followedOrganisations = [];
 
@@ -120,9 +119,9 @@ Conseil constitutionnel : *Q1127218*`,
             );
             return;
           }
-          const followConfirmation = await bot.sendMessage(
-            `Un résultat correspondant à votre recherche: *${orgResults[0].name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].id)})}\n\n
-Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)`,
+          const followConfirmation = await bot.sendMessage(chatId,
+            `Un résultat correspondant à votre recherche:\n\n *${orgResults[0].name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].id)})\n
+Voulez-vous l'ajouter à vos suivis ? (répondez *oui* ou *non*)`,
             {
               parse_mode: "Markdown",
               reply_markup: {
@@ -141,19 +140,17 @@ Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)`,
                 );
               }
               if (new RegExp(/oui/i).test(msg.text)) {
-                const JORFRes = await callJORFSearchOrganisation(
-                  orgResults[0].id,
-                );
 
                 const organisation: IOrganisation =
                   await Organisation.firstOrCreate({
-                    nom: JORFRes[0].organisations[0].nom,
-                    wikidata_id: JORFRes[0].organisations[0].wikidata_id,
+                    nom: orgResults[0].name,
+                    wikidata_id: orgResults[0].id,
                   });
                 user.followedOrganisations.push({
                   wikidata_id: organisation.wikidata_id,
                   lastUpdate: new Date(Date.now()),
                 });
+                await user.save()
                 await bot.sendMessage(
                   chatId,
                   `Vous suivez maintenant *${orgResults[0].name}* ✅`,
@@ -187,8 +184,8 @@ Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)`,
           bot.onReplyToMessage(
             chatId,
             question.message_id,
-            async (msg2: TelegramBot.Message) => {
-              let answers = parseIntAnswers(msg2.text, orgResults.length);
+            async (msg: TelegramBot.Message) => {
+              let answers = parseIntAnswers(msg.text, orgResults.length);
               if (answers === null || answers.length == 0) {
                 await bot.sendMessage(
                   chatId,
@@ -202,7 +199,7 @@ Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)`,
               await bot.sendChatAction(chatId, "typing");
 
               const user = await User.firstOrCreate({
-                tgUser: msg2.from,
+                tgUser: msg.from,
                 chatId,
               });
               if (user.followedOrganisations === undefined)
@@ -217,14 +214,10 @@ Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)`,
                 )
                   continue;
 
-                const JORFRes = await callJORFSearchOrganisation(
-                  orgResults[answer - 1].id,
-                );
-
                 const organisation: IOrganisation =
                   await Organisation.firstOrCreate({
-                    nom: JORFRes[0].organisations[0].nom,
-                    wikidata_id: JORFRes[0].organisations[0].wikidata_id,
+                    nom: orgResults[answer - 1].name,
+                    wikidata_id: orgResults[answer - 1].id,
                   });
 
                 user.followedOrganisations.push({
@@ -236,21 +229,13 @@ Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)`,
               await user.save();
 
               await new Promise((resolve) => setTimeout(resolve, 500));
-              if (answers.length == 1) {
-                await bot.sendMessage(
-                  chatId,
-                  `Vous suivez l'organisation *${orgResults[0].name}* ✅`,
-                  startKeyboard,
-                );
-              } else {
-                await sendLongText(
-                  bot,
-                  chatId,
-                  `Vous suivez les organisations: *${orgResults[0].name}* ✅\n${orgResults
+              await sendLongText(
+                bot,
+                chatId,
+                `Vous suivez les organisations: ✅\n${orgResults
                     .map((org) => `\n   - *${org.name}*`)
-                    .join("\n\n")}`,
-                );
-              }
+                    .join("\n")}`,
+              );
             },
           );
         }
