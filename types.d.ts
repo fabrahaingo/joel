@@ -17,7 +17,7 @@ export type MessageApp =
 
 export interface IUser {
   _id: number;
-  messageApp?: MessageApp; // undefined for user created before it was added
+  messageApp?: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
