@@ -41,7 +41,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     const user = await User.firstOrCreate({
       tgUser,
       chatId,
-      message_app: "Telegram"
+      messageApp: "Telegram"
     });
 
     let text = "";

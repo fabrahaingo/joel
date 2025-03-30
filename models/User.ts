@@ -14,7 +14,7 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: Number,
       required: true,
     },
-    message_app: {
+    messageApp: {
       type: String,
       required: true,
       default: "Telegram",
@@ -67,7 +67,7 @@ UserSchema.static(
   async function (args: {
     tgUser: TelegramBot.User;
     chatId: number;
-    message_app: MessageApp;
+    messageApp: MessageApp;
   }): Promise<IUser | null> {
     if (args.tgUser.is_bot || isNaN(args.chatId)) return null;
 
@@ -78,7 +78,7 @@ UserSchema.static(
       const newUser = new this({
         _id: args.tgUser.id,
         chatId: args.chatId,
-        message_app: args.message_app,
+        messageApp: args.messageApp,
         language_code: args.tgUser.language_code,
       });
       await newUser.save();

@@ -17,7 +17,7 @@ export type MessageApp =
 
 export interface IUser {
   _id: number;
-  message_app: MessageApp | undefined; // undefined for user created before it was added
+  messageApp?: MessageApp; // undefined for user created before it was added
   chatId: number;
   language_code: string;
   status: string;
@@ -35,8 +35,8 @@ export interface UserModel extends Model<IUser> {
   firstOrCreate: (args: {
     tgUser: TelegramBot.User;
     chatId: number;
-    message_app: MessageApp;
-  }) => Promise<IUser | null>; // null means that the user is a bot or
+    messageApp: MessageApp;
+  }) => Promise<IUser | null>; // null means that the user is a bot
 }
 
 export type IBlocked = {
