@@ -4,10 +4,10 @@ import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
 import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
-import { IOrganisation, IPeople } from "../types";
+import { IOrganisation, IPeople, IUser } from "../types";
 import Organisation from "../models/Organisation";
 
-function sortArrayAlphabetically(array: string[]) {
+function sortArrayAlphabetically(array: IUser["followedFunctions"]) {
   array.sort((a, b) => {
     if (a < b) {
       return -1;
@@ -29,7 +29,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     await bot.sendChatAction(chatId, "typing");
 
     let text = "";
-    const user = await User.firstOrCreate({
+    const user: IUser = await User.firstOrCreate({
       tgUser: msg.from,
       chatId: msg.chat.id,
     });
