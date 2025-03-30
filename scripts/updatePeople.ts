@@ -46,11 +46,11 @@ async function updatePeople(updatedUsers: any[], relevantPeople: any[]) {
 }
 
 (async () => {
-  await umami.log({ event: "/autom-update-people-start" });
+
   await mongodbConnect();
   const updatedPeople = await getUpdatedPeople();
   const relevantPeople = await getRelevantPeopleFromDb(updatedPeople);
   await updatePeople(updatedPeople, relevantPeople);
-  await umami.log({ event: "/autom-update-people-end" });
+
   process.exit(0);
 })();

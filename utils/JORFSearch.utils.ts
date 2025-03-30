@@ -19,7 +19,7 @@ export async function callJORFSearchPeople(peopleName: string) {
             // If the peopleName had nom/prenom inverted or bad formatting:
             // we need to call JORFSearch again with the response url with correct format
             if (res1.request.res.responseUrl) {
-                await umami.log({ event: "/jorfsearch-request-people" });
+                await umami.log({ event: "/jorfsearch-request-people-formatted" });
                 return await axios
                     .get<JORFSearchResponse>(
                     res1.request.res.responseUrl.endsWith("?format=JSON")

@@ -38,6 +38,7 @@ export type UmamiEvent =
     | "/stats"
     | "/list"
     | "/jorfsearch-request-people"
+    | "/jorfsearch-request-people-formatted"
     | "/jorfsearch-request-tag"
     | "/jorfsearch-request-organisation"
     | "/jorfsearch-request-date"
@@ -51,10 +52,4 @@ export type UmamiEvent =
     | "/notification-people"
     | "/person-updated"
     | "/person-added"
-    | "/autom-update-people-start"
-    | "/autom-update-people-end"
-    | "/autom-update-functions-start"
-    | "/autom-update-functions-end"
-    | "/autom-notify-start"
-    | "/autom-notify-end"
 

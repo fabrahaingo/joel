@@ -71,13 +71,11 @@ async function updateTags(tagsToUpdate: any) {
 }
 
 (async () => {
-  await umami.log({ event: "/autom-update-functions-start" });
 
   await mongodbConnect();
   const dailyUpdates = await getPeopleToAddOrUpdate();
   const tagsToUpdate = await extractRelevantTags(dailyUpdates);
   await updateTags(tagsToUpdate);
 
-  await umami.log({ event: "/autom-update-functions-end" });
   process.exit(0);
 })();
