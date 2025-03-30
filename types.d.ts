@@ -22,9 +22,9 @@ export interface IUser {
   }[];
   followedNames?: string[];
   followedOrganisations?: {
-    wikidata_id: WikiDataId;
+    wikidata_id: WikidataId;
     lastUpdate: Date;
-  }[]; // undefined for user model create before organisations
+  }[];
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
@@ -32,7 +32,7 @@ export interface IUser {
 
 export interface IOrganisation {
   nom: string;
-  wikidata_id: string;
+  wikidata_id: WikidataId;
   save: () => Promise<IOrganisation>;
   countDocuments: () => number;
 }
@@ -40,7 +40,7 @@ export interface IOrganisation {
 export interface OrganisationModel extends Model<IOrganisation> {
   firstOrCreate: (args: {
     nom: string;
-    wikidata_id: string;
+    wikidata_id: WikidataId;
   }) => Promise<IOrganisation>;
 }
 
@@ -123,4 +123,4 @@ export type TypeOrdre =
   | "fin délégation signature"
   | "prime";
 
-export type WikiDataId = string;
+export type WikidataId = string;

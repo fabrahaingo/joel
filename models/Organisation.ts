@@ -1,7 +1,7 @@
 import { Schema as _Schema, model } from "mongoose";
 const Schema = _Schema;
 import umami from "../utils/umami";
-import { IOrganisation, OrganisationModel } from "../types";
+import { IOrganisation, OrganisationModel, WikidataId } from "../types";
 
 const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
   {
@@ -21,7 +21,7 @@ const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
 
 OrganisationSchema.static(
   "firstOrCreate",
-  async function (args: { nom: string; wikidata_id: string }) {
+  async function (args: { nom: string; wikidata_id: WikidataId }) {
     const organization: IOrganisation | null = await this.findOne({
       wikidata_id: args.wikidata_id
     });
