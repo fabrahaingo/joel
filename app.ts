@@ -3,7 +3,6 @@ import TelegramBot from "node-telegram-bot-api";
 import { CommandType, IUser } from "./types";
 import { mongodbConnect } from "./db";
 import User from "./models/User";
-import umami from "./utils/umami";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -66,20 +65,8 @@ const commands: CommandType = [
           // Check if user is defined
           const tgUser: TelegramBot.User | undefined = msg.from;
           if (tgUser === undefined) return
-
-          // Fetch user from db
           const user: IUser | null = await User.findOne({ chatId: msg.chat.id });
-
-          if (user !== null) {
-            // Update time of last interaction if before the current day
-            const currentDate = new Date();
-            currentDate.setHours(0, 12, 0, 0); // Prevents updating the user for each message
-            if (user.last_interaction === undefined || user.last_interaction.getTime() < currentDate.getTime()) {
-              user.last_interaction = currentDate;
-              await user.save();
-              await umami.log({event: "/daily-active-user"});
-            }
-          }
+          if (user !== null) await user.saveDailyInteraction();
 
           // Process user message
           command.action(bot)(msg)
