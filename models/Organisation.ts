@@ -11,7 +11,8 @@ const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
     },
     wikidata_id: {
       type: String,
-      required: true
+      required: true,
+      unique: true
     }
   },
   {
