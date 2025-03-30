@@ -4,7 +4,7 @@ import User from "../models/User";
 import People from "../models/People";
 import umami from "../utils/umami";
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
-import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
+import { getFunctionsFromValues } from "../entities/FunctionTags";
 import {IOrganisation, IPeople} from "../types";
 import Organisation from "../models/Organisation";
 
@@ -43,7 +43,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
     const followedFunctions = sortArrayAlphabetically(
       user.followedFunctions,
-    ) as FunctionTags[];
+    );
 
     if (user.followedOrganisations === undefined) user.followedOrganisations=[];
     const followedOrganisations: IOrganisation[] = await Organisation.find({
@@ -258,7 +258,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         );
 
         user.followedFunctions = (
-          user.followedFunctions as FunctionTags[]
+          user.followedFunctions
         ).filter((tag) => !unfollowedFunctions.includes(tag));
 
         await user.save();
