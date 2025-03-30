@@ -92,7 +92,6 @@ UserSchema.method('saveDailyInteraction', async function saveDailyInteraction() 
         await this.save();
         await umami.log({event: "/daily-active-user"});
     }
-    1;
 });
 
 
