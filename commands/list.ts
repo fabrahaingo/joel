@@ -41,7 +41,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     const noDataText=
       `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
 
-    // Search for a registered user: don't create one if it doesn't exist
+    // We only want to create a user upon use of follow function
     const user: IUser | null = await User.findOne({ _id: msg.chat.id });
 
     if (user === null) {
@@ -57,7 +57,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       .lean();
     let functions = sortArrayAlphabetically(user.followedFunctions);
 
-    if (peoples.length === 0 && functions.length === 0) {
+    if (user.followsNothing()) {
       await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
       return;
     }

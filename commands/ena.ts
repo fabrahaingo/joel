@@ -3,8 +3,7 @@ import User from "../models/User";
 import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
-import { Types } from "mongoose";
-import { IUser, WikiDataId } from "../types";
+import { IPeople, WikiDataId } from "../types";
 import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
@@ -75,13 +74,6 @@ function capitalizeFirstLetters(str: string | undefined): string {
     console.log(e);
     return str;
   }
-}
-
-function isPersonAlreadyFollowed(
-  id: Types.ObjectId,
-  followedPeople: IUser["followedPeople"]
-): boolean {
-  return followedPeople.some((person) => person.peopleId.equals(id));
 }
 
 function getYearFromPromo(promoName: string | undefined): string {
@@ -210,8 +202,10 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             await bot.sendChatAction(chatId, "typing");
             const tgUser = msg.from;
             let user = await User.firstOrCreate({ tgUser, chatId });
-            for (let i = 0; i < JORFSearchRes.length; i++) {
-              const contact = JORFSearchRes[i];
+
+            const peopleTab: IPeople[] = [];
+
+            for (const contact of JORFSearchRes) {
               const people_data= await callJORFSearchPeople(
                 `${contact.prenom} ${contact.nom}`
               );
@@ -222,10 +216,10 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
                   lastKnownPosition: people_data[0],
                 });
                 await people.save();
-
-                await user.addFollowedPeople(people);
+                peopleTab.push(people);
               }
             }
+            await user.addFollowedPeopleBulk(peopleTab);
             await user.save();
             return await bot.sendMessage(
               chatId,

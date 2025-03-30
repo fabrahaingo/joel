@@ -23,7 +23,16 @@ export interface IUser {
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
-}
+
+  checkFollowedPeople: (arg0: IPeople) => boolean;
+  checkFollowedFunction: (arg0: FunctionTags) => boolean;
+  addFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  addFollowedPeopleBulk: (arg0: IPeople[]) => Promise<boolean>;
+  addFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
+  removeFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
+  followsNothing: () => boolean;
+  }
 
 export interface UserModel extends Model<IUser> {
   firstOrCreate: (args: {

@@ -85,7 +85,6 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const noDataText=
             `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
 
-        // Search for user: don't create if it doesn't exist
         const user: IUser | null = await User.findOne({ _id: chatId });
 
         if (user === null) {
@@ -175,7 +174,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
                 );
 
                 // Delete user if it doesn't follow anything anymore
-                if (user.followedPeople.length === 0 && user.followedFunctions.length === 0) {
+                if (user.followsNothing()) {
                     await User.deleteOne({ _id: chatId });
                     await umami.log({ event: "/user-deletion" });
                 }
