@@ -48,6 +48,10 @@ const commands: CommandType = [
     action: require("./commands/stats"),
   },
   {
+    regex: /\/supprimerCompte/,
+    action: require("./commands/deleteProfile"),
+  },
+  {
     regex: /.*/,
     action: require("./commands/default"),
   },
