@@ -1,11 +1,11 @@
 import { startKeyboard } from "../utils/keyboards";
 import People from "../models/People";
 import User from "../models/User";
-import get from "axios";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
 import { Types } from "mongoose";
 import { IPeople } from "../types";
+import { callJORFSearchPeople } from "../utils/JORFSearch.utils";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -34,66 +34,50 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   try {
     await bot.sendChatAction(chatId, "typing");
 
-    let JORFRes = await get(
-      encodeURI(
-        `https://jorfsearch.steinertriples.ch/name/${person}?format=JSON`
-      )
-    ).then(async (res) => {
-      if (res.data?.length === 0) {
-        return res;
-      }
-      if (res.request.res.responseUrl) {
-        return await get(
-          res.request.res.responseUrl.endsWith("?format=JSON")
-            ? res.request.res.responseUrl
-            : `${res.request.res.responseUrl}?format=JSON`
-        );
-      }
+    const tgUser: TelegramBot.User | undefined = msg.from;
+    if (tgUser === undefined) return;
+    let user = await User.firstOrCreate({
+      tgUser,
+      chatId,
     });
 
-    if (
-      JORFRes?.data?.length === 0 ||
-      !JORFRes?.data[0]?.nom ||
-      !JORFRes.data[0]?.prenom
-    ) {
+    const JORFRes = await callJORFSearchPeople(person);
+    if (JORFRes.length == 0) {
       await bot.sendMessage(
-        chatId,
-        "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement",
-        startKeyboard
+          chatId,
+          "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement",
+          startKeyboard
+      );
+      return;
+    }
+
+    const people = await People.firstOrCreate({
+      nom: JORFRes[0].nom,
+      prenom: JORFRes[0].prenom,
+      lastKnownPosition: JORFRes[0],
+    });
+    await people.save();
+
+    if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
+      user.followedPeople.push({
+        peopleId: people._id,
+        lastUpdate: new Date(Date.now()),
+      });
+      await user.save();
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await bot.sendMessage(
+          chatId,
+          `Vous suivez maintenant *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`,
+          startKeyboard
       );
     } else {
-      const people = await People.firstOrCreate({
-        nom: JORFRes.data[0].nom,
-        prenom: JORFRes.data[0].prenom,
-        lastKnownPosition: JORFRes.data[0],
-      });
-      await people.save();
-      const tgUser: TelegramBot.User | undefined = msg.from;
-      let user = await User.firstOrCreate({
-        tgUser,
-        chatId,
-      });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await bot.sendMessage(
+          chatId,
+          `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`,
+          startKeyboard
+      );
 
-      if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
-        user.followedPeople.push({
-          peopleId: people._id,
-          lastUpdate: new Date(Date.now()),
-        });
-        await user.save();
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        await bot.sendMessage(
-            chatId,
-            `Vous suivez maintenant *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
-            startKeyboard
-        );
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        await bot.sendMessage(
-            chatId,
-            `Vous suivez déjà *${JORFRes.data[0].prenom} ${JORFRes.data[0].nom}* ✅`,
-            startKeyboard
-        );
-      }
     }
   } catch (error) {
     console.log(error);
