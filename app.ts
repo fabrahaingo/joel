@@ -51,6 +51,10 @@ const commands: CommandType = [
     action: followOrganisationCommand,
   },
   {
+    regex: /\/supprimerCompte/,
+    action: require("./commands/deleteProfile"),
+  },
+  {
     regex: /.*/,
     action: require("./commands/default"),
   },

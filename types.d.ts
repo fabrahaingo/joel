@@ -10,6 +10,7 @@ export type CommandType = {
   };
 }[];
 
+// fields are undefined for users created before implementation
 export interface IUser {
   _id: number;
   chatId: number;
@@ -19,10 +20,11 @@ export interface IUser {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
-    followedOrganisations: {
-        wikidata_id: WikiDataId;
-        lastUpdate: Date;
-    }[] | undefined; // undefined for user model create before organisations
+  followedNames?: string[];
+  followedOrganisations?: {
+    wikidata_id: WikiDataId;
+    lastUpdate: Date;
+  }[]; // undefined for user model create before organisations
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
