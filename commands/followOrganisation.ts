@@ -85,14 +85,17 @@ Conseil constitutionnel : *Q1127218*`,
           },
         },
       );
-      bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
-        if (msg.text === undefined || msg.text === "") {
-          await bot.sendMessage(
-            chatId,
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-          );
-          return;
-        }
+      bot.onReplyToMessage(
+        chatId,
+        question.message_id,
+        async (msg: TelegramBot.Message) => {
+          if (msg.text === undefined || msg.text === "") {
+            await bot.sendMessage(
+              chatId,
+              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+            );
+            return;
+          }
 
         const orgResults = await searchOrganisationWikidataId(msg.text);
 
@@ -132,7 +135,6 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
           bot.onReplyToMessage(
             chatId,
             followConfirmation.message_id,
-            async (msg) => {
               if (msg.text === undefined) {
                 return await bot.sendMessage(
                   chatId,
@@ -170,6 +172,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
             )}. *${organisation_k.name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.id)})\n\n`;
           }
           await sendLongText(bot, chatId, text);
+              async (msg: TelegramBot.Message) => {
 
           const question = await bot.sendMessage(
             chatId,
