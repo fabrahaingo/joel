@@ -3,11 +3,11 @@ import People from "../models/People";
 import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
-import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
+import { getFunctionsFromValues } from "../entities/FunctionTags";
 import { IOrganisation, IPeople, IUser } from "../types";
 import Organisation from "../models/Organisation";
 
-function sortArrayAlphabetically(array: IUser["followedFunctions"]) {
+function sortFunctionsAlphabetically(array: IUser["followedFunctions"]) {
   array.sort((a, b) => {
     if (a < b) {
       return -1;
@@ -40,9 +40,9 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       .collation({ locale: "fr" })
       .sort({ nom: 1 })
       .lean();
-    const functions = sortArrayAlphabetically(
+    const functions = sortFunctionsAlphabetically(
       user.followedFunctions,
-    ) as FunctionTags[];
+    );
     if (user.followedOrganisations === undefined) user.followedOrganisations=[];
     const organisations: IOrganisation[] = await Organisation.find({
       wikidata_id: {

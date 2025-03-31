@@ -4,20 +4,20 @@ import User from "../models/User";
 import People from "../models/People";
 import umami from "../utils/umami";
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
-import { getFunctionsFromValues } from "../entities/FunctionTags";
+import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
 import {IOrganisation, IPeople} from "../types";
 import Organisation from "../models/Organisation";
 
 function parseIntAnswers(
   answer: string | undefined,
-  selectionIndexMax: number,
+  maxAllowedValue: number,
 ) {
   if (answer === undefined) return null;
 
   const answers = answer
     .split(/[ ,\-;:]/)
     .map((s) => parseInt(s))
-    .filter((i) => i && !isNaN(i) && i <= selectionIndexMax);
+    .filter((i) => i && !isNaN(i) && i <= maxAllowedValue);
 
   if (answers.length == 0) {
     return null;
@@ -25,7 +25,7 @@ function parseIntAnswers(
   return answers;
 }
 
-function sortArrayAlphabetically(array: string[]) {
+function sortFunctionsAlphabetically(array: FunctionTags[]) {
   return array.sort((a, b) => {
     return a.localeCompare(b);
   });
@@ -41,7 +41,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
     const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
 
-    const followedFunctions = sortArrayAlphabetically(
+    const followedFunctions = sortFunctionsAlphabetically(
       user.followedFunctions,
     );
 
@@ -126,15 +126,15 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       chatId,
       question.message_id,
       async (msg: TelegramBot.Message) => {
-        const selectionIndexMax =
+        const maxAllowedValue =
             followedPeoples.length +
             followedFunctions.length +
             followedOrganisations.length;
-        let answers = parseIntAnswers(msg.text, selectionIndexMax);
+        let answers = parseIntAnswers(msg.text, maxAllowedValue);
         if (answers === null) {
           await bot.sendMessage(
             chatId,
-            `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(selectionIndexMax)}.
+            `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(maxAllowedValue)}.
 👎 Veuillez essayer de nouveau la commande /unfollow.`,
             startKeyboard,
           );
@@ -188,19 +188,19 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             text += `Vous ne suivez plus la personne *${unfollowedPeople[0].prenom} ${unfollowedPeople[0].nom}* 🙅‍♂️`;
           }
         } else if (unfollowedTotal === unfollowedFunctions.length) {
-          // If only 1 type of unfollowed items
+        // If only 1 type of unfollowed items: functions
           text +=
             "Vous ne suivez plus les fonctions 🙅‍ :" +
             unfollowedFunctions
               .map((_fct, i) => `\n - *${unfollowedFunctionsKeys[i]}*`)
               .join("");
         } else if (unfollowedTotal === unfollowedOrganisations.length) {
-          // If
+        // If only 1 type of unfollowed items: organisations
           text +=
             "Vous ne suivez plus les organisations 🙅‍ :" +
             unfollowedOrganisations.map((org) => `\n - *${org.nom}*`).join("");
         } else if (unfollowedTotal === unfollowedPeople.length) {
-          // If
+        // If only 1 type of unfollowed items: people
           text +=
             "Vous ne suivez plus les personnes 🙅‍ :" +
             unfollowedPeople.map((p) => `\n - *${p.prenom} ${p.nom}*`).join("");

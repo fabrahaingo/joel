@@ -9,14 +9,14 @@ import { sendLongText } from "../utils/sendLongText";
 
 function parseIntAnswers(
   answer: string | undefined,
-  selectionIndexMax: number,
+  maxAllowedValue: number,
 ) {
   if (answer === undefined) return null;
 
   const answers = answer
     .split(/[ ,\-;:]/)
     .map((s) => parseInt(s))
-    .filter((i) => i && !isNaN(i) && i <= selectionIndexMax);
+    .filter((i) => i && !isNaN(i) && i <= maxAllowedValue);
 
   if (answers.length == 0) {
     return null;
@@ -28,7 +28,7 @@ const isOrganisationAlreadyFollowed = (
   user: IUser,
   wikidata_id: WikidataId,
 ): boolean => {
-  return user?.followedOrganisations.some((o) => o.wikidata_id === wikidata_id);
+  return user.followedOrganisations?.some((o) => o.wikidata_id === wikidata_id);
 };
 
 interface WikiDataAPIResponse {
@@ -114,14 +114,14 @@ Conseil constitutionnel : *Q1127218*`,
             await new Promise((resolve) => setTimeout(resolve, 500));
             await bot.sendMessage(
               chatId,
-              `Vous suivez déjà *${orgResults[0].name}* ✅`,
+              `Vous suivez déjà l'organisation *${orgResults[0].name}* ✅`,
               startKeyboard,
             );
             return;
           }
           const followConfirmation = await bot.sendMessage(chatId,
-            `Un résultat correspondant à votre recherche:\n\n *${orgResults[0].name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].id)})\n
-Voulez-vous l'ajouter à vos suivis ? (répondez *oui* ou *non*)`,
+            `Une organisation correspond à votre recherche:\n\n *${orgResults[0].name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].id)})\n
+Voulez-vous être notifié de toutes les nominations en rapport avec cette organisation ? (répondez *oui* ou *non*)`,
             {
               parse_mode: "Markdown",
               reply_markup: {
@@ -148,12 +148,12 @@ Voulez-vous l'ajouter à vos suivis ? (répondez *oui* ou *non*)`,
                   });
                 user.followedOrganisations.push({
                   wikidata_id: organisation.wikidata_id,
-                  lastUpdate: new Date(Date.now()),
+                  lastUpdate: new Date(),
                 });
                 await user.save()
                 await bot.sendMessage(
                   chatId,
-                  `Vous suivez maintenant *${orgResults[0].name}* ✅`,
+                  `Vous suivez maintenant l'organisation *${orgResults[0].name}* ✅`,
                   startKeyboard,
                 );
               }
@@ -206,8 +206,6 @@ Voulez-vous l'ajouter à vos suivis ? (répondez *oui* ou *non*)`,
                 user.followedOrganisations = [];
 
               for (const answer of answers) {
-                if (answer > orgResults.length) continue; // this shoud not happen
-
                 // Don't call JORF if the organisation is already followed
                 if (
                   isOrganisationAlreadyFollowed(user, orgResults[answer - 1].id)
@@ -222,7 +220,7 @@ Voulez-vous l'ajouter à vos suivis ? (répondez *oui* ou *non*)`,
 
                 user.followedOrganisations.push({
                   wikidata_id: organisation.wikidata_id,
-                  lastUpdate: new Date(Date.now()),
+                  lastUpdate: new Date(),
                 });
               }
 
