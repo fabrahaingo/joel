@@ -15,6 +15,7 @@ export interface IUser {
   chatId: number;
   language_code: string;
   status: string;
+  lastInteractionDay?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
@@ -24,6 +25,8 @@ export interface IUser {
   save: () => Promise<IUser>;
   countDocuments: () => number;
 
+  saveDailyInteraction: () => Promise<void>;
+
   checkFollowedPeople: (arg0: IPeople) => boolean;
   checkFollowedFunction: (arg0: FunctionTags) => boolean;
   addFollowedPeople: (arg0: IPeople) => Promise<boolean>;
@@ -32,7 +35,7 @@ export interface IUser {
   removeFollowedPeople: (arg0: IPeople) => Promise<boolean>;
   removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
   followsNothing: () => boolean;
-  }
+}
 
 export interface UserModel extends Model<IUser> {
   firstOrCreate: (args: {

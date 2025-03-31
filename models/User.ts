@@ -25,6 +25,9 @@ const UserSchema = new Schema<IUser, UserModel>(
       enum: ["active", "blocked"],
       default: "active",
     },
+    lastInteractionDay: {
+      type: Date,
+      },
     followedPeople: {
       type: [
         {
@@ -80,6 +83,17 @@ UserSchema.static(
     return user;
   }
 );
+
+UserSchema.method('saveDailyInteraction', async function saveDailyInteraction() {
+    const currentDate = new Date();
+    currentDate.setHours(0, 12, 0, 0);
+    if (this.lastInteractionDay === undefined || this.lastInteractionDay.getTime() < currentDate.getTime()) {
+        this.lastInteractionDay = currentDate;
+        await this.save();
+        await umami.log({event: "/daily-active-user"});
+    }
+});
+
 
 UserSchema.method('checkFollowedPeople', function checkFollowedPeople(people: IPeople): boolean {
     return this.followedPeople.some((person) => person.peopleId.equals(people._id));
