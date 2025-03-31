@@ -53,4 +53,6 @@ export type UmamiEvent =
     | "/notification-update"
     | "/person-updated"
     | "/person-added"
+    | "/daily-active-user"
+
 
