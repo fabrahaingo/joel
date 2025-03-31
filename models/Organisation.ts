@@ -9,7 +9,7 @@ const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
       type: String,
       required: true
     },
-    wikidata_id: {
+    wikidataId: {
       type: String,
       required: true,
       unique: true
@@ -22,20 +22,20 @@ const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
 
 OrganisationSchema.static(
   "firstOrCreate",
-  async function (args: { nom: string; wikidata_id: WikidataId }) {
+  async function (args: { nom: string; wikidataId: WikidataId }) {
     const organization: IOrganisation | null = await this.findOne({
-      wikidata_id: args.wikidata_id
+      wikidataId: args.wikidataId
     });
 
     if (organization === null) {
       await umami.log({ event: "/new-organisation" });
       const newOrganization: IOrganisation = new this({
         nom: args.nom,
-        wikidata_id: args.wikidata_id
+        wikidataId: args.wikidataId
       });
       await newOrganization.save();
       return newOrganization;
-    } else if (!(args.nom === organization.nom)) {
+    } else if (args.nom !== organization.nom) {
       // Update the organisation name if it has changed
       organization.nom = args.nom;
       await organization.save();

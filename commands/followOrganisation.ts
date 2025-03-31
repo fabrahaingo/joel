@@ -23,9 +23,9 @@ function parseIntAnswers(answer: string | undefined, maxAllowedValue: number) {
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
-  wikidata_id: WikidataId,
+  wikidataId: WikidataId,
 ): boolean => {
-  return user.followedOrganisations?.some((o) => o.wikidata_id === wikidata_id);
+  return user.followedOrganisations?.some((o) => o.wikidataId === wikidataId);
 };
 
 interface WikiDataAPIResponse {
@@ -37,7 +37,7 @@ interface WikiDataAPIResponse {
 
 async function searchOrganisationWikidataId(
   org_name: string,
-): Promise<{ name: string; id: WikidataId }[]> {
+): Promise<{ nom: string; wikidataId: WikidataId }[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-wikidata-names" });
 
@@ -50,13 +50,17 @@ async function searchOrganisationWikidataId(
       .then((r) => {
         return r.data.search.map((o) => o.id);
       });
-    if (wikidataIds_raw.length == 0) return []; // prevents unecessary jorf event
+    if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
 
-    return await axios
+    return (await axios
       .get<
         { name: string; id: WikidataId }[]
       >(encodeURI(`https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`))
-      .then((r) => r.data);
+      .then((r) => r.data))
+        .map(o=>({
+          nom: o.name,
+          wikidataId: o.id as WikidataId
+        }));
   } catch (error) {
     console.log(error);
     return [];
@@ -110,18 +114,18 @@ Conseil constitutionnel : *Q1127218*`,
               user.followedOrganisations = [];
 
             // If the one result is already followed
-            if (isOrganisationAlreadyFollowed(user, orgResults[0].id)) {
+            if (isOrganisationAlreadyFollowed(user, orgResults[0].wikidataId)) {
               await new Promise((resolve) => setTimeout(resolve, 500));
               await bot.sendMessage(
                 chatId,
-                `Vous suivez déjà l'organisation *${orgResults[0].name}* ✅`,
+                `Vous suivez déjà l'organisation *${orgResults[0].nom}* ✅`,
                 startKeyboard,
               );
               return;
             }
             const followConfirmation = await bot.sendMessage(
               chatId,
-              `Une organisation correspond à votre recherche:\n\n *${orgResults[0].name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].id)})\n
+              `Une organisation correspond à votre recherche:\n\n*${orgResults[0].nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].wikidataId)})\n
 Voulez-vous être notifié de toutes les nominations en rapport avec cette organisation ? (répondez *oui* ou *non*)`,
               {
                 parse_mode: "Markdown",
@@ -138,24 +142,24 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   if (new RegExp(/oui/i).test(msg.text)) {
                     const organisation: IOrganisation =
                       await Organisation.firstOrCreate({
-                        nom: orgResults[0].name,
-                        wikidata_id: orgResults[0].id,
+                        nom: orgResults[0].nom,
+                        wikidataId: orgResults[0].wikidataId,
                       });
                     user.followedOrganisations.push({
-                      wikidata_id: organisation.wikidata_id,
+                      wikidataId: organisation.wikidataId,
                       lastUpdate: new Date(),
                     });
                     await user.save();
                     await bot.sendMessage(
                       chatId,
-                      `Vous suivez maintenant l'organisation *${orgResults[0].name}* ✅`,
+                      `Vous suivez maintenant l'organisation *${orgResults[0].nom}* ✅`,
                       startKeyboard,
                     );
                     return;
                   } else if (new RegExp(/non/i).test(msg.text)) {
                     await bot.sendMessage(
                       chatId,
-                      `L'organisation *${orgResults[0].name}* n'a pas été ajoutée aux suivis.`,
+                      `L'organisation *${orgResults[0].nom}* n'a pas été ajoutée aux suivis.`,
                       startKeyboard,
                     );
                     return;
@@ -176,7 +180,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
               const organisation_k = orgResults[k];
               text += `${String(
                 k + 1,
-              )}. *${organisation_k.name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.id)})\n\n`;
+              )}. *${organisation_k.nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.wikidataId)})\n\n`;
             }
             await sendLongText(bot, chatId, text);
 
@@ -219,19 +223,19 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   if (
                     isOrganisationAlreadyFollowed(
                       user,
-                      orgResults[answer - 1].id,
+                      orgResults[answer - 1].wikidataId,
                     )
                   )
                     continue;
 
                   const organisation: IOrganisation =
                     await Organisation.firstOrCreate({
-                      nom: orgResults[answer - 1].name,
-                      wikidata_id: orgResults[answer - 1].id,
+                      nom: orgResults[answer - 1].nom,
+                      wikidataId: orgResults[answer - 1].wikidataId,
                     });
 
                   user.followedOrganisations.push({
-                    wikidata_id: organisation.wikidata_id,
+                    wikidataId: organisation.wikidataId,
                     lastUpdate: new Date(),
                   });
                 }
@@ -243,7 +247,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   bot,
                   chatId,
                   `Vous suivez les organisations: ✅\n${orgResults
-                    .map((org) => `\n   - *${org.name}*`)
+                    .map((org) => `\n   - *${org.nom}*`)
                     .join("\n")}`,
                 );
               },

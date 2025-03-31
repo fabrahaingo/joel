@@ -47,8 +47,8 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
     if (user.followedOrganisations === undefined) user.followedOrganisations=[];
     const followedOrganisations: IOrganisation[] = await Organisation.find({
-      wikidata_id: {
-        $in: user.followedOrganisations.map((o) => o.wikidata_id),
+      wikidataId: {
+        $in: user.followedOrganisations.map((o) => o.wikidataId),
       },
     })
       .collation({ locale: "fr" })
@@ -94,7 +94,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const organisation_k = followedOrganisations[k];
         text += `${String(
           i + k + 1,
-        )}. *${organisation_k.nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.wikidata_id)})\n\n`;
+        )}. *${organisation_k.nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.wikidataId)})\n\n`;
       }
     }
     let j = 0;
@@ -253,8 +253,8 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         user.followedOrganisations = user.followedOrganisations.filter(
           (org) =>
             !unfollowedOrganisations
-              .map((o) => o.wikidata_id)
-              .includes(org.wikidata_id),
+              .map((o) => o.wikidataId)
+              .includes(org.wikidataId),
         );
 
         user.followedFunctions = (

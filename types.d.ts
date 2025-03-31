@@ -22,7 +22,7 @@ export interface IUser {
   }[];
   followedNames?: string[];
   followedOrganisations?: {
-    wikidata_id: WikidataId;
+    wikidataId: WikidataId;
     lastUpdate: Date;
   }[];
   followedFunctions: FunctionTags[];
@@ -32,7 +32,7 @@ export interface IUser {
 
 export interface IOrganisation {
   nom: string;
-  wikidata_id: WikidataId;
+  wikidataId: WikidataId;
   save: () => Promise<IOrganisation>;
   countDocuments: () => number;
 }
@@ -40,7 +40,7 @@ export interface IOrganisation {
 export interface OrganisationModel extends Model<IOrganisation> {
   firstOrCreate: (args: {
     nom: string;
-    wikidata_id: WikidataId;
+    wikidataId: WikidataId;
   }) => Promise<IOrganisation>;
 }
 

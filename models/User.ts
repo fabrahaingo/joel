@@ -46,7 +46,7 @@ const UserSchema = new Schema<IUser, UserModel>(
     followedOrganisations: {
       type: [
           {
-              wikidata_id: {
+              wikidataId: {
                   type: String,
               },
               lastUpdate: {
