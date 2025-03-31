@@ -125,54 +125,62 @@ Conseil constitutionnel : *Q1127218*`,
           const followConfirmation = await bot.sendMessage(chatId,
             `Une organisation correspond à votre recherche:\n\n *${orgResults[0].name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].id)})\n
 Voulez-vous être notifié de toutes les nominations en rapport avec cette organisation ? (répondez *oui* ou *non*)`,
-            {
-              parse_mode: "Markdown",
-              reply_markup: {
-                force_reply: true,
+              {
+                parse_mode: "Markdown",
+                reply_markup: {
+                  force_reply: true,
+                },
               },
-            },
-          );
-          bot.onReplyToMessage(
-            chatId,
-            followConfirmation.message_id,
-              if (msg.text === undefined) {
+            );
+            bot.onReplyToMessage(
+              chatId,
+              followConfirmation.message_id,
+              async (msg: TelegramBot.Message) => {
+                if (msg.text !== undefined) {
+                  if (new RegExp(/oui/i).test(msg.text)) {
+                    const organisation: IOrganisation =
+                      await Organisation.firstOrCreate({
+                        nom: orgResults[0].name,
+                        wikidata_id: orgResults[0].id,
+                      });
+                    user.followedOrganisations.push({
+                      wikidata_id: organisation.wikidata_id,
+                      lastUpdate: new Date(),
+                    });
+                    await user.save();
+                    await bot.sendMessage(
+                      chatId,
+                      `Vous suivez maintenant l'organisation *${orgResults[0].name}* ✅`,
+                      startKeyboard,
+                    );
+                    return;
+                  } else if (new RegExp(/non/i).test(msg.text)) {
+                    await bot.sendMessage(
+                      chatId,
+                      `L'organisation *${orgResults[0].name}* n'a pas été ajoutée aux suivis.`,
+                      startKeyboard,
+                    );
+                    return;
+                  }
+                }
+                // If msg.txt undefined or not "oui"/"non"
                 return await bot.sendMessage(
                   chatId,
                   `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
                 );
-              }
-              if (new RegExp(/oui/i).test(msg.text)) {
-
-                const organisation: IOrganisation =
-                  await Organisation.firstOrCreate({
-                    nom: orgResults[0].name,
-                    wikidata_id: orgResults[0].id,
-                  });
-                user.followedOrganisations.push({
-                  wikidata_id: organisation.wikidata_id,
-                  lastUpdate: new Date(),
-                });
-                await user.save()
-                await bot.sendMessage(
-                  chatId,
-                  `Vous suivez maintenant l'organisation *${orgResults[0].name}* ✅`,
-                  startKeyboard,
-                );
-              }
-            },
-          );
-          // More than one org results
-        } else {
-          let text =
-            "Voici les organisations correspondant à votre recherche :\n\n";
-          for (let k = 0; k < orgResults.length; k++) {
-            const organisation_k = orgResults[k];
-            text += `${String(
-              k + 1,
-            )}. *${organisation_k.name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.id)})\n\n`;
-          }
-          await sendLongText(bot, chatId, text);
-              async (msg: TelegramBot.Message) => {
+              },
+            );
+            // More than one org results
+          } else {
+            let text =
+              "Voici les organisations correspondant à votre recherche :\n\n";
+            for (let k = 0; k < orgResults.length; k++) {
+              const organisation_k = orgResults[k];
+              text += `${String(
+                k + 1,
+              )}. *${organisation_k.name}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.id)})\n\n`;
+            }
+            await sendLongText(bot, chatId, text);
 
           const question = await bot.sendMessage(
             chatId,
