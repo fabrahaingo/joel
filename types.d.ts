@@ -16,6 +16,7 @@ export interface IUser {
   chatId: number;
   language_code: string;
   status: string;
+  lastInteractionDay?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
@@ -28,6 +29,8 @@ export interface IUser {
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
+
+  saveDailyInteraction: () => Promise<void>;
 }
 
 export interface IOrganisation {
