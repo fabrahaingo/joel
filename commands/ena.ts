@@ -5,18 +5,12 @@ import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import { Types } from "mongoose";
 import { IUser, WikiDataId } from "../types";
-import {
-  Promo_ENA_INSP,
-  ListPromos_INSP_ENA_all,
-  ListPromos_INSP_available,
-  ListPromos_ENA_available,
-  ListPromos_ENA_unavailable,
-} from "../entities/PromoNames";
+import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
 import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
 
-export function removeAccents(input: string): string {
+function removeAccents(input: string): string {
     input = input.trim().toLowerCase();
 
     input = input.replace(/[àáâãäå]/g, "a");
@@ -31,15 +25,14 @@ export function removeAccents(input: string): string {
 }
 
 function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
-  const allPromos = ListPromos_INSP_ENA_all;
-  const allPromoNames = allPromos.map((i) =>
-    i.name
-      ? removeAccents(i.name.toLowerCase()).replaceAll("-", " ")
-      : undefined,
-  );
-  const allPromoPeriods = allPromos.map((i) => i.formattedPeriod);
+  const allPromoPeriods = List_Promos_INSP_ENA.map((i) => i.period);
 
-  let promoIdx = allPromoNames.findIndex(
+  let promoIdx = List_Promos_INSP_ENA
+      .map((i) =>
+      i.name
+          ? removeAccents(i.name.toLowerCase()).replaceAll("-", " ")
+          : undefined,
+  ).findIndex(
     (i) => i === removeAccents(input.toLowerCase().replaceAll("-", " ")),
   );
 
@@ -54,36 +47,20 @@ function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
     return null;
   }
 
-  // Promo found
-  // The full promo list is in order: INSP / ENA_available / ENA_unavailable
-
-  // Promo in INSP
-  if (promoIdx < ListPromos_INSP_available.length) {
-    return ListPromos_INSP_available[promoIdx];
-  }
-
-  promoIdx = promoIdx - ListPromos_INSP_available.length;
-
-  if (promoIdx < ListPromos_ENA_available.length) {
-    return ListPromos_ENA_available[promoIdx];
-  }
-
-  promoIdx = promoIdx - ListPromos_ENA_available.length;
-
-  return ListPromos_ENA_unavailable[promoIdx];
+  return List_Promos_INSP_ENA[promoIdx];
 }
 
 async function getJORFPromoSearchResult(
-    promoInfo: Promo_ENA_INSP | null,
+    promo: Promo_ENA_INSP | null,
 ): Promise<JORFSearchItem[] | null> {
-    if (promoInfo === null) {
+    if (promo === null) {
         return null;
     }
 
-  switch (promoInfo.promoType) {
+  switch (promo.school) {
 
     case "ENA": // If ENA, we can use the associated tag with the year as value
-      return callJORFSearchTag("eleve_ena", promoInfo.formattedPeriod);
+      return callJORFSearchTag("eleve_ena", promo.period);
 
     case "INSP": // If INSP, we can rely on the associated organisation
       const inspId = "Q109039648" as WikiDataId;
@@ -94,11 +71,12 @@ async function getJORFPromoSearchResult(
               // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
               return (
                   publication?.type_ordre === "admission" && publication?.date_fin &&
-                  publication?.date_fin.slice(0, 4) === promoInfo.formattedPeriod.slice(-4)
+                  publication?.date_fin.slice(0, 4) === promo.period.slice(-4)
               );
             });
+      default:
+          return [];
   }
-  return []
 }
 
 function isPersonAlreadyFollowed(
@@ -125,7 +103,7 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
           force_reply: true,
         },
       });
-      bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
+      bot.onReplyToMessage(chatId, question.message_id, async (msg: TelegramBot.Message) => {
         if (msg.text === undefined) {
           await bot.sendMessage(
             chatId,
@@ -143,30 +121,29 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
         const promoInfo = findENAINSPPromo(msg.text);
         const promoJORFList = await getJORFPromoSearchResult(promoInfo);
 
+        if (promoJORFList === null ||promoJORFList.length == 0) {
+          await bot.sendMessage(
+              chatId,
+              `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
+              startKeyboard,
+          );
+          return;
+        }
+
+        let promoStr= promoInfo.period;
+        if (promoInfo.name !== null) promoStr = `${promoInfo.name} (${promoInfo.period})`;
+
         if (!promoInfo?.onJORF) {
           await bot.sendMessage(
             chatId,
-            `La promotion *${promoInfo.fullStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
+            `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
             startKeyboard,
           );
           return;
         }
 
-        if (
-          promoInfo === null ||
-          promoJORFList === null ||
-          promoJORFList.length == 0
-        ) {
-          await bot.sendMessage(
-            chatId,
-            `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
-            startKeyboard,
-          );
-          return;
-        }
-
-        const text = `La promotion *${promoInfo.fullStr}* contient *${String(promoJORFList.length)} élèves*:`;
+        const text = `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`;
         await bot.sendMessage(chatId, text, {
           parse_mode: "Markdown",
         });
@@ -198,7 +175,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
       bot.onReplyToMessage(
         chatId,
         followConfirmation.message_id,
-        async (msg) => {
+        async (msg: TelegramBot.Message) => {
           if (msg.text === undefined) {
             await bot.sendMessage(
               chatId,
@@ -241,7 +218,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                 chatId,
                 `Les *${String(
                   promoJORFList.length,
-                )} personnes* de la promo *${promoInfo.fullStr}* ont été ajoutées à vos contacts.`,
+                )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
                 startKeyboard,
               );
               return;
@@ -275,14 +252,14 @@ export const promosCommand =
 
       // Promotions INSP
       text += "*Institut National du Service Public (INSP)*\n\n";
-      for (const promoINSP of ListPromos_INSP_available) {
-        text += `${promoINSP.formattedPeriod} : *${promoINSP.name ?? "À venir"}*\n`;
+      for (const promoINSP of List_Promos_INSP_ENA.filter(p=>p.school==="INSP")) {
+        text += `${promoINSP.period} : *${promoINSP.name ?? "À venir"}*\n`;
       }
 
       // Promotions ENA
       text += "\n*École Nationale d'Administration (ENA)*\n\n";
-      for (const promoENA of ListPromos_ENA_available) {
-        text += `${promoENA.formattedPeriod} : *${promoENA.name ?? "À venir"}*\n`;
+      for (const promoENA of List_Promos_INSP_ENA.filter(p=>p.school==="ENA" && p.onJORF)) {
+        text += `${promoENA.period} : *${promoENA.name ?? "À venir"}*\n`;
       }
 
       text +=
