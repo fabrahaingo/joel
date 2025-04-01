@@ -270,7 +270,7 @@ export const promosCommand =
   (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     try {
       const chatId = msg.chat.id;
-      await umami.log({ event: "/INSPENAList" });
+      await umami.log({ event: "/ena-list" });
       let text = `Les périodes et noms des promotions successives sont:\n\n`;
 
       // Promotions INSP
