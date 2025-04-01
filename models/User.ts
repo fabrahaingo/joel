@@ -92,6 +92,7 @@ UserSchema.static(
 
 UserSchema.method('updateInteractionMetrics', async function updateInteractionMetrics() {
     let needSaving=false;
+
     const currentDay = new Date();
     currentDay.setHours(4, 0, 0, 0);
     if (this.lastInteractionDay === undefined || this.lastInteractionDay.getTime() < currentDay.getTime()) {
@@ -102,7 +103,6 @@ UserSchema.method('updateInteractionMetrics', async function updateInteractionMe
 
     const startWeek = new Date(currentDay);
     startWeek.setDate(startWeek.getDate() - startWeek.getDay()+1);
-
     if (this.lastInteractionWeek === undefined || this.lastInteractionWeek.getTime() < startWeek.getTime()) {
         this.lastInteractionWeek = startWeek;
         await umami.log({event: "/weekly-active-user"});
