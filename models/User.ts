@@ -27,7 +27,13 @@ const UserSchema = new Schema<IUser, UserModel>(
     },
     lastInteractionDay: {
       type: Date,
-      },
+    },
+    lastInteractionWeek: {
+      type: Date,
+    },
+    lastInteractionMonth: {
+      type: Date,
+    },
     followedPeople: {
       type: [
         {

@@ -16,6 +16,8 @@ export interface IUser {
   language_code: string;
   status: string;
   lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
