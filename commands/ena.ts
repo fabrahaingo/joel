@@ -8,7 +8,7 @@ import { IUser, WikiDataId } from "../types";
 import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
-import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
+import { callJORFSearchOrganisation, callJORFSearchTag } from "../utils/JORFSearch.utils";
 
 function removeAccents(input: string): string {
   input = input.trim().toLowerCase();
@@ -107,8 +107,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         force_reply: true,
       },
     });
-    let JORFSearchRes: any[] = [];
-    bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
+    bot.onReplyToMessage(chatId, question.message_id, async (msg: TelegramBot.Message) => {
       let institution = "";
       let promoName: string = "";
 
@@ -150,7 +149,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         })();
       }
 
-      JORFSearchRes = await getJORFSearchResult(
+      const JORFSearchRes = await getJORFSearchResult(
         getYearFromPromo(ENAPromo || INSPPromo),
         institution
       );
@@ -195,7 +194,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       bot.onReplyToMessage(
         chatId,
         followConfirmation.message_id,
-        async (msg) => {
+        async (msg: TelegramBot.Message) => {
           if (msg.text === undefined) {
             return await bot.sendMessage(
               chatId,
@@ -210,24 +209,18 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             await bot.sendChatAction(chatId, "typing");
             const tgUser = msg.from;
             let user = await User.firstOrCreate({ tgUser, chatId });
-            for (let i = 0; i < JORFSearchRes.length; i++) {
-              const contact = JORFSearchRes[i];
-              const people_data= await callJORFSearchPeople(
-                `${contact.prenom} ${contact.nom}`
-              );
-              if (people_data.length > 0) {
-                const people = await People.firstOrCreate({
-                  nom: people_data[0].nom,
-                  prenom: people_data[0].prenom,
-                });
-                await people.save();
+            for (const contact_item of JORFSearchRes) {
+              const people = await People.firstOrCreate({
+                nom: contact_item[0].nom,
+                prenom: contact_item[0].prenom,
+              });
+              await people.save();
 
-                if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
-                  user.followedPeople.push({
-                    peopleId: people._id,
-                    lastUpdate: new Date(),
-                  });
-                }
+              if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
+                user.followedPeople.push({
+                  peopleId: people._id,
+                  lastUpdate: new Date(),
+                });
               }
             }
             await user.save();
