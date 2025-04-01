@@ -27,7 +27,7 @@ export interface IUser {
   save: () => Promise<IUser>;
   countDocuments: () => number;
 
-  saveDailyInteraction: () => Promise<void>;
+  updateInteractionMetrics: () => Promise<void>;
 }
 
 export interface UserModel extends Model<IUser> {

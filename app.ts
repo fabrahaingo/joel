@@ -66,7 +66,7 @@ const commands: CommandType = [
           const tgUser: TelegramBot.User | undefined = msg.from;
           if (tgUser === undefined) return
           const user: IUser | null = await User.findOne({ chatId: msg.chat.id });
-          if (user !== null) await user.saveDailyInteraction();
+          if (user !== null) await user.updateInteractionMetrics();
 
           // Process user message
           command.action(bot)(msg)
