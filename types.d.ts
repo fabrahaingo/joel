@@ -1,5 +1,4 @@
 import { Model, Types } from "mongoose";
-import { JORFSearchItem } from "./entities/JORFSearchResponse";
 import { FunctionTags } from "./entities/FunctionTags";
 import TelegramBot from "node-telegram-bot-api";
 
