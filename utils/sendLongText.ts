@@ -1,4 +1,4 @@
-import TelegramBot, { ChatId, Message, SendMessageOptions } from "node-telegram-bot-api";
+import TelegramBot from "node-telegram-bot-api";
 import { startKeyboard } from "./keyboards";
 
 export function splitText(text: string, max: number): string[] {
@@ -28,13 +28,7 @@ export function splitText(text: string, max: number): string[] {
 }
 
 export async function sendLongText(
-  bot: {
-    sendMessage: (
-      arg0: ChatId,
-      arg1: string,
-      arg2: SendMessageOptions
-    ) => Promise<Message>;
-  },
+  bot: TelegramBot,
   chatId: any,
   formattedData: string,
   replyKeyboard?: TelegramBot.InlineKeyboardButton[][]
