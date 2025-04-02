@@ -77,7 +77,7 @@ async function searchPersonHistory(
   historyType: "full" | "latest",
 ) {
   try {
-    let JORFRes_data = await callJORFSearchPeople(personName);
+    const JORFRes_data = await callJORFSearchPeople(personName);
     const nbRecords = JORFRes_data.length;
 
     if (nbRecords == 0) {
@@ -89,10 +89,12 @@ async function searchPersonHistory(
       return;
     }
 
+    let formattedData: string;
     if (historyType === "latest") {
-      JORFRes_data = JORFRes_data.slice(0, 2);
+        formattedData = formatSearchResult(JORFRes_data.slice(0, 2), { isConfirmation: true });
+    } else {
+        formattedData = formatSearchResult(JORFRes_data);
     }
-    const formattedData = formatSearchResult(JORFRes_data);
 
     // Check if the user has an account and follows the person
     const user: IUser | null = await User.findOne({ chatId });
