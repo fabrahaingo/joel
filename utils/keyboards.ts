@@ -1,9 +1,9 @@
 import TelegramBot from "node-telegram-bot-api";
 
 export const menuKeyboardPattern = [
-    [{ text: "🧩 Ajouter un contact" }, { text: "👨‍💼 Ajouter une fonction" }],
+    [{ text: "🔎 Rechercher" }, { text: "👨‍💼 Ajouter une fonction" }],
     [{ text: "✋ Retirer un suivi" }, { text: "🧐 Lister mes suivis" }],
-    [{ text: "🔎 Rechercher" }, { text: "❓ Aide / Contact" }]
+    [{ text: "❓ Aide / Contact" }]
 ];
 
 export const startKeyboard: TelegramBot.SendMessageOptions = {
