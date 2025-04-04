@@ -31,20 +31,13 @@ export async function sendLongText(
   bot: TelegramBot,
   chatId: any,
   formattedData: string,
-  replyKeyboard?: TelegramBot.InlineKeyboardButton[][]
+  replyOptions?: TelegramBot.SendMessageOptions
 ): Promise<void> {
   const mArr = splitText(formattedData, 3000);
 
   for (let i = 0; i < mArr.length; i++) {
-    if (i == mArr.length-1 && replyKeyboard !== undefined) {
-      await bot.sendMessage(chatId, mArr[i], {
-        parse_mode: "Markdown",
-        reply_markup: {
-          resize_keyboard: true,
-          remove_keyboard: true,
-          keyboard: replyKeyboard
-        },
-      });
+    if (i == mArr.length-1 && replyOptions !== undefined) {
+      await bot.sendMessage(chatId, mArr[i], replyOptions);
     } else {
       await bot.sendMessage(chatId, mArr[i], startKeyboard);
     }

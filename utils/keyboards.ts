@@ -15,3 +15,15 @@ export const startKeyboard: TelegramBot.SendMessageOptions = {
     keyboard: menuKeyboardPattern,
   },
 };
+
+export function customKeyboard(keyboard: { text: string }[][]): TelegramBot.SendMessageOptions {
+    return {
+        parse_mode: "Markdown",
+        disable_web_page_preview: true,
+        reply_markup: {
+            selective: true,
+            resize_keyboard: true,
+            keyboard: keyboard,
+        },
+    }
+}
