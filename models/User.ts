@@ -17,7 +17,6 @@ const UserSchema = new Schema<IUser, UserModel>(
     },
     messageApp: {
       type: String,
-      required: true,
       default: "Telegram",
     },
     language_code: {
@@ -29,11 +28,10 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: String,
       enum: ["active", "blocked"],
       default: "active",
-      required: true,
     },
     lastInteractionDay: {
       type: Date,
-      },
+    },
     followedPeople: {
       type: [
         {
@@ -47,17 +45,14 @@ const UserSchema = new Schema<IUser, UserModel>(
         },
       ],
       default: [],
-      required: true,
     },
     followedNames: {
         type: [String],
         default: [],
-        required: true,
     },
     followedFunctions: {
       type: [String],
       default: [],
-      required: true,
     },
   },
   {
