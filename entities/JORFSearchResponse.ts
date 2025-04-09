@@ -208,7 +208,17 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
             break
         }
 
-        clean_items.push({...item_raw, organisations: clean_organisations} as JORFSearchItem);
+        const clean_item: JORFSearchItem = {...item_raw, organisations: clean_organisations} as JORFSearchItem;
+
+        // extend FunctionTag eleve_ena to include INSP students
+        if (clean_item.organisations.length > 0 &&
+            clean_item.organisations[0]?.wikidata_id === "Q109039648" &&
+            clean_item.type_ordre === "nomination" &&
+            clean_item?.date_debut !== undefined) {
+          clean_item.eleve_ena="true";
+        }
+
+        clean_items.push(clean_item);
         return clean_items;
       },
       []);
