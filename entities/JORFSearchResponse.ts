@@ -28,7 +28,7 @@ interface JORFSearchRawItem {
   type_ordre?: string;
   nom?: string;
   prenom?: string;
-  organisations: OrganisationRaw[];
+  organisations?: OrganisationRaw[];
   remplacement?: {
     sexe?: "F" | "M";
     nom?: string;
@@ -188,6 +188,10 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
             item_raw.prenom === undefined) {
             return clean_items;
         }
+
+        if (item_raw.organisations === undefined)
+          item_raw.organisations=[];
+
         // Drop organisations if name is missing
         const clean_organisations = item_raw.organisations.filter(
             org_raw => org_raw.nom !== undefined
@@ -208,7 +212,20 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
             break
         }
 
-        clean_items.push({...item_raw, organisations: clean_organisations} as JORFSearchItem);
+        const clean_item: JORFSearchItem = {...item_raw, organisations: clean_organisations} as JORFSearchItem;
+
+        // extend FunctionTag eleve_ena to include INSP students
+        if (clean_item.organisations.length > 0 &&
+            clean_item.organisations[0]?.wikidata_id === "Q109039648" &&
+            clean_item.type_ordre === "nomination" &&
+            clean_item?.date_debut !== undefined) {
+          const year = parseInt(clean_item.date_debut.slice(0,4))
+          if (year != -1) {
+            clean_item.eleve_ena=`${String(year)}-${String(year+2)}`;
+          }
+        }
+
+        clean_items.push(clean_item);
         return clean_items;
       },
       []);

@@ -66,14 +66,7 @@ async function getJORFPromoSearchResult(
       const inspId = "Q109039648" as WikiDataId;
       return (await callJORFSearchOrganisation(inspId))
           // We filter to keep admissions to the INSP organisation from the relevant year
-          .filter(
-            (publication) => {
-              // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
-              return (
-                  publication?.type_ordre === "admission" && publication?.date_fin &&
-                  publication?.date_fin.slice(0, 4) === promo.period.slice(-4)
-              );
-            });
+          .filter((publication) => publication.eleve_ena === promo.period);
       default:
           return [];
   }
