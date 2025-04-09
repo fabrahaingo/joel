@@ -22,7 +22,7 @@ export enum FunctionTags {
   "Délégation parlementaire" = "delegation_parlementaire",
   "Directeur academie" = "directeur_academie",
   "Direction hopital" = "direction_hopital",
-  "Élève ENA" = "eleve_ena",
+  "Élève INSP & ENA" = "eleve_ena",
   "Élève ENS" = "eleve_ens",
   "Élève IRA" = "eleve_ira",
   "Élève Mines" = "eleve_mines",
