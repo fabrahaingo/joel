@@ -219,7 +219,10 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
             clean_item.organisations[0]?.wikidata_id === "Q109039648" &&
             clean_item.type_ordre === "nomination" &&
             clean_item?.date_debut !== undefined) {
-          clean_item.eleve_ena="true";
+          const year = parseInt(clean_item.date_debut.slice(0,4))
+          if (year != -1) {
+            clean_item.eleve_ena=`${String(year)}-${String(year+2)}`;
+          }
         }
 
         clean_items.push(clean_item);
