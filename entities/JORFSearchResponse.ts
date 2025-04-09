@@ -28,7 +28,7 @@ interface JORFSearchRawItem {
   type_ordre?: string;
   nom?: string;
   prenom?: string;
-  organisations: OrganisationRaw[];
+  organisations?: OrganisationRaw[];
   remplacement?: {
     sexe?: "F" | "M";
     nom?: string;
@@ -188,6 +188,10 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
             item_raw.prenom === undefined) {
             return clean_items;
         }
+
+        if (item_raw.organisations === undefined)
+          item_raw.organisations=[];
+
         // Drop organisations if name is missing
         const clean_organisations = item_raw.organisations.filter(
             org_raw => org_raw.nom !== undefined
