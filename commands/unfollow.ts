@@ -7,6 +7,7 @@ import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
 import { IOrganisation, IPeople, IUser } from "../types";
 import Organisation from "../models/Organisation";
+import { Types } from "mongoose";
 
 function parseIntAnswers(
   answer: string | undefined,
@@ -67,13 +68,30 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       _id: { $in: user.followedPeople.map((p) => p.peopleId) },
     })
       .collation({ locale: "fr" })
-      .sort({ nom: 1 })
       .lean();
+
+    if (user.followedNames === undefined) user.followedNames = [];
+    const followedPeopleTab: {
+      nomPrenom: string,
+      peopleId?: Types.ObjectId,
+      JORFSearchLink?: string,
+    }[] = [];
+    user.followedNames.forEach(p=> followedPeopleTab.push({nomPrenom: p}));
+    followedPeoples.forEach(p=>followedPeopleTab.push({
+      nomPrenom: `${p.nom} ${p.prenom}`,
+      peopleId: p._id,
+      JORFSearchLink: encodeURI(`https://jorfsearch.steinertriples.ch/name/${p.prenom} ${p.nom}`),
+    }));
+      followedPeopleTab.sort((a, b) => {
+      if (a.nomPrenom.toUpperCase() < b.nomPrenom.toUpperCase()) return -1;
+      if (a.nomPrenom.toUpperCase() > b.nomPrenom.toUpperCase()) return 1;
+      return 0;
+    });
 
     if (
       followedFunctions.length === 0 &&
       followedOrganisations.length === 0 &&
-      followedPeoples.length === 0
+      followedPeopleTab.length === 0
     ) {
       await bot.sendMessage(
         chatId,
@@ -107,15 +125,18 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       }
     }
     let j = 0;
-    if (followedPeoples.length > 0) {
+    if (followedPeopleTab.length > 0) {
       text += "Voici les personnes que vous suivez :\n\n";
-      for (; j < followedPeoples.length; j++) {
-        const people_j = followedPeoples[j];
-        text += `${String(
+      for (; j < followedPeopleTab.length; j++) {
+          const followedName= followedPeopleTab[j];
+          text += `${String(
           i + k + j + 1,
-        )}. *${people_j.nom} ${people_j.prenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-          `${people_j.prenom} ${people_j.nom}`,
-        )})\n\n`;
+        )}. *${followedName.nomPrenom}* - `;
+        if (followedName.JORFSearchLink !== undefined) {
+          text += `[JORFSearch](${followedName.JORFSearchLink})\n\n`;
+        } else {
+          text += `Suivi manuel\n\n`;
+        }
       }
     }
 
@@ -136,7 +157,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       question.message_id,
       async (msg: TelegramBot.Message) => {
         const maxAllowedValue =
-            followedPeoples.length +
+            followedPeopleTab.length +
             followedFunctions.length +
             followedOrganisations.length;
         let answers = parseIntAnswers(msg.text, maxAllowedValue);
@@ -164,16 +185,35 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
           )
           .map((i) => followedOrganisations[i - followedFunctions.length]);
 
-        const unfollowedPeople = answers
+        const unfollowedPeopleIdx = answers
           .filter((i) => i > followedOrganisations.length)
-          .map(
-            (i) =>
-              followedPeoples[
-                i - followedFunctions.length - followedOrganisations.length
-              ],
-          );
+          .map(i=> i - followedFunctions.length - followedOrganisations.length);
 
-        await user.save();
+        const unfollowedPrenomNomTab: string[] = [];
+
+        const unfollowedPeopleId = unfollowedPeopleIdx.reduce(
+          (tab: Types.ObjectId[], idx) => {
+              if (followedPeopleTab[idx].peopleId === undefined) return tab;
+              const unfollowPerson: IPeople | undefined = followedPeoples
+                  .find(p=> p._id.toString() === followedPeopleTab[idx].peopleId.toString());
+              if (unfollowPerson == undefined) return tab;
+              tab.push(unfollowPerson._id);
+              unfollowedPrenomNomTab.push(`${unfollowPerson.prenom} ${unfollowPerson.nom}`);
+              return tab;
+          }, []
+        );
+
+        const unfollowedNamesIdx= unfollowedPeopleIdx.reduce(
+          (tab: number[], idx) => {
+              if (followedPeopleTab[idx].peopleId !== undefined) return tab;
+              const idInFollowedNameTab = user.followedNames.findIndex(name=> name === followedPeopleTab[idx].nomPrenom);
+              if (idInFollowedNameTab == -1) return tab;
+              tab.push(idInFollowedNameTab);
+              const nameTab=user.followedNames[idInFollowedNameTab].split(' ');
+              unfollowedPrenomNomTab.push(`${nameTab[nameTab.length-1]} ${nameTab.slice(0,nameTab.length-1).join(' ')}`);
+              return tab;
+          }, []
+        );
 
         let text = "";
 
@@ -183,7 +223,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const unfollowedTotal =
           unfollowedFunctions.length +
           unfollowedOrganisations.length +
-          unfollowedPeople.length;
+          unfollowedPeopleIdx.length;
 
         // If only 1 item unfollowed
         if (unfollowedTotal === 1) {
@@ -193,8 +233,8 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
             }* 🙅‍♂️`;
           } else if (unfollowedOrganisations.length === 1) {
             text += `Vous ne suivez plus l'organisation *${unfollowedOrganisations[0].nom}* 🙅‍♂️`;
-          } else if (unfollowedPeople.length === 1) {
-            text += `Vous ne suivez plus la personne *${unfollowedPeople[0].prenom} ${unfollowedPeople[0].nom}* 🙅‍♂️`;
+          } else if (unfollowedPrenomNomTab.length === 1) {
+            text += `Vous ne suivez plus la personne *${unfollowedPrenomNomTab[0]}* 🙅‍♂️`;
           }
         } else if (unfollowedTotal === unfollowedFunctions.length) {
         // If only 1 type of unfollowed items: functions
@@ -208,11 +248,11 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
           text +=
             "Vous ne suivez plus les organisations 🙅‍ :" +
             unfollowedOrganisations.map((org) => `\n - *${org.nom}*`).join("");
-        } else if (unfollowedTotal === unfollowedPeople.length) {
+        } else if (unfollowedTotal === unfollowedPrenomNomTab.length) {
         // If only 1 type of unfollowed items: people
           text +=
             "Vous ne suivez plus les personnes 🙅‍ :" +
-            unfollowedPeople.map((p) => `\n - *${p.prenom} ${p.nom}*`).join("");
+              unfollowedPrenomNomTab.map((p) => `\n - *${p}*`).join("");
         } else {
           // Mixed types of unfollowed items
           text += "Vous ne suivez plus les items 🙅‍ :";
@@ -238,14 +278,14 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
                   .join("");
             }
           }
-          if (unfollowedPeople.length > 0) {
-            if (unfollowedPeople.length === 1) {
-              text += `\n- Personne : *${unfollowedPeople[0].prenom} ${unfollowedPeople[0].nom}`;
+          if (followedPeopleTab.length > 0) {
+            if (followedPeopleTab.length === 1) {
+              text += `\n- Personne : *${unfollowedPrenomNomTab[0]}`;
             } else {
               text +=
                 `\n- Personnes :` +
-                unfollowedPeople
-                  .map((p) => `\n   - *${p.prenom} ${p.nom}*`)
+                  unfollowedPrenomNomTab
+                  .map((p) => `\n   - *${p}*`)
                   .join("");
             }
           }
@@ -253,12 +293,15 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
         user.followedPeople = user.followedPeople.filter(
           (people) =>
-            !unfollowedPeople
-              .map((p) => p._id.toString())
+            !unfollowedPeopleId
+              .map((id) => id.toString())
               .includes(people.peopleId.toString()),
         );
 
-        if (user.followedOrganisations === undefined) user.followedOrganisations=[];
+        user.followedNames = user.followedNames.filter(
+          (_value, idx) => !unfollowedNamesIdx.includes(idx)
+        );
+
         user.followedOrganisations = user.followedOrganisations.filter(
           (org) =>
             !unfollowedOrganisations
