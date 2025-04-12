@@ -15,7 +15,7 @@ import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils";
 import { splitText } from "../utils/sendLongText";
 import { formatSearchResult } from "../utils/formatSearchResult";
 import {
-  callJORFSearchDay,
+  callJORFSearchDay, cleanPeopleName,
   uniqueMinimalNameInfo
 } from "../utils/JORFSearch.utils";
 import { ObjectId } from "mongodb";
@@ -254,7 +254,112 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   }
 }
 
+export async function notifyNameMentionUpdates(updatedRecords: JORFSearchItem[]) {
+  const userFollowingNames: IUser[] = await User.find(
+      {
+        followedNames: { $exists: true, $not: { $size: 0 } }
+      },
+      {
+        _id: 1,
+        chatId: 1,
+        followedNames: 1,
+        followedPeople: { peopleId: 1, lastUpdate: 1 },
+      }
+  ).then(async (res: IUser[]) => {
+    return await filterOutBlockedUsers(res); // filter out user who blocked JOEL
+  });
+
+  const recordsNamesTab = updatedRecords.reduce(
+      (tab: {nomPrenomClean: string, prenomNomClean: string, nom: string, prenom: string, peopleItems: JORFSearchItem[]}[], item) => {
+        if (tab.some(p=> p.nom === item.nom && p.prenom === item.prenom)) return tab;
+        const peopleItems = updatedRecords.filter(p=> p.nom === item.nom && p.prenom === item.prenom);
+        tab.push({
+          nomPrenomClean: cleanPeopleName(`${item.nom} ${item.prenom}`).toUpperCase(),
+          prenomNomClean: cleanPeopleName(`${item.prenom} ${item.nom}`).toUpperCase(),
+          nom: item.nom, prenom: item.prenom, peopleItems
+        })
+        return tab;
+      }, []);
+
+  const isPersonAlreadyFollowed = (
+      person: IPeople,
+      followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
+  ) => {
+    return followedPeople.some((followedPerson) => {
+      return followedPerson.peopleId.toString() === person._id.toString();
+    });
+  };
+
+  for (const user of userFollowingNames) {
+
+    const nameUpdates: {
+      followedName: string,
+      people: IPeople
+      nameJORFRecords: JORFSearchItem[],
+    }[] = [];
+
+    for (const followedName of user.followedNames) {
+      const followedNameCleaned = cleanPeopleName(followedName).toUpperCase();
+
+      const mention = recordsNamesTab.find(i=>
+          i.nomPrenomClean === followedNameCleaned || i.prenomNomClean === followedNameCleaned);
+      if (mention === undefined) continue;
+
+      user.followedNames = user.followedNames.filter(p=> p !== followedName);
+
+      if (nameUpdates
+          .some(p=>p.people.nom == mention.nom && p.people.prenom == mention.prenom))
+        continue;
+
+      const people = await People.firstOrCreate({nom: mention.nom, prenom: mention.prenom})
+
+      nameUpdates.push({
+        followedName, people,
+        nameJORFRecords: mention.peopleItems,
+      });
+
+      if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
+        user.followedPeople.push({
+          peopleId: people._id,
+          lastUpdate: new Date(Date.now()),
+        });
+      }
+    }
+
+    await sendNameMentionUpdate(user, nameUpdates.map(i=> ({people: i.people, updateItems: i.nameJORFRecords})));
+
+    await user.save();
+  }
+}
+
 const BOT_TOKEN = process.env.BOT_TOKEN || "";
+
+async function sendNameMentionUpdate(user: IUser, nameUpdates: {people: IPeople, updateItems: JORFSearchItem[]}[]) {
+  if (nameUpdates.length == 0) {
+    return;
+  }
+
+  // Reverse array change order of records
+  //updatedRecords.reverse();
+
+  const pluralHandler = nameUpdates.length > 1 ? "s" : "";
+
+  let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
+
+  for (let i = 0; i < nameUpdates.length ; i++) {
+    notification_text += formatSearchResult(nameUpdates[i].updateItems, {
+      isConfirmation: false,
+      isListing: true,
+      displayName: "first"
+    });
+    notification_text+=`Vous suivez maintenant *${nameUpdates[i].people.prenom} ${nameUpdates[i].people.nom}* ✅`;
+    if (i<nameUpdates.length-1) notification_text+="\n\n";
+  }
+
+  await sendLongMessageFromAxios(user, notification_text);
+
+  await umami.log({ event: "/notification-update-name" });
+}
 
 async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
   const nbPersonUpdated = uniqueMinimalNameInfo(updatedRecords).length;
@@ -401,6 +506,9 @@ if (MONGODB_URI === undefined) {
 
   // Send notifications to users on followed people
   await notifyPeopleUpdates(JORFAllRecordsFromDate);
+
+  // Send notifications to users on followed functions
+  await notifyNameMentionUpdates(JORFAllRecordsFromDate);
 
   // Send notifications to users on followed functions
   await notifyFunctionTagsUpdates(JORFAllRecordsFromDate);

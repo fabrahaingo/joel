@@ -85,7 +85,7 @@ export function formatSearchResult(
       } else if (!options?.isListing) {
         message += `Voici la liste des postes connus pour ${prenomNomLink}:\n\n`;
       } else if (options?.displayName === "first") {
-        message += `🕵️ ${prenomNomLink}\n`;
+        message += `🕵️ ${prenomNomLink}\n\n`;
       }
     }
     if (options?.displayName === "all") {
