@@ -5,7 +5,7 @@ import People from "../models/People";
 import umami from "../utils/umami";
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
-import {IOrganisation, IPeople} from "../types";
+import { IOrganisation, IPeople, IUser } from "../types";
 import Organisation from "../models/Organisation";
 
 function parseIntAnswers(
@@ -39,7 +39,16 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
     await bot.sendChatAction(chatId, "typing");
 
-    const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
+    const noDataText=
+        `Vous ne suivez aucun contact, fonction, ni organisation pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
+
+    // We only want to create a user upon use of follow function
+    const user: IUser | null = await User.findOne({ chatId });
+
+    if (user === null) {
+      await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
+      return;
+    }
 
     const followedFunctions = sortFunctionsAlphabetically(
       user.followedFunctions,

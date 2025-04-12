@@ -6,6 +6,7 @@ import TelegramBot from "node-telegram-bot-api";
 import { getFunctionsFromValues } from "../entities/FunctionTags";
 import { IOrganisation, IPeople, IUser } from "../types";
 import Organisation from "../models/Organisation";
+import { startKeyboard } from "../utils/keyboards";
 
 function sortFunctionsAlphabetically(array: IUser["followedFunctions"]) {
   array.sort((a, b) => {
@@ -27,6 +28,17 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
   try {
     await bot.sendChatAction(chatId, "typing");
+
+    const noDataText=
+        `Vous ne suivez aucun contact, fonction, ni organisation pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
+
+    // We only want to create a user upon use of follow function
+    const user: IUser | null = await User.findOne({ chatId });
+
+    if (user === null) {
+      await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
+      return;
+    }
 
     let text = "";
     const user: IUser = await User.firstOrCreate({
