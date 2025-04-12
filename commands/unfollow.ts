@@ -81,17 +81,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         let j = 0;
         await bot.sendChatAction(chatId, "typing");
         let text = "";
-
-        const noDataText=
-            `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
-
-        const user: IUser | null = await User.findOne({ _id: chatId });
-
-        if (user === null) {
-            await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
-            return;
-        }
-
+        const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
         const peopleIds = user.followedPeople.map((p) => p.peopleId);
         const peoples = await People.find({ _id: { $in: peopleIds } })
             .collation({ locale: "fr" })
@@ -99,31 +89,34 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const followedFunctions = sortArrayAlphabetically(user.followedFunctions);
 
         if (peoples.length === 0 && followedFunctions.length === 0) {
-            await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
-            return;
-        }
-
-        if (followedFunctions.length > 0) {
-            text += "Voici les fonctions que vous suivez :\n\n";
-            for (i; i < followedFunctions.length; i++) {
-                const functionName = getFunctionFromValue(
-                    followedFunctions[i]
-                );
-                text += `${
-                    i + 1
-                }. *${functionName}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
-                    followedFunctions[i]
-                )})\n\n`;
+            return await bot.sendMessage(
+                chatId,
+                `Vous ne suivez aucun contact ni fonction pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`,
+                startKeyboard
+            );
+        } else {
+            if (followedFunctions.length > 0) {
+                text += "Voici les fonctions que vous suivez :\n\n";
+                for (i; i < followedFunctions.length; i++) {
+                    const functionName = getFunctionFromValue(
+                        followedFunctions[i]
+                    );
+                    text += `${
+                        i + 1
+                    }. *${functionName}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
+                        followedFunctions[i]
+                    )})\n\n`;
+                }
             }
-        }
-        if (peoples.length > 0) {
-            text += "Voici les personnes que vous suivez :\n\n";
-            for (j; j < peoples.length; j++) {
-                text += `${
-                    j + 1 + i
-                }. *${peoples[j].nom} ${peoples[j].prenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-                    `${peoples[j].prenom} ${peoples[j].nom}`
-                )})\n\n`;
+            if (peoples.length > 0) {
+                text += "Voici les personnes que vous suivez :\n\n";
+                for (j; j < peoples.length; j++) {
+                    text += `${
+                        j + 1 + i
+                    }. *${peoples[j].nom} ${peoples[j].prenom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+                        `${peoples[j].prenom} ${peoples[j].nom}`
+                    )})\n\n`;
+                }
             }
         }
 
