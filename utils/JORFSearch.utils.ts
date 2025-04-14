@@ -1,6 +1,7 @@
 import { cleanJORFItems, JORFSearchResponse } from "../entities/JORFSearchResponse";
 import { WikiDataId } from "../types";
 import axios from "axios";
+import { cleanJORFPublication, JORFSearchResponseMeta } from "../entities/JORFSearchResponseMeta";
 
 export async function callJORFSearchPeople(peopleName: string) {
     try {
@@ -84,6 +85,19 @@ export async function callJORFSearchOrganisation(wikiId: WikiDataId) {
         console.log(error);
     }
     return [];
+}
+
+async function JORFSearchCallPublications(currentDay: string) {
+    return await axios
+        .get<JORFSearchResponseMeta>(
+            `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`,
+        )
+        .then((res) => {
+            if (res.data === null || typeof res.data === "string") {
+                return [];
+            }
+            return cleanJORFPublication(res.data);
+        });
 }
 
 // Format a string to match the expected search format on JORFSearch: first letter capitalized and no accent
