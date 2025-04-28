@@ -50,14 +50,7 @@ function addPoste(elem: JORFSearchItem, message: string) {
 function addLinkJO(elem: JORFSearchItem, message: string) {
   if (elem.source_id && elem.source_date) {
     message += `🔗 _${elem.source_name} du ${dateToFrenchString(elem.source_date)}_: `;
-
-    switch (elem.source_name) {
-      case "BOMI":
-        message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}.pdf)\n`;
-        break;
-      default:
-        message += `[cliquez ici](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`;
-    }
+    message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}/redirect)\n`;
   }
   return message;
 }
