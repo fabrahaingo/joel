@@ -9,14 +9,14 @@
   },
   "dependencies": {
     "@types/node-telegram-bot-api": "0.64.8",
-    "axios": "1.8.4",
-    "dotenv": "16.4.7",
+    "axios": "1.9.0",
+    "dotenv": "16.5.0",
     "express": "4.21.2",
-    "mongodb": "6.15.0",
-    "mongoose": "8.13.1",
+    "mongodb": "6.16.0",
+    "mongoose": "8.15.0",
     "node-telegram-bot-api": "0.66.0",
-    "nodemon": "3.1.9",
-    "tsx": "^4.19.2",
-    "typescript": "5.8.2"
+    "nodemon": "3.1.10",
+    "tsx": "^4.19.4",
+    "typescript": "5.8.3"
   }
 }
