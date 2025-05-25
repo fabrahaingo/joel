@@ -1,11 +1,12 @@
 {
   "scripts": {
-    "start": "tsx app.ts"
+    "start": "tsx app.ts",
+    "test": "jest"
   },
   "license": "MIT",
   "engines": {
     "node": "v22.14.0",
-    "npm": "11.0.0"
+    "npm": "10.9.2"
   },
   "dependencies": {
     "@types/node-telegram-bot-api": "0.64.7",
@@ -18,5 +19,13 @@
     "nodemon": "3.1.9",
     "tsx": "^4.19.2",
     "typescript": "5.8.2"
+  },
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.1.4",
+    "ts-jest": "^29.3.4",
+    "ts-node": "^10.9.2"
   }
 }
