@@ -12,7 +12,7 @@ module.exports = {
   collectCoverageFrom: ['*.{ts,tsx}','**/*.{ts,tsx}','**/**/*.{ts,tsx}', '!src/**/*.d.ts'],
   coverageProvider: 'v8',                 // or “babel”
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov', 'json-summary'],
+  coverageReporters: ['json-summary'],
   globalSetup: "<rootDir>/tests/jest.global_setup.ts",
   globalTeardown: "<rootDir>/tests/jest.global_teardown.ts",
   setupFilesAfterEnv: [
