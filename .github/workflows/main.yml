@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
     branches:
-      - main
+      - test_workflow_proof
 
 jobs:
   test:
