@@ -23,6 +23,5 @@ jobs:
       - run: npm ci
 
       - run: npm test
-      - uses: codecov/codecov-action@v4      # optional but recommended
         with:
           fail_ci_if_error: true
