@@ -63,7 +63,7 @@ jobs:
       - run: npm test -- --coverage
 
       - name: Create Coverage Badge
-        uses: jaywcjlove/coverage-badges-cli@v1
+        uses: jaywcjlove/coverage-badges-cli@v2
         with:
           style: flat
           source: coverage/coverage-summary.json
@@ -71,7 +71,7 @@ jobs:
           jsonPath: totals.percent_covered
 
       - name: Deploy badge to gh-pages
-        uses: peaceiris/actions-gh-pages@v3
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: coverage
