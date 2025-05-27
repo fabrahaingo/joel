@@ -9,7 +9,7 @@ const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   onlyFirstMatch: true,
 });
 
-const commands: CommandType = [
+const commands: CommandType[] = [
   {
     regex: /\/start$/,
     action: require("./commands/start"),
@@ -56,23 +56,26 @@ const commands: CommandType = [
   },
 ];
 
+export const commandHandler = (command: CommandType) => {
+  bot.onText(command.regex,
+      async (msg: TelegramBot.Message) => {
+        // Check if user is defined
+        const tgUser: TelegramBot.User | undefined = msg.from;
+        if (tgUser === undefined) return
+        const user: IUser | null = await User.findOne({ chatId: msg.chat.id });
+        if (user !== null) await user.saveDailyInteraction();
+
+        // Process user message
+        command.action(bot)(msg)
+      })
+  ;
+}
+
 (async () => {
   await mongodbConnect();
 
-  commands.forEach((command) => {
-    bot.onText(command.regex,
-        async (msg: TelegramBot.Message) => {
-          // Check if user is defined
-          const tgUser: TelegramBot.User | undefined = msg.from;
-          if (tgUser === undefined) return
-          const user: IUser | null = await User.findOne({ chatId: msg.chat.id });
-          if (user !== null) await user.saveDailyInteraction();
-
-          // Process user message
-          command.action(bot)(msg)
-        })
-        ;
-  });
+  commands.forEach(commandHandler);
 
   console.log(`\u{2705} JOEL started successfully`);
 })();
+

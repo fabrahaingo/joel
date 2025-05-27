@@ -8,7 +8,7 @@ export type CommandType = {
   action: (bot: TelegramBot) => (msg: TelegramBot.Message) => {
     default: void;
   };
-}[];
+};
 
 export interface IUser {
   _id: number;
