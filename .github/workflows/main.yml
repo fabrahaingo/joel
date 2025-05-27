@@ -1,27 +1,78 @@
-name: CI
+name: Unit tests
 
 on:
+  # PR opened / updated / reopened **and** PR closed (merged or not)
   pull_request:
-    branches:
-      - main
+    branches: [main]
+    types: [opened, synchronize, reopened, closed]
+
+  # Every commit that actually lands on main
+  push:
+    branches: [main]
+
+# Cancel any older run for the same commit/PR
+concurrency:
+  group: ${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  # ─────────────────────────────────────────────────────────────
+  # 1) Test matrix – runs on all events
+  # ─────────────────────────────────────────────────────────────
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x, 24.x]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  # ─────────────────────────────────────────────────────────────
+  # 2) Publish badge – runs on *either* push-to-main *or* PR-merged
+  # ─────────────────────────────────────────────────────────────
+  publish:
+    needs: test            # wait for matrix to be green
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' &&
+       github.event.action == 'closed' &&
+       github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout merged commit
+        # • for a push we get the commit via `github.sha`
+        # • for a closed PR we use the merge commit SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
       - run: npm ci
+      - run: npm test -- --coverage
 
-      - run: npm test
+      - name: Create Coverage Badge
+        uses: jaywcjlove/coverage-badges-cli@v1
         with:
-          fail_ci_if_error: true
+          style: flat
+          source: coverage/coverage-summary.json
+          output: coverage/badge.svg
+          jsonPath: totals.percent_covered
+
+      - name: Deploy badge to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: coverage
+
