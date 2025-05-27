@@ -1,12 +1,12 @@
 {
   "scripts": {
     "start": "tsx app.ts",
-    "test": "jest --runInBan"
+    "test": "jest --config=jest.config.js"
   },
   "license": "MIT",
   "engines": {
-    "node": "v22.14.0",
-    "npm": "10.9.2"
+    "node": "v23.7.0",
+    "npm": "11.0.0"
   },
   "dependencies": {
     "@types/node-telegram-bot-api": "0.64.7",
@@ -17,6 +17,7 @@
     "mongoose": "8.12.1",
     "node-telegram-bot-api": "0.66.0",
     "nodemon": "3.1.9",
+    "prettier": "^3.5.3",
     "tsx": "^4.19.2",
     "typescript": "5.8.2"
   },

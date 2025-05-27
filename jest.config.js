@@ -16,6 +16,7 @@ module.exports = {
   globalSetup: '<rootDir>/tests/jest.global_setup.ts',
   globalTeardown: '<rootDir>/tests/jest.global_teardown.ts',
   testSequencer: '<rootDir>/tests/testSequencer.ts',
+  runInBand: true,
   runner: "jest-serial-runner"
 };
 
