@@ -60,7 +60,7 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npm test -- --coverage
+      - run: npm test
 
       - name: Create Coverage Badge
         uses: jaywcjlove/coverage-badges-cli@v2
