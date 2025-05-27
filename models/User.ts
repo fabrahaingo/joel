@@ -3,7 +3,6 @@ const Schema = _Schema;
 import umami from "../utils/umami";
 import { IUser, UserModel } from "../types";
 import TelegramBot = require("node-telegram-bot-api")
-import {FunctionTags} from "../entities/FunctionTags";
 
 const UserSchema = new Schema<IUser, UserModel>(
   {
@@ -25,9 +24,6 @@ const UserSchema = new Schema<IUser, UserModel>(
       enum: ["active", "blocked"],
       default: "active",
     },
-    lastInteractionDay: {
-      type: Date,
-      },
     followedPeople: {
       type: [
         {
@@ -45,11 +41,13 @@ const UserSchema = new Schema<IUser, UserModel>(
     followedNames: {
         type: [String],
         default: [],
-        required: true,
     },
     followedFunctions: {
       type: [String],
       default: [],
+    },
+    lastInteractionDay: {
+      type: Date,
     },
   },
   {
