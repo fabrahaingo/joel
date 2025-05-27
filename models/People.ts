@@ -29,9 +29,9 @@ PeopleSchema.static(
     lastKnownPosition: JORFSearchItem;
   }) {
     let people = await this.findOne({
-      nom: tgPeople.nom,
-      prenom: tgPeople.prenom,
-    });
+      nom: {'$regex': `^${tgPeople.nom}$`, $options: 'i'}, // regex makes the search case-insensitive
+      prenom: {'$regex': `^${tgPeople.prenom}$`, $options: 'i'},
+    })
     if (people && !people.lastKnownPosition) {
       people.lastKnownPosition = tgPeople.lastKnownPosition;
       people = await people.save();
