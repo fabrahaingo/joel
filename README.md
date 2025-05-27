@@ -1,3 +1,4 @@
+![Coverage](./coverage/badges.svg)
 <!-- PROJECT LOGO -->
 <br />
 <p align="center">
