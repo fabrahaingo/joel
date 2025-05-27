@@ -1,17 +1,9 @@
-const path = require("node:path");
-const fs = require("fs");
+import {MongoMemoryServer} from "mongodb-memory-server";
 
-const globalTeardown = async () => {
-  const mongoServer = (global as any).__MONGOSERVER__;
-  if (mongoServer) {
-    await mongoServer.stop();
-  }
-
-  // Clean up the config file
-  const globalConfigPath = path.join(__dirname, "globalConfigMongo.json");
-  if (fs.existsSync(globalConfigPath)) {
-    fs.unlinkSync(globalConfigPath);
+export = async function globalTeardown() {
+   { // Config to decide if an mongodb-memory-server instance should be used
+    const instance: MongoMemoryServer = (global as any).__MONGOINSTANCE;
+    await instance.stop();
   }
 };
 
-export default globalTeardown;

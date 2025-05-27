@@ -1,10 +1,5 @@
 import { expect } from "@jest/globals";
-import { dbHelper } from "./dbHelper";
 import { TestSaveLegacyPerson } from "./legacy_data/legacy_people.utils";
-
-beforeAll(async () => {
-  await dbHelper.setup();
-});
 
 // Delete the legacy people model to prevent OverwriteModelError
 /*

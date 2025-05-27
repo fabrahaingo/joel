@@ -1,22 +1,15 @@
-import { MongoMemoryServer } from "mongodb-memory-server";
-const path = require("node:path");
-const fs = require("fs");
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import * as mongoose from 'mongoose';
 
-const globalSetup = async () => {
-  const mongoServer = await MongoMemoryServer.create();
-  const mongoUri = mongoServer.getUri();
+export = async function globalSetup() {
+  // it's needed in global space, because we don't want to create a new instance every test-suite
+  const instance = await MongoMemoryServer.create();
+  const uri = instance.getUri();
+  (global as any).__MONGOINSTANCE = instance;
+  process.env.MONGO_URI_TEST = uri.slice(0, uri.lastIndexOf('/'));
 
-  // Store the URI in a temporary file that can be read by all test processes
-  const globalConfigPath = path.join(__dirname, "globalConfigMongo.json");
-  const mongoConfig = {
-    mongoUri,
-    mongoDBName: "jest",
-  };
-
-  fs.writeFileSync(globalConfigPath, JSON.stringify(mongoConfig));
-
-  // Add this to make the server persist between tests
-  (global as any).__MONGOSERVER__ = mongoServer;
+  // The following is to make sure the database is clean before a test suite starts
+  const conn = await mongoose.connect(`${process.env.MONGO_URI_TEST}/test`);
+  await conn.connection.db.dropDatabase();
+  await mongoose.disconnect();
 };
-
-export default globalSetup;

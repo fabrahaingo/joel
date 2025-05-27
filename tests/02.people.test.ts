@@ -2,14 +2,8 @@ import { describe, expect } from "@jest/globals";
 import People from "../models/People";
 import { IPeople } from "../types";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
-import { dbHelper } from "./dbHelper";
 
 describe("People Model Test Suite", () => {
-  beforeAll(async () => {
-    await dbHelper.setup();
-
-    await dbHelper.reboot(); // This reload the legacy users from the DB
-  });
 
   // Only need to be checked for the current user schema
   describe("Schema Validation", () => {

@@ -13,10 +13,12 @@ module.exports = {
   coverageProvider: 'v8',                 // or “babel”
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'json-summary'],
-  globalSetup: '<rootDir>/tests/jest.global_setup.ts',
-  globalTeardown: '<rootDir>/tests/jest.global_teardown.ts',
+  globalSetup: "<rootDir>/tests/jest.global_setup.ts",
+  globalTeardown: "<rootDir>/tests/jest.global_teardown.ts",
+  setupFilesAfterEnv: [
+    "<rootDir>/tests/setupFile.ts"
+  ],
   testSequencer: '<rootDir>/tests/testSequencer.ts',
-  runInBand: true,
   runner: "jest-serial-runner"
 };
 
