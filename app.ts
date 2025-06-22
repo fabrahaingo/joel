@@ -4,6 +4,7 @@ import { CommandType, IUser } from "./types";
 import { mongodbConnect } from "./db";
 import { followOrganisationCommand } from "./commands/followOrganisation";
 import User from "./models/User";
+import { followCommand, fullHistoryCommand, searchCommand } from "./commands/search";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -12,16 +13,20 @@ const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
 
 const commands: CommandType = [
   {
-    regex: /\/start$/,
+    regex: /\/start$|🏠 Menu principal/,
     action: require("./commands/start"),
   },
   {
-    regex: /🔎 Rechercher$/,
-    action: require("./commands/search"),
+    regex: /🔎 Rechercher$|🔎 Nouvelle recherche$/,
+    action: searchCommand,
   },
   {
-    regex: /🧩 Ajouter un contact$/,
-    action: require("./commands/follow"),
+    regex: /Historique de \s*(.*)/i,
+    action: fullHistoryCommand,
+  },
+  {
+    regex: /Suivre \s*(.*)/i,
+    action: followCommand,
   },
   {
     regex: /✋ Retirer un suivi$/,
