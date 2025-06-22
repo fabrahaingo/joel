@@ -1,5 +1,5 @@
 import { cleanJORFItems, JORFSearchResponse } from "../entities/JORFSearchResponse";
-import { WikiDataId } from "../types";
+import { WikidataId } from "../types";
 import axios from "axios";
 import umami from "./umami";
 
@@ -76,12 +76,12 @@ export async function callJORFSearchTag(tag: string, tagValue?: string) {
     return [];
 }
 
-export async function callJORFSearchOrganisation(wikiId: WikiDataId) {
+export async function callJORFSearchOrganisation(wikiId: WikidataId) {
     try {
         await umami.log({ event: "/jorfsearch-request-organisation" });
         return axios
         .get<JORFSearchResponse>(encodeURI(
-            `https://jorfsearch.steinertriples.ch/${wikiId}?format=JSON`))
+            `https://jorfsearch.steinertriples.ch/${wikiId.toUpperCase()}?format=JSON`))
         .then((res) => {
             if (res.data === null || typeof res.data === "string") return [];
             return cleanJORFItems(res.data);

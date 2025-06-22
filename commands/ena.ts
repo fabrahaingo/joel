@@ -4,7 +4,7 @@ import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import { Types } from "mongoose";
-import { IUser, WikiDataId } from "../types";
+import { IUser, WikidataId } from "../types";
 import { PromoENA, PromoINSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
@@ -52,7 +52,7 @@ async function getJORFSearchResult(year: string, institution: string): Promise <
       return callJORFSearchTag("eleve_ena", year);
 
     case "INSP": // If INSP, we can rely on the associated organisation
-      const inspId = "Q109039648" as WikiDataId;
+      const inspId = "Q109039648" as WikidataId;
       return (await callJORFSearchOrganisation(inspId))
           // We filter to keep admissions to the INSP organisation from the relevant year
           .filter(
