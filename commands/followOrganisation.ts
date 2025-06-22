@@ -1,0 +1,261 @@
+import { startKeyboard } from "../utils/keyboards";
+import umami from "../utils/umami";
+import TelegramBot from "node-telegram-bot-api";
+import Organisation from "../models/Organisation";
+import User from "../models/User";
+import { IOrganisation, IUser, WikidataId } from "../types";
+import axios from "axios";
+import { sendLongText } from "../utils/sendLongText";
+
+function parseIntAnswers(answer: string | undefined, maxAllowedValue: number) {
+  if (answer === undefined) return null;
+
+  const answers = answer
+    .split(/[ ,\-;:]/)
+    .map((s) => parseInt(s))
+    .filter((i) => i && !isNaN(i) && i <= maxAllowedValue);
+
+  if (answers.length == 0) {
+    return null;
+  }
+  return answers;
+}
+
+const isOrganisationAlreadyFollowed = (
+  user: IUser,
+  wikidataId: WikidataId,
+): boolean => {
+  return user.followedOrganisations?.some((o) => o.wikidataId === wikidataId);
+};
+
+interface WikiDataAPIResponse {
+  success: number;
+  search: {
+    id: WikidataId;
+  }[];
+}
+
+async function searchOrganisationWikidataId(
+  org_name: string,
+): Promise<{ nom: string; wikidataId: WikidataId }[]> {
+  try {
+    await umami.log({ event: "/jorfsearch-request-wikidata-names" });
+
+    const wikidataIds_raw: WikidataId[] = await axios
+      .get<WikiDataAPIResponse>(
+        encodeURI(
+          `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`,
+        ),
+      )
+      .then((r) => {
+        return r.data.search.map((o) => o.id);
+      });
+    if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
+
+    return (await axios
+      .get<
+        { name: string; id: WikidataId }[]
+      >(encodeURI(`https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`))
+      .then((r) => r.data))
+        .map(o=>({
+          nom: o.name,
+          wikidataId: o.id as WikidataId
+        }));
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+}
+
+export const followOrganisationCommand =
+  (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
+    const chatId = msg.chat.id;
+    await umami.log({ event: "/follow-organisation" });
+    try {
+      await bot.sendChatAction(chatId, "typing");
+      const question = await bot.sendMessage(
+        chatId,
+        `Entrez le nom ou l'identifiant [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
+Exemples:
+Conseil d'Etat : *Q769657*
+Conseil constitutionnel : *Q1127218*`,
+        {
+          parse_mode: "Markdown",
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      bot.onReplyToMessage(
+        chatId,
+        question.message_id,
+        async (msg: TelegramBot.Message) => {
+          if (msg.text === undefined || msg.text === "") {
+            await bot.sendMessage(
+              chatId,
+              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+            );
+            return;
+          }
+
+          const orgResults = await searchOrganisationWikidataId(msg.text);
+
+          if (orgResults.length == 0) {
+            await bot.sendMessage(
+              chatId,
+              `Votre recherche n'a donné aucun résultat. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+            );
+            return;
+          }
+
+          if (orgResults.length == 1) {
+            const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
+            if (user.followedOrganisations === undefined)
+              user.followedOrganisations = [];
+
+            // If the one result is already followed
+            if (isOrganisationAlreadyFollowed(user, orgResults[0].wikidataId)) {
+              await new Promise((resolve) => setTimeout(resolve, 500));
+              await bot.sendMessage(
+                chatId,
+                `Vous suivez déjà l'organisation *${orgResults[0].nom}* ✅`,
+                startKeyboard,
+              );
+              return;
+            }
+            const followConfirmation = await bot.sendMessage(
+              chatId,
+              `Une organisation correspond à votre recherche:\n\n*${orgResults[0].nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].wikidataId)})\n
+Voulez-vous être notifié de toutes les nominations en rapport avec cette organisation ? (répondez *oui* ou *non*)`,
+              {
+                parse_mode: "Markdown",
+                reply_markup: {
+                  force_reply: true,
+                },
+              },
+            );
+            bot.onReplyToMessage(
+              chatId,
+              followConfirmation.message_id,
+              async (msg: TelegramBot.Message) => {
+                if (msg.text !== undefined) {
+                  if (new RegExp(/oui/i).test(msg.text)) {
+                    const organisation: IOrganisation =
+                      await Organisation.firstOrCreate({
+                        nom: orgResults[0].nom,
+                        wikidataId: orgResults[0].wikidataId,
+                      });
+                    user.followedOrganisations.push({
+                      wikidataId: organisation.wikidataId,
+                      lastUpdate: new Date(),
+                    });
+                    await user.save();
+                    await bot.sendMessage(
+                      chatId,
+                      `Vous suivez maintenant l'organisation *${orgResults[0].nom}* ✅`,
+                      startKeyboard,
+                    );
+                    return;
+                  } else if (new RegExp(/non/i).test(msg.text)) {
+                    await bot.sendMessage(
+                      chatId,
+                      `L'organisation *${orgResults[0].nom}* n'a pas été ajoutée aux suivis.`,
+                      startKeyboard,
+                    );
+                    return;
+                  }
+                }
+                // If msg.txt undefined or not "oui"/"non"
+                return await bot.sendMessage(
+                  chatId,
+                  `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+                );
+              },
+            );
+            // More than one org results
+          } else {
+            let text =
+              "Voici les organisations correspondant à votre recherche :\n\n";
+            for (let k = 0; k < orgResults.length; k++) {
+              const organisation_k = orgResults[k];
+              text += `${String(
+                k + 1,
+              )}. *${organisation_k.nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.wikidataId)})\n\n`;
+            }
+            await sendLongText(bot, chatId, text);
+
+            const question = await bot.sendMessage(
+              chatId,
+              "Entrez le(s) nombre(s) correspondant au(x) organisation(s) à suivre.\nExemple: 1 4 7",
+              {
+                reply_markup: {
+                  force_reply: true,
+                },
+              },
+            );
+
+            bot.onReplyToMessage(
+              chatId,
+              question.message_id,
+              async (msg: TelegramBot.Message) => {
+                let answers = parseIntAnswers(msg.text, orgResults.length);
+                if (answers === null || answers.length == 0) {
+                  await bot.sendMessage(
+                    chatId,
+                    `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.
+      👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+                    startKeyboard,
+                  );
+                  return;
+                }
+
+                await bot.sendChatAction(chatId, "typing");
+
+                const user = await User.firstOrCreate({
+                  tgUser: msg.from,
+                  chatId,
+                });
+                if (user.followedOrganisations === undefined)
+                  user.followedOrganisations = [];
+
+                for (const answer of answers) {
+                  // Don't call JORF if the organisation is already followed
+                  if (
+                    isOrganisationAlreadyFollowed(
+                      user,
+                      orgResults[answer - 1].wikidataId,
+                    )
+                  )
+                    continue;
+
+                  const organisation: IOrganisation =
+                    await Organisation.firstOrCreate({
+                      nom: orgResults[answer - 1].nom,
+                      wikidataId: orgResults[answer - 1].wikidataId,
+                    });
+
+                  user.followedOrganisations.push({
+                    wikidataId: organisation.wikidataId,
+                    lastUpdate: new Date(),
+                  });
+                }
+
+                await user.save();
+
+                await new Promise((resolve) => setTimeout(resolve, 500));
+                await sendLongText(
+                  bot,
+                  chatId,
+                  `Vous suivez les organisations: ✅\n${orgResults
+                    .map((org) => `\n   - *${org.nom}*`)
+                    .join("\n")}`,
+                );
+              },
+            );
+          }
+        },
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
