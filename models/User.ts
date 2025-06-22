@@ -43,9 +43,24 @@ const UserSchema = new Schema<IUser, UserModel>(
       default: [],
     },
     followedNames: {
-        type: [String],
-        default: [],
-        required: true,
+      type: [String],
+      default: [],
+      required: true,
+    },
+    followedOrganisations: {
+      type: [
+          {
+              wikidataId: {
+                  type: String,
+              },
+              lastUpdate: {
+                  type: Date,
+                  default: Date.now,
+              },
+          },
+      ],
+      default: [],
+      required: true,
     },
     followedFunctions: {
       type: [String],

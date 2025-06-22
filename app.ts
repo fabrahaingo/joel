@@ -2,6 +2,7 @@ import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { CommandType, IUser } from "./types";
 import { mongodbConnect } from "./db";
+import { followOrganisationCommand } from "./commands/followOrganisation";
 import User from "./models/User";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
@@ -45,6 +46,10 @@ const commands: CommandType = [
   {
     regex: /\/stats/,
     action: require("./commands/stats"),
+  },
+  {
+    regex: /\/followOrganisation|\/followOrganization/i,
+    action: followOrganisationCommand,
   },
   {
     regex: /\/supprimerCompte/,
