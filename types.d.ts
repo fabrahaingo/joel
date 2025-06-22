@@ -10,6 +10,7 @@ export type CommandType = {
   };
 }[];
 
+// fields are undefined for users created before implementation
 export interface IUser {
   _id: number;
   chatId: number;
@@ -20,7 +21,11 @@ export interface IUser {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
-  followedNames: string[] | undefined; // undefined for user created before it was added
+  followedNames?: string[];
+  followedOrganisations?: {
+    wikidataId: WikidataId;
+    lastUpdate: Date;
+  }[];
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
@@ -35,6 +40,20 @@ export interface IUser {
   removeFollowedPeople: (arg0: IPeople) => Promise<boolean>;
   removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
   followsNothing: () => boolean;
+}
+
+export interface IOrganisation {
+  nom: string;
+  wikidataId: WikidataId;
+  save: () => Promise<IOrganisation>;
+  countDocuments: () => number;
+}
+
+export interface OrganisationModel extends Model<IOrganisation> {
+  firstOrCreate: (args: {
+    nom: string;
+    wikidataId: WikidataId;
+  }) => Promise<IOrganisation>;
 }
 
 export interface UserModel extends Model<IUser> {
@@ -116,4 +135,4 @@ export type TypeOrdre =
   | "fin délégation signature"
   | "prime";
 
-export type WikiDataId = string;
+export type WikidataId = string;

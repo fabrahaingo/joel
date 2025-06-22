@@ -3,196 +3,178 @@ import User from "../models/User";
 import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
-import { IPeople, WikiDataId } from "../types";
-import { PromoENA, PromoINSP } from "../entities/PromoNames";
+import { Types } from "mongoose";
+import { IPeople, IUser, WikidataId } from "../types";
+import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
 import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
 
 function removeAccents(input: string): string {
-  input = input.trim().toLowerCase();
+    input = input.trim().toLowerCase();
 
-  input = input.replace(/[àáâãäå]/g, "a");
-  input = input.replace(/[èéêë]/g, "e");
-  input = input.replace(/[ìíîï]/g, "i");
-  input = input.replace(/[òóôõö]/g, "o");
-  input = input.replace(/[ùúûü]/g, "u");
-  input = input.replace(/[ç]/g, "c");
+    input = input.replace(/[àáâãäå]/g, "a");
+    input = input.replace(/[èéêë]/g, "e");
+    input = input.replace(/[ìíîï]/g, "i");
+    input = input.replace(/[òóôõö]/g, "o");
+    input = input.replace(/[ùúûü]/g, "u");
+    input = input.replace(/[ç]/g, "c");
+    input = input.replace(/[œ]/g, "oe");
 
-  return input;
+    return input;
 }
 
-// https://stackoverflow.com/questions/53606337/check-if-array-contains-all-elements-of-another-array
-let checker = (arr: string[], target: string) =>
-  target.split(" ").every((v) => arr.includes(v));
+function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
+  const allPromoPeriods = List_Promos_INSP_ENA.map((i) => i.period);
 
-function findPromoName(args: {
-  input: string | undefined;
-  promoNames: string[];
-}): string | undefined {
-  if (!args.input) return;
-  let promoNamesArray = args.promoNames.map((name) => name.split(" "));
-  const clean = removeAccents(args.input);
-  for (let i = 0; i < promoNamesArray.length; i++) {
-    if (checker(promoNamesArray[i], clean)) {
-      return args.promoNames[i];
+  let promoIdx = List_Promos_INSP_ENA
+      .map((i) =>
+      i.name
+          ? removeAccents(i.name.toLowerCase()).replaceAll("-", " ")
+          : undefined,
+  ).findIndex(
+    (i) => i === removeAccents(input.toLowerCase().replaceAll("-", " ")),
+  );
+
+  if (promoIdx === -1) {
+    promoIdx = allPromoPeriods.findIndex(
+      (i) => i === input.replaceAll("/", "-"),
+    );
+  }
+
+  // Promo not found
+  if (promoIdx === -1) {
+    return null;
+  }
+
+  return List_Promos_INSP_ENA[promoIdx];
+}
+
+async function getJORFPromoSearchResult(
+    promo: Promo_ENA_INSP | null,
+): Promise<JORFSearchItem[] | null> {
+    if (promo === null) {
+        return null;
     }
-  }
-  return;
-}
 
-async function getJORFSearchResult(year: string, institution: string): Promise <JORFSearchItem[]> {
-  if (year === "") {
-    return [];
-  }
-  switch (institution) {
+  switch (promo.school) {
 
     case "ENA": // If ENA, we can use the associated tag with the year as value
-      return callJORFSearchTag("eleve_ena", year);
+      return callJORFSearchTag("eleve_ena", promo.period);
 
     case "INSP": // If INSP, we can rely on the associated organisation
-      const inspId = "Q109039648" as WikiDataId;
+      const inspId = "Q109039648" as WikidataId;
       return (await callJORFSearchOrganisation(inspId))
           // We filter to keep admissions to the INSP organisation from the relevant year
-          .filter(
-            (publication) => {
-              // only keep publications objects that contain "type_ordre":"admission" and where "date_fin":"2024-10-31" the first 4 characters of date_fin are equal to the 4 last characters of year
-              return (
-                  publication?.type_ordre === "admission" && publication?.date_fin &&
-                  publication?.date_fin.slice(0, 4) === year.slice(-4)
-              );
-            });
-  }
-  return []
-}
-
-function capitalizeFirstLetters(str: string | undefined): string {
-  if (!str) return "";
-  try {
-    return str.replace(/\b\w/g, (l) => l.toUpperCase());
-  } catch (e) {
-    console.log(e);
-    return str;
+          .filter((publication) => publication.eleve_ena === promo.period);
+      default:
+          return [];
   }
 }
 
-function getYearFromPromo(promoName: string | undefined): string {
-  if (!promoName) return "";
-  if (promoName in PromoENA) {
-    return PromoENA[promoName as keyof typeof PromoENA];
-  }
-  if (promoName in PromoINSP) {
-    return PromoINSP[promoName as keyof typeof PromoINSP];
-  }
-  return "";
+function isPersonAlreadyFollowed(
+    id: Types.ObjectId,
+    followedPeople: IUser["followedPeople"],
+): boolean {
+    return followedPeople.some((person) => person.peopleId.equals(id));
 }
 
-module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
-  try {
-    const chatId = msg.chat.id;
-    await umami.log({ event: "/ena" });
-    const text = `Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
-⚠️ Attention, beaucoup de personnes seront ajoutées en même temps, *les retirer peut ensuite prendre du temps* ⚠️`;
-    const question = await bot.sendMessage(msg.chat.id, text, {
-      parse_mode: "Markdown",
-      reply_markup: {
-        force_reply: true,
-      },
-    });
-    let JORFSearchRes: any[] = [];
-    bot.onReplyToMessage(chatId, question.message_id, async (msg) => {
-      let institution = "";
-      let promoName: string = "";
-
-      const ENAPromo = findPromoName({
-        input: msg.text,
-        promoNames: Object.keys(PromoENA),
+export const enaCommand =
+  (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
+    try {
+      const chatId = msg.chat.id;
+      await umami.log({ event: "/ena" });
+      const text = `Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
+⚠️ Attention, un nombre important de suivis seront ajoutées en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n
+Formats acceptés:
+Georges-Clemenceau
+2017-2018\n
+Utilisez la command /promos pour consulter la liste des promotions INSP et ENA disponibles.`;
+      const question = await bot.sendMessage(msg.chat.id, text, {
+        parse_mode: "Markdown",
+        reply_markup: {
+          force_reply: true,
+        },
       });
-      if (ENAPromo) {
-        institution = "ENA";
-        promoName = (() => {
-          for (let key in PromoENA) {
-            if (
-              PromoENA[key as keyof typeof PromoENA] ===
-              PromoENA[ENAPromo as keyof typeof PromoENA]
-            ) {
-              return key;
-            }
-          }
-          return "";
-        })();
-      }
+      bot.onReplyToMessage(chatId, question.message_id, async (msg: TelegramBot.Message) => {
+        if (msg.text === undefined) {
+          await bot.sendMessage(
+            chatId,
+            `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena.`,
+          );
+          return;
+        }
 
-      const INSPPromo = findPromoName({
-        input: msg.text,
-        promoNames: Object.keys(PromoINSP),
-      });
-      if (INSPPromo) {
-        institution = "INSP";
-        promoName = (() => {
-          for (let key in PromoINSP) {
-            if (
-              PromoINSP[key as keyof typeof PromoINSP] ===
-              PromoINSP[INSPPromo as keyof typeof PromoINSP]
-            ) {
-              return key;
-            }
-          }
-          return "";
-        })();
-      }
+        // If the user used the /promos command or button
+        if (RegExp(/\/promos/i).test(msg.text)) {
+          promosCommand(bot);
+          return;
+        }
 
-      JORFSearchRes = await getJORFSearchResult(
-        getYearFromPromo(ENAPromo || INSPPromo),
-        institution
-      );
+        const promoInfo = findENAINSPPromo(msg.text);
+        const promoJORFList = await getJORFPromoSearchResult(promoInfo);
 
-      let text = `La promotion *${capitalizeFirstLetters(
-        promoName
-      )}* contient *${JORFSearchRes.length} élèves*:`;
-      if (JORFSearchRes.length > 0) {
+        if (promoJORFList === null ||promoJORFList.length == 0) {
+          await bot.sendMessage(
+              chatId,
+              `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
+              startKeyboard,
+          );
+          return;
+        }
+
+        let promoStr= promoInfo.period;
+        if (promoInfo.name !== null) promoStr = `${promoInfo.name} (${promoInfo.period})`;
+
+        if (!promoInfo?.onJORF) {
+          await bot.sendMessage(
+            chatId,
+            `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
+Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
+            startKeyboard,
+          );
+          return;
+        }
+
+        const text = `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`;
         await bot.sendMessage(chatId, text, {
           parse_mode: "Markdown",
         });
-      } else {
-        return await bot.sendMessage(
+
+        // wait 2 seconds
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+
+        // sort JORFSearchRes by upper last name: to account for French "particule"
+        promoJORFList.sort((a, b) => {
+          if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
+          if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;
+          return 0;
+        });
+        // send all contacts
+        const contacts = promoJORFList.map((contact) => {
+          return `${contact.nom} ${contact.prenom}`;
+        });
+        await sendLongText(bot, chatId, contacts.join("\n"));
+        const followConfirmation = await bot.sendMessage(
           chatId,
-          "Promo introuvable",
-          startKeyboard
-        );
-      }
-      // wait 2 seconds
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      // sort JORFSearchRes by last name
-      JORFSearchRes.sort((a, b) => {
-        if (a.nom < b.nom) return -1;
-        if (a.nom > b.nom) return 1;
-        return 0;
-      });
-      // send all contacts
-      const contacts = JORFSearchRes.map((contact) => {
-        return `${contact.nom} ${contact.prenom}`;
-      });
-      await sendLongText(bot, chatId, contacts.join("\n"));
-      const followConfirmation = await bot.sendMessage(
-        chatId,
-        `Voulez-vous ajouter ces personnes à vos contacts ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *les retirer peut ensuite prendre du temps*`,
-        {
-          parse_mode: "Markdown",
-          reply_markup: {
-            force_reply: true,
+          `Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *les retirer peut ensuite prendre du temps*`,
+          {
+            parse_mode: "Markdown",
+            reply_markup: {
+              force_reply: true,
+            },
           },
-        }
       );
       bot.onReplyToMessage(
         chatId,
         followConfirmation.message_id,
-        async (msg) => {
+        async (msg: TelegramBot.Message) => {
           if (msg.text === undefined) {
-            return await bot.sendMessage(
+            await bot.sendMessage(
               chatId,
               `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`
             );
+            return;
           }
           if (new RegExp(/oui/i).test(msg.text)) {
             await bot.sendMessage(
@@ -200,12 +182,14 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
               `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
             );
             await bot.sendChatAction(chatId, "typing");
-            const tgUser = msg.from;
-            let user = await User.firstOrCreate({ tgUser, chatId });
+            const user = await User.firstOrCreate({
+              tgUser: msg.from,
+              chatId,
+            });
 
             const peopleTab: IPeople[] = [];
 
-            for (const contact of JORFSearchRes) {
+            for (const contact of promoJORFList) {
               const people_data= await callJORFSearchPeople(
                 `${contact.prenom} ${contact.nom}`
               );
@@ -219,16 +203,14 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
                 peopleTab.push(people);
               }
             }
-            await user.addFollowedPeopleBulk(peopleTab);
-            await user.save();
+              await user.addFollowedPeopleBulk(peopleTab);
+              await user.save();
             return await bot.sendMessage(
-              chatId,
-              `Les *${
-                JORFSearchRes.length
-              } personnes* de la promo *${capitalizeFirstLetters(
-                promoName
-              )}* ont été ajoutées à vos contacts.`,
-              startKeyboard
+                chatId,
+                `Les *${String(
+                    peopleTab.length,
+                )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
+                startKeyboard,
             );
           } else if (new RegExp(/non/i).test(msg.text)) {
             return await bot.sendMessage(
@@ -249,3 +231,32 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     console.log(error);
   }
 };
+
+export const promosCommand =
+(bot: TelegramBot) => async (msg: TelegramBot.Message) => {
+    try {
+        const chatId = msg.chat.id;
+        await umami.log({ event: "/ena-list" });
+        let text = `Les périodes et noms des promotions successives sont:\n\n`;
+
+        // Promotions INSP
+        text += "*Institut National du Service Public (INSP)*\n\n";
+        for (const promoINSP of List_Promos_INSP_ENA.filter(p=>p.school==="INSP")) {
+            text += `${promoINSP.period} : *${promoINSP.name ?? "À venir"}*\n`;
+        }
+
+        // Promotions ENA
+        text += "\n*École Nationale d'Administration (ENA)*\n\n";
+        for (const promoENA of List_Promos_INSP_ENA.filter(p=>p.school==="ENA" && p.onJORF)) {
+            text += `${promoENA.period} : *${promoENA.name ?? "À venir"}*\n`;
+        }
+
+        text +=
+            "\nUtilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
+
+        await bot.sendMessage(chatId, text, startKeyboard);
+    } catch (error) {
+        console.log(error);
+    }
+};
+
