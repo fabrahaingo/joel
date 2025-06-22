@@ -1,19 +1,19 @@
-import { SourceName, TypeOrdre, WikiDataId } from "../types";
+import { SourceName, TypeOrdre, WikidataId } from "../types";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
 interface OrganisationRaw{
   nom?: string;
-  wikidata_id?: WikiDataId;
-  organisation_militaire?: WikiDataId;
-  ecole?: WikiDataId;
-  etablissement_enseignement_superieur?: WikiDataId;
-  cour_appel?: WikiDataId;
-  autorite_administrative_independante?: WikiDataId;
-  academie?: WikiDataId;
-  tribunal?: WikiDataId;
-  tribunal_grande_instance?: WikiDataId;
-  tribunal_instance?: WikiDataId;
+  wikidata_id?: WikidataId;
+  organisation_militaire?: WikidataId;
+  ecole?: WikidataId;
+  etablissement_enseignement_superieur?: WikidataId;
+  cour_appel?: WikidataId;
+  autorite_administrative_independante?: WikidataId;
+  academie?: WikidataId;
+  tribunal?: WikidataId;
+  tribunal_grande_instance?: WikidataId;
+  tribunal_instance?: WikidataId;
 }
 
 interface Organisation extends OrganisationRaw{

@@ -4,7 +4,7 @@ import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import { Types } from "mongoose";
-import { IUser, WikiDataId } from "../types";
+import { IUser, WikidataId } from "../types";
 import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";

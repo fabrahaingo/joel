@@ -80,3 +80,14 @@ export enum FunctionTags {
   "Tribunal de proximité" = "tribunal_proximite",
   "Visa grands établissements" = "visa_grands_etablissements",
 }
+
+export function getFunctionsFromValues(
+  values: FunctionTags[],
+): (keyof typeof FunctionTags)[] {
+  if (values.length === 0) return [];
+
+  const tagValues = Object.values(FunctionTags);
+  const tagKeys = Object.keys(FunctionTags) as (keyof typeof FunctionTags)[];
+
+  return values.map((tag) => tagKeys[tagValues.indexOf(tag)]);
+}
