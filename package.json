@@ -4,7 +4,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": "v22.14.0",
+    "node": "v24.2.0",
     "npm": "11.0.0"
   },
   "dependencies": {
