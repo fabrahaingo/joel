@@ -322,7 +322,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       // Delete user if it doesn't follow anything anymore
       if (user.followsNothing()) {
           await User.deleteOne({ _id: chatId });
-          await umami.log({ event: "/user-deletion" });
+          await umami.log({ event: "/user-deletion-no-follow" });
       }
   } catch (error) {
     console.log(error);
