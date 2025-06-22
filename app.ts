@@ -5,6 +5,7 @@ import { mongodbConnect } from "./db";
 import { followOrganisationCommand } from "./commands/followOrganisation";
 import User from "./models/User";
 import { followCommand, fullHistoryCommand, searchCommand } from "./commands/search";
+import { enaCommand, promosCommand } from "./commands/ena";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -45,8 +46,12 @@ const commands: CommandType = [
     action: require("./commands/followFunction"),
   },
   {
-    regex: /\/secret|\/ena|\/ENA|\/insp|\/INSP/,
-    action: require("./commands/ena"),
+    regex: /\/secret|\/ENA|\/INSP/i,
+    action: enaCommand,
+  },
+  {
+    regex: /\/promos/,
+    action: promosCommand,
   },
   {
     regex: /\/stats/,
