@@ -72,13 +72,6 @@ async function getJORFPromoSearchResult(
   }
 }
 
-function isPersonAlreadyFollowed(
-    id: Types.ObjectId,
-    followedPeople: IUser["followedPeople"],
-): boolean {
-    return followedPeople.some((person) => person.peopleId.equals(id));
-}
-
 export const enaCommand =
   (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     try {
