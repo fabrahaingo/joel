@@ -177,12 +177,12 @@ export const followCommand =
     try {
       await bot.sendChatAction(chatId, "typing");
 
-      const tgUser: TelegramBot.User | undefined = msg.from;
-      if (tgUser === undefined) return;
-      let user = await User.firstOrCreate({
-        tgUser,
+      const user = await User.firstOrCreate({
+        tgUser: msg.from,
         chatId,
+        messageApp: "Telegram"
       });
+      if (user === null) return;
 
       const JORFRes = await callJORFSearchPeople(person);
       if (JORFRes.length == 0) {

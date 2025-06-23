@@ -2,16 +2,22 @@ import User from "../models/User";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
-import { IUser } from "../types";
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
   await umami.log({ event: "/start" });
   try {
-    bot.sendChatAction(chatId, "typing");
+    await bot.sendChatAction(chatId, "typing");
 
-    const tgUser = msg.from;
-    const user: IUser = await User.firstOrCreate({ tgUser, chatId });
+    const tgUser: TelegramBot.User | undefined = msg.from;
+    if (tgUser === undefined) return;
+    const user = await User.firstOrCreate({
+      tgUser,
+      chatId,
+      messageApp: "Telegram"
+    });
+    if (user === null) return;
+
     if (user.status === "blocked") {
       user.status = "active";
       await user.save();
