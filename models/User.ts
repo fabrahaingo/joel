@@ -27,7 +27,13 @@ const UserSchema = new Schema<IUser, UserModel>(
     },
     lastInteractionDay: {
       type: Date,
-      },
+    },
+    lastInteractionWeek: {
+      type: Date,
+    },
+    lastInteractionMonth: {
+      type: Date,
+    },
     followedPeople: {
       type: [
         {
@@ -99,14 +105,34 @@ UserSchema.static(
   }
 );
 
-UserSchema.method('saveDailyInteraction', async function saveDailyInteraction() {
-    const currentDate = new Date();
-    currentDate.setHours(0, 12, 0, 0);
-    if (this.lastInteractionDay === undefined || this.lastInteractionDay.getTime() < currentDate.getTime()) {
-        this.lastInteractionDay = currentDate;
-        await this.save();
+UserSchema.method('updateInteractionMetrics', async function updateInteractionMetrics() {
+    let needSaving=false;
+
+    const currentDay = new Date();
+    currentDay.setHours(4, 0, 0, 0);
+    if (this.lastInteractionDay === undefined || this.lastInteractionDay.getTime() < currentDay.getTime()) {
+        this.lastInteractionDay = currentDay;
         await umami.log({event: "/daily-active-user"});
+        needSaving=true;
     }
+
+    const startWeek = new Date(currentDay);
+    startWeek.setDate(startWeek.getDate() - startWeek.getDay()+1);
+    if (this.lastInteractionWeek === undefined || this.lastInteractionWeek.getTime() < startWeek.getTime()) {
+        this.lastInteractionWeek = startWeek;
+        await umami.log({event: "/weekly-active-user"});
+        needSaving=true;
+    }
+
+    const startMonth = new Date(currentDay);
+    startMonth.setDate(1);
+    if (this.lastInteractionMonth === undefined || this.lastInteractionMonth.getTime() < startMonth.getTime()) {
+        this.lastInteractionMonth = startMonth;
+        await umami.log({event: "/monthly-active-user"});
+        needSaving=true;
+    }
+
+    if (needSaving) await this.save();
 });
 
 
