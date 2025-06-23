@@ -50,6 +50,7 @@ export type UmamiEvent =
     | "/history"
     | "/follow"
     | "/ena"
+    | "/ena-list"
     | "/follow-function"
     | "/unfollow"
     | "/user-blocked-joel"
