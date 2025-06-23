@@ -2,7 +2,10 @@ import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { CommandType, IUser } from "./types";
 import { mongodbConnect } from "./db";
+import { followOrganisationCommand } from "./commands/followOrganisation";
 import User from "./models/User";
+import { followCommand, fullHistoryCommand, searchCommand } from "./commands/search";
+import { enaCommand, promosCommand } from "./commands/ena";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -11,16 +14,20 @@ const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
 
 const commands: CommandType = [
   {
-    regex: /\/start$/,
+    regex: /\/start$|🏠 Menu principal/,
     action: require("./commands/start"),
   },
   {
-    regex: /🔎 Rechercher$/,
-    action: require("./commands/search"),
+    regex: /🔎 Rechercher$|🔎 Nouvelle recherche$/,
+    action: searchCommand,
   },
   {
-    regex: /🧩 Ajouter un contact$/,
-    action: require("./commands/follow"),
+    regex: /Historique de \s*(.*)/i,
+    action: fullHistoryCommand,
+  },
+  {
+    regex: /Suivre \s*(.*)/i,
+    action: followCommand,
   },
   {
     regex: /✋ Retirer un suivi$/,
@@ -39,12 +46,20 @@ const commands: CommandType = [
     action: require("./commands/followFunction"),
   },
   {
-    regex: /\/secret|\/ena|\/ENA|\/insp|\/INSP/,
-    action: require("./commands/ena"),
+    regex: /\/secret|\/ENA|\/INSP/i,
+    action: enaCommand,
+  },
+  {
+    regex: /\/promos/,
+    action: promosCommand,
   },
   {
     regex: /\/stats/,
     action: require("./commands/stats"),
+  },
+  {
+    regex: /\/followOrganisation|\/followOrganization/i,
+    action: followOrganisationCommand,
   },
   {
     regex: /\/supprimerCompte/,
@@ -66,7 +81,7 @@ const commands: CommandType = [
           const tgUser: TelegramBot.User | undefined = msg.from;
           if (tgUser === undefined) return
           const user: IUser | null = await User.findOne({ chatId: msg.chat.id });
-          if (user !== null) await user.saveDailyInteraction();
+          if (user !== null) await user.updateInteractionMetrics();
 
           // Process user message
           command.action(bot)(msg)

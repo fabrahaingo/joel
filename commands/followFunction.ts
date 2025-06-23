@@ -2,7 +2,6 @@ import { startKeyboard } from "../utils/keyboards";
 import User from "../models/User";
 import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
-import { IUser } from "../types";
 import { FunctionTags } from "../entities/FunctionTags";
 import TelegramBot, {
   ChatId,
@@ -20,12 +19,6 @@ function buildSuggestions() {
     }. *${key}*\n\n`;
   }
   return suggestion;
-}
-
-function isTagAlreadyFollowed(user: IUser, functionToFollow: string) {
-  return user.followedFunctions.some((elem) => {
-    return elem === functionToFollow;
-  });
 }
 
 async function isWrongAnswer(
@@ -95,17 +88,21 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
           });
           if (user === null) return;
 
-        if (!isTagAlreadyFollowed(user, functionToFollow)) {
-          user.followedFunctions.push(functionToFollow);
-          await user.save();
+        if (await user.addFollowedFunction(functionToFollow)) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            await bot.sendMessage(
+                chatId,
+                `Vous suivez maintenant la fonction *${functionTag}* ✅`,
+                startKeyboard
+            );
+        } else {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            await bot.sendMessage(
+                chatId,
+                `Vous suivez déjà la fonction *${functionTag}* ✅`,
+                startKeyboard
+            );
         }
-
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await bot.sendMessage(
-          chatId,
-          `Vous suivez maintenant la fonction *${functionTag}* ✅`,
-          startKeyboard
-        );
       }
     );
   } catch (error) {

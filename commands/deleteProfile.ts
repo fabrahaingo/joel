@@ -6,7 +6,7 @@ import {IUser} from "../types";
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
-  await umami.log({ event: "/delete-account" });
+  await umami.log({ event: "/user-deletion-command" });
   try {
     const tgUser: TelegramBot.User | undefined = msg.from;
     if (tgUser === undefined) return;
