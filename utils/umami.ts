@@ -47,6 +47,7 @@ export type UmamiEvent =
     | "/jorfsearch-request-organisation"
     | "/jorfsearch-request-date"
     | "/search"
+    | "/history"
     | "/follow"
     | "/ena"
     | "/follow-function"
