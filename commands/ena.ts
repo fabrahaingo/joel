@@ -8,7 +8,7 @@ import { IPeople, IUser, WikidataId } from "../types";
 import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
-import { callJORFSearchOrganisation, callJORFSearchTag } from "../utils/JORFSearch.utils";
+import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
 
 function removeAccents(input: string): string {
     input = input.trim().toLowerCase();
