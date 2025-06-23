@@ -17,6 +17,8 @@ export interface IUser {
   language_code: string;
   status: string;
   lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
@@ -30,7 +32,7 @@ export interface IUser {
   save: () => Promise<IUser>;
   countDocuments: () => number;
 
-  saveDailyInteraction: () => Promise<void>;
+  updateInteractionMetrics: () => Promise<void>;
 
   checkFollowedPeople: (arg0: IPeople) => boolean;
   checkFollowedFunction: (arg0: FunctionTags) => boolean;
@@ -43,17 +45,17 @@ export interface IUser {
 }
 
 export interface IOrganisation {
-  nom: string;
-  wikidataId: WikidataId;
-  save: () => Promise<IOrganisation>;
-  countDocuments: () => number;
+    nom: string;
+    wikidataId: WikidataId;
+    save: () => Promise<IOrganisation>;
+    countDocuments: () => number;
 }
 
 export interface OrganisationModel extends Model<IOrganisation> {
-  firstOrCreate: (args: {
-    nom: string;
-    wikidataId: WikidataId;
-  }) => Promise<IOrganisation>;
+    firstOrCreate: (args: {
+        nom: string;
+        wikidataId: WikidataId;
+    }) => Promise<IOrganisation>;
 }
 
 export interface UserModel extends Model<IUser> {
