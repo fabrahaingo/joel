@@ -93,7 +93,7 @@ export async function callJORFSearchOrganisation(wikiId: WikidataId) {
 }
 
 // Format a string to match the expected search format on JORFSearch: first letter capitalized and no accent
-function cleanPeopleName(input: string): string {
+export function cleanPeopleName(input: string): string {
     /// To lower case
     input = input.trim().toLowerCase();
 

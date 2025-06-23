@@ -8,32 +8,25 @@ import { IPeople, IUser, WikidataId } from "../types";
 import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
-import { callJORFSearchOrganisation, callJORFSearchPeople, callJORFSearchTag } from "../utils/JORFSearch.utils";
-
-function removeAccents(input: string): string {
-    input = input.trim().toLowerCase();
-
-    input = input.replace(/[àáâãäå]/g, "a");
-    input = input.replace(/[èéêë]/g, "e");
-    input = input.replace(/[ìíîï]/g, "i");
-    input = input.replace(/[òóôõö]/g, "o");
-    input = input.replace(/[ùúûü]/g, "u");
-    input = input.replace(/[ç]/g, "c");
-    input = input.replace(/[œ]/g, "oe");
-
-    return input;
-}
+import {
+    callJORFSearchOrganisation,
+    callJORFSearchPeople,
+    callJORFSearchTag,
+    cleanPeopleName
+} from "../utils/JORFSearch.utils";
 
 function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
   const allPromoPeriods = List_Promos_INSP_ENA.map((i) => i.period);
 
+  const cleanInput = cleanPeopleName(input.toLowerCase().replaceAll("-", " "));
+
   let promoIdx = List_Promos_INSP_ENA
       .map((i) =>
       i.name
-          ? removeAccents(i.name.toLowerCase()).replaceAll("-", " ")
+          ? cleanPeopleName(i.name.toLowerCase()).replaceAll("-", " ")
           : undefined,
   ).findIndex(
-    (i) => i === removeAccents(input.toLowerCase().replaceAll("-", " ")),
+    (i) => i === cleanInput,
   );
 
   if (promoIdx === -1) {
