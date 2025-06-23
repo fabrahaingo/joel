@@ -2,7 +2,6 @@ import User from "../models/User";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
-import { IUser } from "../types";
 
 module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
