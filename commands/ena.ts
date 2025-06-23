@@ -4,7 +4,7 @@ import People from "../models/People";
 import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import { Types } from "mongoose";
-import { IUser, WikidataId } from "../types";
+import { IPeople, IUser, WikidataId } from "../types";
 import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
@@ -63,7 +63,7 @@ async function getJORFPromoSearchResult(
       return callJORFSearchTag("eleve_ena", promo.period);
 
     case "INSP": // If INSP, we can rely on the associated organisation
-      const inspId = "Q109039648" as WikiDataId;
+      const inspId = "Q109039648" as WikidataId;
       return (await callJORFSearchOrganisation(inspId))
           // We filter to keep admissions to the INSP organisation from the relevant year
           .filter((publication) => publication.eleve_ena === promo.period);
@@ -186,80 +186,77 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
               tgUser: msg.from,
               chatId,
             });
-            for (const contact of promoJORFList) {
-                const people_data = await callJORFSearchPeople(
-                    `${contact.prenom} ${contact.nom}`
-                );
-                if (people_data.length > 0) {
-                    const people = await People.firstOrCreate({
-                        nom: people_data[0].nom,
-                        prenom: people_data[0].prenom,
-                        lastKnownPosition: people_data[0],
-                    });
-                    await people.save();
 
-                    if (!isPersonAlreadyFollowed(people._id, user.followedPeople)) {
-                        user.followedPeople.push({
-                            peopleId: people._id,
-                            lastUpdate: new Date(),
-                        });
-                    }
-                }
+            const peopleTab: IPeople[] = [];
+
+            for (const contact of promoJORFList) {
+              const people_data= await callJORFSearchPeople(
+                `${contact.prenom} ${contact.nom}`
+              );
+              if (people_data.length > 0) {
+                const people = await People.firstOrCreate({
+                  nom: people_data[0].nom,
+                  prenom: people_data[0].prenom,
+                  lastKnownPosition: people_data[0],
+                });
+                await people.save();
+                peopleTab.push(people);
+              }
             }
+              await user.addFollowedPeopleBulk(peopleTab);
               await user.save();
-              await bot.sendMessage(
+            return await bot.sendMessage(
                 chatId,
                 `Les *${String(
-                  promoJORFList.length,
+                    peopleTab.length,
                 )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
                 startKeyboard,
-              );
-              return;
-            } else if (new RegExp(/non/i).test(msg.text)) {
-              await bot.sendMessage(
-                chatId,
-                `Ok, aucun ajout n'a été effectué. 👌`,
-                startKeyboard,
-              );
-              return;
-            }
-            await bot.sendMessage(
-              chatId,
-              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-              startKeyboard,
             );
-          },
-        );
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  };
+          } else if (new RegExp(/non/i).test(msg.text)) {
+            return await bot.sendMessage(
+              chatId,
+              `Ok, aucun ajout n'a été effectué. 👌`,
+              startKeyboard
+            );
+          }
+          await bot.sendMessage(
+            chatId,
+            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
+            startKeyboard
+          );
+        }
+      );
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
 
 export const promosCommand =
-  (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
+(bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     try {
-      const chatId = msg.chat.id;
-      await umami.log({ event: "/ena-list" });
-      let text = `Les périodes et noms des promotions successives sont:\n\n`;
+        const chatId = msg.chat.id;
+        await umami.log({ event: "/ena-list" });
+        let text = `Les périodes et noms des promotions successives sont:\n\n`;
 
-      // Promotions INSP
-      text += "*Institut National du Service Public (INSP)*\n\n";
-      for (const promoINSP of List_Promos_INSP_ENA.filter(p=>p.school==="INSP")) {
-        text += `${promoINSP.period} : *${promoINSP.name ?? "À venir"}*\n`;
-      }
+        // Promotions INSP
+        text += "*Institut National du Service Public (INSP)*\n\n";
+        for (const promoINSP of List_Promos_INSP_ENA.filter(p=>p.school==="INSP")) {
+            text += `${promoINSP.period} : *${promoINSP.name ?? "À venir"}*\n`;
+        }
 
-      // Promotions ENA
-      text += "\n*École Nationale d'Administration (ENA)*\n\n";
-      for (const promoENA of List_Promos_INSP_ENA.filter(p=>p.school==="ENA" && p.onJORF)) {
-        text += `${promoENA.period} : *${promoENA.name ?? "À venir"}*\n`;
-      }
+        // Promotions ENA
+        text += "\n*École Nationale d'Administration (ENA)*\n\n";
+        for (const promoENA of List_Promos_INSP_ENA.filter(p=>p.school==="ENA" && p.onJORF)) {
+            text += `${promoENA.period} : *${promoENA.name ?? "À venir"}*\n`;
+        }
 
-      text +=
-        "\nUtilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
+        text +=
+            "\nUtilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
-      await bot.sendMessage(chatId, text, startKeyboard);
+        await bot.sendMessage(chatId, text, startKeyboard);
     } catch (error) {
-      console.log(error);
+        console.log(error);
     }
-  };
+};
+

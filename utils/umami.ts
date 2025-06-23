@@ -32,6 +32,9 @@ export default {
 
 export type UmamiEvent =
     | "/new-user"
+    | "/user-deletion-no-follow"
+    | "/user-deletion-command"
+    | "/user-deletion"
     | "/start"
     | "/default-message"
     | "/help"
