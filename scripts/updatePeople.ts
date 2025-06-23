@@ -18,14 +18,14 @@ async function getUpdatedPeople() {
 
 async function getRelevantPeopleFromDb(list: any[]) {
   if (list.length === 0) return [];
-  return await People.find(
-    {
-      $or: list.map((person) => ({
-        nom: person.nom,
-        prenom: person.prenom,
-      })),
-    },
-    { _id: 1, prenom: 1, nom: 1 }
+  return People.find(
+      {
+        $or: list.map((person) => ({
+          nom: person.nom,
+          prenom: person.prenom,
+        })),
+      },
+      {_id: 1, prenom: 1, nom: 1}
   );
 }
 

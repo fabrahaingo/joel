@@ -10,9 +10,15 @@ export type CommandType = {
   };
 }[];
 
+export type MessageApp =
+    | "Telegram";
+//| "WhatsApp";
+//| "Matrix";
+
 // fields are undefined for users created before implementation
 export interface IUser {
   _id: number;
+  messageApp?: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
@@ -60,9 +66,10 @@ export interface OrganisationModel extends Model<IOrganisation> {
 
 export interface UserModel extends Model<IUser> {
   firstOrCreate: (args: {
-    tgUser: TelegramBot.User | undefined;
+    tgUser: TelegramBot.User;
     chatId: number;
-  }) => Promise<IUser>;
+    messageApp: MessageApp;
+  }) => Promise<IUser | null>; // null means that the user is a bot
 }
 
 export type IBlocked = {

@@ -1,7 +1,7 @@
 import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
 import umami from "../utils/umami";
-import { IPeople, IUser, UserModel } from "../types";
+import { IPeople, IUser, MessageApp, UserModel } from "../types";
 import TelegramBot from "node-telegram-bot-api";
 import { FunctionTags } from "../entities/FunctionTags";
 
@@ -14,6 +14,10 @@ const UserSchema = new Schema<IUser, UserModel>(
     chatId: {
       type: Number,
       required: true,
+    },
+    messageApp: {
+      type: String,
+      default: "Telegram",
     },
     language_code: {
       type: String,
@@ -82,18 +86,20 @@ const UserSchema = new Schema<IUser, UserModel>(
 UserSchema.static(
   "firstOrCreate",
   async function (args: {
-    tgUser: TelegramBot.User | undefined;
+    tgUser: TelegramBot.User;
     chatId: number;
-  }) {
-    if (!args.tgUser) throw new Error("No user provided");
+    messageApp: MessageApp;
+  }): Promise<IUser | null> {
+    if (args.tgUser.is_bot || isNaN(args.chatId)) return null;
 
-    const user = await this.findOne({ _id: args.tgUser.id });
+    const user: IUser | null = await this.findOne({ _id: args.tgUser.id });
 
-    if (!user && !args.tgUser.is_bot && !isNaN(args.chatId)) {
+    if (user === null) {
       await umami.log({ event: "/new-user" });
       const newUser = new this({
         _id: args.tgUser.id,
         chatId: args.chatId,
+        messageApp: args.messageApp,
         language_code: args.tgUser.language_code,
       });
       await newUser.save();
