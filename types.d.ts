@@ -1,4 +1,6 @@
 import { Model, Types } from "mongoose";
+import { JORFSearchItem } from "./entities/JORFSearchResponse";
+import { FunctionTags } from "./entities/FunctionTags";
 import TelegramBot from "node-telegram-bot-api";
 
 export type CommandType = {
@@ -14,32 +16,66 @@ export type MessageApp =
 //| "Matrix";
 
 export interface ISession {
-  message_app: MessageApp;
-  chatId: number;
-  language_code: string;
-  user: IUser | null | undefined;
+    message_app: MessageApp;
+    chatId: number;
+    language_code: string;
+    user: IUser | null | undefined;
 
-  loadUser: () => Promise<void>;
-  createUser: () => Promise<void>;
-  sendMessage: (msg: string, sendKeyboard: boolean) => Promise<void>;
-  sendTypingAction: () => Promise<void>;
-  log: (args: { event: string; data?: any }) => Promise<void>;
+    loadUser: () => Promise<void>;
+    createUser: () => Promise<void>;
+    sendMessage: (msg: string, sendKeyboard: boolean) => Promise<void>;
+    sendTypingAction: () => Promise<void>;
+    log: (args: { event: string; data?: any }) => Promise<void>;
 }
 
-export type IUser = {
+// fields are undefined for users created before implementation
+export interface IUser {
   _id: number;
-  message_app: MessageApp;
+  messageApp?: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
-  followedPeople: Array<{
+  lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
+  followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
-  }>;
-  followedFunctions: Array<string>;
+  }[];
+  followedNames?: string[];
+  followedOrganisations?: {
+    wikidataId: WikidataId;
+    lastUpdate: Date;
+  }[];
+  followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
-  countDocuments: () => any;
-};
+  countDocuments: () => number;
+
+  updateInteractionMetrics: () => Promise<void>;
+
+  checkFollowedPeople: (arg0: IPeople) => boolean;
+  checkFollowedFunction: (arg0: FunctionTags) => boolean;
+  addFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  addFollowedPeopleBulk: (arg0: IPeople[]) => Promise<boolean>;
+  addFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
+  removeFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
+  followsNothing: () => boolean;
+}
+
+export interface IOrganisation {
+    nom: string;
+    wikidataId: WikidataId;
+    save: () => Promise<IOrganisation>;
+    countDocuments: () => number;
+}
+
+export interface OrganisationModel extends Model<IOrganisation> {
+    firstOrCreate: (args: {
+        nom: string;
+        wikidataId: WikidataId;
+    }) => Promise<IOrganisation>;
+}
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
@@ -49,18 +85,33 @@ export type IBlocked = {
   chatId: string;
 };
 
-export type IPeople = {
+export interface IPeople {
   _id: Types.ObjectId;
   nom: string;
   prenom: string;
-  lastKnownPosition: Object;
+  lastKnownPosition: JORFSearchItem;
   save: () => Promise<IPeople>;
-  countDocuments: () => any;
-};
+  countDocuments: () => number;
+}
 
 export interface PeopleModel extends Model<IPeople> {
-  firstOrCreate: (people: any) => Promise<IPeople>;
+  firstOrCreate: (people: {
+    nom: string;
+    prenom: string;
+    lastKnownPosition: JORFSearchItem;
+  }) => Promise<IPeople>;
 }
+
+export type SourceName =
+  | "JORF"
+  | "BOMI"
+  | "BOCNRS"
+  | "BOSanté"
+  | "BODD"
+  | "BOEN"
+  | "BOMJ"
+  | "BOESR"
+  | "BOAC";
 
 export type TypeOrdre =
   | "nomination"
@@ -77,4 +128,29 @@ export type TypeOrdre =
   | "renouvellement"
   | "reconduction"
   | "élection"
-  | "admissibilite";
+  | "admissibilité" // also exists in JORF as "admissibilite"
+  | "charge"
+  | "intégration"
+  | "composition"
+  | "habilitation"
+  | "titularisation"
+  | "recrutement"
+  | "disponibilité"
+  | "autorisation"
+  | "mise à disposition"
+  | "décharge"
+  | "diplome"
+  | "mutation"
+  | "décoration"
+  | "élévation"
+  | "transfert"
+  | "conféré"
+  | "citation"
+  | "démission"
+  | "attribution"
+  | "reprise de fonctions"
+  | "bourse"
+  | "fin délégation signature"
+  | "prime";
+
+export type WikidataId = string;

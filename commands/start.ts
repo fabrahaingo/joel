@@ -1,3 +1,7 @@
+import User from "../models/User";
+import { startKeyboard } from "../utils/keyboards";
+import umami from "../utils/umami";
+import TelegramBot from "node-telegram-bot-api";
 import { ISession } from "../types";
 
  export async function commandStart(session: ISession): Promise<void> {

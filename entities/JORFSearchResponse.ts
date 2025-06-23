@@ -1,131 +1,232 @@
-export type JORFSearchResponse = {
-  [key: string]: string | undefined | { nom: string }[];
+import { SourceName, TypeOrdre, WikidataId } from "../types";
 
-  organisations: {
+export type JORFSearchResponse = null | string | JORFSearchRawItem[];
+
+interface OrganisationRaw{
+  nom?: string;
+  wikidata_id?: WikidataId;
+  organisation_militaire?: WikidataId;
+  ecole?: WikidataId;
+  etablissement_enseignement_superieur?: WikidataId;
+  cour_appel?: WikidataId;
+  autorite_administrative_independante?: WikidataId;
+  academie?: WikidataId;
+  tribunal?: WikidataId;
+  tribunal_grande_instance?: WikidataId;
+  tribunal_instance?: WikidataId;
+}
+
+interface Organisation extends OrganisationRaw{
+  nom: string;
+}
+
+// Minimal expected record from JORFSearch
+interface JORFSearchRawItem {
+  source_date?: string;
+  source_id?: string;
+  source_name?: string;
+  type_ordre?: string;
+  nom?: string;
+  prenom?: string;
+  organisations?: OrganisationRaw[];
+  remplacement?: {
+    sexe?: "F" | "M";
+    nom?: string;
+    prenom?: string;
+    nom_alternatif?: string;
+    autres_prenoms?: string;
+  };
+}
+
+// Record after parsing and data cleaning
+export interface JORFSearchItem extends JORFSearchRawItem {
+  organisations: Organisation[];
+  remplacement?: {
+    sexe?: "F" | "M";
     nom: string;
-  }[];
+    prenom: string;
+    nom_alternatif?: string;
+    autres_prenoms?: string;
+  };
   source_date: string;
   source_id: string;
-  source_name: string;
-  type_ordre: string;
-  sexe: string;
+  source_name: SourceName;
+  type_ordre: TypeOrdre;
+
+  sexe?: "F" | "M";
   nom: string;
   prenom: string;
-
-  suppleant?: string;
-  parlement?: string;
-  date_debut?: string;
-  cabinet?: string;
-  cabinet_ministeriel?: string;
-  grade?: string;
-  conseil_administration?: string;
-  commissaire_gouvernement?: string;
-  remplacement?: string;
-  ecole?: string;
-  magistrat?: string;
-  tribunal?: string;
-  tribunal_premiere_instance?: string;
-  nom_alternatif?: string;
-  duree?: string;
-  tribunal_judiciaire?: string;
-  date_fin?: string;
-  a_sa_demande?: string;
-  depart_retraite?: string;
-  autorisation_exercice_medecin?: string;
   date_naissance?: string;
   lieu_naissance?: string;
+  nom_alternatif?: string;
   autres_prenoms?: string;
-  inspecteur_general?: string;
-  autorite_delegation?: string;
-  commission_parlementaire?: string;
-  cour_appel?: string;
-  professeur?: string;
-  professeur_discipline?: string;
-  ordre_merite?: string;
-  annees_service?: string;
-  armee_grade?: string;
-  personnalite_qualifiee?: string;
-  corps?: string;
-  secretaire_affaires_etrangeres?: string;
-  notaire?: string;
-  notaire_residence?: string;
-  notaire_residence_departement_code?: string;
-  notaire_suppression_office?: string;
-  commissaire_de_justice?: string;
-  commissaire_de_justice_residence?: string;
-  commissaire_de_justice_residence_departement_code?: string;
-  greffier?: string;
-  greffier_residence?: string;
-  greffier_residence_departement_code?: string;
-  tribunal_commerce?: string;
-  conseil_des_ministres?: string;
-  president?: string;
-  "sous-prefet"?: string;
-  "sous-prefet_sous-prefecture"?: string;
-  "sous-prefecture_departement_code"?: string;
-  secretaire_general_de_prefecture?: string;
-  visa_emploi_superieur?: string;
-  prefet?: string;
-  delegation_parlementaire?: string;
-  tribunal_pour_enfants?: string;
-  conge_parental?: string;
-  cour_comptes?: string;
-  direction_hopital?: string;
-  membre_gouvernement?: string;
-  secretaire_etat?: string;
-  ministre?: string;
-  tribunal_administratif?: string;
-  ambassadeur?: string;
+
   ambassadeur_pays?: string;
-  cour_cassation?: string;
-  directeur_academie?: string;
-  renouvellement?: string;
-  avocat_aux_conseils?: string;
-  tribunal_proximite?: string;
+  annees_bonification?: string;
+  annees_service?: string;
+  armee?: string;
+  armee_grade?: string;
+  armee_grade_precedent?: string;
+  autorisation_exercice_medecin?: string;
+  autorite_delegation?: string;
+  cabinet?: string;
+  centre_detention?: string;
+  commissaire_de_justice_residence?: string;
+  commissaire_de_justice_residence_departement_code?: number;
+  commission_parlementaire?: string;
+  conge_parental?: string;
   consul?: string;
+  corps?: string;
   cour_administrative_appel?: string;
-  prefet_region?: string;
-  prefet_departement?: string;
-  prefet_departement_code?: string;
-  professeur_section?: string;
-  legion_honneur?: string;
-  nomme_par?: string;
+  cour_appel?: string;
+  date_debut?: string;
+  date_fin?: string;
+  delegation_parlementaire?: string;
+  depart_retraite?: string;
+  duree?: string;
+  ecole?: string;
+  eleve_ena?: string;
+  eleve_ens?: string;
+  eleve_ira?: string;
+  grade?: string;
   grade_precedent?: string;
   grade_precedent_date?: string;
-  citation?: string;
-  armee?: string;
-  armee_grade_precedent?: string;
-  eleve_ens?: string;
-  eleve_ena?: string;
-  eleve_ira?: string;
-  eleve_mines?: string;
-  eleve_ponts_et_chaussees?: string;
-  visa_grands_etablissements?: string;
-  medaille_militaire?: string;
-  conseiller_affaire_etrangeres?: string;
-  concours?: string;
-  annees_bonification?: string;
-  haut_fonctionnaire_defense_securite?: string;
-  recteur_academie?: string;
-  ambassadeur_thematique?: string;
-  notaire_creation_office?: string;
-  recteur_region_academique?: string;
-  commissaire_de_justice_creation_office?: string;
-  ordre_nation?: string;
-  medaille_reconnaissance_terrorisme?: string;
-  eleve_polytechnique?: string;
-  huissier?: string;
+  greffier_residence?: string;
+  greffier_residence_departement_code?: number;
   huissier_residence?: string;
-  huissier_residence_departement_code?: string;
-  maitre_de_conference?: string;
-  medaille_securite_interieure?: string;
-  nigendmedaille_securite_interieure?: string;
-  nigend?: string;
-  numero_livret_de_solde?: string;
-  huissier_creation_office?: string;
+  huissier_residence_departement_code?: number;
+  inspecteur_general?: string;
+  magistrat?: string;
   medaille_agrafe?: string;
+  medaille_militaire?: string;
+  medaille_securite_interieure?: string;
+  ministre?: string;
+  nigend?: string;
+  nigendmedaille_securite_interieure?: string;
+  nomme_par?: string;
+  notaire_residence?: string;
+  notaire_residence_departement_code?: number;
+  numero_livret_de_solde?: string;
+  ordre_nation?: boolean;
+  parlement?: string;
+  prefet_departement?: string;
+  prefet_departement_code?: number;
+  prefet_region?: string;
+  professeur?: string;
+  professeur_discipline?: string;
+  professeur_section?: string;
+  recteur_academie?: string;
+  recteur_region_academique?: string;
+  secretaire_affaires_etrangeres?: string;
+  secretaire_etat?: string;
+  "sous-prefecture_departement_code"?: number;
+  "sous-prefet_sous-prefecture"?: string;
+  tribunal?: string;
+  tribunal_administratif?: string;
+  tribunal_commerce?: string;
   tribunal_instance?: string;
-  tribunal_grande_instance?: string;
-  centre_detention?: string;
-  notaire_tranfert_office?: string;
-};
+  tribunal_judiciaire?: string;
+  tribunal_pour_enfants?: string;
+  tribunal_premiere_instance?: string;
+  tribunal_proximite?: string;
+
+  a_sa_demande?: boolean;
+  ambassadeur?: boolean;
+  ambassadeur_thematique?: boolean;
+  avocat_aux_conseils?: boolean;
+  cabinet_ministeriel?: boolean;
+  citation?: boolean;
+  commissaire_de_justice?: boolean;
+  commissaire_de_justice_creation_office?: boolean;
+  commissaire_gouvernement?: boolean;
+  concours?: boolean;
+  conseil_administration?: boolean;
+  conseil_des_ministres?: boolean;
+  conseiller_affaire_etrangeres?: boolean;
+  cour_cassation?: boolean;
+  cour_comptes?: boolean;
+  directeur_academie?: boolean;
+  direction_hopital?: boolean;
+  eleve_mines?: boolean;
+  eleve_polytechnique?: boolean;
+  eleve_ponts_et_chaussees?: boolean;
+  greffier?: boolean;
+  haut_fonctionnaire_defense_securite?: boolean;
+  huissier?: boolean;
+  huissier_creation_office?: boolean;
+  legion_honneur?: boolean;
+  maitre_de_conference?: boolean;
+  medaille_reconnaissance_terrorisme?: boolean;
+  membre_gouvernement?: boolean;
+  notaire?: boolean;
+  notaire_creation_office?: boolean;
+  notaire_suppression_office?: boolean;
+  notaire_tranfert_office?: boolean;
+  ordre_merite?: boolean;
+  personnalite_qualifiee?: boolean;
+  prefet?: boolean;
+  president?: boolean;
+  renouvellement?: boolean;
+  secretaire_general_de_prefecture?: boolean;
+  "sous-prefet"?: boolean;
+  suppleant?: boolean;
+  tribunal_grande_instance?: boolean;
+  visa_emploi_superieur?: boolean;
+  visa_grands_etablissements?: boolean;
+}
+
+export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchItem[] {
+  return jorf_items_raw.reduce(
+      (clean_items: JORFSearchItem[], item_raw)=> {
+
+        // drop records where any of the required fields is undefined
+        if (item_raw.source_date === undefined ||
+            item_raw.source_id === undefined ||
+            item_raw.source_name === undefined ||
+            item_raw.type_ordre === undefined ||
+            item_raw.nom === undefined ||
+            item_raw.prenom === undefined) {
+            return clean_items;
+        }
+
+        if (item_raw.organisations === undefined)
+          item_raw.organisations=[];
+
+        // Drop organisations if name is missing
+        const clean_organisations = item_raw.organisations.filter(
+            org_raw => org_raw.nom !== undefined
+        ) as Organisation[];
+
+        // Drop remplacement if name is missing
+        if (item_raw?.remplacement?.nom === undefined || item_raw?.remplacement?.prenom === undefined){
+          item_raw.remplacement = undefined;
+        }
+
+        // Replace potential mispelling some type_ordre
+        switch (item_raw?.type_ordre) {
+          case "admissibilite":
+            item_raw.type_ordre = "admissibilité";
+            break
+          case "conférés":
+            item_raw.type_ordre = "conféré";
+            break
+        }
+
+        const clean_item: JORFSearchItem = {...item_raw, organisations: clean_organisations} as JORFSearchItem;
+
+        // extend FunctionTag eleve_ena to include INSP students
+        if (clean_item.organisations.length > 0 &&
+            clean_item.organisations[0]?.wikidata_id === "Q109039648" &&
+            clean_item.type_ordre === "nomination" &&
+            clean_item?.date_debut !== undefined) {
+          const year = parseInt(clean_item.date_debut.slice(0,4))
+          if (year != -1) {
+            clean_item.eleve_ena=`${String(year)}-${String(year+2)}`;
+          }
+        }
+
+        clean_items.push(clean_item);
+        return clean_items;
+      },
+      []);
+}
