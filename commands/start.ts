@@ -8,7 +8,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
   const chatId = msg.chat.id;
   await umami.log({ event: "/start" });
   try {
-    bot.sendChatAction(chatId, "typing");
+    await bot.sendChatAction(chatId, "typing");
 
     const tgUser: TelegramBot.User | undefined = msg.from;
     if (tgUser === undefined) return;
