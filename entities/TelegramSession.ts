@@ -23,6 +23,7 @@ export class TelegramSession implements ISession {
     language_code: string;
     chatId: number;
     user: IUser | null | undefined = undefined;
+    log = umami.log;
 
     constructor(telegramBot: TelegramBot, chatId: number, language_code: string) {
         this.telegramBot = telegramBot;

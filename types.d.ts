@@ -2,6 +2,7 @@ import { Model, Types } from "mongoose";
 import { JORFSearchItem } from "./entities/JORFSearchResponse";
 import { FunctionTags } from "./entities/FunctionTags";
 import TelegramBot from "node-telegram-bot-api";
+import umami from "./utils/umami";
 
 export type CommandType = {
   regex: RegExp;
@@ -25,7 +26,7 @@ export interface ISession {
     createUser: () => Promise<void>;
     sendMessage: (msg: string, sendKeyboard: boolean) => Promise<void>;
     sendTypingAction: () => Promise<void>;
-    log: (args: { event: string; data?: any }) => Promise<void>;
+    log: typeof umami.log;
 }
 
 // fields are undefined for users created before implementation
