@@ -59,5 +59,7 @@ export type UmamiEvent =
     | "/person-updated"
     | "/person-added"
     | "/daily-active-user"
+    | "/weekly-active-user"
+    | "/monthly-active-user"
 
 
