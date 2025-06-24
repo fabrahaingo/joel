@@ -52,6 +52,7 @@ export type UmamiEvent =
     | "/ena"
     | "/ena-list"
     | "/follow-function"
+    | "/follow-organisation"
     | "/unfollow"
     | "/user-blocked-joel"
     | "/user-deletion-self"
