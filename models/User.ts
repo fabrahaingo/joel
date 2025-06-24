@@ -87,7 +87,7 @@ UserSchema.static(
   "findOrCreate",
   async function (session: ISession): Promise<IUser> {
     const user: IUser | null = await this.findOne({
-        message_app: session.message_app,
+        messageApp: session.message_app,
         chatId : session.chatId
     });
     if (args.tgUser.is_bot || isNaN(args.chatId)) return null;
@@ -96,7 +96,7 @@ UserSchema.static(
     if (user === null) {
       await umami.log({ event: "/new-user" });
       const newUser = new this({
-          message_app: session.message_app,
+          messageApp: session.message_app,
           chatId : session.chatId,
           language_code: session.language_code,
       });

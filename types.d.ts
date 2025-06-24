@@ -16,7 +16,7 @@ export type MessageApp =
 //| "Matrix";
 
 export interface ISession {
-    message_app: MessageApp;
+    messageApp: MessageApp;
     chatId: number;
     language_code: string;
     user: IUser | null | undefined;

@@ -18,7 +18,7 @@ export const startKeyboard: TelegramBot.SendMessageOptions = {
 };
 
 export class TelegramSession implements ISession {
-    message_app = "Telegram" as MessageApp;
+    messageApp = "Telegram" as MessageApp;
     telegramBot: TelegramBot;
     language_code: string;
     chatId: number;
@@ -32,7 +32,7 @@ export class TelegramSession implements ISession {
 
     // try to fetch user from db
     async loadUser() {
-        this.user = await User.findOne({ chatId: this.chatId, message_app: this.message_app });
+        this.user = await User.findOne({ chatId: this.chatId, messageApp: this.message_app });
         if (this.user != null) { // If user is known, we update the session language code
             this.language_code=this.user.language_code;
         }
