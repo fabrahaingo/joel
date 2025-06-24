@@ -90,8 +90,6 @@ UserSchema.static(
         messageApp: session.message_app,
         chatId : session.chatId
     });
-    if (args.tgUser.is_bot || isNaN(args.chatId)) return null;
-
 
     if (user === null) {
       await umami.log({ event: "/new-user" });
