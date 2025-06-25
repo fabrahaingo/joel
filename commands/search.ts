@@ -53,9 +53,9 @@ export const searchCommand = async (session: ISession, _msg: never): Promise<voi
 export const fullHistoryCommand  = async (session: ISession, msg: string): Promise<void> => {
     await session.log({ event: "/history" });
 
-    const person = msg.split(" ").slice(2).join(" ");
+    const personName = msg.split(" ").slice(2).join(" ");
 
-    if (person === undefined || person.length == 0) {
+    if (personName.length == 0) {
       await session.sendMessage(
         "Saisie incorrecte. Veuillez réessayer.",
           [
@@ -65,7 +65,7 @@ export const fullHistoryCommand  = async (session: ISession, msg: string): Promi
       );
       return;
     }
-    await searchPersonHistory(session, person, "full");
+    await searchPersonHistory(session, personName, "full");
   };
 
 async function searchPersonHistory(
@@ -154,7 +154,7 @@ export const followCommand= async (session: ISession, msg: string): Promise<void
     try {
         const personName = msg.split(" ").slice(1).join(" ");
 
-        if (personName === undefined || personName.length == 0) {
+        if (personName.length == 0) {
           await session.sendMessage(
             "Saisie incorrecte. Veuillez réessayer.",
             mainMenuKeyboard,
