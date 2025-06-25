@@ -94,16 +94,21 @@ export async function callJORFSearchOrganisation(wikiId: WikidataId) {
 }
 
 async function JORFSearchCallPublications(currentDay: string) {
-    return await axios
-        .get<JORFSearchResponseMeta>(
-            `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`,
-        )
-        .then((res) => {
-            if (res.data === null || typeof res.data === "string") {
-                return [];
-            }
-            return cleanJORFPublication(res.data);
-        });
+    try {
+        return await axios
+            .get<JORFSearchResponseMeta>(
+                `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`,
+            )
+            .then((res) => {
+                if (res.data === null || typeof res.data === "string") {
+                    return [];
+                }
+                return cleanJORFPublication(res.data);
+            });
+        } catch (error) {
+            console.log(error);
+        }
+    return [];
 }
 
 // Format a string to match the expected search format on JORFSearch: first letter capitalized and no accent
