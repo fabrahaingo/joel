@@ -1,12 +1,10 @@
-import TelegramBot from "node-telegram-bot-api";
-import { sendLongText } from "../utils/sendLongText";
-import umami from "../utils/umami";
 import { HelpMessages } from "../entities/BotMessages";
+import { ISession } from "../types";
+import { mainMenuKeyboard } from "../utils/keyboards";
 
-module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
-  const chatId = msg.chat.id;
-  await umami.log({ event: "/help" });
-  await bot.sendChatAction(chatId, "typing");
-  const helpText = HelpMessages.DEFAULT.replace("{chatId}", chatId.toString());
-  await sendLongText(bot, chatId, helpText);
+export const helpCommand = async (session: ISession, _msg: never): Promise<void> => {
+  await session.log({ event: "/help" });
+  await session.sendTypingAction();
+  const helpText = HelpMessages.DEFAULT.replace("{chatId}", session.chatId.toString());
+  await session.sendMessage(helpText, mainMenuKeyboard);
 };

@@ -1,38 +1,83 @@
 import { Model, Types } from "mongoose";
 import { JORFSearchItem } from "./entities/JORFSearchResponse";
 import { FunctionTags } from "./entities/FunctionTags";
-import TelegramBot from "node-telegram-bot-api";
+import umami from "./utils/umami";
 
 export type CommandType = {
   regex: RegExp;
-  action: (bot: TelegramBot) => (msg: TelegramBot.Message) => {
-    default: void;
-  };
-}[];
+  action: (session: ISession, msg?: string) => Promise<void>;
+};
 
+export type MessageApp =
+  | "Telegram";
+//| "WhatsApp";
+//| "Matrix";
+
+export interface ISession {
+    messageApp: MessageApp;
+    chatId: number;
+    language_code: string;
+    user: IUser | null | undefined;
+    isReply: boolean;
+
+    loadUser: () => Promise<void>;
+    createUser: () => Promise<void>;
+    sendMessage: (msg: string, keyboard?: { text: string }[][]) => Promise<void>;
+    sendTypingAction: () => Promise<void>;
+    log: typeof umami.log;
+}
+
+// fields are undefined for users created before implementation
 export interface IUser {
   _id: number;
+  messageApp?: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
   lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
-  followedNames: string[] | undefined; // undefined for user created before it was added
+  followedNames?: string[];
+  followedOrganisations?: {
+    wikidataId: WikidataId;
+    lastUpdate: Date;
+  }[];
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
 
-  saveDailyInteraction: () => Promise<void>;
+  updateInteractionMetrics: () => Promise<void>;
+
+  checkFollowedPeople: (arg0: IPeople) => boolean;
+  checkFollowedFunction: (arg0: FunctionTags) => boolean;
+  addFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  addFollowedPeopleBulk: (arg0: IPeople[]) => Promise<boolean>;
+  addFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
+  removeFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
+  followsNothing: () => boolean;
+}
+
+export interface IOrganisation {
+    nom: string;
+    wikidataId: WikidataId;
+    save: () => Promise<IOrganisation>;
+    countDocuments: () => number;
+}
+
+export interface OrganisationModel extends Model<IOrganisation> {
+    firstOrCreate: (args: {
+        nom: string;
+        wikidataId: WikidataId;
+    }) => Promise<IOrganisation>;
 }
 
 export interface UserModel extends Model<IUser> {
-  firstOrCreate: (args: {
-    tgUser: TelegramBot.User | undefined;
-    chatId: number;
-  }) => Promise<IUser>;
+  findOrCreate: (session: ISession) => Promise<IUser>;
 }
 
 export type IBlocked = {
@@ -107,4 +152,4 @@ export type TypeOrdre =
   | "fin délégation signature"
   | "prime";
 
-export type WikiDataId = string;
+export type WikidataId = string;
