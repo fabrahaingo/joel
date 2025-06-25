@@ -1,12 +1,11 @@
 import { Model, Types } from "mongoose";
 import { JORFSearchItem } from "./entities/JORFSearchResponse";
 import { FunctionTags } from "./entities/FunctionTags";
-import TelegramBot from "node-telegram-bot-api";
 import umami from "./utils/umami";
 
 export type CommandType = {
   regex: RegExp;
-  action: (bot: TelegramBot) => (msg: TelegramBot.Message) => {
+  action: (session: ISession, msg?: string) => {
     default: void;
   };
 };

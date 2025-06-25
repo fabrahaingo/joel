@@ -8,6 +8,7 @@ import { mainMenuKeyboard } from "../utils/keyboards";
 export class TelegramSession implements ISession {
     messageApp = "Telegram" as MessageApp;
     telegramBot: TelegramBot;
+    telegramMessage: TelegramBot.Message | undefined = undefined;
     language_code: string;
     chatId: number;
     user: IUser | null | undefined = undefined;
@@ -21,8 +22,8 @@ export class TelegramSession implements ISession {
 
     // try to fetch user from db
     async loadUser() {
-        this.user = await User.findOne({ chatId: this.chatId, messageApp: this.message_app });
-        if (this.user != null) { // If user is known, we update the session language code
+        this.user = await User.findOne({ chatId: this.chatId, messageApp: this.messageApp });
+        if (this.user != null) { // If the user is known, we update the session language code
             this.language_code=this.user.language_code;
         }
     }
