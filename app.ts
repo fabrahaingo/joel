@@ -67,7 +67,7 @@ const commands: CommandType[] = [
     action: statsCommand,
   },
   {
-    regex: /\/followOrganisation|\/followOrganization/i,
+    regex: /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization/i,
     action: followOrganisationCommand,
   },
   {
