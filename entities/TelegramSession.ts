@@ -5,6 +5,15 @@ import umami from "../utils/umami";
 import { splitText } from "../utils/text.utils";
 import { mainMenuKeyboard } from "../utils/keyboards";
 
+export const telegramMessageOption : TelegramBot.SendMessageOptions = {
+    parse_mode: "Markdown",
+    disable_web_page_preview: true,
+    reply_markup: {
+        selective: true,
+        resize_keyboard: true,
+    },
+};
+
 export class TelegramSession implements ISession {
     messageApp = "Telegram" as MessageApp;
     telegramBot: TelegramBot;
@@ -35,28 +44,17 @@ export class TelegramSession implements ISession {
     }
 
     async sendMessage(msg: string, keyboard?: { text: string }[][]) {
+        let options = telegramMessageOption;
         if (keyboard != null) {
-            if (msg.length > 3000) {
-
-                return;
+            options = {
+                ...telegramMessageOption, reply_markup: {...(telegramMessageOption.reply_markup), keyboard: keyboard}
             }
-            await this.telegramBot.sendMessage(this.chatId, msg, {
-                parse_mode: "Markdown",
-                disable_web_page_preview: true,
-                reply_markup: {
-                    selective: true,
-                    resize_keyboard: true,
-                    keyboard: keyboard,
-                },
-            });
-            return;
         }
-
         if (msg.length > 3000) {
             await this.sendLongMessage(msg,keyboard);
+            return;
         }
-
-        await this.telegramBot.sendMessage(this.chatId, msg);
+        await this.telegramBot.sendMessage(this.chatId, msg, options);
     }
 
     async sendTypingAction(){
@@ -67,13 +65,19 @@ export class TelegramSession implements ISession {
         formattedData: string,
         keyboard?: { text: string }[][]
     ): Promise<void> {
+        let optionsWithKeyboard = telegramMessageOption;
+        if (keyboard != null) {
+            optionsWithKeyboard = {
+                ...telegramMessageOption, reply_markup: {...(telegramMessageOption.reply_markup), keyboard: keyboard}
+            }
+        }
         const mArr = splitText(formattedData, 3000);
 
         for (let i = 0; i < mArr.length; i++) {
             if (i == mArr.length-1 && keyboard !== undefined) {
-                await this.sendMessage(mArr[i], keyboard);
+                await this.sendMessage(mArr[i], optionsWithKeyboard);
             } else {
-                await this.sendMessage(mArr[i]);
+                await this.sendMessage(mArr[i], telegramMessageOption);
             }
         }
     }
@@ -87,7 +91,7 @@ export async function extractTelegramSession(session: ISession, userFacingError?
         }
         return undefined;
     }
-    if (session !instanceof TelegramSession){
+    if (!(session instanceof TelegramSession)){
         console.log("Session messageApp is Telegram, but session is not a TelegramSession");
         return undefined;
     }
