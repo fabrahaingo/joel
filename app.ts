@@ -95,7 +95,7 @@ const commands: CommandType[] = [
             await tgSession.loadUser();
             tgSession.isReply = tgMsg.reply_to_message !== undefined;
 
-            if (tgSession.user !== null) await tgSession.user.updateInteractionMetrics();
+            if (tgSession.user != null) await tgSession.user.updateInteractionMetrics();
 
           // Process user message
           await command.action(tgSession, tgMsg.text)
