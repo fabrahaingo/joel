@@ -98,7 +98,7 @@ const commands: CommandType[] = [
             if (tgSession.user !== null) await tgSession.user.updateInteractionMetrics();
 
           // Process user message
-          command.action(tgSession, tgMsg.text)
+          await command.action(tgSession, tgMsg.text)
         })
         ;
   });

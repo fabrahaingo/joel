@@ -5,9 +5,7 @@ import umami from "./utils/umami";
 
 export type CommandType = {
   regex: RegExp;
-  action: (session: ISession, msg?: string) => {
-    default: void;
-  };
+  action: (session: ISession, msg?: string) => Promise<void>;
 };
 
 export type MessageApp =
