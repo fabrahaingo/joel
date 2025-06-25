@@ -2,10 +2,10 @@ import { Model, Types } from "mongoose.js";
 import { FunctionTags } from "./entities/FunctionTags.js";
 import umami from "./utils/umami.js";
 
-export type CommandType = {
+export interface CommandType {
   regex: RegExp;
   action: (session: ISession, msg?: string) => Promise<void>;
-};
+}
 
 export type MessageApp =
   | "Telegram";
@@ -79,9 +79,9 @@ export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
 }
 
-export type IBlocked = {
+export interface IBlocked {
   chatId: string;
-};
+}
 
 export interface IPeople {
   _id: Types.ObjectId;
