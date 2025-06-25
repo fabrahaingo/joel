@@ -26,9 +26,9 @@
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.1",
-    "typescript": "5.8.2",
+    "typescript": "5.8.3",
     "typescript-eslint": "^8.19.1",
-    "prettier": "3.5.3",
-    "@types/node-telegram-bot-api": "0.64.8"
+    "prettier": "3.6.1",
+    "@types/node-telegram-bot-api": "0.64.9"
   }
 }
