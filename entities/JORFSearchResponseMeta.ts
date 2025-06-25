@@ -68,7 +68,7 @@ export function cleanJORFPublication(
       ) {
         return clean_publications;
       }
-      // Drop remplacement if name is missing
+
       if (publication_raw.tags === undefined) {
         publication_raw.tags = {};
       }
