@@ -1,13 +1,10 @@
-import { startKeyboard } from "../utils/keyboards";
 import User from "../models/User";
-import { sendLongText } from "../utils/sendLongText";
-import umami from "../utils/umami";
 import { FunctionTags } from "../entities/FunctionTags";
-import TelegramBot, {
-  ChatId,
-  Message,
-  SendMessageOptions,
-} from "node-telegram-bot-api";
+import TelegramBot from "node-telegram-bot-api";
+import { mainMenuKeyboard } from "../utils/keyboards";
+import { ISession } from "../types";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
+import { parseIntAnswers } from "../utils/text.utils";
 
 // build message string along with its index
 function buildSuggestions() {
@@ -21,88 +18,93 @@ function buildSuggestions() {
   return suggestion;
 }
 
-async function isWrongAnswer(
-  chatId: ChatId,
-  bot: {
-    sendMessage: (
-      arg0: ChatId,
-      arg1: string,
-      arg2: SendMessageOptions
-    ) => Promise<Message>;
-  },
-  answer: string | undefined
-) {
-  if (
-    isNaN(Number(answer)) ||
-    Number(answer) > Object.keys(FunctionTags).length ||
-    Number(answer) < 1
-  ) {
-    await bot.sendMessage(
-      chatId,
-      "La réponse donnée n'est pas au format numérique. Veuillez réessayer.",
-      startKeyboard
-    );
-    return true;
-  }
-  return false;
-}
-
-module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
-  const chatId = msg.chat.id;
-  await umami.log({ event: "/follow-function" });
+export const followFunctionCommand = async (session: ISession, _msg: string): Promise<void> => {
+  await session.log({ event: "/follow-function" });
   try {
-    await bot.sendChatAction(chatId, "typing");
-    await sendLongText(
-      bot,
-      chatId,
+
+    if (session.user == null) {
+      await session.sendMessage(
+          `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`,
+          mainMenuKeyboard);
+      return;
+    }
+
+    const tgSession: TelegramSession | undefined = await extractTelegramSession(session, true);
+    if (tgSession == null) return;
+
+    const tgBot = tgSession.telegramBot;
+
+    await session.sendTypingAction();
+    await session.sendMessage(
       `Voici la liste des fonctions que vous pouvez suivre:\n\n${buildSuggestions()}`
     );
-    const question = await bot.sendMessage(
-      chatId,
-      "Entrez le numéro de la fonction que vous souhaitez suivre:",
+    const question = await tgBot.sendMessage(
+      session.chatId,
+      "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\nExemple: 1 4 7",
       {
-        reply_markup: {
-          force_reply: true,
-        },
-      }
+          reply_markup: {
+              force_reply: true,
+          },
+      },
     );
-    bot.onReplyToMessage(
-      chatId,
+
+    const functionAll = Object.values(FunctionTags);
+
+    tgBot.onReplyToMessage(
+      session.chatId,
       question.message_id,
       async (msg: TelegramBot.Message) => {
-        if (await isWrongAnswer(chatId, bot, msg.text)) return;
-        if (msg.text === undefined) return;
-
-        let answer = parseInt(msg.text);
-        const functionToFollow = Object.values(FunctionTags)[answer - 1];
-        const functionTag = Object.keys(FunctionTags)[
-          answer - 1
-        ] as keyof typeof FunctionTags;
-
-          const tgUser: TelegramBot.User | undefined = msg.from;
-          if (tgUser === undefined) return;
-          const user = await User.firstOrCreate({
-              tgUser,
-              chatId,
-              messageApp: "Telegram"
-          });
-          if (user === null) return;
-
-        if (await user.addFollowedFunction(functionToFollow)) {
-            await new Promise((resolve) => setTimeout(resolve, 300));
-            await bot.sendMessage(
-                chatId,
-                `Vous suivez maintenant la fonction *${functionTag}* ✅`,
-                startKeyboard
-            );
-        } else {
-            await new Promise((resolve) => setTimeout(resolve, 300));
-            await bot.sendMessage(
-                chatId,
-                `Vous suivez déjà la fonction *${functionTag}* ✅`,
-                startKeyboard
-            );
+        let answers = parseIntAnswers(msg.text, functionAll.length);
+        if (answers === null || answers.length == 0) {
+          await session.sendMessage(
+              `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionAll.length)}.
+        👎 Veuillez essayer de nouveau la commande /followFunction.`,
+              mainMenuKeyboard,
+          );
+          return;
         }
+        await session.sendTypingAction();
+
+        const user = await User.findOrCreate(session);
+
+        const addedFunctions: (keyof typeof FunctionTags)[] = [];
+        const alreadyFollowedFunctions: (keyof typeof FunctionTags)[] = [];
+
+        for (const answer of answers) {
+            const functionToFollow = Object.values(FunctionTags)[answer - 1];
+            const functionTag = Object.keys(FunctionTags)[
+            answer - 1
+                ] as keyof typeof FunctionTags;
+
+            if (await user.addFollowedFunction(functionToFollow)) {
+                addedFunctions.push(functionTag);
+            } else {
+                alreadyFollowedFunctions.push(functionTag);
+            }
+        }
+
+        let text="";
+
+        if (addedFunctions.length == 1 ) {
+            text += `Vous suivez maintenant la fonction *${addedFunctions[0]}* ✅`;
+        } else if (addedFunctions.length > 1) {
+            text += `Vous suivez maintenant les fonctions: ✅\n${addedFunctions
+                .map((fct) => `\n   - *${fct}*`)
+                .join("\n")}`;
+        }
+
+        if (addedFunctions.length > 0 && alreadyFollowedFunctions.length > 0)  text += "\n\n";
+
+        if (alreadyFollowedFunctions.length == 1 ) {
+            text += `Vous suivez déjà la fonction *${alreadyFollowedFunctions[0]}* ✅`;
+        } else if (alreadyFollowedFunctions.length > 1) {
+            text += `Vous suivez déjà les fonctions: ✅\n${alreadyFollowedFunctions
+                .map((fct) => `\n   - *${fct}*`)
+                .join("\n")}`;
+        }
+
+        await session.sendMessage(text, mainMenuKeyboard);
+
       }
     );
   } catch (error) {

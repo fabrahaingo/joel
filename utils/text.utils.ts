@@ -1,5 +1,3 @@
-import TelegramBot from "node-telegram-bot-api";
-import { startKeyboard } from "./keyboards";
 
 export function splitText(text: string, max: number): string[] {
   const chunks: string[] = [];
@@ -27,19 +25,16 @@ export function splitText(text: string, max: number): string[] {
   return chunks;
 }
 
-export async function sendLongText(
-  bot: TelegramBot,
-  chatId: any,
-  formattedData: string,
-  replyOptions?: TelegramBot.SendMessageOptions
-): Promise<void> {
-  const mArr = splitText(formattedData, 3000);
+export function parseIntAnswers(answer: string | undefined, maxAllowedValue: number) {
+  if (answer === undefined) return null;
 
-  for (let i = 0; i < mArr.length; i++) {
-    if (i == mArr.length-1 && replyOptions !== undefined) {
-      await bot.sendMessage(chatId, mArr[i], replyOptions);
-    } else {
-      await bot.sendMessage(chatId, mArr[i], startKeyboard);
-    }
+  const answers = answer
+      .split(/[ ,\-;:]/)
+      .map((s) => parseInt(s))
+      .filter((i) => i && !isNaN(i) && i <= maxAllowedValue);
+
+  if (answers.length == 0) {
+    return null;
   }
+  return answers;
 }

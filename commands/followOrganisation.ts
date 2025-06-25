@@ -1,25 +1,13 @@
-import { startKeyboard } from "../utils/keyboards";
 import umami from "../utils/umami";
 import TelegramBot from "node-telegram-bot-api";
 import Organisation from "../models/Organisation";
 import User from "../models/User";
-import { IOrganisation, IUser, WikidataId } from "../types";
+import { IOrganisation, ISession, IUser, WikidataId } from "../types";
 import axios from "axios";
-import { sendLongText } from "../utils/sendLongText";
+import { parseIntAnswers } from "../utils/text.utils";
+import { mainMenuKeyboard } from "../utils/keyboards";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
 
-function parseIntAnswers(answer: string | undefined, maxAllowedValue: number) {
-  if (answer === undefined) return null;
-
-  const answers = answer
-    .split(/[ ,\-;:]/)
-    .map((s) => parseInt(s))
-    .filter((i) => i && !isNaN(i) && i <= maxAllowedValue);
-
-  if (answers.length == 0) {
-    return null;
-  }
-  return answers;
-}
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
@@ -67,14 +55,24 @@ async function searchOrganisationWikidataId(
   }
 }
 
-export const followOrganisationCommand =
-  (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
-    const chatId = msg.chat.id;
-    await umami.log({ event: "/follow-organisation" });
+export const followOrganisationCommand = async (session: ISession, _msg: never) => {
+    await session.log({ event: "/follow-organisation" });
     try {
-      await bot.sendChatAction(chatId, "typing");
-      const question = await bot.sendMessage(
-        chatId,
+      if (session.user == null) {
+        await session.sendMessage(
+            `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`,
+            mainMenuKeyboard);
+        return;
+      }
+
+      const tgSession: TelegramSession | undefined = await extractTelegramSession(session, true);
+      if (tgSession == null) return;
+
+      const tgBot = tgSession.telegramBot;
+
+      await session.sendTypingAction();
+      const question: TelegramBot.Message = await tgBot.sendMessage(
+        session.chatId,
         `Entrez le nom ou l'identifiant [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
 Exemples:
 Conseil d'Etat : *Q769657*
@@ -86,14 +84,14 @@ Conseil constitutionnel : *Q1127218*`,
           },
         },
       );
-      bot.onReplyToMessage(
-        chatId,
+      tgBot.onReplyToMessage(
+        session.chatId,
         question.message_id,
         async (msg: TelegramBot.Message) => {
           if (msg.text === undefined || msg.text === "") {
-            await bot.sendMessage(
-              chatId,
+            await session.sendMessage(
               `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+                mainMenuKeyboard
             );
             return;
           }
@@ -101,30 +99,29 @@ Conseil constitutionnel : *Q1127218*`,
           const orgResults = await searchOrganisationWikidataId(msg.text);
 
           if (orgResults.length == 0) {
-            await bot.sendMessage(
-              chatId,
+            await session.sendMessage(
               `Votre recherche n'a donné aucun résultat. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+                mainMenuKeyboard
             );
             return;
           }
 
           if (orgResults.length == 1) {
-            const user = await User.firstOrCreate({ tgUser: msg.from, chatId });
+            const user = await User.findOrCreate(session);
             if (user.followedOrganisations === undefined)
               user.followedOrganisations = [];
 
             // If the one result is already followed
             if (isOrganisationAlreadyFollowed(user, orgResults[0].wikidataId)) {
               await new Promise((resolve) => setTimeout(resolve, 500));
-              await bot.sendMessage(
-                chatId,
+              await session.sendMessage(
                 `Vous suivez déjà l'organisation *${orgResults[0].nom}* ✅`,
-                startKeyboard,
+                mainMenuKeyboard,
               );
               return;
             }
-            const followConfirmation = await bot.sendMessage(
-              chatId,
+            const followConfirmation = await tgBot.sendMessage(
+              session.chatId,
               `Une organisation correspond à votre recherche:\n\n*${orgResults[0].nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].wikidataId)})\n
 Voulez-vous être notifié de toutes les nominations en rapport avec cette organisation ? (répondez *oui* ou *non*)`,
               {
@@ -134,8 +131,8 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                 },
               },
             );
-            bot.onReplyToMessage(
-              chatId,
+            tgBot.onReplyToMessage(
+              session.chatId,
               followConfirmation.message_id,
               async (msg: TelegramBot.Message) => {
                 if (msg.text !== undefined) {
@@ -150,25 +147,23 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                       lastUpdate: new Date(),
                     });
                     await user.save();
-                    await bot.sendMessage(
-                      chatId,
+                    await session.sendMessage(
                       `Vous suivez maintenant l'organisation *${orgResults[0].nom}* ✅`,
-                      startKeyboard,
+                      mainMenuKeyboard,
                     );
                     return;
                   } else if (new RegExp(/non/i).test(msg.text)) {
-                    await bot.sendMessage(
-                      chatId,
+                    await session.sendMessage(
                       `L'organisation *${orgResults[0].nom}* n'a pas été ajoutée aux suivis.`,
-                      startKeyboard,
+                      mainMenuKeyboard,
                     );
                     return;
                   }
                 }
                 // If msg.txt undefined or not "oui"/"non"
-                return await bot.sendMessage(
-                  chatId,
+                return await session.sendMessage(
                   `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+                    mainMenuKeyboard
                 );
               },
             );
@@ -182,10 +177,10 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                 k + 1,
               )}. *${organisation_k.nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.wikidataId)})\n\n`;
             }
-            await sendLongText(bot, chatId, text);
+            await session.sendMessage(text);
 
-            const question = await bot.sendMessage(
-              chatId,
+            const question = await tgBot.sendMessage(
+              session.chatId,
               "Entrez le(s) nombre(s) correspondant au(x) organisation(s) à suivre.\nExemple: 1 4 7",
               {
                 reply_markup: {
@@ -194,27 +189,23 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
               },
             );
 
-            bot.onReplyToMessage(
-              chatId,
+            tgBot.onReplyToMessage(
+              session.chatId,
               question.message_id,
               async (msg: TelegramBot.Message) => {
                 let answers = parseIntAnswers(msg.text, orgResults.length);
                 if (answers === null || answers.length == 0) {
-                  await bot.sendMessage(
-                    chatId,
+                  await session.sendMessage(
                     `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.
       👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-                    startKeyboard,
+                    mainMenuKeyboard,
                   );
                   return;
                 }
 
-                await bot.sendChatAction(chatId, "typing");
+                await session.sendTypingAction()
 
-                const user = await User.firstOrCreate({
-                  tgUser: msg.from,
-                  chatId,
-                });
+                const user = await User.findOrCreate(session);
                 if (user.followedOrganisations === undefined)
                   user.followedOrganisations = [];
 
@@ -243,12 +234,11 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                 await user.save();
 
                 await new Promise((resolve) => setTimeout(resolve, 500));
-                await sendLongText(
-                  bot,
-                  chatId,
+                await session.sendMessage(
                   `Vous suivez les organisations: ✅\n${orgResults
                     .map((org) => `\n   - *${org.nom}*`)
                     .join("\n")}`,
+                    mainMenuKeyboard
                 );
               },
             );

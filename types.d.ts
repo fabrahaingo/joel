@@ -1,19 +1,31 @@
 import { Model, Types } from "mongoose";
 import { JORFSearchItem } from "./entities/JORFSearchResponse";
 import { FunctionTags } from "./entities/FunctionTags";
-import TelegramBot from "node-telegram-bot-api";
+import umami from "./utils/umami";
 
 export type CommandType = {
   regex: RegExp;
-  action: (bot: TelegramBot) => (msg: TelegramBot.Message) => {
-    default: void;
-  };
-}[];
+  action: (session: ISession, msg?: string) => Promise<void>;
+};
 
 export type MessageApp =
-    | "Telegram";
+  | "Telegram";
 //| "WhatsApp";
 //| "Matrix";
+
+export interface ISession {
+    messageApp: MessageApp;
+    chatId: number;
+    language_code: string;
+    user: IUser | null | undefined;
+    isReply: boolean;
+
+    loadUser: () => Promise<void>;
+    createUser: () => Promise<void>;
+    sendMessage: (msg: string, keyboard?: { text: string }[][]) => Promise<void>;
+    sendTypingAction: () => Promise<void>;
+    log: typeof umami.log;
+}
 
 // fields are undefined for users created before implementation
 export interface IUser {
@@ -65,11 +77,7 @@ export interface OrganisationModel extends Model<IOrganisation> {
 }
 
 export interface UserModel extends Model<IUser> {
-  firstOrCreate: (args: {
-    tgUser: TelegramBot.User;
-    chatId: number;
-    messageApp: MessageApp;
-  }) => Promise<IUser | null>; // null means that the user is a bot
+  findOrCreate: (session: ISession) => Promise<IUser>;
 }
 
 export type IBlocked = {
