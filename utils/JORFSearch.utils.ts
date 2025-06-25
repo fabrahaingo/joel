@@ -6,7 +6,7 @@ import umami from "./umami.js";
 export async function callJORFSearchPeople(peopleName: string) {
     try {
         await umami.log({ event: "/jorfsearch-request-people" });
-        return axios
+        return await axios
             .get<JORFSearchResponse>(encodeURI(
                     `https://jorfsearch.steinertriples.ch/name/${
                         cleanPeopleName(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
@@ -43,7 +43,7 @@ export async function callJORFSearchPeople(peopleName: string) {
 export async function callJORFSearchDay(day: Date){
     try {
         await umami.log({ event: "/jorfsearch-request-date" });
-        return axios
+        return await axios
             .get<JORFSearchResponse>(encodeURI(
                 `https://jorfsearch.steinertriples.ch/${
                     day.toLocaleDateString("fr-FR").split("/").join("-") // format day = "18-02-2024";
@@ -61,7 +61,7 @@ export async function callJORFSearchDay(day: Date){
 export async function callJORFSearchTag(tag: string, tagValue?: string) {
     try {
         await umami.log({ event: "/jorfsearch-request-tag" });
-        return axios
+        return await axios
             .get<JORFSearchResponse>(encodeURI(
                 `https://jorfsearch.steinertriples.ch/tag/${tag}${
                     tagValue !== undefined ? `="${tagValue}"` : ``
@@ -79,7 +79,7 @@ export async function callJORFSearchTag(tag: string, tagValue?: string) {
 export async function callJORFSearchOrganisation(wikiId: WikidataId) {
     try {
         await umami.log({ event: "/jorfsearch-request-organisation" });
-        return axios
+        return await axios
         .get<JORFSearchResponse>(encodeURI(
             `https://jorfsearch.steinertriples.ch/${wikiId.toUpperCase()}?format=JSON`))
         .then((res) => {
