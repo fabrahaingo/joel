@@ -162,10 +162,11 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   }
                 }
                 // If msg.txt undefined or not "oui"/"non"
-                return await session.sendMessage(
+                await session.sendMessage(
                   `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
                     mainMenuKeyboard
                 );
+                return;
               },
             );
             // More than one org results
