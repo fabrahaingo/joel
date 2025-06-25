@@ -39,7 +39,7 @@ export const unfollowCommand = async (session: ISession, _msg: never) => {
       session.user.followedFunctions,
     );
 
-    if (session.user.followedOrganisations === undefined) session.user.followedOrganisations=[];
+    session.user.followedOrganisations ??= [];
     const followedOrganisations: IOrganisation[] = await Organisation.find({
       wikidataId: {
         $in: session.user.followedOrganisations.map((o) => o.wikidataId),

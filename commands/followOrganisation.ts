@@ -13,7 +13,7 @@ const isOrganisationAlreadyFollowed = (
   user: IUser,
   wikidataId: WikidataId,
 ): boolean => {
-  return user.followedOrganisations?.some((o) => o.wikidataId === wikidataId);
+  return user.followedOrganisations?.some((o) => o.wikidataId === wikidataId) ?? false;
 };
 
 interface WikiDataAPIResponse {
@@ -142,6 +142,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                         nom: orgResults[0].nom,
                         wikidataId: orgResults[0].wikidataId,
                       });
+                    user.followedOrganisations ??= [];
                     user.followedOrganisations.push({
                       wikidataId: organisation.wikidataId,
                       lastUpdate: new Date(),
@@ -206,8 +207,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                 await session.sendTypingAction()
 
                 const user = await User.findOrCreate(session);
-                if (user.followedOrganisations === undefined)
-                  user.followedOrganisations = [];
+                user.followedOrganisations ??= [];
 
                 for (const answer of answers) {
                   // Don't call JORF if the organisation is already followed
