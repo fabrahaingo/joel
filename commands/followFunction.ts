@@ -29,7 +29,7 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
       return;
     }
 
-    const tgSession: TelegramSession | undefined = extractTelegramSession(session, true);
+    const tgSession: TelegramSession | undefined = await extractTelegramSession(session, true);
     if (tgSession == null) return;
 
     const tgBot = tgSession.telegramBot;

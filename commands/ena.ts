@@ -67,7 +67,7 @@ export const enaCommand = async (session: ISession, _msg: never): Promise<void> 
     try {
       await session.log({ event: "/ena" });
 
-      const tgSession : TelegramSession | undefined = extractTelegramSession(session, true);
+      const tgSession : TelegramSession | undefined = await extractTelegramSession(session, true);
       if (tgSession == null) return;
       const tgBot = tgSession.telegramBot;
 

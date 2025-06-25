@@ -14,7 +14,7 @@ export const deleteProfileCommand = async (session: ISession, _msg: never): Prom
       return;
     }
 
-    const tgSession: TelegramSession | undefined = extractTelegramSession(session, true);
+    const tgSession: TelegramSession | undefined = await extractTelegramSession(session, true);
     if (tgSession == null) return;
 
     const tgBot = tgSession.telegramBot;

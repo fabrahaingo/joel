@@ -20,7 +20,7 @@ const isPersonAlreadyFollowed = (
 export const searchCommand = async (session: ISession, _msg: never): Promise<void> => {
     await session.log({ event: "/search" });
 
-    const tgSession: TelegramSession | undefined = extractTelegramSession(session, true);
+    const tgSession: TelegramSession | undefined = await extractTelegramSession(session, true);
     if (tgSession == null) return;
 
     const tgBot = tgSession.telegramBot;

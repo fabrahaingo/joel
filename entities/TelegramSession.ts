@@ -79,4 +79,18 @@ export class TelegramSession implements ISession {
 
 }
 
+export async function extractTelegramSession(session: ISession, userFacingError?: boolean): Promise<TelegramSession | undefined> {
+    if (session.messageApp !== "Telegram") {
+        console.log("Session is not a TelegramSession");
+        if (userFacingError){
+            await session.sendMessage(`Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`, mainMenuKeyboard);
+        }
+        return undefined;
+    }
+    if (session !instanceof TelegramSession){
+        console.log("messageApp as Telegram, but session is not a TelegramSession");
+        return;
+    }
+
+    return session as TelegramSession;
 }
