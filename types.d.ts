@@ -18,6 +18,7 @@ export interface ISession {
     chatId: number;
     language_code: string;
     user: IUser | null | undefined;
+    isReply: boolean;
 
     loadUser: () => Promise<void>;
     createUser: () => Promise<void>;

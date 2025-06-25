@@ -93,7 +93,7 @@ const commands: CommandType[] = [
 
             const tgSession = new TelegramSession(bot, tgMsg.chat.id, tgUser.language_code ?? "fr");
             await tgSession.loadUser();
-            tgSession.telegramBot = tgMsg;
+            tgSession.isReply = tgMsg.reply_to_message !== undefined;
 
             if (tgSession.user !== null) await tgSession.user.updateInteractionMetrics();
 

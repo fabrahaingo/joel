@@ -8,10 +8,11 @@ import { mainMenuKeyboard } from "../utils/keyboards";
 export class TelegramSession implements ISession {
     messageApp = "Telegram" as MessageApp;
     telegramBot: TelegramBot;
-    telegramMessage: TelegramBot.Message | undefined = undefined;
     language_code: string;
     chatId: number;
     user: IUser | null | undefined = undefined;
+    isReply: boolean;
+
     log = umami.log;
 
     constructor(telegramBot: TelegramBot, chatId: number, language_code: string) {
@@ -76,7 +77,6 @@ export class TelegramSession implements ISession {
             }
         }
     }
-
 }
 
 export async function extractTelegramSession(session: ISession, userFacingError?: boolean): Promise<TelegramSession | undefined> {
@@ -88,8 +88,8 @@ export async function extractTelegramSession(session: ISession, userFacingError?
         return undefined;
     }
     if (session !instanceof TelegramSession){
-        console.log("messageApp as Telegram, but session is not a TelegramSession");
-        return;
+        console.log("Session messageApp is Telegram, but session is not a TelegramSession");
+        return undefined;
     }
 
     return session as TelegramSession;
