@@ -1,10 +1,7 @@
-import { sendLongText } from "../utils/sendLongText";
 import User from "../models/User";
 import People from "../models/People";
-import { startKeyboard } from "../utils/keyboards";
-import umami from "../utils/umami";
-import { Types } from "mongoose";
-import { IPeople, IUser, WikidataId } from "../types";
+import { mainMenuKeyboard } from "../utils/keyboards";
+import { IPeople, ISession, WikidataId } from "../types";
 import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames";
 import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse";
@@ -14,6 +11,7 @@ import {
     callJORFSearchTag,
     cleanPeopleName
 } from "../utils/JORFSearch.utils";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
 
 function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
   const allPromoPeriods = List_Promos_INSP_ENA.map((i) => i.period);
@@ -65,27 +63,30 @@ async function getJORFPromoSearchResult(
   }
 }
 
-export const enaCommand =
-  (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
+export const enaCommand = async (session: ISession, _msg: never): Promise<void> => {
     try {
-      const chatId = msg.chat.id;
-      await umami.log({ event: "/ena" });
+      await session.log({ event: "/ena" });
+
+      const tgSession : TelegramSession | undefined = extractTelegramSession(session, true);
+      if (tgSession == null) return;
+      const tgBot = tgSession.telegramBot;
+
       const text = `Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
 ⚠️ Attention, un nombre important de suivis seront ajoutées en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n
 Formats acceptés:
 Georges-Clemenceau
 2017-2018\n
 Utilisez la command /promos pour consulter la liste des promotions INSP et ENA disponibles.`;
-      const question = await bot.sendMessage(msg.chat.id, text, {
+      const question = await tgBot.sendMessage(session.chatId, text, {
         parse_mode: "Markdown",
         reply_markup: {
           force_reply: true,
         },
       });
-      bot.onReplyToMessage(chatId, question.message_id, async (msg: TelegramBot.Message) => {
+      tgBot.onReplyToMessage(session.chatId, question.message_id, async (msg: TelegramBot.Message) => {
         if (msg.text === undefined) {
-          await bot.sendMessage(
-            chatId,
+          await tgBot.sendMessage(
+            session.chatId,
             `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena.`,
           );
           return;
@@ -93,7 +94,7 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
 
         // If the user used the /promos command or button
         if (RegExp(/\/promos/i).test(msg.text)) {
-          promosCommand(bot);
+          await promosCommand(session);
           return;
         }
 
@@ -101,10 +102,9 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
         const promoJORFList = await getJORFPromoSearchResult(promoInfo);
 
         if (promoJORFList === null ||promoJORFList.length == 0) {
-          await bot.sendMessage(
-              chatId,
+          await session.sendMessage(
               `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
-              startKeyboard,
+              mainMenuKeyboard,
           );
           return;
         }
@@ -113,19 +113,15 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
         if (promoInfo.name !== null) promoStr = `${promoInfo.name} (${promoInfo.period})`;
 
         if (!promoInfo?.onJORF) {
-          await bot.sendMessage(
-            chatId,
+          await session.sendMessage(
             `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
-            startKeyboard,
+              mainMenuKeyboard,
           );
           return;
         }
 
-        const text = `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`;
-        await bot.sendMessage(chatId, text, {
-          parse_mode: "Markdown",
-        });
+        await session.sendMessage(`La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`);
 
         // wait 2 seconds
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -140,9 +136,9 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
         const contacts = promoJORFList.map((contact) => {
           return `${contact.nom} ${contact.prenom}`;
         });
-        await sendLongText(bot, chatId, contacts.join("\n"));
-        const followConfirmation = await bot.sendMessage(
-          chatId,
+        await session.sendMessage(contacts.join("\n"));
+        const followConfirmation = await tgBot.sendMessage(
+          session.chatId,
           `Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *les retirer peut ensuite prendre du temps*`,
           {
             parse_mode: "Markdown",
@@ -151,29 +147,23 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             },
           },
       );
-      bot.onReplyToMessage(
-        chatId,
+      tgBot.onReplyToMessage(
+        session.chatId,
         followConfirmation.message_id,
         async (msg: TelegramBot.Message) => {
           if (msg.text === undefined) {
-            await bot.sendMessage(
-              chatId,
-              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`
+            await session.sendMessage(
+              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`, mainMenuKeyboard
             );
             return;
           }
           if (new RegExp(/oui/i).test(msg.text)) {
-            await bot.sendMessage(
-              chatId,
+            await session.sendMessage(
               `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
             );
-            await bot.sendChatAction(chatId, "typing");
-            const user = await User.firstOrCreate({
-              tgUser: msg.from,
-              chatId,
-                messageApp: "Telegram"
-            });
-              if (user === null) return;
+            await session.sendTypingAction();
+            const user = await User.findOrCreate(session);
+            if (user === null) return;
 
             const peopleTab: IPeople[] = [];
 
@@ -193,24 +183,22 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             }
               await user.addFollowedPeopleBulk(peopleTab);
               await user.save();
-            return await bot.sendMessage(
-                chatId,
+            await session.sendMessage(
                 `Les *${String(
                     peopleTab.length,
                 )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
-                startKeyboard,
+                mainMenuKeyboard,
             );
+            return;
           } else if (new RegExp(/non/i).test(msg.text)) {
-            return await bot.sendMessage(
-              chatId,
+            return await session.sendMessage(
               `Ok, aucun ajout n'a été effectué. 👌`,
-              startKeyboard
+                mainMenuKeyboard
             );
           }
-          await bot.sendMessage(
-            chatId,
+          await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-            startKeyboard
+              mainMenuKeyboard
           );
         }
       );
@@ -220,11 +208,9 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
   }
 };
 
-export const promosCommand =
-(bot: TelegramBot) => async (msg: TelegramBot.Message) => {
-    try {
-        const chatId = msg.chat.id;
-        await umami.log({ event: "/ena-list" });
+export const promosCommand = async (session: ISession, _msg?: never): Promise<void> => {
+  try {
+        await session.log({ event: "/ena-list" });
         let text = `Les périodes et noms des promotions successives sont:\n\n`;
 
         // Promotions INSP
@@ -242,7 +228,7 @@ export const promosCommand =
         text +=
             "\nUtilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
-        await bot.sendMessage(chatId, text, startKeyboard);
+        await session.sendMessage(text, mainMenuKeyboard);
     } catch (error) {
         console.log(error);
     }
