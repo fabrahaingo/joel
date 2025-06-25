@@ -1,10 +1,6 @@
-import User from "../models/User";
-import { startKeyboard } from "../utils/keyboards";
-import umami from "../utils/umami";
-import TelegramBot from "node-telegram-bot-api";
 import { ISession } from "../types";
 
- export async function commandStart(session: ISession): Promise<void> {
+export const startCommand = async (session: ISession, _msg: never): Promise<void> => {
   await session.log({ event: "/start" });
   try {
     await session.sendTypingAction()
