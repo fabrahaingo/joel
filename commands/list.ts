@@ -1,8 +1,8 @@
-import People from "../models/People";
-import { getFunctionsFromValues } from "../entities/FunctionTags";
-import { IOrganisation, IPeople, ISession, IUser } from "../types";
-import Organisation from "../models/Organisation";
-import { mainMenuKeyboard } from "../utils/keyboards";
+import People from "../models/People.js";
+import { getFunctionsFromValues } from "../entities/FunctionTags.js";
+import { IOrganisation, IPeople, ISession, IUser } from "../types.js";
+import Organisation from "../models/Organisation.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
 
 function sortFunctionsAlphabetically(array: IUser["followedFunctions"]) {
   array.sort((a, b) => {

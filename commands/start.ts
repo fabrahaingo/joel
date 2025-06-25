@@ -1,5 +1,5 @@
-import { ISession } from "../types";
-import {mainMenuKeyboard} from "../utils/keyboards";
+import { ISession } from "../types.js";
+import {mainMenuKeyboard} from "../utils/keyboards.js";
 
 export const startCommand = async (session: ISession, _msg: never): Promise<void> => {
   await session.log({ event: "/start" });

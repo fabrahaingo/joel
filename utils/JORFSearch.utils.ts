@@ -1,7 +1,7 @@
-import { cleanJORFItems, JORFSearchResponse } from "../entities/JORFSearchResponse";
-import { WikidataId } from "../types";
+import { cleanJORFItems, JORFSearchResponse } from "../entities/JORFSearchResponse.js";
+import { WikidataId } from "../types.js";
 import axios from "axios";
-import umami from "./umami";
+import umami from "./umami.js";
 
 export async function callJORFSearchPeople(peopleName: string) {
     try {

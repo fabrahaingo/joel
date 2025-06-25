@@ -1,6 +1,6 @@
-import { HelpMessages } from "../entities/BotMessages";
-import { ISession } from "../types";
-import { mainMenuKeyboard } from "../utils/keyboards";
+import { HelpMessages } from "../entities/BotMessages.js";
+import { ISession } from "../types.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
 
 export const helpCommand = async (session: ISession, _msg: never): Promise<void> => {
   await session.log({ event: "/help" });

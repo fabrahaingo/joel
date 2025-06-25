@@ -1,12 +1,12 @@
-import umami from "../utils/umami";
+import umami from "../utils/umami.js";
 import TelegramBot from "node-telegram-bot-api";
-import Organisation from "../models/Organisation";
-import User from "../models/User";
-import { IOrganisation, ISession, IUser, WikidataId } from "../types";
+import Organisation from "../models/Organisation.js";
+import User from "../models/User.js";
+import { IOrganisation, ISession, IUser, WikidataId } from "../types.js";
 import axios from "axios";
-import { parseIntAnswers } from "../utils/text.utils";
-import { mainMenuKeyboard } from "../utils/keyboards";
-import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
+import { parseIntAnswers } from "../utils/text.utils.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
 
 
 const isOrganisationAlreadyFollowed = (

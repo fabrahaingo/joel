@@ -1,10 +1,10 @@
-import User from "../models/User";
-import { FunctionTags } from "../entities/FunctionTags";
+import User from "../models/User.js";
+import { FunctionTags } from "../entities/FunctionTags.js";
 import TelegramBot from "node-telegram-bot-api";
-import { mainMenuKeyboard } from "../utils/keyboards";
-import { ISession } from "../types";
-import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
-import { parseIntAnswers } from "../utils/text.utils";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { ISession } from "../types.js";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
+import { parseIntAnswers } from "../utils/text.utils.js";
 
 // build message string along with its index
 function buildSuggestions() {

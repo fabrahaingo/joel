@@ -1,6 +1,6 @@
-import { textTypeOrdre } from "./formatting.utils";
-import { dateToFrenchString } from "./date.utils";
-import { JORFSearchItem } from "../entities/JORFSearchResponse";
+import { textTypeOrdre } from "./formatting.utils.js";
+import { dateToFrenchString } from "./date.utils.js";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
 
 function addPoste(elem: JORFSearchItem, message: string) {
   if (elem.grade) {

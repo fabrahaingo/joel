@@ -1,7 +1,7 @@
-import { mainMenuKeyboard } from "../utils/keyboards";
-import User from "../models/User";
-import { ISession } from "../types";
-import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
+import User from "../models/User.js";
+import { ISession } from "../types.js";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
 import TelegramBot from "node-telegram-bot-api";
 
 export const deleteProfileCommand = async (session: ISession, _msg: never): Promise<void> => {

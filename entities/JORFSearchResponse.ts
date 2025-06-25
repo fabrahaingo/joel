@@ -1,4 +1,4 @@
-import { SourceName, TypeOrdre, WikidataId } from "../types";
+import { SourceName, TypeOrdre, WikidataId } from "../types.js";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 

@@ -1,7 +1,7 @@
-import Users from "../models/User";
-import People from "../models/People";
-import { ISession } from "../types";
-import { mainMenuKeyboard } from "../utils/keyboards";
+import Users from "../models/User.js";
+import People from "../models/People.js";
+import { ISession } from "../types.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
 
 export const statsCommand = async (session: ISession, _msg: never): Promise<void> => {
   try {

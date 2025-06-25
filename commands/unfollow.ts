@@ -1,13 +1,13 @@
-import User from "../models/User";
-import People from "../models/People";
+import User from "../models/User.js";
+import People from "../models/People.js";
 import TelegramBot from "node-telegram-bot-api";
-import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags";
-import { IOrganisation, IPeople, ISession } from "../types";
-import Organisation from "../models/Organisation";
+import { FunctionTags, getFunctionsFromValues } from "../entities/FunctionTags.js";
+import { IOrganisation, IPeople, ISession } from "../types.js";
+import Organisation from "../models/Organisation.js";
 import { Types } from "mongoose";
-import { mainMenuKeyboard } from "../utils/keyboards";
-import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
-import { parseIntAnswers } from "../utils/text.utils";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
+import { parseIntAnswers } from "../utils/text.utils.js";
 
 function sortFunctionsAlphabetically(array: FunctionTags[]) {
   return array.sort((a, b) => {
