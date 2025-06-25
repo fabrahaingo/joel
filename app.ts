@@ -80,7 +80,7 @@ const commands: CommandType[] = [
   },
 ];
 
-(async () => {
+await (async () => {
   await mongodbConnect();
 
   commands.forEach((command) => {
