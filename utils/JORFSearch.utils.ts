@@ -8,13 +8,13 @@ export async function callJORFSearchPeople(peopleName: string) {
         await umami.log({ event: "/jorfsearch-request-people" });
         return axios
             .get<JORFSearchResponse>(encodeURI(
-                `https://jorfsearch.steinertriples.ch/name/${
-                    cleanPeopleName(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
-                }?format=JSON`
-            )
-        ).then(async (res1) => {
-            if (res1.data === null ) return []; // If an error occurred
-            if (typeof res1.data !== "string") return res1.data; // If it worked
+                    `https://jorfsearch.steinertriples.ch/name/${
+                        cleanPeopleName(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
+                    }?format=JSON`
+                )
+            ).then(async (res1) => {
+                if (res1.data === null ) return []; // If an error occurred
+                if (typeof res1.data !== "string") return res1.data; // If it worked
 
             // If the peopleName had nom/prenom inverted or bad formatting:
             // we need to call JORFSearch again with the response url with correct format
@@ -44,14 +44,14 @@ export async function callJORFSearchDay(day: Date){
     try {
         await umami.log({ event: "/jorfsearch-request-date" });
         return axios
-        .get<JORFSearchResponse>(encodeURI(
-            `https://jorfsearch.steinertriples.ch/${
-            day.toLocaleDateString("fr-FR").split("/").join("-") // format day = "18-02-2024";
-        }?format=JSON`))
-        .then((res) => {
-            if (res.data === null || typeof res.data === "string") return [];
-            return cleanJORFItems(res.data);
-        });
+            .get<JORFSearchResponse>(encodeURI(
+                `https://jorfsearch.steinertriples.ch/${
+                    day.toLocaleDateString("fr-FR").split("/").join("-") // format day = "18-02-2024";
+                }?format=JSON`))
+            .then((res) => {
+                if (res.data === null || typeof res.data === "string") return [];
+                return cleanJORFItems(res.data);
+            });
     } catch (error) {
         console.log(error);
     }
@@ -109,4 +109,20 @@ export function cleanPeopleName(input: string): string {
     input=input.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 
     return input;
+}
+
+interface NameInfo {
+  nom: string;
+  prenom: string;
+}
+export function uniqueMinimalNameInfo(records: NameInfo[]) {
+  return records.reduce((infoList: { nom: string; prenom: string }[], item) => {
+    if (
+      infoList.find((i) => i.nom === item.nom && i.prenom == item.prenom) !==
+      undefined
+    )
+      return infoList;
+    infoList.push({ nom: item.nom, prenom: item.prenom });
+    return infoList;
+  }, []);
 }
