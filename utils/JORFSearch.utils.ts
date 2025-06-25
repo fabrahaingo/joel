@@ -95,6 +95,7 @@ export async function callJORFSearchOrganisation(wikiId: WikidataId) {
 
 async function JORFSearchCallPublications(currentDay: string) {
     try {
+        await umami.log({ event: "/jorfsearch-request-meta" });
         return await axios
             .get<JORFSearchResponseMeta>(
                 `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`,
