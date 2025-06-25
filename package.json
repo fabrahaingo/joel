@@ -21,8 +21,8 @@
     "tsx": "^4.20.3"
   },
   "devDependencies": {
+    "@tsconfig/node24": "^24.0.1",
     "@eslint/js": "^9.18.0",
-    "@tsconfig/node22": "^22.0.1",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.1",
