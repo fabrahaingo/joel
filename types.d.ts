@@ -24,7 +24,7 @@ export interface ISession {
 
     loadUser: () => Promise<void>;
     createUser: () => Promise<void>;
-    sendMessage: (msg: string, sendKeyboard: boolean) => Promise<void>;
+    sendMessage: (msg: string, keyboard?: { text: string }[][]) => Promise<void>;
     sendTypingAction: () => Promise<void>;
     log: typeof umami.log;
 }

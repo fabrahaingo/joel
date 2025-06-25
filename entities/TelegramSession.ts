@@ -2,20 +2,8 @@ import { ISession, IUser, MessageApp } from "../types";
 import TelegramBot from "node-telegram-bot-api";
 import User from "../models/User";
 import umami from "../utils/umami";
-
-export const startKeyboard: TelegramBot.SendMessageOptions = {
-    parse_mode: "Markdown",
-    disable_web_page_preview: true,
-    reply_markup: {
-        selective: true,
-        resize_keyboard: true,
-        keyboard: [
-            [{ text: "🧩 Ajouter un contact" }, { text: "👨‍💼 Ajouter une fonction" }],
-            [{ text: "✋ Retirer un suivi" }, { text: "🧐 Lister mes suivis" }],
-            [{ text: "🔎 Rechercher" }, { text: "❓ Aide / Contact" }],
-        ],
-    },
-};
+import { splitText } from "../utils/text.utils";
+import { mainMenuKeyboard } from "../utils/keyboards";
 
 export class TelegramSession implements ISession {
     messageApp = "Telegram" as MessageApp;
@@ -44,8 +32,28 @@ export class TelegramSession implements ISession {
         this.user = await User.findOrCreate(this);
     }
 
-    async sendMessage(msg: string, sendKeyboard: boolean) {
-        if (sendKeyboard) await this.telegramBot.sendMessage(this.chatId, msg, startKeyboard);
+    async sendMessage(msg: string, keyboard?: { text: string }[][]) {
+        if (keyboard != null) {
+            if (msg.length > 3000) {
+
+                return;
+            }
+            await this.telegramBot.sendMessage(this.chatId, msg, {
+                parse_mode: "Markdown",
+                disable_web_page_preview: true,
+                reply_markup: {
+                    selective: true,
+                    resize_keyboard: true,
+                    keyboard: keyboard,
+                },
+            });
+            return;
+        }
+
+        if (msg.length > 3000) {
+            await this.sendLongMessage(msg,keyboard);
+        }
+
         await this.telegramBot.sendMessage(this.chatId, msg);
     }
 
@@ -53,8 +61,21 @@ export class TelegramSession implements ISession {
         await this.telegramBot.sendChatAction(this.chatId, "typing");
     }
 
-    async log(args: { event: string; data?: any }) {
-        await umami.log(args);
+    async sendLongMessage(
+        formattedData: string,
+        keyboard?: { text: string }[][]
+    ): Promise<void> {
+        const mArr = splitText(formattedData, 3000);
+
+        for (let i = 0; i < mArr.length; i++) {
+            if (i == mArr.length-1 && keyboard !== undefined) {
+                await this.sendMessage(mArr[i], keyboard);
+            } else {
+                await this.sendMessage(mArr[i]);
+            }
+        }
     }
+
+}
 
 }
