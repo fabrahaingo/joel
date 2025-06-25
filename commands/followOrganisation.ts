@@ -47,7 +47,7 @@ async function searchOrganisationWikidataId(
       .then((r) => r.data))
         .map(o=>({
           nom: o.name,
-          wikidataId: o.id as WikidataId
+          wikidataId: o.id
         }));
   } catch (error) {
     console.log(error);
