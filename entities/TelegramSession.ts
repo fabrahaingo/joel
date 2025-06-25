@@ -20,7 +20,7 @@ export class TelegramSession implements ISession {
     language_code: string;
     chatId: number;
     user: IUser | null | undefined = undefined;
-    isReply: boolean;
+    isReply: boolean | undefined;
 
     log = umami.log;
 
