@@ -9,7 +9,7 @@ import { parseIntAnswers } from "../utils/text.utils.js";
 // build message string along with its index
 function buildSuggestions() {
   let suggestion = "";
-  for (let key in FunctionTags) {
+  for (const key in FunctionTags) {
     suggestion += `${
       // number in the array of keys
       Object.keys(FunctionTags).indexOf(key) + 1

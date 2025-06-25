@@ -193,7 +193,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
               session.chatId,
               question.message_id,
               async (msg: TelegramBot.Message) => {
-                let answers = parseIntAnswers(msg.text, orgResults.length);
+                const answers = parseIntAnswers(msg.text, orgResults.length);
                 if (answers === null || answers.length == 0) {
                   await session.sendMessage(
                     `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.
