@@ -6,7 +6,7 @@ export const log = async (args: { event: UmamiEvent; data?: any }) => {
     return;
   }
 
-  const endpoint = `https://${process.env.UMAMI_HOST}/api/send`;
+  const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;
   const payload = {
     payload: {
       hostname: process.env.UMAMI_HOST,

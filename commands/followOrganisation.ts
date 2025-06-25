@@ -60,7 +60,7 @@ export const followOrganisationCommand = async (session: ISession, _msg: never) 
     try {
       if (session.user == null) {
         await session.sendMessage(
-            `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`,
+            `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
             mainMenuKeyboard);
         return;
       }
