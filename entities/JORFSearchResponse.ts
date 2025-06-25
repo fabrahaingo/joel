@@ -192,18 +192,18 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
         if (item_raw.organisations === undefined)
           item_raw.organisations=[];
 
-        // Drop organisations if name is missing
+        // Drop organisations where the name is missing
         const clean_organisations = item_raw.organisations.filter(
             org_raw => org_raw.nom !== undefined
         ) as Organisation[];
 
-        // Drop remplacement if name is missing
-        if (item_raw?.remplacement?.nom === undefined || item_raw?.remplacement?.prenom === undefined){
+        // Drop remplacement where the name is missing
+        if (item_raw.remplacement?.nom === undefined || item_raw.remplacement.prenom === undefined){
           item_raw.remplacement = undefined;
         }
 
-        // Replace potential mispelling some type_ordre
-        switch (item_raw?.type_ordre) {
+        // Replace potential misspellings some type_ordre
+        switch (item_raw.type_ordre) {
           case "admissibilite":
             item_raw.type_ordre = "admissibilité";
             break
