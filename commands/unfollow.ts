@@ -165,7 +165,7 @@ export const unfollowCommand = async (session: ISession, _msg: never) => {
           .map((i) => followedOrganisations[i - followedFunctions.length]);
 
         const unfollowedPeopleIdx = answers
-          .filter((i) => i > followedOrganisations.length)
+          .filter((i) => i >= followedFunctions.length + followedOrganisations.length)
           .map(i=> i - followedFunctions.length - followedOrganisations.length);
 
         const unfollowedPrenomNomTab: string[] = [];

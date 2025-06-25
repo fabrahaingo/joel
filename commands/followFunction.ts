@@ -97,7 +97,7 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
 
         if (alreadyFollowedFunctions.length == 1 ) {
             text += `Vous suivez déjà la fonction *${alreadyFollowedFunctions[0]}* ✅`;
-        } else if (addedFunctions.length > 1) {
+        } else if (alreadyFollowedFunctions.length > 1) {
             text += `Vous suivez déjà les fonctions: ✅\n${alreadyFollowedFunctions
                 .map((fct) => `\n   - *${fct}*`)
                 .join("\n")}`;
