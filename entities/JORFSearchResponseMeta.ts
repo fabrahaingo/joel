@@ -31,7 +31,7 @@ export interface JORFSearchPublication extends JORFSearchPublicationRaw {
     remunerations_agents_etat?: boolean;
     conseil_constitutionnel?: boolean;
     senat?: boolean;
-    changement_de_no?: boolean;m
+    changement_de_nom?: boolean;
     office_de_huissier_notaire?: boolean;
     assemblee_nationale?: boolean;
     traitement_de_donnees?: boolean;
