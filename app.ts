@@ -1,21 +1,30 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
-import { CommandType, IUser } from "./types";
+import { CommandType } from "./types";
 import { mongodbConnect } from "./db";
+import { TelegramSession } from "./entities/TelegramSession";
+
 import { followOrganisationCommand } from "./commands/followOrganisation";
-import User from "./models/User";
 import { followCommand, fullHistoryCommand, searchCommand } from "./commands/search";
 import { enaCommand, promosCommand } from "./commands/ena";
+import { statsCommand } from "./commands/stats";
+import { defaultCommand } from "./commands/default";
+import { startCommand } from "./commands/start";
+import { deleteProfileCommand } from "./commands/deleteProfile";
+import { helpCommand } from "./commands/help";
+import { followFunctionCommand } from "./commands/followFunction";
+import { listCommand } from "./commands/list";
+import { unfollowCommand } from "./commands/unfollow";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
   onlyFirstMatch: true,
 });
 
-const commands: CommandType = [
+const commands: CommandType[] = [
   {
     regex: /\/start$|🏠 Menu principal/,
-    action: require("./commands/start"),
+    action: startCommand,
   },
   {
     regex: /🔎 Rechercher$|🔎 Nouvelle recherche$/,
@@ -31,19 +40,19 @@ const commands: CommandType = [
   },
   {
     regex: /✋ Retirer un suivi$/,
-    action: require("./commands/unfollow"),
+    action: unfollowCommand,
   },
   {
     regex: /🧐 Lister mes suivis$/,
-    action: require("./commands/list"),
+    action: listCommand,
   },
   {
     regex: /❓ Aide/,
-    action: require("./commands/help"),
+    action: helpCommand,
   },
   {
     regex: /👨‍💼 Ajouter une fonction/,
-    action: require("./commands/followFunction"),
+    action: followFunctionCommand,
   },
   {
     regex: /\/secret|\/ENA|\/INSP/i,
@@ -55,19 +64,19 @@ const commands: CommandType = [
   },
   {
     regex: /\/stats/,
-    action: require("./commands/stats"),
+    action: statsCommand,
   },
   {
-    regex: /\/followOrganisation|\/followOrganization/i,
+    regex: /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization/i,
     action: followOrganisationCommand,
   },
   {
     regex: /\/supprimerCompte/,
-    action: require("./commands/deleteProfile"),
+    action: deleteProfileCommand,
   },
   {
     regex: /.*/,
-    action: require("./commands/default"),
+    action: defaultCommand,
   },
 ];
 
@@ -76,15 +85,20 @@ const commands: CommandType = [
 
   commands.forEach((command) => {
     bot.onText(command.regex,
-        async (msg: TelegramBot.Message) => {
-          // Check if user is defined
-          const tgUser: TelegramBot.User | undefined = msg.from;
-          if (tgUser === undefined) return
-          const user: IUser | null = await User.findOne({ chatId: msg.chat.id });
-          if (user !== null) await user.updateInteractionMetrics();
+        async (tgMsg: TelegramBot.Message) => {
+
+            // Check if the user is known
+            const tgUser: TelegramBot.User | undefined = tgMsg.from;
+            if (tgUser === undefined || tgUser.is_bot) return // Ignore bots
+
+            const tgSession = new TelegramSession(bot, tgMsg.chat.id, tgUser.language_code ?? "fr");
+            await tgSession.loadUser();
+            tgSession.isReply = tgMsg.reply_to_message !== undefined;
+
+            if (tgSession.user !== null) await tgSession.user.updateInteractionMetrics();
 
           // Process user message
-          command.action(bot)(msg)
+          await command.action(tgSession, tgMsg.text)
         })
         ;
   });

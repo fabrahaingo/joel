@@ -1,12 +1,8 @@
-import User from "../models/User";
 import People from "../models/People";
-import { sendLongText } from "../utils/sendLongText";
-import umami from "../utils/umami";
-import TelegramBot from "node-telegram-bot-api";
 import { getFunctionsFromValues } from "../entities/FunctionTags";
-import { IOrganisation, IPeople, IUser } from "../types";
+import { IOrganisation, IPeople, ISession, IUser } from "../types";
 import Organisation from "../models/Organisation";
-import { startKeyboard } from "../utils/keyboards";
+import { mainMenuKeyboard } from "../utils/keyboards";
 
 function sortFunctionsAlphabetically(array: IUser["followedFunctions"]) {
   array.sort((a, b) => {
@@ -21,39 +17,35 @@ function sortFunctionsAlphabetically(array: IUser["followedFunctions"]) {
   return array;
 }
 
-module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
-  const chatId = msg.chat.id;
-
-  await umami.log({ event: "/list" });
+export const listCommand = async (session: ISession, _msg: never) => {
+  await session.log({ event: "/list" });
 
   try {
-    await bot.sendChatAction(chatId, "typing");
+    await session.sendTypingAction();
 
     const noDataText=
         `Vous ne suivez aucun contact, fonction, ni organisation pour le moment. Cliquez sur *🧩 Ajouter un contact* pour commencer à suivre des contacts.`;
 
-    // We only want to create a user upon use of follow function
-    const user: IUser | null = await User.findOne({ chatId });
-
-    if (user === null) {
-      await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
+        // We only want to create a user upon use of the follow function
+    if (session.user == null) {
+      await session.sendMessage(noDataText, mainMenuKeyboard);
       return;
     }
 
     let text = "";
 
     const peoples: IPeople[] = await People.find({
-      _id: { $in: user.followedPeople.map((p) => p.peopleId) },
+      _id: { $in: session.user.followedPeople.map((p) => p.peopleId) },
     })
       .collation({ locale: "fr" })
       .lean();
 
-    if (user.followedNames === undefined) user.followedNames = [];
+    if (session.user.followedNames === undefined) session.user.followedNames = [];
     const followedPeopleTab: {
       nomPrenom: string,
       JORFSearchLink?: string,
     }[] = [];
-    user.followedNames.forEach(p=> followedPeopleTab.push({nomPrenom: p}));
+    session.user.followedNames.forEach(p=> followedPeopleTab.push({nomPrenom: p}));
     peoples.forEach(p=>followedPeopleTab.push({
       nomPrenom: `${p.nom} ${p.prenom}`,
       JORFSearchLink: encodeURI(`https://jorfsearch.steinertriples.ch/name/${p.prenom} ${p.nom}`),
@@ -65,12 +57,12 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
     });
 
     const functions = sortFunctionsAlphabetically(
-      user.followedFunctions,
+        session.user.followedFunctions,
     );
-    if (user.followedOrganisations === undefined) user.followedOrganisations=[];
+    if (session.user.followedOrganisations === undefined) session.user.followedOrganisations=[];
     const organisations: IOrganisation[] = await Organisation.find({
       wikidataId: {
-        $in: user.followedOrganisations.map((o) => o.wikidataId),
+        $in: session.user.followedOrganisations.map((o) => o.wikidataId),
       },
     })
       .collation({ locale: "fr" })
@@ -81,7 +73,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
       organisations.length === 0 &&
       functions.length === 0
     ) {
-      await bot.sendMessage(msg.chat.id, noDataText, startKeyboard);
+      await session.sendMessage(noDataText, mainMenuKeyboard);
       return;
     }
     if (functions.length > 0) {
@@ -122,7 +114,7 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
 
     }
 
-    await sendLongText(bot, chatId, text);
+    await session.sendMessage(text, mainMenuKeyboard);
   } catch (error) {
     console.log(error);
   }
