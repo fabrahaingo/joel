@@ -1,21 +1,41 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
-import TelegramBot from "node-telegram-bot-api";
+import umami from "./utils/umami";
 
 export type CommandType = {
   regex: RegExp;
-  action: (bot: TelegramBot) => (msg: TelegramBot.Message) => {
-    default: void;
-  };
-}[];
+  action: (session: ISession, msg?: string) => Promise<void>;
+};
+
+export type MessageApp =
+  | "Telegram";
+//| "WhatsApp";
+//| "Matrix";
+
+export interface ISession {
+    messageApp: MessageApp;
+    chatId: number;
+    language_code: string;
+    user: IUser | null | undefined;
+    isReply: boolean;
+
+    loadUser: () => Promise<void>;
+    createUser: () => Promise<void>;
+    sendMessage: (msg: string, keyboard?: { text: string }[][]) => Promise<void>;
+    sendTypingAction: () => Promise<void>;
+    log: typeof umami.log;
+}
 
 // fields are undefined for users created before implementation
 export interface IUser {
   _id: number;
+  messageApp?: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
   lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
@@ -29,7 +49,7 @@ export interface IUser {
   save: () => Promise<IUser>;
   countDocuments: () => number;
 
-  saveDailyInteraction: () => Promise<void>;
+  updateInteractionMetrics: () => Promise<void>;
 
   checkFollowedPeople: (arg0: IPeople) => boolean;
   checkFollowedFunction: (arg0: FunctionTags) => boolean;
@@ -42,24 +62,21 @@ export interface IUser {
 }
 
 export interface IOrganisation {
-  nom: string;
-  wikidataId: WikidataId;
-  save: () => Promise<IOrganisation>;
-  countDocuments: () => number;
+    nom: string;
+    wikidataId: WikidataId;
+    save: () => Promise<IOrganisation>;
+    countDocuments: () => number;
 }
 
 export interface OrganisationModel extends Model<IOrganisation> {
-  firstOrCreate: (args: {
-    nom: string;
-    wikidataId: WikidataId;
-  }) => Promise<IOrganisation>;
+    firstOrCreate: (args: {
+        nom: string;
+        wikidataId: WikidataId;
+    }) => Promise<IOrganisation>;
 }
 
 export interface UserModel extends Model<IUser> {
-  firstOrCreate: (args: {
-    tgUser: TelegramBot.User | undefined;
-    chatId: number;
-  }) => Promise<IUser>;
+  findOrCreate: (session: ISession) => Promise<IUser>;
 }
 
 export type IBlocked = {

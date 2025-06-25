@@ -1,8 +1,7 @@
 import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
 import umami from "../utils/umami";
-import { IPeople, IUser, UserModel } from "../types";
-import TelegramBot from "node-telegram-bot-api";
+import { ISession, IPeople, IUser, UserModel } from "../types";
 import { FunctionTags } from "../entities/FunctionTags";
 
 const UserSchema = new Schema<IUser, UserModel>(
@@ -14,6 +13,10 @@ const UserSchema = new Schema<IUser, UserModel>(
     chatId: {
       type: Number,
       required: true,
+    },
+    messageApp: {
+      type: String,
+      default: "Telegram",
     },
     language_code: {
       type: String,
@@ -27,7 +30,13 @@ const UserSchema = new Schema<IUser, UserModel>(
     },
     lastInteractionDay: {
       type: Date,
-      },
+    },
+    lastInteractionWeek: {
+      type: Date,
+    },
+    lastInteractionMonth: {
+      type: Date,
+    },
     followedPeople: {
       type: [
         {
@@ -74,21 +83,21 @@ const UserSchema = new Schema<IUser, UserModel>(
 );
 
 UserSchema.static(
-  "firstOrCreate",
-  async function (args: {
-    tgUser: TelegramBot.User | undefined;
-    chatId: number;
-  }) {
-    if (!args.tgUser) throw new Error("No user provided");
+  "findOrCreate",
+  async function (session: ISession): Promise<IUser> {
+    if (session.user != null) return session.user;
 
-    const user = await this.findOne({ _id: args.tgUser.id });
+    const user: IUser | null = await this.findOne({
+        messageApp: session.messageApp,
+        chatId : session.chatId
+    });
 
-    if (!user && !args.tgUser.is_bot && !isNaN(args.chatId)) {
+    if (user === null) {
       await umami.log({ event: "/new-user" });
       const newUser = new this({
-        _id: args.tgUser.id,
-        chatId: args.chatId,
-        language_code: args.tgUser.language_code,
+          messageApp: session.messageApp,
+          chatId : session.chatId,
+          language_code: session.language_code,
       });
       await newUser.save();
 
@@ -99,14 +108,34 @@ UserSchema.static(
   }
 );
 
-UserSchema.method('saveDailyInteraction', async function saveDailyInteraction() {
-    const currentDate = new Date();
-    currentDate.setHours(0, 12, 0, 0);
-    if (this.lastInteractionDay === undefined || this.lastInteractionDay.getTime() < currentDate.getTime()) {
-        this.lastInteractionDay = currentDate;
-        await this.save();
+UserSchema.method('updateInteractionMetrics', async function updateInteractionMetrics() {
+    let needSaving=false;
+
+    const currentDay = new Date();
+    currentDay.setHours(4, 0, 0, 0);
+    if (this.lastInteractionDay === undefined || this.lastInteractionDay.getTime() < currentDay.getTime()) {
+        this.lastInteractionDay = currentDay;
         await umami.log({event: "/daily-active-user"});
+        needSaving=true;
     }
+
+    const startWeek = new Date(currentDay);
+    startWeek.setDate(startWeek.getDate() - startWeek.getDay()+1);
+    if (this.lastInteractionWeek === undefined || this.lastInteractionWeek.getTime() < startWeek.getTime()) {
+        this.lastInteractionWeek = startWeek;
+        await umami.log({event: "/weekly-active-user"});
+        needSaving=true;
+    }
+
+    const startMonth = new Date(currentDay);
+    startMonth.setDate(1);
+    if (this.lastInteractionMonth === undefined || this.lastInteractionMonth.getTime() < startMonth.getTime()) {
+        this.lastInteractionMonth = startMonth;
+        await umami.log({event: "/monthly-active-user"});
+        needSaving=true;
+    }
+
+    if (needSaving) await this.save();
 });
 
 
