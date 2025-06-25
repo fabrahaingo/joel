@@ -2,7 +2,6 @@ import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
 import umami from "../utils/umami";
 import { ISession, IPeople, IUser, UserModel } from "../types";
-import TelegramBot from "node-telegram-bot-api";
 import { FunctionTags } from "../entities/FunctionTags";
 
 const UserSchema = new Schema<IUser, UserModel>(
@@ -86,6 +85,8 @@ const UserSchema = new Schema<IUser, UserModel>(
 UserSchema.static(
   "findOrCreate",
   async function (session: ISession): Promise<IUser> {
+    if (session.user != null) return session.user;
+
     const user: IUser | null = await this.findOne({
         messageApp: session.messageApp,
         chatId : session.chatId
