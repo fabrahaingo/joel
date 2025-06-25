@@ -1,5 +1,4 @@
 import { Model, Types } from "mongoose";
-import { JORFSearchItem } from "./entities/JORFSearchResponse";
 import { FunctionTags } from "./entities/FunctionTags";
 import umami from "./utils/umami";
 
@@ -88,7 +87,6 @@ export interface IPeople {
   _id: Types.ObjectId;
   nom: string;
   prenom: string;
-  lastKnownPosition: JORFSearchItem;
   save: () => Promise<IPeople>;
   countDocuments: () => number;
 }
@@ -97,7 +95,6 @@ export interface PeopleModel extends Model<IPeople> {
   firstOrCreate: (people: {
     nom: string;
     prenom: string;
-    lastKnownPosition: JORFSearchItem;
   }) => Promise<IPeople>;
 }
 

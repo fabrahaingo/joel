@@ -175,7 +175,6 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                 const people = await People.firstOrCreate({
                   nom: people_data[0].nom,
                   prenom: people_data[0].prenom,
-                  lastKnownPosition: people_data[0],
                 });
                 await people.save();
                 peopleTab.push(people);

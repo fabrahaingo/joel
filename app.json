@@ -1,14 +1,6 @@
 {
   "cron": [
     {
-      "command": "tsx ./scripts/updatePeople.ts",
-      "schedule": "0 8 * * *"
-    },
-    {
-      "command": "tsx ./scripts/updateFunctions.ts",
-      "schedule": "15 8 * * *"
-    },
-    {
       "command": "tsx ./scripts/notifyUsers.ts",
       "schedule": "0 9 * * *"
     }

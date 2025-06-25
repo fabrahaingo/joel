@@ -179,7 +179,6 @@ export const followCommand= async (session: ISession, msg: string): Promise<void
       const people = await People.firstOrCreate({
         nom: JORFRes[0].nom,
         prenom: JORFRes[0].prenom,
-        lastKnownPosition: JORFRes[0],
       });
       await people.save();
 

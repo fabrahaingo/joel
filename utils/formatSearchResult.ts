@@ -49,15 +49,8 @@ function addPoste(elem: JORFSearchItem, message: string) {
 
 function addLinkJO(elem: JORFSearchItem, message: string) {
   if (elem.source_id && elem.source_date) {
-    message += `🔗 _JO du ${dateToFrenchString(elem.source_date)}_: `;
-
-    switch (elem.source_name) {
-      case "BOMI":
-        message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}.pdf)\n`;
-        break;
-      default:
-        message += `[cliquez ici](https://www.legifrance.gouv.fr/jorf/id/${elem.source_id})\n`;
-    }
+    message += `🔗 _${elem.source_name} du ${dateToFrenchString(elem.source_date)}_: `;
+    message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}/redirect)\n`;
   }
   return message;
 }
@@ -65,29 +58,33 @@ function addLinkJO(elem: JORFSearchItem, message: string) {
 export function formatSearchResult(
   result: JORFSearchItem[],
   options?: {
-    isConfirmation: any;
-    isListing?: any;
-    displayName?: any;
+    isConfirmation?: boolean;
+    isListing?: boolean;
+    displayName?: "all" | "first" | "no";
   },
 ) {
   let message = "";
-  const prenomNom = `${result[0].prenom} ${result[0].nom}`;
-  const prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-    prenomNom,
-  )})`;
-  if (options?.isConfirmation) {
-    if (result.length === 1)
-      message += `Voici la dernière information que nous avons sur ${prenomNomLink}.\n\n`;
-    else
-      message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}.\n\n`;
-  } else if (!options?.isListing) {
-    message += `Voici la liste des postes connus pour ${prenomNomLink}:\n\n`;
-  }
   for (const elem of result) {
-    if (options?.displayName) {
-      message += `🕵️ *${elem.prenom} ${elem.nom}*\n`;
+    const prenomNom = `${elem.prenom} ${elem.nom}`;
+    const prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+        prenomNom,
+    )})`;
+    if (result.indexOf(elem) == 0) {
+      if (options?.isConfirmation) {
+        if (result.length === 1)
+          message += `Voici la dernière information que nous avons sur ${prenomNomLink}.\n\n`;
+        else
+          message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}.\n\n`;
+      } else if (!options?.isListing) {
+        message += `Voici la liste des postes connus pour ${prenomNomLink}:\n\n`;
+      } else if (options?.displayName === "first") {
+        message += `🕵️ ${prenomNomLink}\n\n`;
+      }
     }
-    message += textTypeOrdre(elem.type_ordre || "nomination", elem.sexe || "M");
+    if (options?.displayName === "all") {
+      message += `🕵️ ${prenomNomLink}\n`;
+    }
+    message += textTypeOrdre(elem.type_ordre, elem.sexe || "M");
     message = addPoste(elem, message);
 
     if (elem.date_debut) {
