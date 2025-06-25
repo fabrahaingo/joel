@@ -31,16 +31,12 @@ export default {
 };
 
 export type UmamiEvent =
-    | "/new-user"
-    | "/user-deletion-no-follow"
-    | "/user-deletion-command"
-    | "/user-deletion"
     | "/start"
     | "/default-message"
     | "/help"
     | "/stats"
     | "/list"
-    | "/delete-account"
+    | "/delete-profile"
     | "/jorfsearch-request-people"
     | "/jorfsearch-request-people-formatted"
     | "/jorfsearch-request-tag"
@@ -55,7 +51,9 @@ export type UmamiEvent =
     | "/follow-function"
     | "/follow-organisation"
     | "/unfollow"
+    | "/new-user"
     | "/user-blocked-joel"
+    | "/user-deletion-no-follow"
     | "/user-deletion-self"
     | "/notification-update"
     | "/person-updated"
