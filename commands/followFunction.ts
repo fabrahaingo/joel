@@ -2,7 +2,6 @@ import { startKeyboard } from "../utils/keyboards";
 import User from "../models/User";
 import { sendLongText } from "../utils/sendLongText";
 import umami from "../utils/umami";
-import { IUser } from "../types";
 import { FunctionTags } from "../entities/FunctionTags";
 import TelegramBot, {
   ChatId,
@@ -20,12 +19,6 @@ function buildSuggestions() {
     }. *${key}*\n\n`;
   }
   return suggestion;
-}
-
-function isTagAlreadyFollowed(user: IUser, functionToFollow: string) {
-  return user.followedFunctions.some((elem) => {
-    return elem === functionToFollow;
-  });
 }
 
 async function isWrongAnswer(
@@ -85,20 +78,31 @@ module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
         const functionTag = Object.keys(FunctionTags)[
           answer - 1
         ] as keyof typeof FunctionTags;
-        const tgUser = msg.from;
-        let user = await User.firstOrCreate({ tgUser, chatId });
 
-        if (!isTagAlreadyFollowed(user, functionToFollow)) {
-          user.followedFunctions.push(functionToFollow);
-          await user.save();
+          const tgUser: TelegramBot.User | undefined = msg.from;
+          if (tgUser === undefined) return;
+          const user = await User.firstOrCreate({
+              tgUser,
+              chatId,
+              messageApp: "Telegram"
+          });
+          if (user === null) return;
+
+        if (await user.addFollowedFunction(functionToFollow)) {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            await bot.sendMessage(
+                chatId,
+                `Vous suivez maintenant la fonction *${functionTag}* ✅`,
+                startKeyboard
+            );
+        } else {
+            await new Promise((resolve) => setTimeout(resolve, 300));
+            await bot.sendMessage(
+                chatId,
+                `Vous suivez déjà la fonction *${functionTag}* ✅`,
+                startKeyboard
+            );
         }
-
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await bot.sendMessage(
-          chatId,
-          `Vous suivez maintenant la fonction *${functionTag}* ✅`,
-          startKeyboard
-        );
       }
     );
   } catch (error) {

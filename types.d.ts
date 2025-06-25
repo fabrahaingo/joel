@@ -10,29 +10,66 @@ export type CommandType = {
   };
 }[];
 
+export type MessageApp =
+    | "Telegram";
+//| "WhatsApp";
+//| "Matrix";
+
+// fields are undefined for users created before implementation
 export interface IUser {
   _id: number;
+  messageApp?: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
   lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
-  followedNames: string[] | undefined; // undefined for user created before it was added
+  followedNames?: string[];
+  followedOrganisations?: {
+    wikidataId: WikidataId;
+    lastUpdate: Date;
+  }[];
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
   countDocuments: () => number;
 
-  saveDailyInteraction: () => Promise<void>;
+  updateInteractionMetrics: () => Promise<void>;
+
+  checkFollowedPeople: (arg0: IPeople) => boolean;
+  checkFollowedFunction: (arg0: FunctionTags) => boolean;
+  addFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  addFollowedPeopleBulk: (arg0: IPeople[]) => Promise<boolean>;
+  addFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
+  removeFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
+  followsNothing: () => boolean;
+}
+
+export interface IOrganisation {
+    nom: string;
+    wikidataId: WikidataId;
+    save: () => Promise<IOrganisation>;
+    countDocuments: () => number;
+}
+
+export interface OrganisationModel extends Model<IOrganisation> {
+    firstOrCreate: (args: {
+        nom: string;
+        wikidataId: WikidataId;
+    }) => Promise<IOrganisation>;
 }
 
 export interface UserModel extends Model<IUser> {
   firstOrCreate: (args: {
-    tgUser: TelegramBot.User | undefined;
+    tgUser: TelegramBot.User;
     chatId: number;
-  }) => Promise<IUser>;
+    messageApp: MessageApp;
+  }) => Promise<IUser | null>; // null means that the user is a bot
 }
 
 export type IBlocked = {
@@ -107,4 +144,4 @@ export type TypeOrdre =
   | "fin délégation signature"
   | "prime";
 
-export type WikiDataId = string;
+export type WikidataId = string;

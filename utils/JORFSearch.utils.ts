@@ -1,10 +1,12 @@
 import { cleanJORFItems, JORFSearchResponse } from "../entities/JORFSearchResponse";
-import { WikiDataId } from "../types";
+import { WikidataId } from "../types";
 import axios from "axios";
+import umami from "./umami";
 import { cleanJORFPublication, JORFSearchResponseMeta } from "../entities/JORFSearchResponseMeta";
 
 export async function callJORFSearchPeople(peopleName: string) {
     try {
+        await umami.log({ event: "/jorfsearch-request-people" });
         return axios
             .get<JORFSearchResponse>(encodeURI(
                 `https://jorfsearch.steinertriples.ch/name/${
@@ -18,6 +20,7 @@ export async function callJORFSearchPeople(peopleName: string) {
             // If the peopleName had nom/prenom inverted or bad formatting:
             // we need to call JORFSearch again with the response url with correct format
             if (res1.request.res.responseUrl) {
+                await umami.log({ event: "/jorfsearch-request-people-formatted" });
                 return await axios
                     .get<JORFSearchResponse>(
                     res1.request.res.responseUrl.endsWith("?format=JSON")
@@ -40,6 +43,7 @@ export async function callJORFSearchPeople(peopleName: string) {
 
 export async function callJORFSearchDay(day: Date){
     try {
+        await umami.log({ event: "/jorfsearch-request-date" });
         return axios
         .get<JORFSearchResponse>(encodeURI(
             `https://jorfsearch.steinertriples.ch/${
@@ -57,6 +61,7 @@ export async function callJORFSearchDay(day: Date){
 
 export async function callJORFSearchTag(tag: string, tagValue?: string) {
     try {
+        await umami.log({ event: "/jorfsearch-request-tag" });
         return axios
             .get<JORFSearchResponse>(encodeURI(
                 `https://jorfsearch.steinertriples.ch/tag/${tag}${
@@ -72,11 +77,12 @@ export async function callJORFSearchTag(tag: string, tagValue?: string) {
     return [];
 }
 
-export async function callJORFSearchOrganisation(wikiId: WikiDataId) {
+export async function callJORFSearchOrganisation(wikiId: WikidataId) {
     try {
+        await umami.log({ event: "/jorfsearch-request-organisation" });
         return axios
         .get<JORFSearchResponse>(encodeURI(
-            `https://jorfsearch.steinertriples.ch/${wikiId}?format=JSON`))
+            `https://jorfsearch.steinertriples.ch/${wikiId.toUpperCase()}?format=JSON`))
         .then((res) => {
             if (res.data === null || typeof res.data === "string") return [];
             return cleanJORFItems(res.data);
@@ -101,7 +107,7 @@ async function JORFSearchCallPublications(currentDay: string) {
 }
 
 // Format a string to match the expected search format on JORFSearch: first letter capitalized and no accent
-function cleanPeopleName(input: string): string {
+export function cleanPeopleName(input: string): string {
     /// To lower case
     input = input.trim().toLowerCase();
 
