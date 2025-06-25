@@ -65,13 +65,13 @@ export const followOrganisationCommand = async (session: ISession, _msg: never) 
         return;
       }
 
-      const tgSession: TelegramSession | undefined = extractTelegramSession(session, true);
+      const tgSession: TelegramSession | undefined = await extractTelegramSession(session, true);
       if (tgSession == null) return;
 
       const tgBot = tgSession.telegramBot;
 
       await session.sendTypingAction();
-      const question = await tgBot.sendMessage(
+      const question: TelegramBot.Message = await tgBot.sendMessage(
         session.chatId,
         `Entrez le nom ou l'identifiant [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
 Exemples:
@@ -85,6 +85,7 @@ Conseil constitutionnel : *Q1127218*`,
         },
       );
       tgBot.onReplyToMessage(
+        session.chatId,
         question.message_id,
         async (msg: TelegramBot.Message) => {
           if (msg.text === undefined || msg.text === "") {
@@ -131,6 +132,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
               },
             );
             tgBot.onReplyToMessage(
+              session.chatId,
               followConfirmation.message_id,
               async (msg: TelegramBot.Message) => {
                 if (msg.text !== undefined) {
