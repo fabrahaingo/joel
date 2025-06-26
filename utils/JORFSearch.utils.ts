@@ -1,7 +1,15 @@
 import { cleanJORFItems, JORFSearchResponse } from "../entities/JORFSearchResponse.js";
 import { WikidataId } from "../types.js";
-import axios from "axios";
+import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import umami from "./umami.js";
+
+// Extend the InternalAxiosRequestConfig with the res field
+interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
+    res?: {
+        responseUrl?: string;
+    };
+}
+
 
 export async function callJORFSearchPeople(peopleName: string) {
     try {
@@ -12,20 +20,22 @@ export async function callJORFSearchPeople(peopleName: string) {
                         cleanPeopleName(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
                     }?format=JSON`
                 )
-            ).then(async (res1) => {
+            ).then(async (res1: AxiosResponse<JORFSearchResponse>) => {
                 if (res1.data === null ) return []; // If an error occurred
                 if (typeof res1.data !== "string") return res1.data; // If it worked
 
+                const request = res1.request as CustomInternalAxiosRequestConfig;
+
             // If the peopleName had nom/prenom inverted or bad formatting:
-            // we need to call JORFSearch again with the response url with correct format
-            if (res1.request.res.responseUrl) {
+            // we need to call JORFSearch again with the response url in the correct format
+            if (request.res?.responseUrl) {
                 await umami.log({ event: "/jorfsearch-request-people-formatted" });
                 return await axios
                     .get<JORFSearchResponse>(
-                    res1.request.res.responseUrl.endsWith("?format=JSON")
-                        ? res1.request.res.responseUrl
-                        : `${res1.request.res.responseUrl}?format=JSON`
-                ).then(async (res2) => {
+                    request.res.responseUrl.endsWith("?format=JSON")
+                        ? request.res.responseUrl
+                        : `${request.res.responseUrl}?format=JSON`
+                ).then((res2: AxiosResponse<JORFSearchResponse>) => {
                         if (res2.data === null || typeof res2.data === "string") {
                             return [];
                         }
