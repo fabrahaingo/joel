@@ -190,10 +190,11 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             );
             return;
           } else if (new RegExp(/non/i).test(msg.text)) {
-            return await session.sendMessage(
+            await session.sendMessage(
               `Ok, aucun ajout n'a été effectué. 👌`,
                 mainMenuKeyboard
             );
+            return;
           }
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
