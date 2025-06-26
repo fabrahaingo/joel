@@ -75,9 +75,9 @@ export class TelegramSession implements ISession {
 
         for (let i = 0; i < mArr.length; i++) {
             if (i == mArr.length-1 && keyboard !== undefined) {
-                await this.sendMessage(mArr[i], optionsWithKeyboard);
+                await this.telegramBot.sendMessage(this.chatId, mArr[i], optionsWithKeyboard);
             } else {
-                await this.sendMessage(mArr[i], telegramMessageOption);
+                await this.telegramBot.sendMessage(this.chatId, mArr[i], telegramMessageOption);
             }
         }
     }
