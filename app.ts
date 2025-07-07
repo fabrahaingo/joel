@@ -32,7 +32,6 @@ await (async () => {
             await command.action(tgSession, tgMsg.text)
         } catch (error) {
             console.error('Error processing command:', error);
-
         }
     });
   });
