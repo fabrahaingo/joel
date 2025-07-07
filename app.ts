@@ -15,7 +15,7 @@ import { helpCommand } from "./commands/help.js";
 import { followFunctionCommand } from "./commands/followFunction.js";
 import { listCommand, unfollowCommand } from "./commands/list.js";
 
-const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
+const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN ?? "", {
   polling: true,
   onlyFirstMatch: true,
 });
