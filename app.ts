@@ -17,6 +17,7 @@ await (async () => {
     bot.onText(command.regex,
         async (tgMsg: TelegramBot.Message) => {
 
+        try {
             // Check if the user is known
             const tgUser: TelegramBot.User | undefined = tgMsg.from;
             if (tgUser === undefined || tgUser.is_bot) return // Ignore bots
@@ -27,10 +28,13 @@ await (async () => {
 
             if (tgSession.user != null) await tgSession.user.updateInteractionMetrics();
 
-          // Process user message
-          await command.action(tgSession, tgMsg.text)
-        })
-        ;
+            // Process user message
+            await command.action(tgSession, tgMsg.text)
+        } catch (error) {
+            console.error('Error processing command:', error);
+
+        }
+    });
   });
 
   console.log(`\u{2705} JOEL started successfully`);
