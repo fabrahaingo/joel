@@ -1,6 +1,6 @@
-import { textTypeOrdre } from "./formatting.utils";
-import { dateToFrenchString } from "./date.utils";
-import { JORFSearchItem } from "../entities/JORFSearchResponse";
+import { textTypeOrdre } from "./formatting.utils.js";
+import { dateToFrenchString } from "./date.utils.js";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
 
 function addPoste(elem: JORFSearchItem, message: string) {
   if (elem.grade) {
@@ -77,14 +77,14 @@ export function formatSearchResult(
           message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}.\n\n`;
       } else if (!options?.isListing) {
         message += `Voici la liste des postes connus pour ${prenomNomLink}:\n\n`;
-      } else if (options?.displayName === "first") {
+      } else if (options.displayName === "first") {
         message += `🕵️ ${prenomNomLink}\n\n`;
       }
     }
     if (options?.displayName === "all") {
       message += `🕵️ ${prenomNomLink}\n`;
     }
-    message += textTypeOrdre(elem.type_ordre, elem.sexe || "M");
+    message += textTypeOrdre(elem.type_ordre, elem.sexe ?? "M");
     message = addPoste(elem, message);
 
     if (elem.date_debut) {

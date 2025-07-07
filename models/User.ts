@@ -1,8 +1,8 @@
 import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
-import umami from "../utils/umami";
-import { ISession, IPeople, IUser, UserModel } from "../types";
-import { FunctionTags } from "../entities/FunctionTags";
+import umami from "../utils/umami.js";
+import { ISession, IPeople, IUser, UserModel } from "../types.js";
+import { FunctionTags } from "../entities/FunctionTags.js";
 
 const UserSchema = new Schema<IUser, UserModel>(
   {

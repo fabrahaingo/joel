@@ -1,17 +1,17 @@
-import User from "../models/User";
-import People from "../models/People";
-import { mainMenuKeyboard } from "../utils/keyboards";
-import { IPeople, ISession, WikidataId } from "../types";
-import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames";
+import User from "../models/User.js";
+import People from "../models/People.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { IPeople, ISession, WikidataId } from "../types.js";
+import { List_Promos_INSP_ENA, Promo_ENA_INSP } from "../entities/PromoNames.js";
 import TelegramBot from "node-telegram-bot-api";
-import { JORFSearchItem } from "../entities/JORFSearchResponse";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
 import {
     callJORFSearchOrganisation,
     callJORFSearchPeople,
     callJORFSearchTag,
     cleanPeopleName
-} from "../utils/JORFSearch.utils";
-import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
+} from "../utils/JORFSearch.utils.js";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
 
 function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
   const allPromoPeriods = List_Promos_INSP_ENA.map((i) => i.period);
@@ -190,10 +190,11 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             );
             return;
           } else if (new RegExp(/non/i).test(msg.text)) {
-            return await session.sendMessage(
+            await session.sendMessage(
               `Ok, aucun ajout n'a été effectué. 👌`,
                 mainMenuKeyboard
             );
+            return;
           }
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,

@@ -1,15 +1,15 @@
-import User from "../models/User";
-import { FunctionTags } from "../entities/FunctionTags";
+import User from "../models/User.js";
+import { FunctionTags } from "../entities/FunctionTags.js";
 import TelegramBot from "node-telegram-bot-api";
-import { mainMenuKeyboard } from "../utils/keyboards";
-import { ISession } from "../types";
-import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
-import { parseIntAnswers } from "../utils/text.utils";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { ISession } from "../types.js";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
+import { parseIntAnswers } from "../utils/text.utils.js";
 
 // build message string along with its index
 function buildSuggestions() {
   let suggestion = "";
-  for (let key in FunctionTags) {
+  for (const key in FunctionTags) {
     suggestion += `${
       // number in the array of keys
       Object.keys(FunctionTags).indexOf(key) + 1
@@ -24,7 +24,7 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
 
     if (session.user == null) {
       await session.sendMessage(
-          `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`,
+          `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
           mainMenuKeyboard);
       return;
     }
@@ -54,7 +54,7 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
       session.chatId,
       question.message_id,
       async (msg: TelegramBot.Message) => {
-        let answers = parseIntAnswers(msg.text, functionAll.length);
+        const answers = parseIntAnswers(msg.text, functionAll.length);
         if (answers === null || answers.length == 0) {
           await session.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionAll.length)}.

@@ -2,9 +2,9 @@ import axios, { AxiosResponse } from "axios";
 import {
   JORFSearchItem,
   JORFSearchResponse,
-} from "../entities/JORFSearchResponse";
+} from "../entities/JORFSearchResponse.js";
 import * as fs from "node:fs";
-import { dateTOJORFFormat} from "../utils/date.utils";
+import { dateTOJORFFormat} from "../utils/date.utils.js";
 
 function round(value: number, exp: number) {
   if (typeof exp === 'undefined' || +exp === 0)
@@ -352,4 +352,4 @@ async function main() {
   }
 }
 
-main();
+await main();

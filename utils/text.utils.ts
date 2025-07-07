@@ -8,7 +8,7 @@ export function splitText(text: string, max: number): string[] {
 
     if (endIndex < text.length) {
       // Check for markdown element or word boundary within the chunk
-      while (endIndex > startIndex && !/\n/.test(text.charAt(endIndex))) {
+      while (endIndex > startIndex && !text.charAt(endIndex).includes('\n')) {
         endIndex--;
       }
     }
@@ -17,7 +17,7 @@ export function splitText(text: string, max: number): string[] {
     chunks.push(chunk);
 
     startIndex = endIndex;
-    while (startIndex < text.length && /\n/.test(text.charAt(startIndex))) {
+    while (startIndex < text.length && text.charAt(startIndex).includes('\n')) {
       startIndex++;
     }
   }

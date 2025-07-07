@@ -1,19 +1,19 @@
-import umami from "../utils/umami";
+import umami from "../utils/umami.js";
 import TelegramBot from "node-telegram-bot-api";
-import Organisation from "../models/Organisation";
-import User from "../models/User";
-import { IOrganisation, ISession, IUser, WikidataId } from "../types";
+import Organisation from "../models/Organisation.js";
+import User from "../models/User.js";
+import { IOrganisation, ISession, IUser, WikidataId } from "../types.js";
 import axios from "axios";
-import { parseIntAnswers } from "../utils/text.utils";
-import { mainMenuKeyboard } from "../utils/keyboards";
-import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
+import { parseIntAnswers } from "../utils/text.utils.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
 
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
   wikidataId: WikidataId,
 ): boolean => {
-  return user.followedOrganisations?.some((o) => o.wikidataId === wikidataId);
+  return user.followedOrganisations?.some((o) => o.wikidataId === wikidataId) ?? false;
 };
 
 interface WikiDataAPIResponse {
@@ -47,7 +47,7 @@ async function searchOrganisationWikidataId(
       .then((r) => r.data))
         .map(o=>({
           nom: o.name,
-          wikidataId: o.id as WikidataId
+          wikidataId: o.id
         }));
   } catch (error) {
     console.log(error);
@@ -60,7 +60,7 @@ export const followOrganisationCommand = async (session: ISession, _msg: never) 
     try {
       if (session.user == null) {
         await session.sendMessage(
-            `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`,
+            `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
             mainMenuKeyboard);
         return;
       }
@@ -142,6 +142,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                         nom: orgResults[0].nom,
                         wikidataId: orgResults[0].wikidataId,
                       });
+                    user.followedOrganisations ??= [];
                     user.followedOrganisations.push({
                       wikidataId: organisation.wikidataId,
                       lastUpdate: new Date(),
@@ -161,10 +162,11 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   }
                 }
                 // If msg.txt undefined or not "oui"/"non"
-                return await session.sendMessage(
+                await session.sendMessage(
                   `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
                     mainMenuKeyboard
                 );
+                return;
               },
             );
             // More than one org results
@@ -193,7 +195,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
               session.chatId,
               question.message_id,
               async (msg: TelegramBot.Message) => {
-                let answers = parseIntAnswers(msg.text, orgResults.length);
+                const answers = parseIntAnswers(msg.text, orgResults.length);
                 if (answers === null || answers.length == 0) {
                   await session.sendMessage(
                     `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.
@@ -206,8 +208,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                 await session.sendTypingAction()
 
                 const user = await User.findOrCreate(session);
-                if (user.followedOrganisations === undefined)
-                  user.followedOrganisations = [];
+                user.followedOrganisations ??= [];
 
                 for (const answer of answers) {
                   // Don't call JORF if the organisation is already followed
