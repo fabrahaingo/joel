@@ -1,4 +1,4 @@
-import { SourceName, TypeOrdre, WikidataId } from "../types";
+import { SourceName, TypeOrdre, WikidataId } from "../types.js";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
@@ -189,21 +189,20 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
             return clean_items;
         }
 
-        if (item_raw.organisations === undefined)
-          item_raw.organisations=[];
+        item_raw.organisations ??= [];
 
-        // Drop organisations if name is missing
+        // Drop organisations where the name is missing
         const clean_organisations = item_raw.organisations.filter(
             org_raw => org_raw.nom !== undefined
         ) as Organisation[];
 
-        // Drop remplacement if name is missing
-        if (item_raw?.remplacement?.nom === undefined || item_raw?.remplacement?.prenom === undefined){
+        // Drop remplacement where the name is missing
+        if (item_raw.remplacement?.nom === undefined || item_raw.remplacement.prenom === undefined){
           item_raw.remplacement = undefined;
         }
 
-        // Replace potential mispelling some type_ordre
-        switch (item_raw?.type_ordre) {
+        // Replace potential misspellings some type_ordre
+        switch (item_raw.type_ordre) {
           case "admissibilite":
             item_raw.type_ordre = "admissibilité";
             break
@@ -218,7 +217,7 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchI
         if (clean_item.organisations.length > 0 &&
             clean_item.organisations[0]?.wikidata_id === "Q109039648" &&
             clean_item.type_ordre === "nomination" &&
-            clean_item?.date_debut !== undefined) {
+            clean_item.date_debut !== undefined) {
           const year = parseInt(clean_item.date_debut.slice(0,4))
           if (year != -1) {
             clean_item.eleve_ena=`${String(year)}-${String(year+2)}`;

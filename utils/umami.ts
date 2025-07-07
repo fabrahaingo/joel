@@ -1,12 +1,12 @@
 import axios from "axios";
 
-export const log = async (args: { event: UmamiEvent; data?: any }) => {
+export const log = async (args: { event: UmamiEvent; data?: never }) => {
   if (process.env.NODE_ENV === "development") {
     console.log("Umami event", args.event);
     return;
   }
 
-  const endpoint = `https://${process.env.UMAMI_HOST}/api/send`;
+  const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;
   const payload = {
     payload: {
       hostname: process.env.UMAMI_HOST,
@@ -31,34 +31,37 @@ export default {
 };
 
 export type UmamiEvent =
-    | "/new-user"
-    | "/user-deletion-no-follow"
-    | "/user-deletion-command"
-    | "/user-deletion"
     | "/start"
     | "/default-message"
     | "/help"
     | "/stats"
     | "/list"
-    | "/delete-account"
+    | "/delete-profile"
     | "/jorfsearch-request-people"
     | "/jorfsearch-request-people-formatted"
     | "/jorfsearch-request-tag"
     | "/jorfsearch-request-organisation"
     | "/jorfsearch-request-date"
     | "/jorfsearch-request-meta"
+    | "/jorfsearch-request-wikidata-names"
     | "/search"
     | "/history"
     | "/follow"
     | "/ena"
     | "/ena-list"
     | "/follow-function"
+    | "/follow-organisation"
     | "/unfollow"
+    | "/new-user"
+    | "/new-organisation"
     | "/user-blocked-joel"
+    | "/user-deletion-no-follow"
     | "/user-deletion-self"
     | "/notification-update"
     | "/person-updated"
     | "/person-added"
     | "/daily-active-user"
+    | "/weekly-active-user"
+    | "/monthly-active-user"
 
 

@@ -1,22 +1,18 @@
-import Users from "../models/User";
-import People from "../models/People";
-import { startKeyboard } from "../utils/keyboards";
-import umami from "../utils/umami";
-import TelegramBot from "node-telegram-bot-api";
+import Users from "../models/User.js";
+import People from "../models/People.js";
+import { ISession } from "../types.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
 
-module.exports = (bot: TelegramBot) => async (msg: TelegramBot.Message) => {
+export const statsCommand = async (session: ISession, _msg: never): Promise<void> => {
   try {
-    await umami.log({ event: "/stats" });
-    if (!msg.reply_to_message) {
-      const usersCount = await Users.countDocuments();
-      const peopleCount = await People.countDocuments();
+    await session.log({ event: "/stats" });
+    const usersCount = await Users.countDocuments();
+    const peopleCount = await People.countDocuments();
 
-      await bot.sendMessage(
-        msg.chat.id,
-        `📈 JOEL aujourd’hui c’est\n👨‍💻 ${usersCount} utilisateurs\n🕵️ ${peopleCount} personnes suivies\n\nJOEL sait combien vous êtes à l'utiliser mais il ne sait pas qui vous êtes... et il ne cherchera jamais à le savoir! 🛡`,
-        startKeyboard
+      await session.sendMessage(
+        `📈 JOEL aujourd’hui c’est\n👨‍💻 ${String(usersCount)} utilisateurs\n🕵️ ${String(peopleCount)} personnes suivies\n\nJOEL sait combien vous êtes à l'utiliser mais il ne sait pas qui vous êtes... et il ne cherchera jamais à le savoir! 🛡`,
+        mainMenuKeyboard
       );
-    }
   } catch (error) {
     console.log(error);
   }
