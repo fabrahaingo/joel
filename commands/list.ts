@@ -1,8 +1,8 @@
-import People from "../models/People";
-import { getFunctionsFromValues } from "../entities/FunctionTags";
-import { IOrganisation, IPeople, ISession, IUser } from "../types";
-import Organisation from "../models/Organisation";
-import { mainMenuKeyboard } from "../utils/keyboards";
+import People from "../models/People.js";
+import { getFunctionsFromValues } from "../entities/FunctionTags.js";
+import { IOrganisation, IPeople, ISession, IUser } from "../types.js";
+import Organisation from "../models/Organisation.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
 
 function sortFunctionsAlphabetically(array: IUser["followedFunctions"]) {
   array.sort((a, b) => {
@@ -40,7 +40,7 @@ export const listCommand = async (session: ISession, _msg: never) => {
       .collation({ locale: "fr" })
       .lean();
 
-    if (session.user.followedNames === undefined) session.user.followedNames = [];
+    session.user.followedNames ??= [];
     const followedPeopleTab: {
       nomPrenom: string,
       JORFSearchLink?: string,
@@ -59,7 +59,7 @@ export const listCommand = async (session: ISession, _msg: never) => {
     const functions = sortFunctionsAlphabetically(
         session.user.followedFunctions,
     );
-    if (session.user.followedOrganisations === undefined) session.user.followedOrganisations=[];
+    session.user.followedOrganisations ??= [];
     const organisations: IOrganisation[] = await Organisation.find({
       wikidataId: {
         $in: session.user.followedOrganisations.map((o) => o.wikidataId),

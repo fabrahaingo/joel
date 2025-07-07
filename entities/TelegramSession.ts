@@ -1,9 +1,9 @@
-import { ISession, IUser, MessageApp } from "../types";
+import { ISession, IUser, MessageApp } from "../types.js";
 import TelegramBot from "node-telegram-bot-api";
-import User from "../models/User";
-import umami from "../utils/umami";
-import { splitText } from "../utils/text.utils";
-import { mainMenuKeyboard } from "../utils/keyboards";
+import User from "../models/User.js";
+import umami from "../utils/umami.js";
+import { splitText } from "../utils/text.utils.js";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
 
 export const telegramMessageOption : TelegramBot.SendMessageOptions = {
     parse_mode: "Markdown",
@@ -20,7 +20,7 @@ export class TelegramSession implements ISession {
     language_code: string;
     chatId: number;
     user: IUser | null | undefined = undefined;
-    isReply: boolean;
+    isReply: boolean | undefined;
 
     log = umami.log;
 
@@ -75,9 +75,9 @@ export class TelegramSession implements ISession {
 
         for (let i = 0; i < mArr.length; i++) {
             if (i == mArr.length-1 && keyboard !== undefined) {
-                await this.sendMessage(mArr[i], optionsWithKeyboard);
+                await this.telegramBot.sendMessage(this.chatId, mArr[i], optionsWithKeyboard);
             } else {
-                await this.sendMessage(mArr[i], telegramMessageOption);
+                await this.telegramBot.sendMessage(this.chatId, mArr[i], telegramMessageOption);
             }
         }
     }

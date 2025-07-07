@@ -1,20 +1,20 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
-import { CommandType } from "./types";
-import { mongodbConnect } from "./db";
-import { TelegramSession } from "./entities/TelegramSession";
+import { CommandType } from "./types.js";
+import { mongodbConnect } from "./db.js";
+import { TelegramSession } from "./entities/TelegramSession.js";
 
-import { followOrganisationCommand } from "./commands/followOrganisation";
-import { followCommand, fullHistoryCommand, searchCommand } from "./commands/search";
-import { enaCommand, promosCommand } from "./commands/ena";
-import { statsCommand } from "./commands/stats";
-import { defaultCommand } from "./commands/default";
-import { startCommand } from "./commands/start";
-import { deleteProfileCommand } from "./commands/deleteProfile";
-import { helpCommand } from "./commands/help";
-import { followFunctionCommand } from "./commands/followFunction";
-import { listCommand } from "./commands/list";
-import { unfollowCommand } from "./commands/unfollow";
+import { followOrganisationCommand } from "./commands/followOrganisation.js";
+import { followCommand, fullHistoryCommand, searchCommand } from "./commands/search.js";
+import { enaCommand, promosCommand } from "./commands/ena.js";
+import { statsCommand } from "./commands/stats.js";
+import { defaultCommand } from "./commands/default.js";
+import { startCommand } from "./commands/start.js";
+import { deleteProfileCommand } from "./commands/deleteProfile.js";
+import { helpCommand } from "./commands/help.js";
+import { followFunctionCommand } from "./commands/followFunction.js";
+import { listCommand } from "./commands/list.js";
+import { unfollowCommand } from "./commands/unfollow.js";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
@@ -80,7 +80,7 @@ const commands: CommandType[] = [
   },
 ];
 
-(async () => {
+await (async () => {
   await mongodbConnect();
 
   commands.forEach((command) => {
@@ -95,7 +95,7 @@ const commands: CommandType[] = [
             await tgSession.loadUser();
             tgSession.isReply = tgMsg.reply_to_message !== undefined;
 
-            if (tgSession.user !== null) await tgSession.user.updateInteractionMetrics();
+            if (tgSession.user != null) await tgSession.user.updateInteractionMetrics();
 
           // Process user message
           await command.action(tgSession, tgMsg.text)

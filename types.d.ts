@@ -1,11 +1,11 @@
-import { Model, Types } from "mongoose";
-import { FunctionTags } from "./entities/FunctionTags";
-import umami from "./utils/umami";
+import { Model, Types } from "mongoose.js";
+import { FunctionTags } from "./entities/FunctionTags.js";
+import umami from "./utils/umami.js";
 
-export type CommandType = {
+export interface CommandType {
   regex: RegExp;
   action: (session: ISession, msg?: string) => Promise<void>;
-};
+}
 
 export type MessageApp =
   | "Telegram";
@@ -17,7 +17,7 @@ export interface ISession {
     chatId: number;
     language_code: string;
     user: IUser | null | undefined;
-    isReply: boolean;
+    isReply: boolean | undefined;
 
     loadUser: () => Promise<void>;
     createUser: () => Promise<void>;
@@ -79,9 +79,9 @@ export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
 }
 
-export type IBlocked = {
+export interface IBlocked {
   chatId: string;
-};
+}
 
 export interface IPeople {
   _id: Types.ObjectId;

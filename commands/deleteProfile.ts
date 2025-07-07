@@ -1,7 +1,7 @@
-import { mainMenuKeyboard } from "../utils/keyboards";
-import User from "../models/User";
-import { ISession } from "../types";
-import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession";
+import { mainMenuKeyboard } from "../utils/keyboards.js";
+import User from "../models/User.js";
+import { ISession } from "../types.js";
+import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
 import TelegramBot from "node-telegram-bot-api";
 
 export const deleteProfileCommand = async (session: ISession, _msg: never): Promise<void> => {
@@ -9,7 +9,7 @@ export const deleteProfileCommand = async (session: ISession, _msg: never): Prom
   try {
     if (session.user == null) {
       await session.sendMessage(
-          `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`,
+          `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
           mainMenuKeyboard);
       return;
     }

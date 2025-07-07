@@ -1,4 +1,4 @@
-import { TypeOrdre } from "../types";
+import { TypeOrdre } from "../types.js";
 
 export const textTypeOrdre = (
   type_ordre: TypeOrdre,

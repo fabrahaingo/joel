@@ -1,12 +1,12 @@
 import axios from "axios";
 
-export const log = async (args: { event: UmamiEvent; data?: any }) => {
+export const log = async (args: { event: UmamiEvent; data?: never }) => {
   if (process.env.NODE_ENV === "development") {
     console.log("Umami event", args.event);
     return;
   }
 
-  const endpoint = `https://${process.env.UMAMI_HOST}/api/send`;
+  const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;
   const payload = {
     payload: {
       hostname: process.env.UMAMI_HOST,
