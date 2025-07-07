@@ -13,8 +13,7 @@ import { startCommand } from "./commands/start.js";
 import { deleteProfileCommand } from "./commands/deleteProfile.js";
 import { helpCommand } from "./commands/help.js";
 import { followFunctionCommand } from "./commands/followFunction.js";
-import { listCommand } from "./commands/list.js";
-import { unfollowCommand } from "./commands/unfollow.js";
+import { listCommand, unfollowCommand } from "./commands/list.js";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN || "", {
   polling: true,
