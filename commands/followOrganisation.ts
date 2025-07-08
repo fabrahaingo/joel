@@ -96,7 +96,7 @@ Conseil constitutionnel : *Q1127218*`,
             return;
           }
 
-          const orgResults = await searchOrganisationWikidataId(msg.text);
+          const orgResults = await searchOrganisationWikidataId(tgMsg1.text);
 
           if (orgResults.length == 0) {
             await session.sendMessage(
@@ -194,8 +194,8 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
             tgBot.onReplyToMessage(
               session.chatId,
               question.message_id,
-              async (msg: TelegramBot.Message) => {
-                const answers = parseIntAnswers(msg.text, orgResults.length);
+              async (tgMsg3: TelegramBot.Message) => {
+                const answers = parseIntAnswers(tgMsg3.text, orgResults.length);
                 if (answers === null || answers.length == 0) {
                   await session.sendMessage(
                     `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.
