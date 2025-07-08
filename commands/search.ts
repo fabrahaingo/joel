@@ -101,7 +101,7 @@ async function searchPersonHistory(
     if (session.user == null) {
       isUserFollowingPerson = false;
     } else {
-      const people: IPeople = await People.findOne({
+      const people: IPeople | null = await People.findOne({
         nom: JORFRes_data[0].nom,
         prenom: JORFRes_data[0].prenom,
       });
