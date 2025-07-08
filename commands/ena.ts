@@ -13,6 +13,8 @@ import {
 } from "../utils/JORFSearch.utils.js";
 import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
 
+const inspId = "Q109039648" as WikidataId;
+
 function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
   const allPromoPeriods = List_Promos_INSP_ENA.map((i) => i.period);
 
@@ -54,7 +56,6 @@ async function getJORFPromoSearchResult(
       return callJORFSearchTag("eleve_ena", promo.period);
 
     case "INSP": // If INSP, we can rely on the associated organisation
-      const inspId = "Q109039648" as WikidataId;
       return (await callJORFSearchOrganisation(inspId))
           // We filter to keep admissions to the INSP organisation from the relevant year
           .filter((publication) => publication.eleve_ena === promo.period);
