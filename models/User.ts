@@ -149,7 +149,7 @@ UserSchema.method('addFollowedPeople', function addFollowedPeoples(peopleToFollo
         peopleId: peopleToFollow._id,
         lastUpdate: new Date(),
     });
-    this.save();
+    await this.save();
     return true;
 });
 
@@ -161,7 +161,7 @@ UserSchema.method('addFollowedPeopleBulk', async function addFollowedPeoplesBulk
             lastUpdate: new Date(),
         });
     }
-    this.save();
+    await this.save();
     return true;
 });
 
