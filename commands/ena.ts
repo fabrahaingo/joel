@@ -102,7 +102,7 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
         const promoInfo = findENAINSPPromo(tgMsg1.text);
         const promoJORFList = await getJORFPromoSearchResult(promoInfo);
 
-        if (promoJORFList === null ||promoJORFList.length == 0) {
+        if (promoInfo == null || promoJORFList == null ||promoJORFList.length == 0) {
           await session.sendMessage(
               `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
               mainMenuKeyboard,
@@ -110,10 +110,9 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
           return;
         }
 
-        let promoStr= promoInfo.period;
-        if (promoInfo.name !== null) promoStr = `${promoInfo.name} (${promoInfo.period})`;
+        const promoStr= promoInfo.name ? `${promoInfo.name} (${promoInfo.period})` : promoInfo.period;
 
-        if (!promoInfo?.onJORF) {
+        if (!promoInfo.onJORF) {
           await session.sendMessage(
             `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
