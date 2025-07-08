@@ -165,7 +165,6 @@ export const followCommand= async (session: ISession, msg: string): Promise<void
       await session.sendTypingAction();
 
       const user = await User.findOrCreate(session);
-      if (user === null) return;
 
       const JORFRes = await callJORFSearchPeople(personName);
       if (JORFRes.length == 0) {

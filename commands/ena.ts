@@ -163,7 +163,6 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             );
             await session.sendTypingAction();
             const user = await User.findOrCreate(session);
-            if (user === null) return;
 
             const peopleTab: IPeople[] = [];
 
