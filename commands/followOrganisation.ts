@@ -108,8 +108,7 @@ Conseil constitutionnel : *Q1127218*`,
 
           if (orgResults.length == 1) {
             const user = await User.findOrCreate(session);
-            if (user.followedOrganisations === undefined)
-              user.followedOrganisations = [];
+            user.followedOrganisations ??= [];
 
             // If the one result is already followed
             if (isOrganisationAlreadyFollowed(user, orgResults[0].wikidataId)) {
