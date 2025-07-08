@@ -83,8 +83,8 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
           force_reply: true,
         },
       });
-      tgBot.onReplyToMessage(session.chatId, question.message_id, async (msg: TelegramBot.Message) => {
-        if (msg.text === undefined) {
+      tgBot.onReplyToMessage(session.chatId, question.message_id, async (tgMsg1: TelegramBot.Message) => {
+          if (tgMsg1.text == undefined || tgMsg1.text.length == 0) {
           await tgBot.sendMessage(
             session.chatId,
             `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena.`,
@@ -93,12 +93,12 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
         }
 
         // If the user used the /promos command or button
-        if (RegExp(/\/promos/i).test(msg.text)) {
+        if (RegExp(/\/promos/i).test(tgMsg1.text)) {
           await promosCommand(session);
           return;
         }
 
-        const promoInfo = findENAINSPPromo(msg.text);
+        const promoInfo = findENAINSPPromo(tgMsg1.text);
         const promoJORFList = await getJORFPromoSearchResult(promoInfo);
 
         if (promoJORFList === null ||promoJORFList.length == 0) {
@@ -150,14 +150,14 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
       tgBot.onReplyToMessage(
         session.chatId,
         followConfirmation.message_id,
-        async (msg: TelegramBot.Message) => {
-          if (msg.text === undefined) {
+        async (tgMsg2: TelegramBot.Message) => {
+          if (tgMsg2.text === undefined) {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`, mainMenuKeyboard
             );
             return;
           }
-          if (new RegExp(/oui/i).test(msg.text)) {
+          if (new RegExp(/oui/i).test(tgMsg2.text)) {
             await session.sendMessage(
               `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
             );
@@ -189,7 +189,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                 mainMenuKeyboard,
             );
             return;
-          } else if (new RegExp(/non/i).test(msg.text)) {
+          } else if (new RegExp(/non/i).test(tgMsg2.text)) {
             await session.sendMessage(
               `Ok, aucun ajout n'a été effectué. 👌`,
                 mainMenuKeyboard

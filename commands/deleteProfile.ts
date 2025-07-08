@@ -31,8 +31,8 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
           },
         }
     );
-    tgBot.onReplyToMessage(session.chatId, question.message_id, async (msg: TelegramBot.Message) => {
-      if (msg.text === "SUPPRIMER MON COMPTE") {
+    tgBot.onReplyToMessage(session.chatId, question.message_id, async (tgMsg: TelegramBot.Message) => {
+      if (tgMsg.text === "SUPPRIMER MON COMPTE") {
         await User.deleteOne({
           _id: session.chatId,
           chatId: session.chatId,

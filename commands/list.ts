@@ -194,15 +194,15 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
     tgBot.onReplyToMessage(
         session.chatId,
         question.message_id,
-        async (msg: TelegramBot.Message) => {
+        async (tgMsg: TelegramBot.Message) => {
           if (session.user == undefined) return;
 
-          if (msg.text == "/list"){
+          if (tgMsg.text == "/list"){
             await listCommand(session, _msg);
             return;
           }
 
-          let answers = parseIntAnswers(msg.text, followTotal);
+          let answers = parseIntAnswers(tgMsg.text, followTotal);
           if (answers === null) {
             await session.sendMessage(
                 `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.

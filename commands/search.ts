@@ -39,7 +39,7 @@ export const searchCommand = async (session: ISession, _msg: never): Promise<voi
       session.chatId,
       question.message_id,
       async (tgMsg: TelegramBot.Message) => {
-        if (tgMsg.text === undefined) {
+        if (tgMsg.text == undefined || tgMsg.text.length == 0) {
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
             mainMenuKeyboard);

@@ -53,8 +53,8 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
     tgBot.onReplyToMessage(
       session.chatId,
       question.message_id,
-      async (msg: TelegramBot.Message) => {
-        const answers = parseIntAnswers(msg.text, functionAll.length);
+      async (tgMsg: TelegramBot.Message) => {
+        const answers = parseIntAnswers(tgMsg.text, functionAll.length);
         if (answers === null || answers.length == 0) {
           await session.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionAll.length)}.

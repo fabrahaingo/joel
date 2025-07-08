@@ -87,8 +87,8 @@ Conseil constitutionnel : *Q1127218*`,
       tgBot.onReplyToMessage(
         session.chatId,
         question.message_id,
-        async (msg: TelegramBot.Message) => {
-          if (msg.text === undefined || msg.text === "") {
+        async (tgMsg1: TelegramBot.Message) => {
+          if (tgMsg1.text === undefined || tgMsg1.text === "") {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
                 mainMenuKeyboard
@@ -134,9 +134,9 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
             tgBot.onReplyToMessage(
               session.chatId,
               followConfirmation.message_id,
-              async (msg: TelegramBot.Message) => {
-                if (msg.text !== undefined) {
-                  if (new RegExp(/oui/i).test(msg.text)) {
+              async (tgMsg2: TelegramBot.Message) => {
+                if (tgMsg2.text !== undefined) {
+                  if (new RegExp(/oui/i).test(tgMsg2.text)) {
                     const organisation: IOrganisation =
                       await Organisation.firstOrCreate({
                         nom: orgResults[0].nom,
@@ -153,7 +153,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                       mainMenuKeyboard,
                     );
                     return;
-                  } else if (new RegExp(/non/i).test(msg.text)) {
+                  } else if (new RegExp(/non/i).test(tgMsg2.text)) {
                     await session.sendMessage(
                       `L'organisation *${orgResults[0].nom}* n'a pas été ajoutée aux suivis.`,
                       mainMenuKeyboard,
