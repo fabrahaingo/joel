@@ -52,7 +52,7 @@ JOEL c’est aussi:
 <li>🛡 Vos données sont anonymisées et ne sont pas réutilisées </li>
 <li>🧩 Un nouvel élément de transparence et d’accessibilité du JO, dans la logique initiée par l’outil Jorfsearch de <a href="https://github.com/nathanncohen">Nathann Cohen</a> sur lequel est construit JOEL </li>
 </br> 🤔 Et pourquoi « JOEL »? 
-En hommage au <a href="https://fr.wikipedia.org/wiki/Fichier:Publicit%C3%A9_3615_JOEL.png">3615 JOEL </a>, qui permettait de consulter le <b>J</b>ournal <b>O</b>fficiel <b>EL</b>ectronique sur Minitel 😉 </br>
+En hommage au <a href="https://fr.wikipedia.org/wiki/Fichier:Publicit%C3%A9_3615_JOEL.png">3615 JOEL</a>, qui permettait de consulter le <b>J</b>ournal <b>O</b>fficiel <b>EL</b>ectronique sur Minitel 😉 </br>
 
 ### Built With
 
@@ -101,7 +101,7 @@ La liste de vos contacts apparaît, il vous suffit alors d'entrer le numéro ass
 
 #### Lister mes contacts
 
-Pour lister vos contacts, cliquez sur le bouton "🧐 Lister mes contacts"
+Pour lister vos contacts, cliquez sur le bouton "🧐 Lister mes contacts".
 
 <p align="center">
   <a href="./img/tuto/list-delete.png">
@@ -125,7 +125,7 @@ Toute contribution sera **grandement appréciée** 🤗
 2. Créer une branche feature ('git checkout -b feature/AmazingFeature')
 3. Commiter les changement ('git commit -m 'Add some AmazingFeature')
 4. Pusher dans la branche ('git push origin feature/AmazingFeature')
-5. Ouvrir une Pull Request
+5. Ouvrir un Pull Request
 
 ## Contact
 

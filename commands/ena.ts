@@ -126,7 +126,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
         // wait 2 seconds
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // sort JORFSearchRes by upper last name: to account for French "particule"
+        // sort JORFSearchRes by the upper lastname: to account for French "particule"
         promoJORFList.sort((a, b) => {
           if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
           if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;

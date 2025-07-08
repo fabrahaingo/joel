@@ -75,7 +75,7 @@ export const followOrganisationCommand = async (session: ISession, _msg: never) 
         session.chatId,
         `Entrez le nom ou l'identifiant [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
 Exemples:
-Conseil d'Etat : *Q769657*
+Conseil d'État : *Q769657*
 Conseil constitutionnel : *Q1127218*`,
         {
           parse_mode: "Markdown",

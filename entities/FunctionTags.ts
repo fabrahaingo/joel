@@ -4,7 +4,7 @@ export enum FunctionTags {
   "Ambassadeur thématique" = "ambassadeur_thematique",
   "Avocat aux conseils" = "avocat_aux_conseils",
   "Cabinet" = "cabinet",
-  "Cabinet ministeriel" = "cabinet_ministeriel",
+  "Cabinet ministériel" = "cabinet_ministeriel",
   "Centre de détention" = "centre_detention",
   "Commissaire de justice" = "commissaire_de_justice",
   "Commissaire de justice création d'office" = "commissaire_de_justice_creation_office",

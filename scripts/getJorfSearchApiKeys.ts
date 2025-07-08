@@ -57,7 +57,7 @@ interface JORFKeyStat {
 interface Incomplete {
   source_date: string,
   source_id: string,
-  nb_occurences: number
+  nb_occurrences: number
 }
 
 // Function to convert array to CSV
@@ -272,7 +272,7 @@ async function main() {
   ).map(i => ({
     source_date: i.source_date,
     source_id: i.source_id,
-    nb_occurences: 1,
+    nb_occurrences: 1,
   }) as Incomplete)
       .reduce((accumulator: Incomplete[], currentItem) => {
         // Check if the valueT already exists in the accumulator
@@ -281,10 +281,10 @@ async function main() {
 
         if (existingItem) {
           // If it exists, increment the count
-          existingItem.nb_occurences += 1;
+          existingItem.nb_occurrences += 1;
         } else {
           // If it doesn't exist, add the item with a count of 1
-          accumulator.push({...currentItem, nb_occurences: 1});
+          accumulator.push({...currentItem, nb_occurrences: 1});
         }
 
         return accumulator;
@@ -302,7 +302,7 @@ async function main() {
   ).map(i=> ({
     source_date: i.source_date,
     source_id: i.source_id,
-    nb_occurences: 1,
+    nb_occurrences: 1,
   }) as Incomplete)
       .reduce((accumulator: Incomplete[], currentItem) => {
         // Check if the valueT already exists in the accumulator
@@ -311,10 +311,10 @@ async function main() {
 
         if (existingItem) {
           // If it exists, increment the count
-          existingItem.nb_occurences += 1;
+          existingItem.nb_occurrences += 1;
         } else {
           // If it doesn't exist, add the item with a count of 1
-          accumulator.push({ ...currentItem, nb_occurences: 1 });
+          accumulator.push({ ...currentItem, nb_occurrences: 1 });
         }
 
         return accumulator;
@@ -328,7 +328,7 @@ async function main() {
   const missing_sexe=res_data.filter(i=>i.sexe === undefined).map(i=> ({
     source_date: i.source_date,
     source_id: i.source_id,
-    nb_occurences: 1,
+    nb_occurrences: 1,
   }) as Incomplete)
       .reduce((accumulator: Incomplete[], currentItem) => {
         // Check if the valueT already exists in the accumulator
@@ -337,10 +337,10 @@ async function main() {
 
         if (existingItem) {
           // If it exists, increment the count
-          existingItem.nb_occurences += 1;
+          existingItem.nb_occurrences += 1;
         } else {
           // If it doesn't exist, add the item with a count of 1
-          accumulator.push({ ...currentItem, nb_occurences: 1 });
+          accumulator.push({ ...currentItem, nb_occurrences: 1 });
         }
 
         return accumulator;

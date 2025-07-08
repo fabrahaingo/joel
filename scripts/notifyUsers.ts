@@ -32,7 +32,7 @@ async function getJORFRecordsFromDate(
   const targetDateStr = dateTOJORFFormat(startDate);
 
   // From today, until the start
-  // Order is important to keep record sorted, and remove later ones as duplicates
+  // Order is important to keep record sorted and remove later ones as duplicates
   let updatedPeople: JORFSearchItem[] = [];
 
   const currentDate = new Date(todayDate);
@@ -50,9 +50,9 @@ async function getJORFRecordsFromDate(
 function extractTaggedItems(
   JORF_items: JORFSearchItem[],
   tagName: FunctionTags,
-  tagvalue?: string
+  tagValue?: string
 ) {
-  if (tagvalue === undefined) {
+  if (tagValue === undefined) {
     return JORF_items.filter(
       (item) => Object.prototype.hasOwnProperty.call(item, tagName) // Check if item has tag as a field
     );
@@ -60,7 +60,7 @@ function extractTaggedItems(
     return JORF_items.filter(
       (item) =>
         Object.prototype.hasOwnProperty.call(item, tagName) && // Check if item has tag as a field
-        item[tagName as keyof JORFSearchItem] === tagvalue // Check if tag has the required value
+        item[tagName as keyof JORFSearchItem] === tagValue // Check if the tag has the required value
     );
   }
 }
@@ -88,7 +88,7 @@ async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
   return users;
 }
 
-// Update the timestamp of last update of a user-specific people follow
+// Update the timestamp of the last update date for a user-specific people follow
 async function updateUserFollowedPeople(
   user: IUser,
   updatedPeopleIds: Types.ObjectId[]
@@ -106,7 +106,7 @@ async function updateUserFollowedPeople(
           (f) => f.peopleId.toString() === followed.peopleId.toString()
         )
       )
-        return followedList; // If user follows twice the same person: we drop the second record
+        return followedList; // If the user follows twice the same person: we drop the second record
 
       // if updated people: we update the timestamp
       if (
@@ -131,7 +131,7 @@ async function updateUserFollowedPeople(
 }
 
 // There is currently no way to check if a user has been notified of a tag update
-// Resuming an update thus require to force-notify users for all tags update over the period.
+// Resuming an update thus require to force-notify users for all tags updates over the period.
 export async function notifyFunctionTagsUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
@@ -159,7 +159,7 @@ export async function notifyFunctionTagsUpdates(
   });
 
   for (const user of usersFollowingTags) {
-    // send notification to user
+    // send tqg notification to the user
     await sendTagUpdates(user, updatedTagMap);
   }
 }
@@ -200,11 +200,11 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     const peopleInfoFollowedByUser =
       uniqueMinimalNameInfo(peopleFollowedByUser);
 
-    // Records which are associated with followed People, and which are new for this respective People follow
+    // Records which are associated with followed People, and which are new for the respective People follow
     const newRecordsFollowedByUser = updatedRecords.reduce(
       (recordList: JORFSearchItem[], record) => {
         // remove records not associated with followed people
-        // this the first main filter
+        // this is the first main filter
         if (
           !peopleInfoFollowedByUser.some(
             (p) => p.nom === record.nom && p.prenom === record.prenom
@@ -217,27 +217,27 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         )?._id;
         if (updatesPeopleId === undefined) return recordList; // this should not happen
 
-        // Find the follow data associated with this People
+        // Find the follow data associated with these people record
         const followData = user.followedPeople.find(
           (i) => i.peopleId.toString() === updatesPeopleId.toString()
         );
         if (followData === undefined) return recordList; // this should not happen
 
-        // Check that the update is newer than lastUpdate
+        // Check that the update is newer than the lastUpdate
         if (
           JORFtoDate(record.source_date).getTime() <
           followData.lastUpdate.getTime()
         )
           return recordList;
 
-        // Record up to this point are associated to a followed People and newer than the last update
+        // Record up to this point associated with a followed People and newer than the last update
         recordList.push(record);
         return recordList;
       },
       []
     );
 
-    // send notification to user
+    // send follow notification to the user
     await sendPeopleUpdate(user, newRecordsFollowedByUser);
 
     // Ids of updated peoples:
@@ -461,7 +461,7 @@ async function sendLongMessageFromAxios(user: IUser, message: string) {
         console.log(error.message);
       });
 
-    // prevent hitting Telegram API rate limit
+    // prevent hitting the Telegram API rate limit
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }
@@ -485,10 +485,10 @@ if (MONGODB_URI === undefined) {
     throw new Error("BOT TOKEN NOT SET");
   }
 
-  // Number of days to go back : 0 means we just fetch today's info
+  // Number of days to go back: 0 means we just fetch today's info
   const shiftDays = 0;
 
-  // currentDate is today
+  // the currentDate is today
   const currentDate = new Date();
   const startDate = new Date(
     currentDate.getFullYear(),
