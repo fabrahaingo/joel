@@ -87,7 +87,8 @@ Conseil constitutionnel : *Q1127218*`,
       tgBot.onReplyToMessage(
         session.chatId,
         question.message_id,
-        async (tgMsg1: TelegramBot.Message) => {
+        (tgMsg1: TelegramBot.Message) => {
+        void (async () => {
           if (tgMsg1.text === undefined || tgMsg1.text === "") {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
@@ -133,7 +134,8 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
             tgBot.onReplyToMessage(
               session.chatId,
               followConfirmation.message_id,
-              async (tgMsg2: TelegramBot.Message) => {
+              (tgMsg2: TelegramBot.Message) => {
+                  void (async () => {
                 if (tgMsg2.text !== undefined) {
                   if (new RegExp(/oui/i).test(tgMsg2.text)) {
                     const organisation: IOrganisation =
@@ -166,6 +168,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                     mainMenuKeyboard
                 );
                 return;
+                  })();
               },
             );
             // More than one org results
@@ -193,7 +196,8 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
             tgBot.onReplyToMessage(
               session.chatId,
               question.message_id,
-              async (tgMsg3: TelegramBot.Message) => {
+              (tgMsg3: TelegramBot.Message) => {
+                  void (async () => {
                 const answers = parseIntAnswers(tgMsg3.text, orgResults.length);
                 if (answers === null || answers.length == 0) {
                   await session.sendMessage(
@@ -240,9 +244,11 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                     .join("\n")}`,
                     mainMenuKeyboard
                 );
+              })();
               },
             );
           }
+        })();
         },
       );
     } catch (error) {

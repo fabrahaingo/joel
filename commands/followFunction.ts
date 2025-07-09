@@ -53,7 +53,8 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
     tgBot.onReplyToMessage(
       session.chatId,
       question.message_id,
-      async (tgMsg: TelegramBot.Message) => {
+      (tgMsg: TelegramBot.Message) => {
+      void (async () => {
         const answers = parseIntAnswers(tgMsg.text, functionAll.length);
         if (answers === null || answers.length == 0) {
           await session.sendMessage(
@@ -105,6 +106,7 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
 
         await session.sendMessage(text, mainMenuKeyboard);
 
+      })();
       }
     );
   } catch (error) {
