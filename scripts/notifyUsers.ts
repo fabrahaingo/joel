@@ -106,7 +106,7 @@ async function updateUserFollowedPeople(
           (f) => f.peopleId.toString() === followed.peopleId.toString()
         )
       )
-        return followedList; // If the user follows twice the same person: we drop the second record
+        return followedList; // If the user follows twice the same person, we drop the second record
 
       // if updated people: we update the timestamp
       if (
@@ -119,7 +119,7 @@ async function updateUserFollowedPeople(
           lastUpdate: currentDate
         });
       } else {
-        followedList.push(followed); // otherwise we don't change the item
+        followedList.push(followed); // otherwise, we don't change the item
       }
       return followedList;
     },
@@ -186,7 +186,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: { peopleId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out user who blocked JOEL
+    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
   });
 
   for (const user of updatedUsers) {
@@ -266,7 +266,7 @@ export async function notifyNameMentionUpdates(updatedRecords: JORFSearchItem[])
         followedPeople: { peopleId: 1, lastUpdate: 1 },
       }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out user who blocked JOEL
+    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
   });
 
   const recordsNamesTab = updatedRecords.reduce(
@@ -466,9 +466,6 @@ async function sendLongMessageFromAxios(user: IUser, message: string) {
   }
 }
 
-if (BOT_TOKEN === undefined) {
-  throw new Error("BOT TOKEN NOT SET");
-}
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
