@@ -18,7 +18,6 @@ import {
   callJORFSearchDay, cleanPeopleName,
   uniqueMinimalNameInfo
 } from "../utils/JORFSearch.utils.js";
-import { ObjectId } from "mongodb";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -107,10 +106,10 @@ async function updateUserFollowedPeople(
   const currentDate = new Date();
 
   user.followedPeople = user.followedPeople.reduce(
-    (followedList: { peopleId: ObjectId; lastUpdate: Date }[], followed) => {
+    (followedList: { peopleId: Types.ObjectId; lastUpdate: Date }[], followed) => {
       if (
         followedList.some(
-          (f) => f.peopleId.toString() === followed.peopleId.toString()
+          (f) => f.peopleId.equals(followed.peopleId)
         )
       )
         return followedList; // If the user follows twice the same person, we drop the second record
@@ -118,7 +117,7 @@ async function updateUserFollowedPeople(
       // if updated people: we update the timestamp
       if (
         updatedPeopleIds.some(
-          (p) => p._id.toString() === followed.peopleId.toString()
+          (p) => p._id.equals(followed.peopleId)
         )
       ) {
         followedList.push({
@@ -226,7 +225,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 
         // Find the follow data associated with these people record
         const followData = user.followedPeople.find(
-          (i) => i.peopleId.toString() === updatesPeopleId.toString()
+          (i) => i.peopleId.equals(updatesPeopleId)
         );
         if (followData === undefined) return recordList; // this should not happen
 
