@@ -394,7 +394,7 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
 
 async function sendTagUpdates(
   user: IUser,
-  tagMap: [[FunctionTags], JORFSearchItem[]][]
+  tagMap: Record<FunctionTags, JORFSearchItem[]>
 ) {
   // only keep the tags followed by the user
   const tagList = (Object.keys(tagMap) as FunctionTags[]).filter((tag) =>
