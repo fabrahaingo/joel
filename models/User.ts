@@ -146,7 +146,7 @@ UserSchema.method('checkFollowedPeople', function checkFollowedPeople(people: IP
 UserSchema.method('addFollowedPeople', async function addFollowedPeople(peopleToFollow: IPeople) {
     if (this.checkFollowedPeople(peopleToFollow)) return false;
     this.followedPeople.push({
-        peopleId: peopleToFollow._id,
+        peopleId: peopleToFollow._id as Types.ObjectId,
         lastUpdate: new Date(),
     });
     await this.save();
@@ -157,7 +157,7 @@ UserSchema.method('addFollowedPeopleBulk', async function addFollowedPeopleBulk(
     for (const people of peopleToFollow) {
         if (this.checkFollowedPeople(people)) continue;
         this.followedPeople.push({
-            peopleId: people._id,
+            peopleId: people._id as Types.ObjectId,
             lastUpdate: new Date(),
         });
     }
@@ -168,7 +168,7 @@ UserSchema.method('addFollowedPeopleBulk', async function addFollowedPeopleBulk(
 UserSchema.method('removeFollowedPeople', async function removeFollowedPeople(peopleToUnfollow: IPeople) {
     if (!this.checkFollowedPeople(peopleToUnfollow)) return false;
     this.followedPeople = this.followedPeople.filter((elem) => {
-        return !elem.peopleId.equals(peopleToUnfollow._id);
+        return !((elem.peopleId as Types.ObjectId).toString === (peopleToUnfollow._id as Types.ObjectId).toString);
     });
     await this.save();
     return true;

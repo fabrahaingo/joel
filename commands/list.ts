@@ -336,7 +336,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
               (people) =>
                   !unfollowedPeopleId
                       .map((id) => id.toString())
-                      .includes(people.peopleId.toString()),
+                      .includes((people.peopleId as Types.ObjectId).toString()),
           );
 
           session.user.followedNames = session.user.followedNames.filter(

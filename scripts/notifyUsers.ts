@@ -106,10 +106,10 @@ async function updateUserFollowedPeople(
   const currentDate = new Date();
 
   user.followedPeople = user.followedPeople.reduce(
-    (followedList: { peopleId: Types.ObjectId; lastUpdate: Date }[], followed) => {
+    (followedList: IUser["followedPeople"], followed: { peopleId: Types.ObjectId; lastUpdate: Date }) => {
       if (
         followedList.some(
-          (f) => f.peopleId.equals(followed.peopleId)
+          (f) => (f.peopleId as Types.ObjectId).toString() === followed.peopleId.toString()
         )
       )
         return followedList; // If the user follows twice the same person, we drop the second record
@@ -117,7 +117,7 @@ async function updateUserFollowedPeople(
       // if updated people: we update the timestamp
       if (
         updatedPeopleIds.some(
-          (p) => p._id.equals(followed.peopleId)
+          (p) => p._id.toString() === followed.peopleId.toString()
         )
       ) {
         followedList.push({
@@ -181,7 +181,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: {
         $elemMatch: {
           peopleId: {
-            $in: updatedPeopleList.map((i) => i._id)
+            $in: updatedPeopleList.map((i) => i._id as Types.ObjectId)
           }
         }
       }
@@ -197,11 +197,11 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
-    const peopleIdsFollowedByUser = user.followedPeople.map((j) =>
-      j.peopleId.toString()
+    const peopleIdStrsFollowedByUser =
+        user.followedPeople.map((j) => (j.peopleId as Types.ObjectId).toString()
     );
     const peopleFollowedByUser = updatedPeopleList.filter((i) =>
-      peopleIdsFollowedByUser.includes(i._id.toString())
+        peopleIdStrsFollowedByUser.includes((i._id as Types.ObjectId).toString())
     );
     const peopleInfoFollowedByUser =
       uniqueMinimalNameInfo(peopleFollowedByUser);
@@ -218,14 +218,14 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         )
           return recordList;
 
-        const updatesPeopleId = peopleFollowedByUser.find(
-          (i) => i.nom == record.nom && i.prenom == record.prenom
-        )?._id;
-        if (updatesPeopleId === undefined) return recordList; // this should not happen
+        const updatedPeople: IPeople | undefined = peopleFollowedByUser.find(
+          (i) => i.nom === record.nom && i.prenom === record.prenom
+        );
+        if (updatedPeople == null) return recordList; // this should not happen
 
         // Find the follow data associated with these people record
         const followData = user.followedPeople.find(
-          (i) => i.peopleId.equals(updatesPeopleId)
+          (i) => i.peopleId === (updatedPeople._id as Types.ObjectId).toString()
         );
         if (followData === undefined) return recordList; // this should not happen
 
@@ -247,13 +247,13 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     await sendPeopleUpdate(user, newRecordsFollowedByUser);
 
     // Ids of updated peoples:
-    const updatedRecordsPeopleId = peopleFollowedByUser
+    const updatedRecordsPeopleId: Types.ObjectId[] = peopleFollowedByUser
       .filter((p) =>
         newRecordsFollowedByUser.some(
           (r) => r.nom === p.nom && r.prenom === p.prenom
         )
       )
-      .map((p) => p._id);
+      .map((p) => p._id as Types.ObjectId);
 
     // update each lastUpdate fields of the user followedPeople
     await updateUserFollowedPeople(user, updatedRecordsPeopleId);
@@ -292,7 +292,7 @@ export async function notifyNameMentionUpdates(updatedRecords: JORFSearchItem[])
       followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
   ) => {
     return followedPeople.some((followedPerson) => {
-      return followedPerson.peopleId.toString() === person._id.toString();
+      return followedPerson.peopleId.toString() === (person._id as Types.ObjectId).toString();
     });
   };
 
@@ -328,7 +328,7 @@ export async function notifyNameMentionUpdates(updatedRecords: JORFSearchItem[])
 
       if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
         user.followedPeople.push({
-          peopleId: people._id,
+          peopleId: people._id as Types.ObjectId,
           lastUpdate: new Date(Date.now()),
         });
       }
