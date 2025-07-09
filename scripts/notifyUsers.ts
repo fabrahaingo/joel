@@ -75,15 +75,15 @@ export function buildTagMap(
   updatedRecords: JORFSearchItem[],
   tagList: FunctionTags[]
 ) {
-  return tagList.reduce((tagMap: [[FunctionTags], JORFSearchItem[]][], tag) => {
+  return tagList.reduce((tagMap: Record<FunctionTags, JORFSearchItem[]>, tag) => {
     // extracts the relevant tags from the daily updates
     const taggedItems = extractTaggedItems(updatedRecords, tag);
-    if (taggedItems.length == 0) return tagMap; // If no tagged record: we drop the tag
+    if (taggedItems.length === 0) return tagMap; // If no tagged record: we drop the tag
 
     // format: {tag: [contacts], tag2: [contacts]}
-    tagMap[tag as FunctionTags] = taggedItems;
+    tagMap[tag] = taggedItems;
     return tagMap;
-  }, []);
+  }, {} as Record<FunctionTags, JORFSearchItem[]>);
 }
 
 async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
