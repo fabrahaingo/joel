@@ -10,10 +10,10 @@ import { parseIntAnswers } from "../utils/text.utils.js";
 function buildSuggestions() {
   let suggestion = "";
   for (const key in FunctionTags) {
-    suggestion += `${
+    suggestion += `${String(
       // number in the array of keys
       Object.keys(FunctionTags).indexOf(key) + 1
-    }. *${key}*\n\n`;
+    )}. *${key}*\n\n`;
   }
   return suggestion;
 }
