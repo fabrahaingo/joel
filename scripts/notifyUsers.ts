@@ -473,7 +473,7 @@ if (MONGODB_URI === undefined) {
   throw new Error(ErrorMessages.MONGODB_URI_NOT_SET);
 }
 
-(async () => {
+await (async () => {
   // Connect to DB
   await mongodbConnect();
 
