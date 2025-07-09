@@ -20,6 +20,13 @@ import {
 } from "../utils/JORFSearch.utils.js";
 import { ObjectId } from "mongodb";
 
+const BOT_TOKEN = process.env.BOT_TOKEN;
+
+// Check that the BOT TOKEN is set: to prevent computing everything for nothing ...
+if (BOT_TOKEN === undefined) {
+  throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
+}
+
 async function getJORFRecordsFromDate(
   startDate: Date
 ): Promise<JORFSearchItem[]> {
@@ -332,7 +339,6 @@ export async function notifyNameMentionUpdates(updatedRecords: JORFSearchItem[])
   }
 }
 
-const BOT_TOKEN = process.env.BOT_TOKEN || "";
 
 async function sendNameMentionUpdate(user: IUser, nameUpdates: {people: IPeople, updateItems: JORFSearchItem[]}[]) {
   if (nameUpdates.length == 0) {
@@ -435,6 +441,10 @@ async function sendTagUpdates(
 async function sendLongMessageFromAxios(user: IUser, message: string) {
   const messagesArray = splitText(message, 3000);
 
+  if (BOT_TOKEN === undefined) {
+    throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
+  }
+
   for (const message of messagesArray) {
     await axios
       .post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -467,20 +477,9 @@ async function sendLongMessageFromAxios(user: IUser, message: string) {
 }
 
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-if (MONGODB_URI === undefined) {
-  throw new Error(ErrorMessages.MONGODB_URI_NOT_SET);
-}
-
 await (async () => {
   // Connect to DB
   await mongodbConnect();
-
-  // Check that the BOT TOKEN is set: to prevent computing everything for nothing ...
-  if (process.env.BOT_TOKEN === undefined) {
-    throw new Error("BOT TOKEN NOT SET");
-  }
 
   // Number of days to go back: 0 means we just fetch today's info
   const shiftDays = 0;
