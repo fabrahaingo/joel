@@ -5,7 +5,7 @@ interface JORFSearchPublicationRaw {
   id?: string;
   date?: string;
   title?: string;
-  tags?: {};
+  tags?: object;
 }
 
 export interface JORFSearchPublication extends JORFSearchPublicationRaw {
@@ -69,9 +69,7 @@ export function cleanJORFPublication(
         return clean_publications;
       }
 
-      if (publication_raw.tags === undefined) {
-        publication_raw.tags = {};
-      }
+      publication_raw.tags ??= {};
 
       clean_publications.push(publication_raw as JORFSearchPublication);
       return clean_publications;
