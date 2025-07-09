@@ -3,7 +3,7 @@ import { JORFSearchResponse } from "../entities/JORFSearchResponse.js";
 import * as fs from "node:fs";
 import { dateTOJORFFormat} from "../utils/date.utils.js";
 
-function round(value: number, exp: number) {
+export function round(value: number, exp: number) {
   if (typeof exp === 'undefined' || +exp === 0)
     return Math.round(value);
 
@@ -36,7 +36,7 @@ async function JORFSearchCallRaw(currentDay: string) {
     });
 }
 
-function getOccurrenceCount(values: string[]) {
+export function getOccurrenceCount(values: string[]) {
   return values.reduce<Record<string, number>>((acc , val) => {
     acc[val] = (acc[val] || 0) + 1;
     return acc;
@@ -57,7 +57,7 @@ interface Incomplete {
 }
 
 // Function to convert an array to CSV
-function convertToCSV(array: never[]) {
+export function convertToCSV(array: never[]) {
   if (array.length < 1) {
     return null
   }

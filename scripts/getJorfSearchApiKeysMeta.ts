@@ -1,29 +1,8 @@
 import axios, { AxiosResponse } from "axios";
 import * as fs from "node:fs";
-import { dateTOJORFFormat } from "../utils/date.utils";
-import {
-  JORFSearchPublication,
-  JORFSearchResponseMeta,
-} from "../entities/JORFSearchResponseMeta";
-
-function round(value: number, exp: number) {
-  if (typeof exp === "undefined" || +exp === 0) return Math.round(value);
-
-  value = +value;
-  exp = +exp;
-
-  if (isNaN(value) || !(typeof exp === "number" && exp % 1 === 0)) return NaN;
-
-  // Shift
-  value = value.toString().split("e");
-  value = Math.round(+(value[0] + "e" + (value[1] ? +value[1] + exp : exp)));
-
-  // Shift back
-  value = value.toString().split("e");
-  return +(value[0] + "e" + (value[1] ? +value[1] - exp : -exp));
-}
-
-type StringToNumberMap = { [key: string]: number }[];
+import { dateTOJORFFormat } from "../utils/date.utils.js";
+import { JORFSearchResponseMeta } from "../entities/JORFSearchResponseMeta.js";
+import { getOccurrenceCount, round, convertToCSV } from "./getJorfSearchApiKeys.js";
 
 async function JORFSearchCallRawMeta(currentDay: string) {
   return await axios
@@ -38,13 +17,6 @@ async function JORFSearchCallRawMeta(currentDay: string) {
     });
 }
 
-function getOccurrenceCount(values: string[]): StringToNumberMap {
-  return values.reduce((acc, val) => {
-    acc[val] = (acc[val] || 0) + 1;
-    return acc;
-  }, [] as StringToNumberMap);
-}
-
 interface JORFKeyStat {
   field_name: string;
   nb_presence: number;
@@ -55,24 +27,7 @@ interface JORFKeyStat {
 interface Incomplete {
   date: string;
   id: string;
-  nb_occurences: number;
-}
-
-// Function to convert array to CSV
-function convertToCSV(array: any[]) {
-  if (array.length < 1) {
-    return null;
-  }
-  // Extract the keys from the first element
-  const headers = Object.keys(array[0]).join(",");
-
-  // Convert each element to a CSV row
-  const rows = array
-    .map((element: any) => Object.values(element).join(","))
-    .join("\n");
-
-  // Combine headers and rows
-  return `${headers}\n${rows}`;
+  nb_occurrences: number;
 }
 
 async function main() {
@@ -81,7 +36,9 @@ async function main() {
 
   const currentDay = new Date();
 
-  let res_data: JORFSearchPublication[] = [];
+  type JORFSearchRawPublicationArray = Awaited<ReturnType<typeof JORFSearchCallRawMeta>>; // This form is used as JORFSearchRawItem is not exported
+
+  let res_data: JORFSearchRawPublicationArray = [];
   for (let i = 0; i < nbDays; i++) {
     // currentDay minus i days
     const day = new Date(currentDay);
@@ -158,7 +115,7 @@ async function main() {
     );
   }
 
-  const items_stats_csv = convertToCSV(item_keys_stats_sort);
+  const items_stats_csv = convertToCSV(item_keys_stats_sort as never);
   if (items_stats_csv !== null) {
     fs.writeFileSync("stats_meta_items.csv", items_stats_csv, "utf8");
   }
@@ -170,7 +127,7 @@ async function main() {
     );
   }
 
-  const tags_stats_csv = convertToCSV(tags_keys_stats_sort);
+  const tags_stats_csv = convertToCSV(tags_keys_stats_sort as never);
   if (tags_stats_csv !== null) {
     fs.writeFileSync("stats_meta_tags.csv", tags_stats_csv, "utf8");
   }
@@ -185,7 +142,7 @@ async function main() {
         ({
           date: i.date,
           id: i.id,
-          nb_occurences: 1,
+          nb_occurrences: 1,
         }) as Incomplete,
     )
     .reduce((accumulator: Incomplete[], currentItem) => {
@@ -196,19 +153,19 @@ async function main() {
 
       if (existingItem) {
         // If it exists, increment the count
-        existingItem.nb_occurences += 1;
+        existingItem.nb_occurrences += 1;
       } else {
         // If it doesn't exist, add the item with a count of 1
-        accumulator.push({ ...currentItem, nb_occurences: 1 });
+        accumulator.push({ ...currentItem, nb_occurrences: 1 });
       }
 
       return accumulator;
     }, []);
 
-  const incomplete_items_csv = convertToCSV(incomplete_items);
+  const incomplete_items_csv = convertToCSV(incomplete_items as never);
   if (incomplete_items_csv !== null) {
     fs.writeFileSync("incomplete_meta_items.csv", incomplete_items_csv, "utf8");
   }
 }
 
-main();
+await main();
