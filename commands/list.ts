@@ -339,9 +339,13 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
                       .includes((people.peopleId as Types.ObjectId).toString()),
           );
 
+          session.user.followedNames ??= [];
+
           session.user.followedNames = session.user.followedNames.filter(
               (_value, idx) => !unfollowedNamesIdx.includes(idx)
           );
+
+          session.user.followedOrganisations ??= [];
 
           session.user.followedOrganisations = session.user.followedOrganisations.filter(
               (org) =>
