@@ -13,7 +13,7 @@ const isPersonAlreadyFollowed = (
   followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[],
 ) => {
   return followedPeople.some((followedPerson) => {
-    return followedPerson.peopleId.toString() === person._id.toString();
+    return followedPerson.peopleId.toString() === (person._id as Types.ObjectId).toString();
   });
 };
 
