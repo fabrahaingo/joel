@@ -123,7 +123,7 @@ async function JORFSearchCallPublications(currentDay: string) {
     return [];
 }
 
-// Format a string to match the expected search format on JORFSearch: first letter capitalized and no accent
+// Format a string to match the expected search format on JORFSearch: first letter capitalised and no accent
 export function cleanPeopleName(input: string): string {
     /// To lower case
     input = input.trim().toLowerCase();
@@ -134,9 +134,9 @@ export function cleanPeopleName(input: string): string {
     input = input.replace(/[ìíîï]/g, "i");
     input = input.replace(/[òóôõö]/g, "o");
     input = input.replace(/[ùúûü]/g, "u");
-    input = input.replace(/[ç]/g, "c");
+    input = input.replace(/ç/g, "c");
 
-    // Capitalized the first letter of each part of the name
+    // Capitalised the first letter of each part of the name
     input=input.split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
 
     return input;

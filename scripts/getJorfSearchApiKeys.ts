@@ -1,8 +1,5 @@
 import axios, { AxiosResponse } from "axios";
-import {
-  JORFSearchItem,
-  JORFSearchResponse,
-} from "../entities/JORFSearchResponse.js";
+import { JORFSearchResponse } from "../entities/JORFSearchResponse.js";
 import * as fs from "node:fs";
 import { dateTOJORFFormat} from "../utils/date.utils.js";
 
@@ -13,7 +10,7 @@ function round(value: number, exp: number) {
   value = +value;
   exp = +exp;
 
-  if (isNaN(value) || !(typeof exp === 'number' && exp % 1 === 0))
+  if (isNaN(value) || !(exp % 1 === 0))
     return NaN;
 
   // Shift
@@ -25,7 +22,6 @@ function round(value: number, exp: number) {
   return +(value[0] + 'e' + (value[1] ? (+value[1] - exp) : -exp));
 }
 
-type StringToNumberMap={[key: string]:number}[];
 
 async function JORFSearchCallRaw(currentDay: string) {
   return await axios
@@ -40,11 +36,11 @@ async function JORFSearchCallRaw(currentDay: string) {
     });
 }
 
-function getOccurrenceCount(values: string[]): StringToNumberMap {
-  return values.reduce((acc , val) => {
+function getOccurrenceCount(values: string[]) {
+  return values.reduce<Record<string, number>>((acc , val) => {
     acc[val] = (acc[val] || 0) + 1;
     return acc;
-  }, [] as StringToNumberMap);
+  }, {});
 }
 
 interface JORFKeyStat {
@@ -57,11 +53,11 @@ interface JORFKeyStat {
 interface Incomplete {
   source_date: string,
   source_id: string,
-  nb_occurences: number
+  nb_occurrences: number
 }
 
-// Function to convert array to CSV
-function convertToCSV(array: any[]) {
+// Function to convert an array to CSV
+function convertToCSV(array: never[]) {
   if (array.length < 1) {
     return null
   }
@@ -69,7 +65,7 @@ function convertToCSV(array: any[]) {
   const headers = Object.keys(array[0]).join(',');
 
   // Convert each element to a CSV row
-  const rows = array.map((element: any) => Object.values(element).join(',')).join('\n');
+  const rows = array.map((element: never) => Object.values(element).join(',')).join('\n');
 
   // Combine headers and rows
   return `${headers}\n${rows}`;
@@ -81,7 +77,9 @@ async function main() {
 
   const currentDay = new Date();
 
-  let res_data: JORFSearchItem[] = [];
+  type JORFSearchRawItemArray = Awaited<ReturnType<typeof JORFSearchCallRaw>>; // This form is used as JORFSearchRawItem is not exported
+
+  let res_data: JORFSearchRawItemArray = [];
   for (let i = 0; i < nbDays; i++) {
     // currentDay minus i days
     const day = new Date(currentDay);
@@ -103,7 +101,7 @@ async function main() {
 
   for (const key of Object.keys(items_keys_occurs)) {
     const isKeyBoolean = !res_data
-        .filter((i) => i[key])
+        .filter((i) => i[key] !== undefined)
         .map((i) => i[key])
         .some((v) => !(v === "true" || v === "false"));
 
@@ -116,10 +114,13 @@ async function main() {
   }
 
   const typeOrdre_keys = getOccurrenceCount(
-          res_data
-              .filter((i) => i.type_ordre)
-              .map((i) => i.type_ordre)
-              .flat(),
+      res_data.reduce<string[]>((accumulator, currentItem) => {
+        if (currentItem.type_ordre === undefined) {
+          return accumulator;
+        }
+        accumulator.push(currentItem.type_ordre);
+        return accumulator;
+      }, [])
   );
 
   const typeOrdre_keys_stats= [];
@@ -133,10 +134,13 @@ async function main() {
   }
 
   const sourceName_keys = getOccurrenceCount(
-      res_data
-          .filter((i) => i.source_name)
-          .map((i) => i.source_name)
-          .flat(),
+      res_data.reduce<string[]>((accumulator, currentItem) => {
+        if (currentItem.source_name === undefined) {
+          return accumulator;
+        }
+        accumulator.push(currentItem.source_name);
+        return accumulator;
+      }, [])
   );
 
   const sourceName_keys_stats= [];
@@ -150,14 +154,14 @@ async function main() {
   }
 
   const res_org = res_data
-      .filter((i) => i.organisations.length > 0)
+      .filter((i) => i.organisations && i.organisations.length > 0)
       .map((i) => i.organisations)
       .flat();
   const nbRecordsOrg = res_org.length;
 
   const res_org_keys = res_org.map((i) => Object.keys(i)).flat();
 
-  const org_keys_occurs: StringToNumberMap = getOccurrenceCount(res_org_keys);
+  const org_keys_occurs = getOccurrenceCount(res_org_keys);
 
   const org_keys_stats: JORFKeyStat[] = [];
 
@@ -221,7 +225,7 @@ async function main() {
     );
   }
 
-  const items_stats_csv= convertToCSV(item_keys_stats_sort);
+  const items_stats_csv= convertToCSV(item_keys_stats_sort as never[]);
   if (items_stats_csv !== null) {
     fs.writeFileSync('stats_items.csv', items_stats_csv, 'utf8');
   }
@@ -233,7 +237,7 @@ async function main() {
     );
   }
 
-  const orgs_stats_csv= convertToCSV(org_keys_stats_sort);
+  const orgs_stats_csv= convertToCSV(org_keys_stats_sort as never[]);
   if (orgs_stats_csv !== null) {
     fs.writeFileSync('stats_organisations.csv', orgs_stats_csv, 'utf8');
   }
@@ -245,22 +249,22 @@ async function main() {
     );
   }
 
-  const repl_stats_csv= convertToCSV(rempl_keys_stats_sort);
+  const repl_stats_csv= convertToCSV(rempl_keys_stats_sort as never[]);
   if (repl_stats_csv !== null) {
     fs.writeFileSync('stats_remplacement.csv', repl_stats_csv, 'utf8');
   }
 
   console.log("\nTypeOrdre:\n");
-  for (const key of typeOrdre_keys) {
+  for (const key of typeOrdre_keys_stats) {
     console.log(key);
   }
 
-  const typeOrdre_stats_csv= convertToCSV(typeOrdre_keys_stats);
+  const typeOrdre_stats_csv= convertToCSV(typeOrdre_keys_stats as never[]);
   if (typeOrdre_stats_csv !== null) {
     fs.writeFileSync('stats_type_ordre.csv', typeOrdre_stats_csv, 'utf8');
   }
 
-  const sourceName_stats_csv= convertToCSV(sourceName_keys_stats);
+  const sourceName_stats_csv= convertToCSV(sourceName_keys_stats as never[]);
   if (sourceName_stats_csv !== null) {
     fs.writeFileSync('stats_source_name.csv', sourceName_stats_csv, 'utf8');
   }
@@ -272,7 +276,7 @@ async function main() {
   ).map(i => ({
     source_date: i.source_date,
     source_id: i.source_id,
-    nb_occurences: 1,
+    nb_occurrences: 1,
   }) as Incomplete)
       .reduce((accumulator: Incomplete[], currentItem) => {
         // Check if the valueT already exists in the accumulator
@@ -281,16 +285,16 @@ async function main() {
 
         if (existingItem) {
           // If it exists, increment the count
-          existingItem.nb_occurences += 1;
+          existingItem.nb_occurrences += 1;
         } else {
           // If it doesn't exist, add the item with a count of 1
-          accumulator.push({...currentItem, nb_occurences: 1});
+          accumulator.push({...currentItem, nb_occurrences: 1});
         }
 
         return accumulator;
       }, []);
 
-  const incomplete_items_csv = convertToCSV(incomplete_items);
+  const incomplete_items_csv = convertToCSV(incomplete_items as never[]);
   if (incomplete_items_csv !== null) {
     fs.writeFileSync('incomplete_items_nom_prenom.csv', incomplete_items_csv, 'utf8');
   }
@@ -302,7 +306,7 @@ async function main() {
   ).map(i=> ({
     source_date: i.source_date,
     source_id: i.source_id,
-    nb_occurences: 1,
+    nb_occurrences: 1,
   }) as Incomplete)
       .reduce((accumulator: Incomplete[], currentItem) => {
         // Check if the valueT already exists in the accumulator
@@ -311,45 +315,20 @@ async function main() {
 
         if (existingItem) {
           // If it exists, increment the count
-          existingItem.nb_occurences += 1;
+          existingItem.nb_occurrences += 1;
         } else {
           // If it doesn't exist, add the item with a count of 1
-          accumulator.push({ ...currentItem, nb_occurences: 1 });
+          accumulator.push({ ...currentItem, nb_occurrences: 1 });
         }
 
         return accumulator;
       }, []);
 
-  const rempl_incomplete_items_csv=convertToCSV(rempl_incomplete_items);
+  const rempl_incomplete_items_csv=convertToCSV(rempl_incomplete_items as never[]);
   if (rempl_incomplete_items_csv !== null) {
     fs.writeFileSync('incomplete_remplacements_nom_prenom.csv', rempl_incomplete_items_csv, 'utf8');
   }
 
-  const missing_sexe=res_data.filter(i=>i.sexe === undefined).map(i=> ({
-    source_date: i.source_date,
-    source_id: i.source_id,
-    nb_occurences: 1,
-  }) as Incomplete)
-      .reduce((accumulator: Incomplete[], currentItem) => {
-        // Check if the valueT already exists in the accumulator
-        const existingItem = accumulator
-            .find(item  => item.source_id === currentItem.source_id);
-
-        if (existingItem) {
-          // If it exists, increment the count
-          existingItem.nb_occurences += 1;
-        } else {
-          // If it doesn't exist, add the item with a count of 1
-          accumulator.push({ ...currentItem, nb_occurences: 1 });
-        }
-
-        return accumulator;
-      }, []);
-
-  const missing_sexe_csv=convertToCSV(missing_sexe);
-  if (missing_sexe_csv !== null) {
-    fs.writeFileSync('incomplete_items_sexe.csv', missing_sexe_csv, 'utf8');
-  }
 }
 
 await main();
