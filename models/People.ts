@@ -26,12 +26,10 @@ PeopleSchema.static(
       nom: tgPeople.nom,
       prenom: tgPeople.prenom,
     });
-    if (people === null) {
-      people = await new this({
+    people ??= await new this({
         nom: tgPeople.nom,
         prenom: tgPeople.prenom,
       }).save();
-    }
 
     return people;
   },

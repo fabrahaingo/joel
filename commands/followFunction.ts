@@ -10,10 +10,10 @@ import { parseIntAnswers } from "../utils/text.utils.js";
 function buildSuggestions() {
   let suggestion = "";
   for (const key in FunctionTags) {
-    suggestion += `${
+    suggestion += `${String(
       // number in the array of keys
       Object.keys(FunctionTags).indexOf(key) + 1
-    }. *${key}*\n\n`;
+    )}. *${key}*\n\n`;
   }
   return suggestion;
 }
@@ -53,8 +53,9 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
     tgBot.onReplyToMessage(
       session.chatId,
       question.message_id,
-      async (msg: TelegramBot.Message) => {
-        const answers = parseIntAnswers(msg.text, functionAll.length);
+      (tgMsg: TelegramBot.Message) => {
+      void (async () => {
+        const answers = parseIntAnswers(tgMsg.text, functionAll.length);
         if (answers === null || answers.length == 0) {
           await session.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionAll.length)}.
@@ -105,6 +106,7 @@ export const followFunctionCommand = async (session: ISession, _msg: string): Pr
 
         await session.sendMessage(text, mainMenuKeyboard);
 
+      })();
       }
     );
   } catch (error) {

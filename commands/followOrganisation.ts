@@ -75,7 +75,7 @@ export const followOrganisationCommand = async (session: ISession, _msg: never) 
         session.chatId,
         `Entrez le nom ou l'identifiant [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
 Exemples:
-Conseil d'Etat : *Q769657*
+Conseil d'État : *Q769657*
 Conseil constitutionnel : *Q1127218*`,
         {
           parse_mode: "Markdown",
@@ -87,8 +87,9 @@ Conseil constitutionnel : *Q1127218*`,
       tgBot.onReplyToMessage(
         session.chatId,
         question.message_id,
-        async (msg: TelegramBot.Message) => {
-          if (msg.text === undefined || msg.text === "") {
+        (tgMsg1: TelegramBot.Message) => {
+        void (async () => {
+          if (tgMsg1.text === undefined || tgMsg1.text === "") {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
                 mainMenuKeyboard
@@ -96,7 +97,7 @@ Conseil constitutionnel : *Q1127218*`,
             return;
           }
 
-          const orgResults = await searchOrganisationWikidataId(msg.text);
+          const orgResults = await searchOrganisationWikidataId(tgMsg1.text);
 
           if (orgResults.length == 0) {
             await session.sendMessage(
@@ -108,8 +109,7 @@ Conseil constitutionnel : *Q1127218*`,
 
           if (orgResults.length == 1) {
             const user = await User.findOrCreate(session);
-            if (user.followedOrganisations === undefined)
-              user.followedOrganisations = [];
+            user.followedOrganisations ??= [];
 
             // If the one result is already followed
             if (isOrganisationAlreadyFollowed(user, orgResults[0].wikidataId)) {
@@ -134,9 +134,10 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
             tgBot.onReplyToMessage(
               session.chatId,
               followConfirmation.message_id,
-              async (msg: TelegramBot.Message) => {
-                if (msg.text !== undefined) {
-                  if (new RegExp(/oui/i).test(msg.text)) {
+              (tgMsg2: TelegramBot.Message) => {
+                  void (async () => {
+                if (tgMsg2.text !== undefined) {
+                  if (new RegExp(/oui/i).test(tgMsg2.text)) {
                     const organisation: IOrganisation =
                       await Organisation.firstOrCreate({
                         nom: orgResults[0].nom,
@@ -153,7 +154,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                       mainMenuKeyboard,
                     );
                     return;
-                  } else if (new RegExp(/non/i).test(msg.text)) {
+                  } else if (new RegExp(/non/i).test(tgMsg2.text)) {
                     await session.sendMessage(
                       `L'organisation *${orgResults[0].nom}* n'a pas été ajoutée aux suivis.`,
                       mainMenuKeyboard,
@@ -167,6 +168,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                     mainMenuKeyboard
                 );
                 return;
+                  })();
               },
             );
             // More than one org results
@@ -194,8 +196,9 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
             tgBot.onReplyToMessage(
               session.chatId,
               question.message_id,
-              async (msg: TelegramBot.Message) => {
-                const answers = parseIntAnswers(msg.text, orgResults.length);
+              (tgMsg3: TelegramBot.Message) => {
+                  void (async () => {
+                const answers = parseIntAnswers(tgMsg3.text, orgResults.length);
                 if (answers === null || answers.length == 0) {
                   await session.sendMessage(
                     `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.
@@ -241,9 +244,11 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                     .join("\n")}`,
                     mainMenuKeyboard
                 );
+              })();
               },
             );
           }
+        })();
         },
       );
     } catch (error) {

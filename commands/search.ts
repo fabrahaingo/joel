@@ -13,7 +13,7 @@ const isPersonAlreadyFollowed = (
   followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[],
 ) => {
   return followedPeople.some((followedPerson) => {
-    return followedPerson.peopleId.toString() === person._id.toString();
+    return followedPerson.peopleId.toString() === (person._id as Types.ObjectId).toString();
   });
 };
 
@@ -38,14 +38,16 @@ export const searchCommand = async (session: ISession, _msg: never): Promise<voi
     tgBot.onReplyToMessage(
       session.chatId,
       question.message_id,
-      async (tgMsg: TelegramBot.Message) => {
-        if (tgMsg.text === undefined) {
-          await session.sendMessage(
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            mainMenuKeyboard);
-          return;
-        }
-        await searchPersonHistory(session, tgMsg.text, "latest");
+      (tgMsg: TelegramBot.Message) => {
+          void (async () => {
+              if (tgMsg.text == undefined || tgMsg.text.length == 0) {
+                  await session.sendMessage(
+                    `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
+                    mainMenuKeyboard);
+                  return;
+                }
+                await searchPersonHistory(session, tgMsg.text, "latest");
+          })();
       },
     );
   };
@@ -101,7 +103,7 @@ async function searchPersonHistory(
     if (session.user == null) {
       isUserFollowingPerson = false;
     } else {
-      const people: IPeople = await People.findOne({
+      const people: IPeople | null = await People.findOne({
         nom: JORFRes_data[0].nom,
         prenom: JORFRes_data[0].prenom,
       });
@@ -165,7 +167,6 @@ export const followCommand= async (session: ISession, msg: string): Promise<void
       await session.sendTypingAction();
 
       const user = await User.findOrCreate(session);
-      if (user === null) return;
 
       const JORFRes = await callJORFSearchPeople(personName);
       if (JORFRes.length == 0) {

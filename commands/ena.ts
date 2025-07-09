@@ -13,6 +13,8 @@ import {
 } from "../utils/JORFSearch.utils.js";
 import { extractTelegramSession, TelegramSession } from "../entities/TelegramSession.js";
 
+const inspId = "Q109039648" as WikidataId;
+
 function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
   const allPromoPeriods = List_Promos_INSP_ENA.map((i) => i.period);
 
@@ -54,7 +56,6 @@ async function getJORFPromoSearchResult(
       return callJORFSearchTag("eleve_ena", promo.period);
 
     case "INSP": // If INSP, we can rely on the associated organisation
-      const inspId = "Q109039648" as WikidataId;
       return (await callJORFSearchOrganisation(inspId))
           // We filter to keep admissions to the INSP organisation from the relevant year
           .filter((publication) => publication.eleve_ena === promo.period);
@@ -83,8 +84,9 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
           force_reply: true,
         },
       });
-      tgBot.onReplyToMessage(session.chatId, question.message_id, async (msg: TelegramBot.Message) => {
-        if (msg.text === undefined) {
+      tgBot.onReplyToMessage(session.chatId, question.message_id,  (tgMsg1: TelegramBot.Message) => {
+          void (async () => {
+              if (tgMsg1.text == undefined || tgMsg1.text.length == 0) {
           await tgBot.sendMessage(
             session.chatId,
             `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena.`,
@@ -93,15 +95,15 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
         }
 
         // If the user used the /promos command or button
-        if (RegExp(/\/promos/i).test(msg.text)) {
+        if (RegExp(/\/promos/i).test(tgMsg1.text)) {
           await promosCommand(session);
           return;
         }
 
-        const promoInfo = findENAINSPPromo(msg.text);
+        const promoInfo = findENAINSPPromo(tgMsg1.text);
         const promoJORFList = await getJORFPromoSearchResult(promoInfo);
 
-        if (promoJORFList === null ||promoJORFList.length == 0) {
+        if (promoInfo == null || promoJORFList == null ||promoJORFList.length == 0) {
           await session.sendMessage(
               `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
               mainMenuKeyboard,
@@ -109,10 +111,9 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
           return;
         }
 
-        let promoStr= promoInfo.period;
-        if (promoInfo.name !== null) promoStr = `${promoInfo.name} (${promoInfo.period})`;
+        const promoStr= promoInfo.name ? `${promoInfo.name} (${promoInfo.period})` : promoInfo.period;
 
-        if (!promoInfo?.onJORF) {
+        if (!promoInfo.onJORF) {
           await session.sendMessage(
             `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
@@ -126,7 +127,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
         // wait 2 seconds
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        // sort JORFSearchRes by upper last name: to account for French "particule"
+        // sort JORFSearchRes by the upper lastname: to account for French "particule"
         promoJORFList.sort((a, b) => {
           if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
           if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;
@@ -150,20 +151,20 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
       tgBot.onReplyToMessage(
         session.chatId,
         followConfirmation.message_id,
-        async (msg: TelegramBot.Message) => {
-          if (msg.text === undefined) {
+        (tgMsg2: TelegramBot.Message) => {
+            void (async () => {
+                if (tgMsg2.text === undefined) {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`, mainMenuKeyboard
             );
             return;
           }
-          if (new RegExp(/oui/i).test(msg.text)) {
+          if (new RegExp(/oui/i).test(tgMsg2.text)) {
             await session.sendMessage(
               `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
             );
             await session.sendTypingAction();
             const user = await User.findOrCreate(session);
-            if (user === null) return;
 
             const peopleTab: IPeople[] = [];
 
@@ -189,7 +190,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                 mainMenuKeyboard,
             );
             return;
-          } else if (new RegExp(/non/i).test(msg.text)) {
+          } else if (new RegExp(/non/i).test(tgMsg2.text)) {
             await session.sendMessage(
               `Ok, aucun ajout n'a été effectué. 👌`,
                 mainMenuKeyboard
@@ -200,8 +201,10 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
               mainMenuKeyboard
           );
+        })();
         }
       );
+      })();
     });
   } catch (error) {
     console.log(error);

@@ -15,25 +15,26 @@ await (async () => {
 
   commands.forEach((command) => {
     bot.onText(command.regex,
-        async (tgMsg: TelegramBot.Message) => {
+        (tgMsg: TelegramBot.Message) => {
+            void (async () => {
+                try {
+                    // Check if the user is known
+                    const tgUser: TelegramBot.User | undefined = tgMsg.from;
+                    if (tgUser === undefined || tgUser.is_bot) return // Ignore bots
 
-        try {
-            // Check if the user is known
-            const tgUser: TelegramBot.User | undefined = tgMsg.from;
-            if (tgUser === undefined || tgUser.is_bot) return // Ignore bots
+                    const tgSession = new TelegramSession(bot, tgMsg.chat.id, tgUser.language_code ?? "fr");
+                    await tgSession.loadUser();
+                    tgSession.isReply = tgMsg.reply_to_message !== undefined;
 
-            const tgSession = new TelegramSession(bot, tgMsg.chat.id, tgUser.language_code ?? "fr");
-            await tgSession.loadUser();
-            tgSession.isReply = tgMsg.reply_to_message !== undefined;
+                    if (tgSession.user != null) await tgSession.user.updateInteractionMetrics();
 
-            if (tgSession.user != null) await tgSession.user.updateInteractionMetrics();
-
-            // Process user message
-            await command.action(tgSession, tgMsg.text)
-        } catch (error) {
-            console.error('Error processing command:', error);
-        }
-    });
+                    // Process user message
+                    await command.action(tgSession, tgMsg.text)
+                } catch (error) {
+                    console.error('Error processing command:', error);
+                }
+            })();
+        });
   });
 
   console.log(`\u{2705} JOEL started successfully`);

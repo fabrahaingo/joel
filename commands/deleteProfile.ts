@@ -31,22 +31,24 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
           },
         }
     );
-    tgBot.onReplyToMessage(session.chatId, question.message_id, async (msg: TelegramBot.Message) => {
-      if (msg.text === "SUPPRIMER MON COMPTE") {
-        await User.deleteOne({
-          _id: session.chatId,
-          chatId: session.chatId,
-        });
-        await session.sendMessage( `🗑 Votre profil a bien été supprimé ! 👋
-⚠️ Un profil vierge sera créé lors de votre prochaine interaction avec JOEL ⚠️`
-            , mainMenuKeyboard);
-        await session.log({ event: "/user-deletion-self" });
-    } else {
-        await session.sendMessage(
-            "Suppression annulée.",
-            mainMenuKeyboard
-        );
-      }
+    tgBot.onReplyToMessage(session.chatId, question.message_id, (tgMsg: TelegramBot.Message) => {
+      void (async () => {
+          if (tgMsg.text === "SUPPRIMER MON COMPTE") {
+          await User.deleteOne({
+            _id: session.chatId,
+            chatId: session.chatId,
+          });
+          await session.sendMessage( `🗑 Votre profil a bien été supprimé ! 👋
+  ⚠️ Un profil vierge sera créé lors de votre prochaine interaction avec JOEL ⚠️`
+              , mainMenuKeyboard);
+          await session.log({ event: "/user-deletion-self" });
+      } else {
+          await session.sendMessage(
+              "Suppression annulée.",
+              mainMenuKeyboard
+          );
+        }
+      })();
     });
 
   } catch (error) {
