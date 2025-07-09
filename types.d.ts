@@ -83,6 +83,7 @@ export interface UserModel extends Model<IUser> {
   findOne: (arg1, arg2?) => Promise<IUser | null>;
   find: (arg1, arg2?) => Promise<IUser[]>;
   countDocuments: () => Promise<number>;
+  deleteOne: (args) => Promise<void>;
 }
 
 export interface IBlocked {
