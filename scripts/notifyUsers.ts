@@ -303,6 +303,8 @@ export async function notifyNameMentionUpdates(updatedRecords: JORFSearchItem[])
       people: IPeople
       nameJORFRecords: JORFSearchItem[],
     }[] = [];
+    
+    user.followedNames ??= [];
 
     for (const followedName of user.followedNames) {
       const followedNameCleaned = cleanPeopleName(followedName).toUpperCase();
