@@ -38,14 +38,16 @@ export const searchCommand = async (session: ISession, _msg: never): Promise<voi
     tgBot.onReplyToMessage(
       session.chatId,
       question.message_id,
-      async (tgMsg: TelegramBot.Message) => {
-        if (tgMsg.text == undefined || tgMsg.text.length == 0) {
-          await session.sendMessage(
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            mainMenuKeyboard);
-          return;
-        }
-        await searchPersonHistory(session, tgMsg.text, "latest");
+      (tgMsg: TelegramBot.Message) => {
+          void (async () => {
+              if (tgMsg.text == undefined || tgMsg.text.length == 0) {
+                  await session.sendMessage(
+                    `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
+                    mainMenuKeyboard);
+                  return;
+                }
+                await searchPersonHistory(session, tgMsg.text, "latest");
+          })();
       },
     );
   };

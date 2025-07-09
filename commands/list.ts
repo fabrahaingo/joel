@@ -194,7 +194,8 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
     tgBot.onReplyToMessage(
         session.chatId,
         question.message_id,
-        async (tgMsg: TelegramBot.Message) => {
+        (tgMsg: TelegramBot.Message) => {
+            void (async () => {
           if (session.user == undefined) return;
 
           if (tgMsg.text == "/list"){
@@ -362,6 +363,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
           }
 
           await session.sendMessage(text, mainMenuKeyboard);
+        })();
         },
     );
   } catch (error) {

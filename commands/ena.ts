@@ -84,8 +84,9 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
           force_reply: true,
         },
       });
-      tgBot.onReplyToMessage(session.chatId, question.message_id, async (tgMsg1: TelegramBot.Message) => {
-          if (tgMsg1.text == undefined || tgMsg1.text.length == 0) {
+      tgBot.onReplyToMessage(session.chatId, question.message_id,  (tgMsg1: TelegramBot.Message) => {
+          void (async () => {
+              if (tgMsg1.text == undefined || tgMsg1.text.length == 0) {
           await tgBot.sendMessage(
             session.chatId,
             `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena.`,
@@ -150,8 +151,9 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
       tgBot.onReplyToMessage(
         session.chatId,
         followConfirmation.message_id,
-        async (tgMsg2: TelegramBot.Message) => {
-          if (tgMsg2.text === undefined) {
+        (tgMsg2: TelegramBot.Message) => {
+            void (async () => {
+                if (tgMsg2.text === undefined) {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`, mainMenuKeyboard
             );
@@ -199,8 +201,10 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
               mainMenuKeyboard
           );
+        })();
         }
       );
+      })();
     });
   } catch (error) {
     console.log(error);
