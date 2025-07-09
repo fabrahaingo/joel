@@ -4,6 +4,10 @@ export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
 interface OrganisationRaw{
   nom?: string;
+}
+
+interface Organisation extends OrganisationRaw{
+  nom: string;
   wikidata_id?: WikidataId;
   organisation_militaire?: WikidataId;
   ecole?: WikidataId;
@@ -14,10 +18,6 @@ interface OrganisationRaw{
   tribunal?: WikidataId;
   tribunal_grande_instance?: WikidataId;
   tribunal_instance?: WikidataId;
-}
-
-interface Organisation extends OrganisationRaw{
-  nom: string;
 }
 
 // Minimal expected record from JORFSearch
@@ -33,8 +33,6 @@ interface JORFSearchRawItem {
     sexe?: "F" | "M";
     nom?: string;
     prenom?: string;
-    nom_alternatif?: string;
-    autres_prenoms?: string;
   };
 }
 

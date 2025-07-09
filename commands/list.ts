@@ -194,15 +194,16 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
     tgBot.onReplyToMessage(
         session.chatId,
         question.message_id,
-        async (msg: TelegramBot.Message) => {
+        (tgMsg: TelegramBot.Message) => {
+            void (async () => {
           if (session.user == undefined) return;
 
-          if (msg.text == "/list"){
+          if (tgMsg.text == "/list"){
             await listCommand(session, _msg);
             return;
           }
 
-          let answers = parseIntAnswers(msg.text, followTotal);
+          let answers = parseIntAnswers(tgMsg.text, followTotal);
           if (answers === null) {
             await session.sendMessage(
                 `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.
@@ -335,12 +336,16 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
               (people) =>
                   !unfollowedPeopleId
                       .map((id) => id.toString())
-                      .includes(people.peopleId.toString()),
+                      .includes((people.peopleId as Types.ObjectId).toString()),
           );
+
+          session.user.followedNames ??= [];
 
           session.user.followedNames = session.user.followedNames.filter(
               (_value, idx) => !unfollowedNamesIdx.includes(idx)
           );
+
+          session.user.followedOrganisations ??= [];
 
           session.user.followedOrganisations = session.user.followedOrganisations.filter(
               (org) =>
@@ -355,13 +360,14 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
 
           await session.user.save();
 
-          // Delete the user if it doesn't follow anything anymore
+          // Delete the user if it doesn't follow anything any more
           if (session.user.followsNothing()) {
             await User.deleteOne({ _id: session.chatId });
             await session.log({ event: "/user-deletion-no-follow" });
           }
 
           await session.sendMessage(text, mainMenuKeyboard);
+        })();
         },
     );
   } catch (error) {

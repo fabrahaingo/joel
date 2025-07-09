@@ -47,7 +47,7 @@ export interface IUser {
   }[];
   followedFunctions: FunctionTags[];
   save: () => Promise<IUser>;
-  countDocuments: () => number;
+  countDocuments: () => Promise<number>;
 
   updateInteractionMetrics: () => Promise<void>;
 
@@ -65,7 +65,7 @@ export interface IOrganisation {
     nom: string;
     wikidataId: WikidataId;
     save: () => Promise<IOrganisation>;
-    countDocuments: () => number;
+    countDocuments: () => Promise<number>;
 }
 
 export interface OrganisationModel extends Model<IOrganisation> {
@@ -73,10 +73,17 @@ export interface OrganisationModel extends Model<IOrganisation> {
         nom: string;
         wikidataId: WikidataId;
     }) => Promise<IOrganisation>;
+    findOne: (arg1, arg2?) => Promise<IOrganisation | null>;
+    find: (arg1, arg2?) => Promise<IOrganisation[]>;
+    countDocuments: () => Promise<number>;
 }
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
+  findOne: (arg1, arg2?) => Promise<IUser | null>;
+  find: (arg1, arg2?) => Promise<IUser[]>;
+  countDocuments: () => Promise<number>;
+  deleteOne: (args) => Promise<void>;
 }
 
 export interface IBlocked {
@@ -88,7 +95,7 @@ export interface IPeople {
   nom: string;
   prenom: string;
   save: () => Promise<IPeople>;
-  countDocuments: () => number;
+  countDocuments: () => Promise<number>;
 }
 
 export interface PeopleModel extends Model<IPeople> {
@@ -96,6 +103,9 @@ export interface PeopleModel extends Model<IPeople> {
     nom: string;
     prenom: string;
   }) => Promise<IPeople>;
+  findOne: (arg1, arg2?) => Promise<IPeople | null>;
+  find: (arg1, arg2?) => Promise<IPeople[]>;
+  countDocuments: () => Promise<number>;
 }
 
 export type SourceName =
