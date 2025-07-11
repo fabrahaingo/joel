@@ -314,7 +314,7 @@ export async function notifyOrganisationsUpdates(
           followData.wikidataId
         ].filter(
           (record) =>
-            JORFtoDate(record.source_date).getTime() <
+            JORFtoDate(record.source_date).getTime() >
             followData.lastUpdate.getTime()
         );
         return orgTabList;
