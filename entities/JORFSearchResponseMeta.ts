@@ -56,7 +56,7 @@ export interface JORFSearchPublication extends JORFSearchPublicationRaw {
 }
 
 export function cleanJORFPublication(
-  jorf_publication_raw: JORFSearchPublicationRaw[],
+  jorf_publication_raw: JORFSearchPublicationRaw[]
 ): JORFSearchPublication[] {
   return jorf_publication_raw.reduce(
     (clean_publications: JORFSearchPublication[], publication_raw) => {
@@ -74,6 +74,6 @@ export function cleanJORFPublication(
       clean_publications.push(publication_raw as JORFSearchPublication);
       return clean_publications;
     },
-    [],
+    []
   );
 }

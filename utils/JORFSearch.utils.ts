@@ -5,8 +5,10 @@ import {
 import { WikidataId } from "../types.js";
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import umami from "./umami.js";
-import { cleanJORFPublication, JORFSearchResponseMeta } from "../entities/JORFSearchResponseMeta.js";
-
+import {
+  cleanJORFPublication,
+  JORFSearchResponseMeta
+} from "../entities/JORFSearchResponseMeta.js";
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -120,22 +122,22 @@ export async function callJORFSearchOrganisation(wikiId: WikidataId) {
 }
 
 async function JORFSearchCallPublications(currentDay: string) {
-    try {
-        await umami.log({ event: "/jorfsearch-request-meta" });
-        return await axios
-            .get<JORFSearchResponseMeta>(
-                `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`,
-            )
-            .then((res) => {
-                if (res.data === null || typeof res.data === "string") {
-                    return [];
-                }
-                return cleanJORFPublication(res.data);
-            });
-        } catch (error) {
-            console.log(error);
+  try {
+    await umami.log({ event: "/jorfsearch-request-meta" });
+    return await axios
+      .get<JORFSearchResponseMeta>(
+        `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`
+      )
+      .then((res) => {
+        if (res.data === null || typeof res.data === "string") {
+          return [];
         }
-    return [];
+        return cleanJORFPublication(res.data);
+      });
+  } catch (error) {
+    console.log(error);
+  }
+  return [];
 }
 
 // Format a string to match the expected search format on JORFSearch: first letter capitalised and no accent

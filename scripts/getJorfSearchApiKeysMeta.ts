@@ -2,12 +2,16 @@ import axios, { AxiosResponse } from "axios";
 import * as fs from "node:fs";
 import { dateTOJORFFormat } from "../utils/date.utils.js";
 import { JORFSearchResponseMeta } from "../entities/JORFSearchResponseMeta.js";
-import { getOccurrenceCount, round, convertToCSV } from "./getJorfSearchApiKeys.js";
+import {
+  getOccurrenceCount,
+  round,
+  convertToCSV
+} from "./getJorfSearchApiKeys.js";
 
 async function JORFSearchCallRawMeta(currentDay: string) {
   return await axios
     .get<JORFSearchResponseMeta>(
-      `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay}`,
+      `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay}`
     )
     .then((res: AxiosResponse<JORFSearchResponseMeta>) => {
       if (res.data === null || typeof res.data === "string") {
@@ -36,7 +40,9 @@ async function main() {
 
   const currentDay = new Date();
 
-  type JORFSearchRawPublicationArray = Awaited<ReturnType<typeof JORFSearchCallRawMeta>>; // This form is used as JORFSearchRawItem is not exported
+  type JORFSearchRawPublicationArray = Awaited<
+    ReturnType<typeof JORFSearchCallRawMeta>
+  >; // This form is used as JORFSearchRawItem is not exported
 
   let res_data: JORFSearchRawPublicationArray = [];
   for (let i = 0; i < nbDays; i++) {
@@ -45,7 +51,7 @@ async function main() {
     day.setDate(day.getDate() - i);
 
     const res_day = await JORFSearchCallRawMeta(
-      dateTOJORFFormat(day).split("-").reverse().join("-"),
+      dateTOJORFFormat(day).split("-").reverse().join("-")
     );
     res_data = res_data.concat(res_day);
 
@@ -55,7 +61,7 @@ async function main() {
   const nbRecordsTotal = res_data.length;
 
   const items_keys_occurs = getOccurrenceCount(
-    res_data.map((i) => Object.keys(i)).flat(),
+    res_data.map((i) => Object.keys(i)).flat()
   );
 
   const item_keys_stats: JORFKeyStat[] = [];
@@ -70,7 +76,7 @@ async function main() {
       field_name: key,
       nb_presence: items_keys_occurs[key],
       is_boolean: isKeyBoolean,
-      frequency: round(items_keys_occurs[key] / nbRecordsTotal, 3),
+      frequency: round(items_keys_occurs[key] / nbRecordsTotal, 3)
     });
   }
 
@@ -93,17 +99,17 @@ async function main() {
       field_name: key,
       nb_presence: tags_keys_occurs[key],
       is_boolean: isKeyBoolean,
-      frequency: round(tags_keys_occurs[key] / nbRecordsTags, 3),
+      frequency: round(tags_keys_occurs[key] / nbRecordsTags, 3)
     });
   }
 
   // Sort by frequency
   const item_keys_stats_sort = item_keys_stats.sort(
-    (i, j) => j.nb_presence - i.nb_presence,
+    (i, j) => j.nb_presence - i.nb_presence
   );
 
   const tags_keys_stats_sort = tags_keys_stats.sort(
-    (i, j) => j.nb_presence - i.nb_presence,
+    (i, j) => j.nb_presence - i.nb_presence
   );
 
   // Disp and write stats
@@ -111,7 +117,7 @@ async function main() {
   console.log("\nStructure base item:\n");
   for (const key of item_keys_stats_sort) {
     console.log(
-      `${key.field_name} - ${((100 * key.nb_presence) / nbRecordsTotal).toFixed(2)}% ${key.is_boolean ? " - boolean" : ""}`,
+      `${key.field_name} - ${((100 * key.nb_presence) / nbRecordsTotal).toFixed(2)}% ${key.is_boolean ? " - boolean" : ""}`
     );
   }
 
@@ -123,7 +129,7 @@ async function main() {
   console.log('\nStructure "tags":\n');
   for (const key of tags_keys_stats_sort) {
     console.log(
-      `${key.field_name} - ${((100 * key.nb_presence) / nbRecordsTags).toFixed(2)}% ${key.is_boolean ? " - boolean" : ""}`,
+      `${key.field_name} - ${((100 * key.nb_presence) / nbRecordsTags).toFixed(2)}% ${key.is_boolean ? " - boolean" : ""}`
     );
   }
 
@@ -134,21 +140,20 @@ async function main() {
 
   const incomplete_items: Incomplete[] = res_data
     .filter(
-      (i) =>
-        i.id === undefined || i.date === undefined || i.title === undefined,
+      (i) => i.id === undefined || i.date === undefined || i.title === undefined
     )
     .map(
       (i) =>
         ({
           date: i.date,
           id: i.id,
-          nb_occurrences: 1,
-        }) as Incomplete,
+          nb_occurrences: 1
+        }) as Incomplete
     )
     .reduce((accumulator: Incomplete[], currentItem) => {
       // Check if the valueT already exists in the accumulator
       const existingItem = accumulator.find(
-        (item) => item.id === currentItem.id,
+        (item) => item.id === currentItem.id
       );
 
       if (existingItem) {
