@@ -7,8 +7,8 @@ const BlockedSchema = new Schema<IBlocked>(
     chatId: {
       type: String,
       required: true,
-      unique: true,
-    },
+      unique: true
+    }
   },
   { timestamps: true }
 );

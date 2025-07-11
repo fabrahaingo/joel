@@ -8,5 +8,5 @@ Vous pouvez contacter ses créateurs [Fabien](https://www.linkedin.com/in/fabien
 
 Pour rester au courant des nouveautés, des corrections de bugs ainsi que des améliorations de JOEL, rejoignez notre channel officiel [@joel_news](https://t.me/joel_news).
 
-Si vous souhaitez supprimer votre compte: utilisez la commande /supprimerCompte`,
+Si vous souhaitez supprimer votre compte: utilisez la commande /supprimerCompte`
 }

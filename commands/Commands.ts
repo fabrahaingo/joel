@@ -1,7 +1,12 @@
 import { CommandType } from "../types.js";
 
 import { followOrganisationCommand } from "./followOrganisation.js";
-import {followCommand, fullHistoryCommand, manualFollowCommand, searchCommand} from "./search.js";
+import {
+  followCommand,
+  fullHistoryCommand,
+  manualFollowCommand,
+  searchCommand
+} from "./search.js";
 import { enaCommand, promosCommand } from "./ena.js";
 import { statsCommand } from "./stats.js";
 import { defaultCommand } from "./default.js";
