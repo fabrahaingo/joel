@@ -310,13 +310,17 @@ export async function notifyOrganisationsUpdates(
         )
           return orgTabList;
 
-        orgTabList[followData.wikidataId] = updatedOrganisationMapById[
+        const newRecordsFollowedB = updatedOrganisationMapById[
           followData.wikidataId
         ].filter(
           (record) =>
             JORFtoDate(record.source_date).getTime() >
             followData.lastUpdate.getTime()
         );
+
+        if (newRecordsFollowedB.length > 0)
+          orgTabList[followData.wikidataId] = newRecordsFollowedB;
+
         return orgTabList;
       },
       {}
