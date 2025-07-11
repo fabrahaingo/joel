@@ -108,11 +108,11 @@ Conseil constitutionnel : *Q1127218*`,
           }
 
           if (orgResults.length == 1) {
-            const user = await User.findOrCreate(session);
-            user.followedOrganisations ??= [];
+          session.user = await User.findOrCreate(session);
+          session.user.followedOrganisations ??= [];
 
             // If the one result is already followed
-            if (isOrganisationAlreadyFollowed(user, orgResults[0].wikidataId)) {
+            if (isOrganisationAlreadyFollowed(session.user, orgResults[0].wikidataId)) {
               await new Promise((resolve) => setTimeout(resolve, 500));
               await session.sendMessage(
                 `Vous suivez déjà l'organisation *${orgResults[0].nom}* ✅`,
@@ -143,12 +143,11 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                         nom: orgResults[0].nom,
                         wikidataId: orgResults[0].wikidataId,
                       });
-                    user.followedOrganisations ??= [];
-                    user.followedOrganisations.push({
+                    session.user.followedOrganisations.push({
                       wikidataId: organisation.wikidataId,
                       lastUpdate: new Date(),
                     });
-                    await user.save();
+                    await session.user.save();
                     await session.sendMessage(
                       `Vous suivez maintenant l'organisation *${orgResults[0].nom}* ✅`,
                       mainMenuKeyboard,
