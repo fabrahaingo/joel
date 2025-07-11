@@ -78,11 +78,11 @@ export enum FunctionTags {
   "Tribunal pour enfants" = "tribunal_pour_enfants",
   "Tribunal de première instance" = "tribunal_premiere_instance",
   "Tribunal de proximité" = "tribunal_proximite",
-  "Visa grands établissements" = "visa_grands_etablissements",
+  "Visa grands établissements" = "visa_grands_etablissements"
 }
 
 export function getFunctionsFromValues(
-  values: FunctionTags[],
+  values: FunctionTags[]
 ): (keyof typeof FunctionTags)[] {
   if (values.length === 0) return [];
 

@@ -1,7 +1,12 @@
 import { CommandType } from "../types.js";
 
 import { followOrganisationCommand } from "./followOrganisation.js";
-import { followCommand, fullHistoryCommand, searchCommand } from "./search.js";
+import {
+  followCommand,
+  fullHistoryCommand,
+  manualFollowCommand,
+  searchCommand
+} from "./search.js";
 import { enaCommand, promosCommand } from "./ena.js";
 import { statsCommand } from "./stats.js";
 import { defaultCommand } from "./default.js";
@@ -19,6 +24,10 @@ export const commands: CommandType[] = [
   {
     regex: /🔎 Rechercher$|🔎 Nouvelle recherche$/,
     action: searchCommand
+  },
+  {
+    regex: /🕵️ Forcer le suivi de \s*(.*)/i,
+    action: manualFollowCommand
   },
   {
     regex: /Historique de \s*(.*)/i,

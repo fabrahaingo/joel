@@ -61,13 +61,13 @@ export function formatSearchResult(
     isConfirmation?: boolean;
     isListing?: boolean;
     displayName?: "all" | "first" | "no";
-  },
+  }
 ) {
   let message = "";
   for (const elem of result) {
     const prenomNom = `${elem.prenom} ${elem.nom}`;
     const prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
-        prenomNom,
+      prenomNom
     )})`;
     if (result.indexOf(elem) == 0) {
       if (options?.isConfirmation) {
@@ -93,12 +93,12 @@ export function formatSearchResult(
         (elem.armee_grade || elem.grade)
       ) {
         message += `🗓 Pour prendre rang du ${dateToFrenchString(
-          elem.date_debut,
+          elem.date_debut
         )}\n`;
       } else {
         if (elem.date_fin)
           message += `🗓 Du ${dateToFrenchString(
-            elem.date_debut,
+            elem.date_debut
           )} au ${dateToFrenchString(elem.date_fin)}\n`;
         else {
           message += `🗓 À compter du ${dateToFrenchString(elem.date_debut)}\n`;

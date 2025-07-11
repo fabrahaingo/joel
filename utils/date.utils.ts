@@ -4,7 +4,7 @@ export function dateToFrenchString(date: string): string {
   return dateToConvert.toLocaleDateString("fr-FR", {
     year: "numeric",
     month: "long",
-    day: "numeric",
+    day: "numeric"
   });
 }
 
@@ -14,7 +14,7 @@ export function dateTOJORFFormat(date: Date): string {
     .toLocaleDateString("fr-FR", {
       day: "numeric",
       month: "numeric",
-      year: "numeric",
+      year: "numeric"
     })
     .replaceAll("/", "-");
 }
@@ -24,7 +24,7 @@ export function JORFtoDate(dateStr: string): Date {
 
   return new Date(
     parseInt(dateSplit[0]),
-    parseInt(dateSplit[1])-1,
-    parseInt(dateSplit[2]),
+    parseInt(dateSplit[1]) - 1,
+    parseInt(dateSplit[2])
   );
 }

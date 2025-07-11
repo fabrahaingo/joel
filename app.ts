@@ -6,35 +6,38 @@ import { commands } from "./commands/Commands.js";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN ?? "", {
   polling: true,
-  onlyFirstMatch: true,
+  onlyFirstMatch: true
 });
-
 
 await (async () => {
   await mongodbConnect();
 
   commands.forEach((command) => {
-    bot.onText(command.regex,
-        (tgMsg: TelegramBot.Message) => {
-            void (async () => {
-                try {
-                    // Check if the user is known
-                    const tgUser: TelegramBot.User | undefined = tgMsg.from;
-                    if (tgUser === undefined || tgUser.is_bot) return // Ignore bots
+    bot.onText(command.regex, (tgMsg: TelegramBot.Message) => {
+      void (async () => {
+        try {
+          // Check if the user is known
+          const tgUser: TelegramBot.User | undefined = tgMsg.from;
+          if (tgUser === undefined || tgUser.is_bot) return; // Ignore bots
 
-                    const tgSession = new TelegramSession(bot, tgMsg.chat.id, tgUser.language_code ?? "fr");
-                    await tgSession.loadUser();
-                    tgSession.isReply = tgMsg.reply_to_message !== undefined;
+          const tgSession = new TelegramSession(
+            bot,
+            tgMsg.chat.id,
+            tgUser.language_code ?? "fr"
+          );
+          await tgSession.loadUser();
+          tgSession.isReply = tgMsg.reply_to_message !== undefined;
 
-                    if (tgSession.user != null) await tgSession.user.updateInteractionMetrics();
+          if (tgSession.user != null)
+            await tgSession.user.updateInteractionMetrics();
 
-                    // Process user message
-                    await command.action(tgSession, tgMsg.text)
-                } catch (error) {
-                    console.error('Error processing command:', error);
-                }
-            })();
-        });
+          // Process user message
+          await command.action(tgSession, tgMsg.text);
+        } catch (error) {
+          console.error("Error processing command:", error);
+        }
+      })();
+    });
   });
 
   console.log(`\u{2705} JOEL started successfully`);

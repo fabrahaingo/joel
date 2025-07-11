@@ -6,33 +6,30 @@ const PeopleSchema = new Schema<IPeople, PeopleModel>(
   {
     nom: {
       type: String,
-      required: true,
+      required: true
     },
     prenom: {
       type: String,
-      required: true,
-    },
+      required: true
+    }
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 PeopleSchema.static(
   "firstOrCreate",
-  async function (tgPeople: {
-    nom: string;
-    prenom: string;
-  }) {
+  async function (tgPeople: { nom: string; prenom: string }) {
     let people: IPeople | null = await this.findOne({
       nom: tgPeople.nom,
-      prenom: tgPeople.prenom,
+      prenom: tgPeople.prenom
     });
     people ??= await new this({
-        nom: tgPeople.nom,
-        prenom: tgPeople.prenom,
-      }).save();
+      nom: tgPeople.nom,
+      prenom: tgPeople.prenom
+    }).save();
 
     return people;
-  },
+  }
 );
 
 export default model<IPeople, PeopleModel>("People", PeopleSchema);
