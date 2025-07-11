@@ -775,5 +775,7 @@ await (async () => {
   // Send notifications to users on followed organisations
   await notifyOrganisationsUpdates(JORFAllRecordsFromDate);
 
+  await umami.log({ event: "/notification-process-completed" });
+
   process.exit(0);
 })();
