@@ -278,6 +278,8 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
             (tab: number[], idx) => {
               if (userFollows.peopleAndNames[idx].peopleId !== undefined)
                 return tab;
+              if (session.user == null) return tab;
+
               session.user.followedNames ??= [];
               const idInFollowedNameTab = session.user.followedNames.findIndex(
                 (name) => name === userFollows.peopleAndNames[idx].nomPrenom
