@@ -197,6 +197,31 @@ UserSchema.method('removeFollowedFunction', async function removeFollowedFunctio
     return true;
 });
 
+
+UserSchema.method('checkFollowedName', function checkFollowedName(name: string): boolean {
+    this.followedNames ??= [];
+    return this.followedNames.some((elem) => {
+        return elem.toUpperCase() === name.toUpperCase();
+    });
+});
+
+UserSchema.method('addFollowedName', async function addFollowedName(name: string) {
+    if (this.checkFollowedName(name)) return false;
+    this.followedNames ??= [];
+    this.followedNames.push(name);
+    await this.save();
+    return true;
+});
+
+UserSchema.method('removeFollowedName', async function removeFollowedName(name: string){
+    if (!this.checkFollowedName(name)) return false;
+    this.followedFunctions = this.followedFunctions.filter((elem) => {
+        return elem.toUpperCase() !== name.toUpperCase();
+    });
+    await this.save();
+    return true;
+});
+
 UserSchema.method('followsNothing', function followsNothing(): boolean {
     let nb_followed=this.followedPeople.length + this.followedFunctions.length;
     if (this.followedNames !== undefined) nb_followed+=this.followedNames.length;
