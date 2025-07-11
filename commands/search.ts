@@ -243,7 +243,7 @@ export const manualFollowCommand = async (
   session: ISession,
   msg: string
 ): Promise<void> => {
-  await session.log({ event: "/follow-manual" });
+  await session.log({ event: "/follow-name" });
   const tgSession: TelegramSession | undefined = await extractTelegramSession(
     session,
     true

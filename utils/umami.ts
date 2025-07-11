@@ -48,7 +48,7 @@ export type UmamiEvent =
   | "/ena"
   | "/ena-list"
   | "/follow"
-  | "/follow-manual"
+  | "/follow-name"
   | "/follow-function"
   | "/follow-organisation"
   | "/unfollow"
