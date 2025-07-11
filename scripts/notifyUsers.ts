@@ -5,7 +5,7 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
 import { FunctionTags } from "../entities/FunctionTags.js";
 import { IPeople, IUser } from "../types.js";
 import People from "../models/People.js";
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, isAxiosError } from "axios";
 import Blocked from "../models/Blocked.js";
 import User from "../models/User.js";
 import { ChatId } from "node-telegram-bot-api";
@@ -491,6 +491,13 @@ async function sendTagUpdates(
   await umami.log({ event: "/notification-update-function" });
 }
 
+// Extend the AxiosError with the response.data.description field
+export interface TelegramAPIError {
+  message: string;
+  status: number;
+  description?: string;
+}
+
 async function sendLongMessageFromAxios(user: IUser, message: string) {
   const messagesArray = splitText(message, 3000);
 
@@ -509,19 +516,21 @@ async function sendLongMessageFromAxios(user: IUser, message: string) {
         }
       })
       .catch(async (err: unknown) => {
-        const error = err as AxiosError;
-        if (
-          error.response !== undefined &&
-          (error.response.data.description as string) ===
-            "Forbidden: bot was blocked by the user"
-        ) {
-          await umami.log({ event: "/user-blocked-joel" });
-          await new Blocked({
-            chatId: user.chatId as ChatId
-          }).save();
-          return;
+        if (isAxiosError(err)) {
+          const error = err as AxiosError<TelegramAPIError>;
+          if (
+            error.response?.data.description !== undefined &&
+            error.response.data.description ===
+              "Forbidden: bot was blocked by the user"
+          ) {
+            await umami.log({ event: "/user-blocked-joel" });
+            await new Blocked({
+              chatId: user.chatId as ChatId
+            }).save();
+            return;
+          }
         }
-        console.log(error.message);
+        console.log(err);
       });
 
     // prevent hitting the Telegram API rate limit
