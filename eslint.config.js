@@ -18,6 +18,6 @@ export default tseslint.config(
       }
     }
   },
-  //prettierConfig,
-  //eslintPluginPrettierRecommended
+  prettierConfig,
+  eslintPluginPrettierRecommended
 );
