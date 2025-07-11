@@ -1,6 +1,6 @@
 import { formatSearchResult } from "../utils/formatSearchResult.js";
 import TelegramBot from "node-telegram-bot-api";
-import { callJORFSearchPeople } from "../utils/JORFSearch.utils.js";
+import { callJORFSearchPeople, cleanPeopleName } from "../utils/JORFSearch.utils.js";
 import { IPeople, ISession } from "../types.js";
 import { Types } from "mongoose";
 import User from "../models/User.js";
@@ -80,10 +80,23 @@ async function searchPersonHistory(
     const nbRecords = JORFRes_data.length;
 
     if (nbRecords == 0) {
+
+        const personNameSplit = personName.split(" ");
+        if (personNameSplit.length < 2) { // Minimum is two words: Prénom + Nom
+            await session.sendMessage(
+                "Votre saisie est incorrecte.",
+                [
+                    [{ text: "🔎 Nouvelle recherche" }],
+                    [{ text: "🏠 Menu principal" }],
+                ]);
+            return;
+        }
+
       await session.sendMessage(
-        "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement",
+        "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.",
           [
               [{ text: "🔎 Nouvelle recherche" }],
+              [{ text: `🕵️ Forcer le suivi de ${cleanPeopleName(personName)}` }],
               [{ text: "🏠 Menu principal" }],
           ]);
       return;
@@ -212,3 +225,68 @@ export const followCommand= async (session: ISession, msg: string): Promise<void
       console.log(error);
     }
   };
+
+
+export const manualFollowCommand= async (session: ISession, msg: string): Promise<void> => {
+    await session.log({ event: "/follow-manual" });
+    const tgSession: TelegramSession | undefined = await extractTelegramSession(session, true);
+    if (tgSession == null) return;
+
+    const tgBot = tgSession.telegramBot;
+
+    const personNameSplit= cleanPeopleName(msg).split(" ").slice(5);
+
+    // Command is
+    const prenomNom = personNameSplit.join(" ");
+    const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
+
+    if (session.user?.checkFollowedName(nomPrenom)) {
+        await session.sendMessage(`Vous suivez déjà *${prenomNom}* ✅`, mainMenuKeyboard);
+        return;
+    }
+
+    await session.sendTypingAction();
+    const question = await tgBot.sendMessage(
+        session.chatId,
+        `Voulez-vous forcer le suivi de *${prenomNom}* ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *en cas de variation d'orthographe ou de nom (mariage, divorce), il est possible que les nominations futures ne soient pas notifiées*`,
+        {
+            reply_markup: {
+                force_reply: true,
+            },
+            parse_mode: "Markdown",
+        },
+    );
+
+    tgBot.onReplyToMessage(
+        session.chatId,
+        question.message_id,
+        (tgMsg2: TelegramBot.Message) => {
+            void (async () => {
+                if (tgMsg2.text === undefined) {
+                    await session.sendMessage(
+                        `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`, mainMenuKeyboard
+                    );
+                    return;
+                }
+                if (new RegExp(/oui/i).test(tgMsg2.text)) {
+
+                    session.user = await User.findOrCreate(session);
+                    await session.user.addFollowedName(nomPrenom);
+                    await session.sendMessage(`Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`);
+
+                } else if (new RegExp(/non/i).test(tgMsg2.text)) {
+                    await session.sendMessage(
+                        `Ok, aucun ajout n'a été effectué. 👌`,
+                        mainMenuKeyboard
+                    );
+                    return;
+                }
+                await session.sendMessage(
+                    `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
+                    mainMenuKeyboard
+                );
+            })();
+        }
+    );
+}
+
