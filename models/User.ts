@@ -14,10 +14,6 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: Number,
       required: true,
     },
-    messageApp: {
-      type: String,
-      default: "Telegram",
-    },
     language_code: {
       type: String,
       required: true,
@@ -27,15 +23,6 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: String,
       enum: ["active", "blocked"],
       default: "active",
-    },
-    lastInteractionDay: {
-      type: Date,
-    },
-    lastInteractionWeek: {
-      type: Date,
-    },
-    lastInteractionMonth: {
-      type: Date,
     },
     followedPeople: {
       type: [
@@ -51,10 +38,13 @@ const UserSchema = new Schema<IUser, UserModel>(
       ],
       default: [],
     },
+    followedFunctions: {
+      type: [String],
+      default: [],
+    },
     followedNames: {
       type: [String],
       default: [],
-      required: true,
     },
     followedOrganisations: {
       type: [
@@ -69,11 +59,19 @@ const UserSchema = new Schema<IUser, UserModel>(
           },
       ],
       default: [],
-      required: true,
     },
-    followedFunctions: {
-      type: [String],
-      default: [],
+    messageApp: {
+      type: String,
+      default: "Telegram",
+    },
+    lastInteractionDay: {
+      type: Date,
+    },
+    lastInteractionWeek: {
+      type: Date,
+    },
+    lastInteractionMonth: {
+      type: Date,
     },
   },
   {
@@ -95,9 +93,10 @@ UserSchema.static(
     if (user === null) {
       await umami.log({ event: "/new-user" });
       const newUser = new this({
-          messageApp: session.messageApp,
+          _id: session.chatId,
           chatId : session.chatId,
           language_code: session.language_code,
+          messageApp: session.messageApp,
       });
       await newUser.save();
 
