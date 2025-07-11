@@ -304,7 +304,10 @@ export async function notifyOrganisationsUpdates(
     // Records which are associated with followed Organisations, and which are new for the respective People follow
     const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
       (orgTabList: Record<WikidataId, JORFSearchItem[]>, followData) => {
-        if (updatedOrganisationMapById[followData.wikidataId].length == 0)
+        if (
+          updatedOrganisationMapById[followData.wikidataId] === undefined ||
+          updatedOrganisationMapById[followData.wikidataId].length == 0
+        )
           return orgTabList;
 
         orgTabList[followData.wikidataId] = updatedOrganisationMapById[
