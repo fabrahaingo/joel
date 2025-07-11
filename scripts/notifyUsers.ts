@@ -555,7 +555,7 @@ await (async () => {
   // Send notifications to users on followed people
   await notifyPeopleUpdates(JORFAllRecordsFromDate);
 
-  // Send notifications to users on followed functions
+  // Send notifications to users on followed names
   await notifyNameMentionUpdates(JORFAllRecordsFromDate);
 
   // Send notifications to users on followed functions
