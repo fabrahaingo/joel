@@ -185,7 +185,7 @@ export const followCommand= async (session: ISession, msg: string): Promise<void
 
       if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
         user.followedPeople.push({
-          peopleId: people._id,
+          peopleId: people._id as Types.ObjectId,
           lastUpdate: new Date(Date.now()),
         });
         await user.save();

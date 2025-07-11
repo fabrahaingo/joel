@@ -140,7 +140,7 @@ UserSchema.method('updateInteractionMetrics', async function updateInteractionMe
 
 
 UserSchema.method('checkFollowedPeople', function checkFollowedPeople(people: IPeople): boolean {
-    return this.followedPeople.some((person) => person.peopleId.equals(people._id));
+    return this.followedPeople.some((person) => person.peopleId === people._id);
 });
 
 UserSchema.method('addFollowedPeople', async function addFollowedPeople(peopleToFollow: IPeople) {
