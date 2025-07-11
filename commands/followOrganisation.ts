@@ -86,10 +86,10 @@ export const followOrganisationCommand = async (
     await session.sendTypingAction();
     const question: TelegramBot.Message = await tgBot.sendMessage(
       session.chatId,
-      `Entrez le nom ou l'identifiant [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
+      `Entrez le *nom* ou l'*identifiant* [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
 Exemples:
-Conseil d'État : *Q769657*
-Conseil constitutionnel : *Q1127218*`,
+*Conseil d'État* ou *Q769657*
+*Conseil constitutionnel* ou *Q1127218*`,
       {
         parse_mode: "Markdown",
         reply_markup: {
@@ -161,6 +161,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                           nom: orgResults[0].nom,
                           wikidataId: orgResults[0].wikidataId
                         });
+                      session.user.followedOrganisations ??= [];
                       session.user.followedOrganisations.push({
                         wikidataId: organisation.wikidataId,
                         lastUpdate: new Date()
