@@ -7,23 +7,22 @@ export interface CommandType {
   action: (session: ISession, msg?: string) => Promise<void>;
 }
 
-export type MessageApp =
-  | "Telegram";
+export type MessageApp = "Telegram";
 //| "WhatsApp";
 //| "Matrix";
 
 export interface ISession {
-    messageApp: MessageApp;
-    chatId: number;
-    language_code: string;
-    user: IUser | null | undefined;
-    isReply: boolean | undefined;
+  messageApp: MessageApp;
+  chatId: number;
+  language_code: string;
+  user: IUser | null | undefined;
+  isReply: boolean | undefined;
 
-    loadUser: () => Promise<void>;
-    createUser: () => Promise<void>;
-    sendMessage: (msg: string, keyboard?: { text: string }[][]) => Promise<void>;
-    sendTypingAction: () => Promise<void>;
-    log: typeof umami.log;
+  loadUser: () => Promise<void>;
+  createUser: () => Promise<void>;
+  sendMessage: (msg: string, keyboard?: { text: string }[][]) => Promise<void>;
+  sendTypingAction: () => Promise<void>;
+  log: typeof umami.log;
 }
 
 // fields are undefined for users created before implementation
@@ -65,20 +64,20 @@ export interface IUser {
 }
 
 export interface IOrganisation {
-    nom: string;
-    wikidataId: WikidataId;
-    save: () => Promise<IOrganisation>;
-    countDocuments: () => Promise<number>;
+  nom: string;
+  wikidataId: WikidataId;
+  save: () => Promise<IOrganisation>;
+  countDocuments: () => Promise<number>;
 }
 
 export interface OrganisationModel extends Model<IOrganisation> {
-    firstOrCreate: (args: {
-        nom: string;
-        wikidataId: WikidataId;
-    }) => Promise<IOrganisation>;
-    findOne: (arg1, arg2?) => Promise<IOrganisation | null>;
-    find: (arg1, arg2?) => Promise<IOrganisation[]>;
-    countDocuments: () => Promise<number>;
+  firstOrCreate: (args: {
+    nom: string;
+    wikidataId: WikidataId;
+  }) => Promise<IOrganisation>;
+  findOne: (arg1, arg2?) => Promise<IOrganisation | null>;
+  find: (arg1, arg2?) => Promise<IOrganisation[]>;
+  countDocuments: () => Promise<number>;
 }
 
 export interface UserModel extends Model<IUser> {
@@ -102,10 +101,7 @@ export interface IPeople {
 }
 
 export interface PeopleModel extends Model<IPeople> {
-  firstOrCreate: (people: {
-    nom: string;
-    prenom: string;
-  }) => Promise<IPeople>;
+  firstOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
   findOne: (arg1, arg2?) => Promise<IPeople | null>;
   find: (arg1, arg2?) => Promise<IPeople[]>;
   countDocuments: () => Promise<number>;

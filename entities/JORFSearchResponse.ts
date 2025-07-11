@@ -2,11 +2,11 @@ import { SourceName, TypeOrdre, WikidataId } from "../types.js";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
-interface OrganisationRaw{
+interface OrganisationRaw {
   nom?: string;
 }
 
-interface Organisation extends OrganisationRaw{
+interface Organisation extends OrganisationRaw {
   nom: string;
   wikidata_id?: WikidataId;
   organisation_militaire?: WikidataId;
@@ -173,57 +173,66 @@ export interface JORFSearchItem extends JORFSearchRawItem {
   visa_grands_etablissements?: boolean;
 }
 
-export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): JORFSearchItem[] {
-  return jorf_items_raw.reduce(
-      (clean_items: JORFSearchItem[], item_raw)=> {
+export function cleanJORFItems(
+  jorf_items_raw: JORFSearchRawItem[]
+): JORFSearchItem[] {
+  return jorf_items_raw.reduce((clean_items: JORFSearchItem[], item_raw) => {
+    // drop records where any of the required fields is undefined
+    if (
+      item_raw.source_date === undefined ||
+      item_raw.source_id === undefined ||
+      item_raw.source_name === undefined ||
+      item_raw.type_ordre === undefined ||
+      item_raw.nom === undefined ||
+      item_raw.prenom === undefined
+    ) {
+      return clean_items;
+    }
 
-        // drop records where any of the required fields is undefined
-        if (item_raw.source_date === undefined ||
-            item_raw.source_id === undefined ||
-            item_raw.source_name === undefined ||
-            item_raw.type_ordre === undefined ||
-            item_raw.nom === undefined ||
-            item_raw.prenom === undefined) {
-            return clean_items;
-        }
+    item_raw.organisations ??= [];
 
-        item_raw.organisations ??= [];
+    // Drop organisations where the name is missing
+    const clean_organisations = item_raw.organisations.filter(
+      (org_raw) => org_raw.nom !== undefined
+    ) as Organisation[];
 
-        // Drop organisations where the name is missing
-        const clean_organisations = item_raw.organisations.filter(
-            org_raw => org_raw.nom !== undefined
-        ) as Organisation[];
+    // Drop remplacement where the name is missing
+    if (
+      item_raw.remplacement?.nom === undefined ||
+      item_raw.remplacement.prenom === undefined
+    ) {
+      item_raw.remplacement = undefined;
+    }
 
-        // Drop remplacement where the name is missing
-        if (item_raw.remplacement?.nom === undefined || item_raw.remplacement.prenom === undefined){
-          item_raw.remplacement = undefined;
-        }
+    // Replace potential misspellings some type_ordre
+    switch (item_raw.type_ordre) {
+      case "admissibilite":
+        item_raw.type_ordre = "admissibilité";
+        break;
+      case "conférés":
+        item_raw.type_ordre = "conféré";
+        break;
+    }
 
-        // Replace potential misspellings some type_ordre
-        switch (item_raw.type_ordre) {
-          case "admissibilite":
-            item_raw.type_ordre = "admissibilité";
-            break
-          case "conférés":
-            item_raw.type_ordre = "conféré";
-            break
-        }
+    const clean_item: JORFSearchItem = {
+      ...item_raw,
+      organisations: clean_organisations
+    } as JORFSearchItem;
 
-        const clean_item: JORFSearchItem = {...item_raw, organisations: clean_organisations} as JORFSearchItem;
+    // extend FunctionTag eleve_ena to include INSP students
+    if (
+      clean_item.organisations.length > 0 &&
+      clean_item.organisations[0]?.wikidata_id === "Q109039648" &&
+      clean_item.type_ordre === "nomination" &&
+      clean_item.date_debut !== undefined
+    ) {
+      const year = parseInt(clean_item.date_debut.slice(0, 4));
+      if (year != -1) {
+        clean_item.eleve_ena = `${String(year)}-${String(year + 2)}`;
+      }
+    }
 
-        // extend FunctionTag eleve_ena to include INSP students
-        if (clean_item.organisations.length > 0 &&
-            clean_item.organisations[0]?.wikidata_id === "Q109039648" &&
-            clean_item.type_ordre === "nomination" &&
-            clean_item.date_debut !== undefined) {
-          const year = parseInt(clean_item.date_debut.slice(0,4))
-          if (year != -1) {
-            clean_item.eleve_ena=`${String(year)}-${String(year+2)}`;
-          }
-        }
-
-        clean_items.push(clean_item);
-        return clean_items;
-      },
-      []);
+    clean_items.push(clean_item);
+    return clean_items;
+  }, []);
 }
