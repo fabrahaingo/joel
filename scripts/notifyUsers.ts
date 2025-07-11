@@ -3,9 +3,9 @@ import { mongodbConnect } from "../db.js";
 import { ErrorMessages } from "../entities/ErrorMessages.js";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
 import { FunctionTags } from "../entities/FunctionTags.js";
-import { IPeople, IUser } from "../types.js";
+import { IPeople, IUser, WikidataId } from "../types.js";
 import People from "../models/People.js";
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, isAxiosError } from "axios";
 import Blocked from "../models/Blocked.js";
 import User from "../models/User.js";
 import { ChatId } from "node-telegram-bot-api";
@@ -19,6 +19,7 @@ import {
   cleanPeopleName,
   uniqueMinimalNameInfo
 } from "../utils/JORFSearch.utils.js";
+import Organisation from "../models/Organisation.js";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -90,6 +91,37 @@ export function buildTagMap(
   );
 }
 
+export function buildOrganisationMapById(
+  updatedRecords: JORFSearchItem[],
+  orgsInDbId: WikidataId[]
+): Record<WikidataId, JORFSearchItem[]> {
+  return updatedRecords.reduce(
+    (orgMap: Record<WikidataId, JORFSearchItem[]>, item) => {
+      const itemUniqueOrgIds: WikidataId[] = item.organisations.reduce(
+        (idTab: WikidataId[], o) => {
+          if (
+            o.wikidata_id === undefined ||
+            !orgsInDbId.includes(o.wikidata_id) ||
+            idTab.some((id) => id === o.wikidata_id)
+          )
+            return idTab;
+
+          idTab.push(o.wikidata_id);
+          return idTab;
+        },
+        []
+      );
+
+      for (const wikiId of itemUniqueOrgIds) {
+        orgMap[wikiId] ??= [];
+        orgMap[wikiId].push(item);
+      }
+      return orgMap;
+    },
+    {} as Record<FunctionTags, JORFSearchItem[]>
+  );
+}
+
 async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
   const blockedUsers: IUser[] = await Blocked.find({}, { _id: 1 });
   for (const blockedUser of blockedUsers) {
@@ -104,7 +136,7 @@ async function updateUserFollowedPeople(
   updatedPeopleIds: Types.ObjectId[]
 ) {
   if (updatedPeopleIds.length == 0) {
-    return; // So we don't touch the use record
+    return;
   }
 
   const currentDate = new Date();
@@ -131,6 +163,47 @@ async function updateUserFollowedPeople(
       ) {
         followedList.push({
           peopleId: followed.peopleId,
+          lastUpdate: currentDate
+        });
+      } else {
+        followedList.push(followed); // otherwise, we don't change the item
+      }
+      return followedList;
+    },
+    []
+  );
+
+  // save user
+  await user.save();
+}
+
+// Update the timestamp of the last update date for a user-specific organisation follow
+async function updateUserFollowedOrganisation(
+  user: IUser,
+  updatedOrgIds: WikidataId[]
+) {
+  if (
+    updatedOrgIds.length == 0 ||
+    user.followedOrganisations === undefined ||
+    user.followedOrganisations.length == 0
+  ) {
+    return;
+  }
+
+  const currentDate = new Date();
+
+  user.followedOrganisations = user.followedOrganisations.reduce(
+    (
+      followedList: { wikidataId: WikidataId; lastUpdate: Date }[],
+      followed
+    ) => {
+      if (followedList.some((f) => f.wikidataId === followed.wikidataId))
+        return followedList; // If the user follows twice the same organisation, we drop the second record
+
+      // if updated people: we update the timestamp
+      if (updatedOrgIds.includes(followed.wikidataId)) {
+        followedList.push({
+          wikidataId: followed.wikidataId,
           lastUpdate: currentDate
         });
       } else {
@@ -176,6 +249,95 @@ export async function notifyFunctionTagsUpdates(
   for (const user of usersFollowingTags) {
     // send tqg notification to the user
     await sendTagUpdates(user, updatedTagMap);
+  }
+}
+
+interface miniOrg {
+  nom: string;
+  wikidataId: string;
+}
+
+// There is currently no way to check if a user has been notified of a tag update
+// Resuming an update thus require to force-notify users for all tags updates over the period.
+export async function notifyOrganisationsUpdates(
+  updatedRecords: JORFSearchItem[]
+) {
+  const orgsInDb: miniOrg[] = await Organisation.find(
+    {},
+    { wikidataId: 1 }
+  ).then((orgs) => orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId })));
+  const orgsInDbIds: WikidataId[] = orgsInDb.map((o) => o.wikidataId);
+
+  const updatedOrganisationMapById = buildOrganisationMapById(
+    updatedRecords,
+    orgsInDbIds
+  );
+
+  const usersFollowingOrganisations: IUser[] = await User.find(
+    {
+      followedOrganisations: {
+        $exists: true,
+        $not: { $size: 0 },
+        $elemMatch: {
+          wikidataId: {
+            $in: Object.keys(updatedOrganisationMapById)
+          }
+        }
+      }
+    },
+    {
+      _id: 1,
+      chatId: 1,
+      followedOrganisations: { wikidataId: 1, lastUpdate: 1 }
+    }
+  ).then(async (res: IUser[]) => {
+    return await filterOutBlockedUsers(res);
+  });
+
+  for (const user of usersFollowingOrganisations) {
+    if (
+      user.followedOrganisations === undefined ||
+      user.followedOrganisations.length == 0
+    )
+      continue;
+
+    // Records which are associated with followed Organisations, and which are new for the respective People follow
+    const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
+      (orgTabList: Record<WikidataId, JORFSearchItem[]>, followData) => {
+        if (
+          updatedOrganisationMapById[followData.wikidataId] === undefined ||
+          updatedOrganisationMapById[followData.wikidataId].length == 0
+        )
+          return orgTabList;
+
+        const newRecordsFollowedB = updatedOrganisationMapById[
+          followData.wikidataId
+        ].filter(
+          (record) =>
+            JORFtoDate(record.source_date).getTime() >
+            followData.lastUpdate.getTime()
+        );
+
+        if (newRecordsFollowedB.length > 0)
+          orgTabList[followData.wikidataId] = newRecordsFollowedB;
+
+        return orgTabList;
+      },
+      {}
+    );
+
+    // send follow notification to the user
+    await sendOrganisationUpdate(
+      user,
+      orgsFollowedByUserAndUpdatedMap,
+      orgsInDb
+    );
+
+    // update each lastUpdate fields of the user followedPeople
+    await updateUserFollowedOrganisation(
+      user,
+      Object.keys(orgsFollowedByUserAndUpdatedMap)
+    );
   }
 }
 
@@ -444,6 +606,50 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
   await umami.log({ event: "/notification-update-people" });
 }
 
+async function sendOrganisationUpdate(
+  user: IUser,
+  orgMap: Record<WikidataId, JORFSearchItem[]>,
+  orgsInDbIds: miniOrg[]
+) {
+  const orgsUpdated = Object.keys(orgMap);
+  if (orgsUpdated.length == 0) return;
+
+  let notification_text =
+    "📢 Nouvelles publications parmi les organisations que suivez :\n\n";
+
+  for (const orgId of orgsUpdated) {
+    const orgName = orgsInDbIds.find((o) => o.wikidataId === orgId)?.nom;
+    if (orgName === undefined) {
+      console.log(
+        "Unable to find the name of the organisation with wikidataId " + orgId
+      );
+      continue;
+    }
+
+    const orgRecords = orgMap[orgId];
+    // Reverse array change order of records
+    // updatedRecords.reverse();
+
+    const pluralHandler = orgRecords.length > 1 ? "s" : "";
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${orgName}*\n\n`;
+
+    notification_text += formatSearchResult(orgRecords, {
+      isConfirmation: false,
+      isListing: true,
+      displayName: "all"
+    });
+
+    if (orgsUpdated.indexOf(orgId) + 1 !== orgsUpdated.length)
+      notification_text += "====================\n\n";
+
+    notification_text += "\n";
+  }
+
+  await sendLongMessageFromAxios(user, notification_text);
+
+  await umami.log({ event: "/notification-update-organisation" });
+}
+
 async function sendTagUpdates(
   user: IUser,
   tagMap: Record<FunctionTags, JORFSearchItem[]>
@@ -491,6 +697,13 @@ async function sendTagUpdates(
   await umami.log({ event: "/notification-update-function" });
 }
 
+// Extend the AxiosError with the response.data.description field
+export interface TelegramAPIError {
+  message: string;
+  status: number;
+  description?: string;
+}
+
 async function sendLongMessageFromAxios(user: IUser, message: string) {
   const messagesArray = splitText(message, 3000);
 
@@ -509,19 +722,21 @@ async function sendLongMessageFromAxios(user: IUser, message: string) {
         }
       })
       .catch(async (err: unknown) => {
-        const error = err as AxiosError;
-        if (
-          error.response !== undefined &&
-          (error.response.data.description as string) ===
-            "Forbidden: bot was blocked by the user"
-        ) {
-          await umami.log({ event: "/user-blocked-joel" });
-          await new Blocked({
-            chatId: user.chatId as ChatId
-          }).save();
-          return;
+        if (isAxiosError(err)) {
+          const error = err as AxiosError<TelegramAPIError>;
+          if (
+            error.response?.data.description !== undefined &&
+            error.response.data.description ===
+              "Forbidden: bot was blocked by the user"
+          ) {
+            await umami.log({ event: "/user-blocked-joel" });
+            await new Blocked({
+              chatId: user.chatId as ChatId
+            }).save();
+            return;
+          }
         }
-        console.log(error.message);
+        console.log(err);
       });
 
     // prevent hitting the Telegram API rate limit
@@ -555,11 +770,16 @@ await (async () => {
   // Send notifications to users on followed people
   await notifyPeopleUpdates(JORFAllRecordsFromDate);
 
-  // Send notifications to users on followed functions
+  // Send notifications to users on followed names
   await notifyNameMentionUpdates(JORFAllRecordsFromDate);
 
   // Send notifications to users on followed functions
   await notifyFunctionTagsUpdates(JORFAllRecordsFromDate);
+
+  // Send notifications to users on followed organisations
+  await notifyOrganisationsUpdates(JORFAllRecordsFromDate);
+
+  await umami.log({ event: "/notification-process-completed" });
 
   process.exit(0);
 })();
