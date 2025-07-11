@@ -86,10 +86,10 @@ export const followOrganisationCommand = async (
     await session.sendTypingAction();
     const question: TelegramBot.Message = await tgBot.sendMessage(
       session.chatId,
-      `Entrez le nom ou l'identifiant [wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
+      `Entrez le *nom* ou l'*identifiant* [Wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
 Exemples:
-Conseil d'État : *Q769657*
-Conseil constitutionnel : *Q1127218*`,
+*Conseil d'État* ou *Q769657*
+*Conseil constitutionnel* ou *Q1127218*`,
       {
         parse_mode: "Markdown",
         reply_markup: {
@@ -104,7 +104,7 @@ Conseil constitutionnel : *Q1127218*`,
         void (async () => {
           if (tgMsg1.text === undefined || tgMsg1.text === "") {
             await session.sendMessage(
-              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+              `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
               mainMenuKeyboard
             );
             return;
@@ -114,7 +114,7 @@ Conseil constitutionnel : *Q1127218*`,
 
           if (orgResults.length == 0) {
             await session.sendMessage(
-              `Votre recherche n'a donné aucun résultat. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+              `Votre recherche n'a donné aucun résultat.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
               mainMenuKeyboard
             );
             return;
@@ -161,6 +161,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                           nom: orgResults[0].nom,
                           wikidataId: orgResults[0].wikidataId
                         });
+                      session.user.followedOrganisations ??= [];
                       session.user.followedOrganisations.push({
                         wikidataId: organisation.wikidataId,
                         lastUpdate: new Date()
@@ -181,7 +182,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   }
                   // If msg.txt undefined or not "oui"/"non"
                   await session.sendMessage(
-                    `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+                    `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
                     mainMenuKeyboard
                   );
                   return;
@@ -221,8 +222,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   );
                   if (answers === null || answers.length == 0) {
                     await session.sendMessage(
-                      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.
-      👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
+                      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
                       mainMenuKeyboard
                     );
                     return;
