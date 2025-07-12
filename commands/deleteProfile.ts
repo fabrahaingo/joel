@@ -47,8 +47,7 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
         void (async () => {
           if (tgMsg.text === "SUPPRIMER MON COMPTE") {
             await User.deleteOne({
-              _id: session.chatId,
-              chatId: session.chatId
+              _id: session.user._id
             });
             await session.sendMessage(
               `🗑 Votre profil a bien été supprimé ! 👋

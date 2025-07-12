@@ -404,7 +404,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
 
           // Delete the user if it doesn't follow anything any more
           if (session.user.followsNothing()) {
-            await User.deleteOne({ _id: session.chatId });
+            await User.deleteOne({ _id: session.user._id });
             await session.log({ event: "/user-deletion-no-follow" });
           }
 
