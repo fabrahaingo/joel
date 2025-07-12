@@ -31,6 +31,8 @@ export default {
 };
 
 export type UmamiEvent =
+  | "/message-telegram"
+  | "/message-whatsapp"
   | "/start"
   | "/default-message"
   | "/help"
