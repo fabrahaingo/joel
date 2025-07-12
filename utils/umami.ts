@@ -63,7 +63,6 @@ export type UmamiEvent =
   | "/notification-update-organisation"
   | "/notification-update-meta"
   | "/notification-process-completed"
-  | "/person-updated"
   | "/person-added"
   | "/daily-active-user"
   | "/weekly-active-user"
