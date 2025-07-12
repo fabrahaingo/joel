@@ -22,8 +22,7 @@ function buildSuggestions() {
 }
 
 export const followFunctionCommand = async (
-  session: ISession,
-  _msg: string
+  session: ISession
 ): Promise<void> => {
   await session.log({ event: "/follow-function" });
   try {

@@ -1,10 +1,7 @@
 import { ISession } from "../types.js";
 import { mainMenuKeyboard } from "../utils/keyboards.js";
 
-export const startCommand = async (
-  session: ISession,
-  _msg: never
-): Promise<void> => {
+export const startCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/start" });
   try {
     await session.sendTypingAction();

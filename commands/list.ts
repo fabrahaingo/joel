@@ -86,7 +86,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   };
 }
 
-export const listCommand = async (session: ISession, _msg: never) => {
+export const listCommand = async (session: ISession) => {
   await session.log({ event: "/list" });
 
   try {
@@ -163,7 +163,7 @@ export const listCommand = async (session: ISession, _msg: never) => {
   }
 };
 
-export const unfollowCommand = async (session: ISession, _msg: never) => {
+export const unfollowCommand = async (session: ISession) => {
   try {
     await session.log({ event: "/unfollow" });
     await session.sendTypingAction();

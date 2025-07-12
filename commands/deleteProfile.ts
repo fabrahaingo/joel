@@ -8,8 +8,7 @@ import {
 import TelegramBot from "node-telegram-bot-api";
 
 export const deleteProfileCommand = async (
-  session: ISession,
-  _msg: never
+  session: ISession
 ): Promise<void> => {
   await session.log({ event: "/delete-profile" });
   try {

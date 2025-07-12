@@ -1,10 +1,7 @@
 import { ISession } from "../types.js";
 import { mainMenuKeyboard } from "../utils/keyboards.js";
 
-export const defaultCommand = async (
-  session: ISession,
-  _msg: never
-): Promise<void> => {
+export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
     // only answer non-reply messages
     if (!session.isReply) {

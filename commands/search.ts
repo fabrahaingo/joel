@@ -26,10 +26,7 @@ const isPersonAlreadyFollowed = (
   });
 };
 
-export const searchCommand = async (
-  session: ISession,
-  _msg: never
-): Promise<void> => {
+export const searchCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/search" });
 
   const tgSession: TelegramSession | undefined = await extractTelegramSession(
@@ -70,9 +67,14 @@ export const searchCommand = async (
 
 export const fullHistoryCommand = async (
   session: ISession,
-  msg: string
+  msg?: string
 ): Promise<void> => {
   await session.log({ event: "/history" });
+
+  if (msg == undefined) {
+    console.log("/history command called without msg argument");
+    return;
+  }
 
   const personName = msg.split(" ").slice(2).join(" ");
 
@@ -181,9 +183,14 @@ async function searchPersonHistory(
 
 export const followCommand = async (
   session: ISession,
-  msg: string
+  msg?: string
 ): Promise<void> => {
   await session.log({ event: "/follow" });
+
+  if (msg == undefined) {
+    console.log("/follow command called without msg argument");
+    return;
+  }
 
   try {
     const personName = msg.split(" ").slice(1).join(" ");
@@ -241,9 +248,15 @@ export const followCommand = async (
 
 export const manualFollowCommand = async (
   session: ISession,
-  msg: string
+  msg?: string
 ): Promise<void> => {
   await session.log({ event: "/follow-name" });
+
+  if (msg == undefined) {
+    console.log("/follow-name command called without msg argument");
+    return;
+  }
+
   const tgSession: TelegramSession | undefined = await extractTelegramSession(
     session,
     true

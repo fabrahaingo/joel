@@ -61,10 +61,7 @@ async function searchOrganisationWikidataId(
   }
 }
 
-export const followOrganisationCommand = async (
-  session: ISession,
-  _msg: never
-) => {
+export const followOrganisationCommand = async (session: ISession) => {
   await session.log({ event: "/follow-organisation" });
   try {
     if (session.user == null) {

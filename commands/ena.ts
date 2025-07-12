@@ -68,10 +68,7 @@ async function getJORFPromoSearchResult(
   }
 }
 
-export const enaCommand = async (
-  session: ISession,
-  _msg: never
-): Promise<void> => {
+export const enaCommand = async (session: ISession): Promise<void> => {
   try {
     await session.log({ event: "/ena" });
 
@@ -234,10 +231,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
   }
 };
 
-export const promosCommand = async (
-  session: ISession,
-  _msg?: never
-): Promise<void> => {
+export const promosCommand = async (session: ISession): Promise<void> => {
   try {
     await session.log({ event: "/ena-list" });
     let text = `Les périodes et noms des promotions successives sont:\n\n`;
