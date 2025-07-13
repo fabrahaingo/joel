@@ -7,8 +7,7 @@ export interface CommandType {
   action: (session: ISession, msg?: string) => Promise<void>;
 }
 
-export type MessageApp = "Telegram";
-//| "WhatsApp";
+export type MessageApp = "Telegram" | "WhatsApp";
 //| "Matrix";
 
 export interface ISession {
