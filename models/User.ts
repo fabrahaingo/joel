@@ -3,107 +3,100 @@ const Schema = _Schema;
 import umami from "../utils/umami.js";
 import { ISession, IPeople, IUser, UserModel } from "../types.js";
 import { FunctionTags } from "../entities/FunctionTags.js";
+import { loadUser } from "../entities/Session.js";
 
-const UserSchema = new Schema<IUser, UserModel>(
-  {
-    _id: {
-      type: Number,
-      required: true
-    },
-    chatId: {
-      type: Number,
-      required: true
-    },
-    language_code: {
-      type: String,
-      required: true,
-      default: "fr"
-    },
-    status: {
-      type: String,
-      enum: ["active", "blocked"],
-      default: "active"
-    },
-    followedPeople: {
-      type: [
-        {
-          peopleId: {
-            type: Types.ObjectId
-          },
-          lastUpdate: {
-            type: Date,
-            default: Date.now
-          }
-        }
-      ],
-      default: []
-    },
-    followedFunctions: {
-      type: [String],
-      default: []
-    },
-    followedNames: {
-      type: [String],
-      default: []
-    },
-    followedOrganisations: {
-      type: [
-        {
-          wikidataId: {
-            type: String
-          },
-          lastUpdate: {
-            type: Date,
-            default: Date.now
-          }
-        }
-      ],
-      default: []
-    },
-    messageApp: {
-      type: String,
-      default: "Telegram"
-    },
-    lastInteractionDay: {
-      type: Date
-    },
-    lastInteractionWeek: {
-      type: Date
-    },
-    lastInteractionMonth: {
-      type: Date
-    }
+export const USER_SCHEMA_VERSION = 2;
+
+const UserSchema = new Schema<IUser, UserModel>({
+  chatId: {
+    type: Number,
+    required: true
   },
-  {
-    timestamps: true,
-    _id: false
+  messageApp: {
+    type: String,
+    required: true
+  },
+  language_code: {
+    type: String,
+    required: true,
+    default: "fr"
+  },
+  status: {
+    type: String,
+    enum: ["active", "blocked"],
+    default: "active"
+  },
+  followedPeople: {
+    type: [
+      {
+        peopleId: {
+          type: Types.ObjectId
+        },
+        lastUpdate: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
+    default: []
+  },
+  followedFunctions: {
+    type: [String],
+    default: []
+  },
+  followedNames: {
+    type: [String],
+    default: []
+  },
+  followedOrganisations: {
+    type: [
+      {
+        wikidataId: {
+          type: String
+        },
+        lastUpdate: {
+          type: Date,
+          default: Date.now
+        }
+      }
+    ],
+    default: []
+  },
+  schemaVersion: {
+    type: Number,
+    required: true
+  },
+
+  lastInteractionDay: {
+    type: Date
+  },
+  lastInteractionWeek: {
+    type: Date
+  },
+  lastInteractionMonth: {
+    type: Date
   }
-);
+});
 
 UserSchema.static(
   "findOrCreate",
   async function (session: ISession): Promise<IUser> {
     if (session.user != null) return session.user;
 
-    const user: IUser | null = await this.findOne({
+    const user: IUser | null = await loadUser(session);
+
+    if (user != null) return user;
+
+    await umami.log({ event: "/new-user" });
+    const newUser = new this({
+      chatId: session.chatId,
       messageApp: session.messageApp,
-      chatId: session.chatId
+      language_code: session.language_code,
+      schemaVersion: USER_SCHEMA_VERSION
     });
+    await newUser.save();
 
-    if (user === null) {
-      await umami.log({ event: "/new-user" });
-      const newUser = new this({
-        _id: session.chatId,
-        chatId: session.chatId,
-        language_code: session.language_code,
-        messageApp: session.messageApp
-      });
-      await newUser.save();
-
-      return newUser;
-    }
-
-    return user;
+    return newUser;
   }
 );
 

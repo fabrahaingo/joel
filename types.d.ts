@@ -27,24 +27,28 @@ export interface ISession {
 
 // fields are undefined for users created before implementation
 export interface IUser {
-  _id: number;
-  messageApp?: MessageApp;
+  _id: Types.ObjectId;
+  messageApp: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
-  lastInteractionDay?: Date;
-  lastInteractionWeek?: Date;
-  lastInteractionMonth?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
-  followedNames?: string[];
-  followedOrganisations?: {
+  followedNames: string[];
+  followedOrganisations: {
     wikidataId: WikidataId;
     lastUpdate: Date;
   }[];
   followedFunctions: FunctionTags[];
+
+  lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
+
+  schemaVersion: number;
+
   save: () => Promise<IUser>;
   countDocuments: () => Promise<number>;
 
@@ -85,6 +89,7 @@ export interface UserModel extends Model<IUser> {
   findOne: (arg1, arg2?) => Promise<IUser | null>;
   find: (arg1, arg2?) => Promise<IUser[]>;
   countDocuments: () => Promise<number>;
+  updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
 }
 
