@@ -7,76 +7,81 @@ import { loadUser } from "../entities/Session.js";
 
 export const USER_SCHEMA_VERSION = 2;
 
-const UserSchema = new Schema<IUser, UserModel>({
-  chatId: {
-    type: Number,
-    required: true
-  },
-  messageApp: {
-    type: String,
-    required: true
-  },
-  language_code: {
-    type: String,
-    required: true,
-    default: "fr"
-  },
-  status: {
-    type: String,
-    enum: ["active", "blocked"],
-    default: "active"
-  },
-  followedPeople: {
-    type: [
-      {
-        peopleId: {
-          type: Types.ObjectId
-        },
-        lastUpdate: {
-          type: Date,
-          default: Date.now
+const UserSchema = new Schema<IUser, UserModel>(
+  {
+    chatId: {
+      type: Number,
+      required: true
+    },
+    messageApp: {
+      type: String,
+      required: true
+    },
+    language_code: {
+      type: String,
+      required: true,
+      default: "fr"
+    },
+    status: {
+      type: String,
+      enum: ["active", "blocked"],
+      default: "active"
+    },
+    followedPeople: {
+      type: [
+        {
+          peopleId: {
+            type: Types.ObjectId
+          },
+          lastUpdate: {
+            type: Date,
+            default: Date.now
+          }
         }
-      }
-    ],
-    default: []
-  },
-  followedFunctions: {
-    type: [String],
-    default: []
-  },
-  followedNames: {
-    type: [String],
-    default: []
-  },
-  followedOrganisations: {
-    type: [
-      {
-        wikidataId: {
-          type: String
-        },
-        lastUpdate: {
-          type: Date,
-          default: Date.now
+      ],
+      default: []
+    },
+    followedFunctions: {
+      type: [String],
+      default: []
+    },
+    followedNames: {
+      type: [String],
+      default: []
+    },
+    followedOrganisations: {
+      type: [
+        {
+          wikidataId: {
+            type: String
+          },
+          lastUpdate: {
+            type: Date,
+            default: Date.now
+          }
         }
-      }
-    ],
-    default: []
-  },
-  schemaVersion: {
-    type: Number,
-    required: true
-  },
+      ],
+      default: []
+    },
+    schemaVersion: {
+      type: Number,
+      required: true
+    },
 
-  lastInteractionDay: {
-    type: Date
+    lastInteractionDay: {
+      type: Date
+    },
+    lastInteractionWeek: {
+      type: Date
+    },
+    lastInteractionMonth: {
+      type: Date
+    }
   },
-  lastInteractionWeek: {
-    type: Date
-  },
-  lastInteractionMonth: {
-    type: Date
+  {
+    timestamps: true
   }
-});
+);
 
 UserSchema.static(
   "findOrCreate",
