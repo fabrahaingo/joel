@@ -93,15 +93,12 @@ UserSchema.static(
     if (user != null) return user;
 
     await umami.log({ event: "/new-user" });
-    const newUser = new this({
+    return await this.create({
       chatId: session.chatId,
       messageApp: session.messageApp,
       language_code: session.language_code,
       schemaVersion: USER_SCHEMA_VERSION
-    });
-    await newUser.save();
-
-    return newUser;
+    }).save();
   }
 );
 
