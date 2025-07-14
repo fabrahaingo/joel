@@ -20,6 +20,7 @@ import {
   uniqueMinimalNameInfo
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
+import { migrateUser } from "../entities/Session.js";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -237,7 +238,8 @@ export async function notifyFunctionTagsUpdates(
       followedFunctions: 1
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res);
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of usersFollowingTags) {
@@ -285,7 +287,8 @@ export async function notifyOrganisationsUpdates(
       followedOrganisations: { wikidataId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res);
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of usersFollowingOrganisations) {
@@ -353,7 +356,8 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: { peopleId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of updatedUsers) {
@@ -435,7 +439,8 @@ export async function notifyNameMentionUpdates(
       followedPeople: { peopleId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   const recordsNamesTab = updatedRecords.reduce(
