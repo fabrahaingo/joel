@@ -22,24 +22,28 @@ const {
   NGROK_DEV_HOOK
 } = process.env;
 
-if (
-  WHATSAPP_USER_TOKEN === undefined ||
-  WHATSAPP_APP_SECRET === undefined ||
-  WHATSAPP_GRAPH_API_TOKEN === undefined ||
-  WHATSAPP_PHONE_ID === undefined
-) {
-  throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+export function getWhatsAppAPI(): WhatsAppAPI {
+  if (
+    WHATSAPP_USER_TOKEN === undefined ||
+    WHATSAPP_APP_SECRET === undefined ||
+    WHATSAPP_GRAPH_API_TOKEN === undefined ||
+    WHATSAPP_PHONE_ID === undefined
+  ) {
+    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+  }
+
+  return new WhatsAppAPI({
+    token: WHATSAPP_USER_TOKEN,
+    appSecret: WHATSAPP_APP_SECRET,
+    webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
+    v: "v24.0"
+  });
 }
 
-const whatsAppAPI = new WhatsAppAPI({
-  token: WHATSAPP_USER_TOKEN,
-  appSecret: WHATSAPP_APP_SECRET,
-  webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-  v: "v24.0"
-});
+const whatsAppAPI = getWhatsAppAPI();
 
 const app = express();
-app.use(express.json());
+app.use(express.tson());
 
 app.post("/webhook", async (req, res) => {
   //res.sendStatus(await Whatsapp.handle_post(req));
@@ -68,6 +72,8 @@ app.get("/webhook", (req, res) => {
 
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   if (message.type !== "text") return 200;
+
+  if (phoneID !== WHATSAPP_PHONE_ID) throw new Error("Invalid bot phone ID");
 
   try {
     await umami.log({ event: "/message-whatsapp" });
