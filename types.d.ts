@@ -53,8 +53,7 @@ export interface IUser {
   schemaVersion: number;
 
   save: () => Promise<IUser>;
-  countDocuments: () => Promise<number>;
-  validate: () => Promise<boolean>;
+  validate: () => Promise<void>;
 
   updateInteractionMetrics: () => Promise<void>;
 
@@ -95,7 +94,8 @@ export interface UserModel extends Model<IUser> {
   countDocuments: () => Promise<number>;
   updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
-  create: (args) => IUser;
+  create: (args) => Promise<IUser>;
+  collection: { insertOne: (arg) => Promise<void> };
 }
 
 export interface IBlocked {
@@ -111,16 +111,17 @@ export interface IPeople {
   updatedAt: Date;
 
   save: () => Promise<IPeople>;
-  validate: () => Promise<boolean>;
+  validate: () => Promise<void>;
 }
 
 export interface PeopleModel extends Model<IPeople> {
-  create: (args) => IPeople;
+  create: (arg1, arg2?) => Promise<IPeople>;
   firstOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
   findOne: (arg1, arg2?) => Promise<IPeople | null>;
   find: (arg1, arg2?) => Promise<IPeople[]>;
   countDocuments: () => Promise<number>;
   deleteOne: (args) => Promise<void>;
+  collection: { insertOne: (arg) => Promise<void> };
 }
 
 export type SourceName =
