@@ -6,15 +6,8 @@ export const defaultCommand = async (session: ISession): Promise<void> => {
     if (!session.isReply) {
       await session.log({ event: "/default-message" });
 
-      let message = "Je n'ai pas compris votre message 🥺\n\n";
-
-      if (session.messageApp === "Telegram") {
-        message += `Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.`;
-      } else {
-        message += `Utilisez une des commandes ci-dessous:
-Rechercher Prénom Nom
-Suivre Prénom Nom`;
-      }
+      const message =
+        "Je n'ai pas compris votre message 🥺\n\nMerci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
       await session.sendMessage(message, session.mainMenuKeyboard);
     }
   } catch (error) {
