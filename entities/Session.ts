@@ -27,7 +27,7 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
 export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
   if (rawUser.schemaVersion === USER_SCHEMA_VERSION) return rawUser as IUser;
 
-  if (rawUser.schemaVersion === undefined || rawUser.schemaVersion === 1) {
+  if (rawUser.schemaVersion == null || rawUser.schemaVersion === 1) {
     const telegramMessageApp: MessageApp = "Telegram"; // To ensure typing
 
     await User.deleteOne({ chatId: rawUser.chatId });
