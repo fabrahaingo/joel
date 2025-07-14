@@ -33,7 +33,7 @@ PeopleSchema.static(
     people ??= await this.create({
       nom: tgPeople.nom,
       prenom: tgPeople.prenom
-    }).save();
+    });
 
     return people;
   }
