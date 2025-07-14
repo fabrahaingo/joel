@@ -27,8 +27,8 @@ PeopleSchema.static(
   "firstOrCreate",
   async function (tgPeople: { nom: string; prenom: string }) {
     let people: IPeople | null = await this.findOne({
-      nom: tgPeople.nom,
-      prenom: tgPeople.prenom
+      nom: { $regex: `^${tgPeople.nom}$`, $options: "i" }, // regex makes the search case-insensitive
+      prenom: { $regex: `^${tgPeople.prenom}$`, $options: "i" }
     });
     people ??= await this.create({
       nom: tgPeople.nom,
