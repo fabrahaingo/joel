@@ -148,9 +148,7 @@ async function updateUserFollowedPeople(
     ) => {
       if (
         followedList.some(
-          (f) =>
-            (f.peopleId as Types.ObjectId).toString() ===
-            followed.peopleId.toString()
+          (f) => f.peopleId.toString() === followed.peopleId.toString()
         )
       )
         return followedList; // If the user follows twice the same person, we drop the second record
@@ -182,11 +180,7 @@ async function updateUserFollowedOrganisation(
   user: IUser,
   updatedOrgIds: WikidataId[]
 ) {
-  if (
-    updatedOrgIds.length == 0 ||
-    user.followedOrganisations === undefined ||
-    user.followedOrganisations.length == 0
-  ) {
+  if (updatedOrgIds.length == 0 || user.followedOrganisations.length == 0) {
     return;
   }
 
@@ -352,7 +346,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: {
         $elemMatch: {
           peopleId: {
-            $in: updatedPeopleList.map((i) => i._id as Types.ObjectId)
+            $in: updatedPeopleList.map((i) => i._id)
           }
         }
       }
@@ -372,7 +366,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       (j.peopleId as Types.ObjectId).toString()
     );
     const peopleFollowedByUser = updatedPeopleList.filter((i) =>
-      peopleIdStrsFollowedByUser.includes((i._id as Types.ObjectId).toString())
+      peopleIdStrsFollowedByUser.includes(i._id.toString())
     );
     const peopleInfoFollowedByUser =
       uniqueMinimalNameInfo(peopleFollowedByUser);
@@ -396,7 +390,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 
         // Find the follow data associated with these people record
         const followData = user.followedPeople.find(
-          (i) => i.peopleId === (updatedPeople._id as Types.ObjectId).toString()
+          (i) => i.peopleId.toString() === updatedPeople._id.toString()
         );
         if (followData === undefined) return recordList; // this should not happen
 
@@ -424,7 +418,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
           (r) => r.nom === p.nom && r.prenom === p.prenom
         )
       )
-      .map((p) => p._id as Types.ObjectId);
+      .map((p) => p._id);
 
     // update each lastUpdate fields of the user followedPeople
     await updateUserFollowedPeople(user, updatedRecordsPeopleId);
@@ -485,10 +479,7 @@ export async function notifyNameMentionUpdates(
     followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
   ) => {
     return followedPeople.some((followedPerson) => {
-      return (
-        followedPerson.peopleId.toString() ===
-        (person._id as Types.ObjectId).toString()
-      );
+      return followedPerson.peopleId.toString() === person._id.toString();
     });
   };
 
@@ -534,7 +525,7 @@ export async function notifyNameMentionUpdates(
 
       if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
         user.followedPeople.push({
-          peopleId: people._id as Types.ObjectId,
+          peopleId: people._id,
           lastUpdate: new Date(Date.now())
         });
       }
