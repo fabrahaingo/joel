@@ -1,15 +1,14 @@
-import { mainMenuKeyboard } from "../utils/keyboards.js";
-import User from "../models/User.js";
-import { ISession } from "../types.js";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
+import User from "../models/User.ts";
+import { ISession } from "../types.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
+} from "../entities/TelegramSession.ts";
 import TelegramBot from "node-telegram-bot-api";
 
 export const deleteProfileCommand = async (
-  session: ISession,
-  _msg: never
+  session: ISession
 ): Promise<void> => {
   await session.log({ event: "/delete-profile" });
   try {
@@ -46,10 +45,10 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
       question.message_id,
       (tgMsg: TelegramBot.Message) => {
         void (async () => {
+          if (session.user == null) return;
           if (tgMsg.text === "SUPPRIMER MON COMPTE") {
             await User.deleteOne({
-              _id: session.chatId,
-              chatId: session.chatId
+              _id: session.user._id
             });
             await session.sendMessage(
               `🗑 Votre profil a bien été supprimé ! 👋

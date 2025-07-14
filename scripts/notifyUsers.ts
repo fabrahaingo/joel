@@ -1,26 +1,27 @@
 import "dotenv/config";
-import { mongodbConnect } from "../db.js";
-import { ErrorMessages } from "../entities/ErrorMessages.js";
-import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
-import { FunctionTags } from "../entities/FunctionTags.js";
-import { IPeople, IUser, MessageApp, WikidataId } from "../types.js";
-import People from "../models/People.js";
+import { mongodbConnect } from "../db.ts";
+import { ErrorMessages } from "../entities/ErrorMessages.ts";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { FunctionTags } from "../entities/FunctionTags.ts";
+import { IPeople, IUser, MessageApp, WikidataId } from "../types.ts";
+import People from "../models/People.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
-import Blocked from "../models/Blocked.js";
-import User from "../models/User.js";
+import Blocked from "../models/Blocked.ts";
+import User from "../models/User.ts";
 import { ChatId } from "node-telegram-bot-api";
 import { Types } from "mongoose";
-import umami from "../utils/umami.js";
-import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.js";
-import { splitText } from "../utils/text.utils.js";
-import { formatSearchResult } from "../utils/formatSearchResult.js";
+import umami from "../utils/umami.ts";
+import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.ts";
+import { splitText } from "../utils/text.utils.ts";
+import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   callJORFSearchDay,
   cleanPeopleName,
   uniqueMinimalNameInfo
-} from "../utils/JORFSearch.utils.js";
-import Organisation from "../models/Organisation.js";
-import { getWhatsAppAPI } from "../WhatsAppApp.js";
+} from "../utils/JORFSearch.utils.ts";
+import Organisation from "../models/Organisation.ts";
+import { migrateUser } from "../entities/Session.js";
+import { getWhatsAppAPI } from "../WhatsAppApp.ts";
 import { Text } from "whatsapp-api-js/messages";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -182,11 +183,7 @@ async function updateUserFollowedOrganisation(
   user: IUser,
   updatedOrgIds: WikidataId[]
 ) {
-  if (
-    updatedOrgIds.length == 0 ||
-    user.followedOrganisations === undefined ||
-    user.followedOrganisations.length == 0
-  ) {
+  if (updatedOrgIds.length == 0 || user.followedOrganisations.length == 0) {
     return;
   }
 
@@ -243,7 +240,8 @@ export async function notifyFunctionTagsUpdates(
       followedFunctions: 1
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res);
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of usersFollowingTags) {
@@ -291,15 +289,12 @@ export async function notifyOrganisationsUpdates(
       followedOrganisations: { wikidataId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res);
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of usersFollowingOrganisations) {
-    if (
-      user.followedOrganisations === undefined ||
-      user.followedOrganisations.length == 0
-    )
-      continue;
+    if (user.followedOrganisations.length == 0) continue;
 
     // Records which are associated with followed Organisations, and which are new for the respective People follow
     const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
@@ -363,7 +358,8 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: { peopleId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of updatedUsers) {
@@ -396,7 +392,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 
         // Find the follow data associated with these people record
         const followData = user.followedPeople.find(
-          (i) => i.peopleId === updatedPeople._id.toString()
+          (i) => i.peopleId.toString() === updatedPeople._id.toString()
         );
         if (followData === undefined) return recordList; // this should not happen
 
@@ -445,7 +441,8 @@ export async function notifyNameMentionUpdates(
       followedPeople: { peopleId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   const recordsNamesTab = updatedRecords.reduce(
@@ -495,8 +492,6 @@ export async function notifyNameMentionUpdates(
       people: IPeople;
       nameJORFRecords: JORFSearchItem[];
     }[] = [];
-
-    user.followedNames ??= [];
 
     for (const followedName of user.followedNames) {
       const followedNameCleaned = cleanPeopleName(followedName).toUpperCase();

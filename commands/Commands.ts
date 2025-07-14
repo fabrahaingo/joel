@@ -1,20 +1,20 @@
-import { CommandType } from "../types.js";
+import { CommandType } from "../types.ts";
 
-import { followOrganisationCommand } from "./followOrganisation.js";
+import { followOrganisationCommand } from "./followOrganisation.ts";
 import {
   followCommand,
   fullHistoryCommand,
   manualFollowCommand,
   searchCommand
-} from "./search.js";
-import { enaCommand, promosCommand } from "./ena.js";
-import { statsCommand } from "./stats.js";
-import { defaultCommand } from "./default.js";
-import { startCommand } from "./start.js";
-import { deleteProfileCommand } from "./deleteProfile.js";
-import { helpCommand } from "./help.js";
-import { followFunctionCommand } from "./followFunction.js";
-import { listCommand, unfollowCommand } from "./list.js";
+} from "./search.ts";
+import { enaCommand, promosCommand } from "./ena.ts";
+import { statsCommand } from "./stats.ts";
+import { defaultCommand } from "./default.ts";
+import { startCommand } from "./start.ts";
+import { deleteProfileCommand } from "./deleteProfile.ts";
+import { helpCommand } from "./help.ts";
+import { followFunctionCommand } from "./followFunction.ts";
+import { listCommand, unfollowCommand } from "./list.ts";
 
 export const commands: CommandType[] = [
   {
