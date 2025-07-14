@@ -1,23 +1,23 @@
-import User from "../models/User.js";
-import People from "../models/People.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
-import { IPeople, ISession, WikidataId } from "../types.js";
+import User from "../models/User.ts";
+import People from "../models/People.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
+import { IPeople, ISession, WikidataId } from "../types.ts";
 import {
   List_Promos_INSP_ENA,
   Promo_ENA_INSP
-} from "../entities/PromoNames.js";
+} from "../entities/PromoNames.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import {
   callJORFSearchOrganisation,
   callJORFSearchPeople,
   callJORFSearchTag,
   cleanPeopleName
-} from "../utils/JORFSearch.utils.js";
+} from "../utils/JORFSearch.utils.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
+} from "../entities/TelegramSession.ts";
 
 const inspId = "Q109039648" as WikidataId;
 
@@ -68,10 +68,7 @@ async function getJORFPromoSearchResult(
   }
 }
 
-export const enaCommand = async (
-  session: ISession,
-  _msg: never
-): Promise<void> => {
+export const enaCommand = async (session: ISession): Promise<void> => {
   try {
     await session.log({ event: "/ena" });
 
@@ -234,10 +231,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
   }
 };
 
-export const promosCommand = async (
-  session: ISession,
-  _msg?: never
-): Promise<void> => {
+export const promosCommand = async (session: ISession): Promise<void> => {
   try {
     await session.log({ event: "/ena-list" });
     let text = `Les périodes et noms des promotions successives sont:\n\n`;

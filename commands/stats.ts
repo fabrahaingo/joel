@@ -1,13 +1,10 @@
-import Users from "../models/User.js";
-import People from "../models/People.js";
-import Organisation from "../models/Organisation.js";
-import { ISession } from "../types.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+import Users from "../models/User.ts";
+import People from "../models/People.ts";
+import Organisation from "../models/Organisation.ts";
+import { ISession } from "../types.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
-export const statsCommand = async (
-  session: ISession,
-  _msg: never
-): Promise<void> => {
+export const statsCommand = async (session: ISession): Promise<void> => {
   try {
     await session.log({ event: "/stats" });
     const usersCount = await Users.countDocuments();

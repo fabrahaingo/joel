@@ -1,7 +1,7 @@
 import { Schema as _Schema, model } from "mongoose";
 const Schema = _Schema;
-import umami from "../utils/umami.js";
-import { IOrganisation, OrganisationModel, WikidataId } from "../types.js";
+import umami from "../utils/umami.ts";
+import { IOrganisation, OrganisationModel, WikidataId } from "../types.ts";
 
 const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
   {

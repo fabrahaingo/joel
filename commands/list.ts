@@ -1,19 +1,19 @@
-import People from "../models/People.js";
+import People from "../models/People.ts";
 import {
   FunctionTags,
   getFunctionsFromValues
-} from "../entities/FunctionTags.js";
-import { IOrganisation, IPeople, ISession, IUser } from "../types.js";
-import Organisation from "../models/Organisation.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+} from "../entities/FunctionTags.ts";
+import { IOrganisation, IPeople, ISession, IUser } from "../types.ts";
+import Organisation from "../models/Organisation.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
+} from "../entities/TelegramSession.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { parseIntAnswers } from "../utils/text.utils.js";
+import { parseIntAnswers } from "../utils/text.utils.ts";
 import { Types } from "mongoose";
-import User from "../models/User.js";
+import User from "../models/User.ts";
 
 interface UserFollows {
   functions: FunctionTags[];
@@ -39,7 +39,6 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     return 0;
   });
 
-  user.followedOrganisations ??= [];
   const followedOrganisations: IOrganisation[] = await Organisation.find({
     wikidataId: {
       $in: user.followedOrganisations.map((o) => o.wikidataId)
@@ -54,7 +53,6 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     .collation({ locale: "fr" })
     .lean();
 
-  user.followedNames ??= [];
   const followedPeopleTab: {
     nomPrenom: string;
     peopleId?: Types.ObjectId;
@@ -86,7 +84,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   };
 }
 
-export const listCommand = async (session: ISession, _msg: never) => {
+export const listCommand = async (session: ISession) => {
   await session.log({ event: "/list" });
 
   try {
@@ -163,7 +161,7 @@ export const listCommand = async (session: ISession, _msg: never) => {
   }
 };
 
-export const unfollowCommand = async (session: ISession, _msg: never) => {
+export const unfollowCommand = async (session: ISession) => {
   try {
     await session.log({ event: "/unfollow" });
     await session.sendTypingAction();
@@ -211,7 +209,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
           if (session.user == undefined) return;
 
           if (tgMsg.text == "/list") {
-            await listCommand(session, _msg);
+            await listCommand(session);
             return;
           }
 
@@ -278,7 +276,8 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
             (tab: number[], idx) => {
               if (userFollows.peopleAndNames[idx].peopleId !== undefined)
                 return tab;
-              session.user.followedNames ??= [];
+              if (session.user == null) return tab;
+
               const idInFollowedNameTab = session.user.followedNames.findIndex(
                 (name) => name === userFollows.peopleAndNames[idx].nomPrenom
               );
@@ -374,16 +373,12 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
             (people) =>
               !unfollowedPeopleId
                 .map((id) => id.toString())
-                .includes((people.peopleId as Types.ObjectId).toString())
+                .includes(people.peopleId.toString())
           );
-
-          session.user.followedNames ??= [];
 
           session.user.followedNames = session.user.followedNames.filter(
             (_value, idx) => !unfollowedNamesIdx.includes(idx)
           );
-
-          session.user.followedOrganisations ??= [];
 
           session.user.followedOrganisations =
             session.user.followedOrganisations.filter(
@@ -402,7 +397,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
 
           // Delete the user if it doesn't follow anything any more
           if (session.user.followsNothing()) {
-            await User.deleteOne({ _id: session.chatId });
+            await User.deleteOne({ _id: session.user._id });
             await session.log({ event: "/user-deletion-no-follow" });
           }
 

@@ -31,6 +31,8 @@ export default {
 };
 
 export type UmamiEvent =
+  | "/message-telegram"
+  | "/message-whatsapp"
   | "/start"
   | "/default-message"
   | "/help"
@@ -63,7 +65,6 @@ export type UmamiEvent =
   | "/notification-update-organisation"
   | "/notification-update-meta"
   | "/notification-process-completed"
-  | "/person-updated"
   | "/person-added"
   | "/daily-active-user"
   | "/weekly-active-user"
