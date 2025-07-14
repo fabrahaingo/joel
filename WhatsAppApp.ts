@@ -85,10 +85,18 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     if (WHSession.user != null) await WHSession.user.updateInteractionMetrics();
 
-    const msgText =
-      message.type === "text"
-        ? message.text.body
-        : message.interactive.list_reply.title;
+    let msgText: string;
+
+    if (message.type === "text") msgText = message.text.body;
+    else {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (message.interactive.list_reply !== undefined)
+        msgText = message.interactive.list_reply.title;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      else if (message.interactive.button_reply !== undefined)
+        msgText = message.interactive.button_reply.title;
+      else return;
+    }
 
     for (const command of commands) {
       if (command.regex.test(msgText)) {
