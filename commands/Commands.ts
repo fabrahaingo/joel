@@ -42,15 +42,15 @@ export const commands: CommandType[] = [
     action: unfollowCommand
   },
   {
-    regex: /🧐 Lister mes suivis$/,
+    regex: /🧐 Lister mes suivis$|🧐 Mes suivis$/,
     action: listCommand
   },
   {
-    regex: /❓ Aide/,
+    regex: /❓ Aide|❓ Aide & Contact/,
     action: helpCommand
   },
   {
-    regex: /👨‍💼 Ajouter une fonction/,
+    regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction/,
     action: followFunctionCommand
   },
   {
@@ -67,7 +67,7 @@ export const commands: CommandType[] = [
   },
   {
     regex:
-      /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization/i,
+      /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization|🏛️️ Ajout Organisation/i,
     action: followOrganisationCommand
   },
   {
