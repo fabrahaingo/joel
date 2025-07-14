@@ -19,10 +19,7 @@ const isPersonAlreadyFollowed = (
   followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
 ) => {
   return followedPeople.some((followedPerson) => {
-    return (
-      followedPerson.peopleId.toString() ===
-      (person._id as Types.ObjectId).toString()
-    );
+    return followedPerson.peopleId.toString() === person._id.toString();
   });
 };
 
@@ -76,7 +73,7 @@ export const fullHistoryCommand = async (
     return;
   }
 
-  const personName = msg.split(" ").slice(2).join(" ");
+  const personName = msg.split(" ").slice(1).join(" ");
 
   if (personName.length == 0) {
     await session.sendMessage("Saisie incorrecte. Veuillez réessayer.", [
@@ -157,7 +154,7 @@ async function searchPersonHistory(
         text += `${String(nbRecords - 2)} autres mentions au JORF non affichées.\n\n`;
         temp_keyboard.unshift([
           {
-            text: `Historique de ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`
+            text: `Historique ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`
           }
         ]);
       }
@@ -224,7 +221,7 @@ export const followCommand = async (
 
     if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
       user.followedPeople.push({
-        peopleId: people._id as Types.ObjectId,
+        peopleId: people._id,
         lastUpdate: new Date(Date.now())
       });
       await user.save();

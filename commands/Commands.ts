@@ -22,7 +22,7 @@ export const commands: CommandType[] = [
     action: startCommand
   },
   {
-    regex: /🔎 Rechercher$|🔎 Nouvelle recherche$/,
+    regex: /Rechercher$|🔎 Rechercher$|🔎 Nouvelle recherche$/,
     action: searchCommand
   },
   {
@@ -30,7 +30,7 @@ export const commands: CommandType[] = [
     action: manualFollowCommand
   },
   {
-    regex: /Historique de \s*(.*)/i,
+    regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
     action: fullHistoryCommand
   },
   {
