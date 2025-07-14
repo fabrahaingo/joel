@@ -98,13 +98,13 @@ UserSchema.static(
       messageApp: session.messageApp,
       language_code: session.language_code,
       schemaVersion: USER_SCHEMA_VERSION
-    }).save();
+    });
   }
 );
 
 UserSchema.method(
   "updateInteractionMetrics",
-  async function updateInteractionMetrics() {
+  async function updateInteractionMetrics(this: IUser) {
     let needSaving = false;
 
     const currentDay = new Date();
@@ -146,17 +146,17 @@ UserSchema.method(
 
 UserSchema.method(
   "checkFollowedPeople",
-  function checkFollowedPeople(people: IPeople): boolean {
+  function checkFollowedPeople(this: IUser, people: IPeople): boolean {
     return this.followedPeople.some((person) => person.peopleId === people._id);
   }
 );
 
 UserSchema.method(
   "addFollowedPeople",
-  async function addFollowedPeople(peopleToFollow: IPeople) {
+  async function addFollowedPeople(this: IUser, peopleToFollow: IPeople) {
     if (this.checkFollowedPeople(peopleToFollow)) return false;
     this.followedPeople.push({
-      peopleId: peopleToFollow._id as Types.ObjectId,
+      peopleId: peopleToFollow._id,
       lastUpdate: new Date()
     });
     await this.save();
@@ -166,11 +166,11 @@ UserSchema.method(
 
 UserSchema.method(
   "addFollowedPeopleBulk",
-  async function addFollowedPeopleBulk(peopleToFollow: IPeople[]) {
+  async function addFollowedPeopleBulk(this: IUser, peopleToFollow: IPeople[]) {
     for (const people of peopleToFollow) {
       if (this.checkFollowedPeople(people)) continue;
       this.followedPeople.push({
-        peopleId: people._id as Types.ObjectId,
+        peopleId: people._id,
         lastUpdate: new Date()
       });
     }
@@ -181,13 +181,10 @@ UserSchema.method(
 
 UserSchema.method(
   "removeFollowedPeople",
-  async function removeFollowedPeople(peopleToUnfollow: IPeople) {
+  async function removeFollowedPeople(this: IUser, peopleToUnfollow: IPeople) {
     if (!this.checkFollowedPeople(peopleToUnfollow)) return false;
     this.followedPeople = this.followedPeople.filter((elem) => {
-      return !(
-        (elem.peopleId as Types.ObjectId).toString ===
-        (peopleToUnfollow._id as Types.ObjectId).toString
-      );
+      return !(elem.peopleId.toString === peopleToUnfollow._id.toString);
     });
     await this.save();
     return true;
@@ -196,7 +193,7 @@ UserSchema.method(
 
 UserSchema.method(
   "checkFollowedFunction",
-  function checkFollowedFunction(fct: FunctionTags): boolean {
+  function checkFollowedFunction(this: IUser, fct: FunctionTags): boolean {
     return this.followedFunctions.some((elem) => {
       return elem === fct;
     });
@@ -205,7 +202,7 @@ UserSchema.method(
 
 UserSchema.method(
   "addFollowedFunction",
-  async function addFollowedFunction(fct: FunctionTags) {
+  async function addFollowedFunction(this: IUser, fct: FunctionTags) {
     if (this.checkFollowedFunction(fct)) return false;
     this.followedFunctions.push(fct);
     await this.save();
@@ -215,7 +212,7 @@ UserSchema.method(
 
 UserSchema.method(
   "removeFollowedFunction",
-  async function removeFollowedFunctions(fct: FunctionTags) {
+  async function removeFollowedFunctions(this: IUser, fct: FunctionTags) {
     if (!this.checkFollowedFunction(fct)) return false;
     this.followedFunctions = this.followedFunctions.filter((elem) => {
       return elem !== fct;
@@ -227,8 +224,7 @@ UserSchema.method(
 
 UserSchema.method(
   "checkFollowedName",
-  function checkFollowedName(name: string): boolean {
-    this.followedNames ??= [];
+  function checkFollowedName(this: IUser, name: string): boolean {
     return this.followedNames.some((elem) => {
       return elem.toUpperCase() === name.toUpperCase();
     });
@@ -237,9 +233,8 @@ UserSchema.method(
 
 UserSchema.method(
   "addFollowedName",
-  async function addFollowedName(name: string) {
+  async function addFollowedName(this: IUser, name: string) {
     if (this.checkFollowedName(name)) return false;
-    this.followedNames ??= [];
     this.followedNames.push(name);
     await this.save();
     return true;
@@ -248,7 +243,7 @@ UserSchema.method(
 
 UserSchema.method(
   "removeFollowedName",
-  async function removeFollowedName(name: string) {
+  async function removeFollowedName(this: IUser, name: string) {
     if (!this.checkFollowedName(name)) return false;
     this.followedFunctions = this.followedFunctions.filter((elem) => {
       return elem.toUpperCase() !== name.toUpperCase();
