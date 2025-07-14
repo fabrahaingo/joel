@@ -289,11 +289,7 @@ export async function notifyOrganisationsUpdates(
   });
 
   for (const user of usersFollowingOrganisations) {
-    if (
-      user.followedOrganisations === undefined ||
-      user.followedOrganisations.length == 0
-    )
-      continue;
+    if (user.followedOrganisations.length == 0) continue;
 
     // Records which are associated with followed Organisations, and which are new for the respective People follow
     const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
@@ -489,8 +485,6 @@ export async function notifyNameMentionUpdates(
       people: IPeople;
       nameJORFRecords: JORFSearchItem[];
     }[] = [];
-
-    user.followedNames ??= [];
 
     for (const followedName of user.followedNames) {
       const followedNameCleaned = cleanPeopleName(followedName).toUpperCase();
