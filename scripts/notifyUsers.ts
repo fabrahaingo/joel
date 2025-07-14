@@ -3,7 +3,7 @@ import { mongodbConnect } from "../db.ts";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
-import { IPeople, IUser, MessageApp, WikidataId } from "../types.ts";
+import { IPeople, IUser, WikidataId } from "../types.ts";
 import People from "../models/People.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 import Blocked from "../models/Blocked.ts";
@@ -300,6 +300,8 @@ export async function notifyOrganisationsUpdates(
     const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
       (orgTabList: Record<WikidataId, JORFSearchItem[]>, followData) => {
         if (
+          // the map call can be undefined, here ESLINT is incorrect
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           updatedOrganisationMapById[followData.wikidataId] === undefined ||
           updatedOrganisationMapById[followData.wikidataId].length == 0
         )
@@ -736,7 +738,7 @@ async function sendTelegramMessageFromAxios(chatId: number, message: string) {
   for (const message of messagesArray) {
     await axios
       .post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        chat_id: Number(chatIdStr) as ChatId,
+        chat_id: chatId,
         text: message,
         parse_mode: "markdown",
         link_preview_options: {
@@ -753,7 +755,7 @@ async function sendTelegramMessageFromAxios(chatId: number, message: string) {
           ) {
             await umami.log({ event: "/user-blocked-joel" });
             await new Blocked({
-              chatId: user.chatId as ChatId
+              chatId: chatId as ChatId
             }).save();
             return;
           }
