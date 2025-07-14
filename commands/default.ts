@@ -1,5 +1,4 @@
 import { ISession } from "../types.ts";
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
@@ -16,7 +15,7 @@ export const defaultCommand = async (session: ISession): Promise<void> => {
 Rechercher Prénom Nom
 Suivre Prénom Nom`;
       }
-      await session.sendMessage(message, mainMenuKeyboard);
+      await session.sendMessage(message, session.mainMenuKeyboard);
     }
   } catch (error) {
     console.log(error);

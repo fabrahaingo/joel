@@ -52,7 +52,7 @@ app.post("/webhook", async (req, res) => {
     await whatsAppAPI.post(
       req.body,
       JSON.stringify(req.body),
-      req.header("x-hub-signature-256")
+      req.header("x-hub-signature-256")!
     );
 
     res.sendStatus(200);
@@ -71,7 +71,7 @@ app.get("/webhook", (req, res) => {
 });
 
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
-  if (message.type !== "text") return 200;
+  if (message.type !== "text" && message.type !== "interactive") return 200;
 
   if (phoneID !== WHATSAPP_PHONE_ID) throw new Error("Invalid bot phone ID");
 
@@ -85,9 +85,14 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     if (WHSession.user != null) await WHSession.user.updateInteractionMetrics();
 
+    const msgText =
+      message.type === "text"
+        ? message.text.body
+        : message.interactive.list_reply.title;
+
     for (const command of commands) {
-      if (command.regex.test(message.text.body)) {
-        await command.action(WHSession, message.text.body);
+      if (command.regex.test(msgText)) {
+        await command.action(WHSession, msgText);
         return;
       }
     }

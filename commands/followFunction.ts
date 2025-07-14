@@ -1,7 +1,6 @@
 import User from "../models/User.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 import { ISession } from "../types.ts";
 import {
   extractTelegramSession,
@@ -29,7 +28,7 @@ export const followFunctionCommand = async (
     if (session.user == null) {
       await session.sendMessage(
         `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -68,7 +67,7 @@ export const followFunctionCommand = async (
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionAll.length)}.
         👎 Veuillez essayer de nouveau la commande /followFunction.`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
@@ -113,7 +112,7 @@ export const followFunctionCommand = async (
               .join("\n")}`;
           }
 
-          await session.sendMessage(text, mainMenuKeyboard);
+          await session.sendMessage(text, session.mainMenuKeyboard);
         })();
       }
     );

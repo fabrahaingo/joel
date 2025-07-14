@@ -1,4 +1,3 @@
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 import User from "../models/User.ts";
 import { ISession } from "../types.ts";
 import {
@@ -15,7 +14,7 @@ export const deleteProfileCommand = async (
     if (session.user == null) {
       await session.sendMessage(
         `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -53,11 +52,14 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
             await session.sendMessage(
               `🗑 Votre profil a bien été supprimé ! 👋
   ⚠️ Un profil vierge sera créé lors de votre prochaine interaction avec JOEL ⚠️`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             await session.log({ event: "/user-deletion-self" });
           } else {
-            await session.sendMessage("Suppression annulée.", mainMenuKeyboard);
+            await session.sendMessage(
+              "Suppression annulée.",
+              session.mainMenuKeyboard
+            );
           }
         })();
       }

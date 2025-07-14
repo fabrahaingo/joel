@@ -12,7 +12,6 @@ import {
   extractTelegramSession,
   TelegramSession
 } from "../entities/TelegramSession.ts";
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -52,7 +51,7 @@ export const searchCommand = async (session: ISession): Promise<void> => {
         if (tgMsg.text == undefined || tgMsg.text.length == 0) {
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            mainMenuKeyboard
+            session.mainMenuKeyboard
           );
           return;
         }
@@ -195,7 +194,7 @@ export const followCommand = async (
     if (personName.length == 0) {
       await session.sendMessage(
         "Saisie incorrecte. Veuillez réessayer.",
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -208,7 +207,7 @@ export const followCommand = async (
     if (JORFRes.length == 0) {
       await session.sendMessage(
         "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement",
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -271,7 +270,7 @@ export const manualFollowCommand = async (
   if (session.user?.checkFollowedName(nomPrenom)) {
     await session.sendMessage(
       `Vous suivez déjà *${prenomNom}* ✅`,
-      mainMenuKeyboard
+      session.mainMenuKeyboard
     );
     return;
   }
@@ -296,7 +295,7 @@ export const manualFollowCommand = async (
         if (tgMsg2.text === undefined) {
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            mainMenuKeyboard
+            session.mainMenuKeyboard
           );
           return;
         }
@@ -309,13 +308,13 @@ export const manualFollowCommand = async (
         } else if (new RegExp(/non/i).test(tgMsg2.text)) {
           await session.sendMessage(
             `Ok, aucun ajout n'a été effectué. 👌`,
-            mainMenuKeyboard
+            session.mainMenuKeyboard
           );
           return;
         }
         await session.sendMessage(
           `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-          mainMenuKeyboard
+          session.mainMenuKeyboard
         );
       })();
     }

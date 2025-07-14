@@ -5,7 +5,6 @@ import {
 } from "../entities/FunctionTags.ts";
 import { IOrganisation, IPeople, ISession, IUser } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 import {
   extractTelegramSession,
   TelegramSession
@@ -92,7 +91,7 @@ export const listCommand = async (session: ISession) => {
 
     // We only want to create a user upon use of the follow function
     if (session.user == null) {
-      await session.sendMessage(noDataText, mainMenuKeyboard);
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
@@ -102,7 +101,7 @@ export const listCommand = async (session: ISession) => {
       userFollows.organisations.length +
       userFollows.peopleAndNames.length;
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, mainMenuKeyboard);
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
     }
 
@@ -168,7 +167,7 @@ export const unfollowCommand = async (session: ISession) => {
 
     // We only want to create a user upon use of the follow function
     if (session.user == null) {
-      await session.sendMessage(noDataText, mainMenuKeyboard);
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
@@ -178,7 +177,7 @@ export const unfollowCommand = async (session: ISession) => {
       userFollows.organisations.length +
       userFollows.peopleAndNames.length;
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, mainMenuKeyboard);
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
     }
 
@@ -218,7 +217,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.
 👎 Veuillez essayer de nouveau la commande /unfollow.`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
@@ -401,7 +400,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
             await session.log({ event: "/user-deletion-no-follow" });
           }
 
-          await session.sendMessage(text, mainMenuKeyboard);
+          await session.sendMessage(text, session.mainMenuKeyboard);
         })();
       }
     );
