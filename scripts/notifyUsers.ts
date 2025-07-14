@@ -363,7 +363,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
     const peopleIdStrsFollowedByUser = user.followedPeople.map((j) =>
-      (j.peopleId as Types.ObjectId).toString()
+      j.peopleId.toString()
     );
     const peopleFollowedByUser = updatedPeopleList.filter((i) =>
       peopleIdStrsFollowedByUser.includes(i._id.toString())
