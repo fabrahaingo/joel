@@ -1,24 +1,21 @@
-import umami from "../utils/umami.js";
+import umami from "../utils/umami.ts";
 import TelegramBot from "node-telegram-bot-api";
-import Organisation from "../models/Organisation.js";
-import User from "../models/User.js";
-import { IOrganisation, ISession, IUser, WikidataId } from "../types.js";
+import Organisation from "../models/Organisation.ts";
+import User from "../models/User.ts";
+import { IOrganisation, ISession, IUser, WikidataId } from "../types.ts";
 import axios from "axios";
-import { parseIntAnswers } from "../utils/text.utils.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { parseIntAnswers } from "../utils/text.utils.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
+} from "../entities/TelegramSession.ts";
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
   wikidataId: WikidataId
 ): boolean => {
-  return (
-    user.followedOrganisations?.some((o) => o.wikidataId === wikidataId) ??
-    false
-  );
+  return user.followedOrganisations.some((o) => o.wikidataId === wikidataId);
 };
 
 interface WikiDataAPIResponse {
@@ -61,10 +58,7 @@ async function searchOrganisationWikidataId(
   }
 }
 
-export const followOrganisationCommand = async (
-  session: ISession,
-  _msg: never
-) => {
+export const followOrganisationCommand = async (session: ISession) => {
   await session.log({ event: "/follow-organisation" });
   try {
     if (session.user == null) {
@@ -122,7 +116,6 @@ Exemples:
 
           if (orgResults.length == 1) {
             session.user = await User.findOrCreate(session);
-            session.user.followedOrganisations ??= [];
 
             // If the one result is already followed
             if (
@@ -154,6 +147,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
               followConfirmation.message_id,
               (tgMsg2: TelegramBot.Message) => {
                 void (async () => {
+                  if (session.user == null) return;
                   if (tgMsg2.text !== undefined) {
                     if (new RegExp(/oui/i).test(tgMsg2.text)) {
                       const organisation: IOrganisation =
@@ -161,7 +155,6 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                           nom: orgResults[0].nom,
                           wikidataId: orgResults[0].wikidataId
                         });
-                      session.user.followedOrganisations ??= [];
                       session.user.followedOrganisations.push({
                         wikidataId: organisation.wikidataId,
                         lastUpdate: new Date()
@@ -231,7 +224,6 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   await session.sendTypingAction();
 
                   const user = await User.findOrCreate(session);
-                  user.followedOrganisations ??= [];
 
                   for (const answer of answers) {
                     // Don't call JORF if the organisation is already followed

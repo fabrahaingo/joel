@@ -1,6 +1,6 @@
-import { Model, Types } from "mongoose.js";
-import { FunctionTags } from "./entities/FunctionTags.js";
-import umami from "./utils/umami.js";
+import { Model, Types } from "mongoose";
+import { FunctionTags } from "./entities/FunctionTags";
+import umami from "./utils/umami";
 
 export interface CommandType {
   regex: RegExp;
@@ -27,26 +27,33 @@ export interface ISession {
 
 // fields are undefined for users created before implementation
 export interface IUser {
-  _id: number;
-  messageApp?: MessageApp;
+  _id: Types.ObjectId;
+  messageApp: MessageApp;
   chatId: number;
   language_code: string;
   status: string;
-  lastInteractionDay?: Date;
-  lastInteractionWeek?: Date;
-  lastInteractionMonth?: Date;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
-  followedNames?: string[];
-  followedOrganisations?: {
+  followedNames: string[];
+  followedOrganisations: {
     wikidataId: WikidataId;
     lastUpdate: Date;
   }[];
   followedFunctions: FunctionTags[];
+
+  lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
+
+  createdAt: Date;
+  updatedAt: Date;
+
+  schemaVersion: number;
+
   save: () => Promise<IUser>;
-  countDocuments: () => Promise<number>;
+  validate: () => Promise<void>;
 
   updateInteractionMetrics: () => Promise<void>;
 
@@ -85,7 +92,10 @@ export interface UserModel extends Model<IUser> {
   findOne: (arg1, arg2?) => Promise<IUser | null>;
   find: (arg1, arg2?) => Promise<IUser[]>;
   countDocuments: () => Promise<number>;
+  updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
+  create: (args) => Promise<IUser>;
+  collection: { insertOne: (arg) => Promise<void> };
 }
 
 export interface IBlocked {
@@ -96,15 +106,22 @@ export interface IPeople {
   _id: Types.ObjectId;
   nom: string;
   prenom: string;
+
+  createdAt: Date;
+  updatedAt: Date;
+
   save: () => Promise<IPeople>;
-  countDocuments: () => Promise<number>;
+  validate: () => Promise<void>;
 }
 
 export interface PeopleModel extends Model<IPeople> {
+  create: (arg1, arg2?) => Promise<IPeople>;
   firstOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
   findOne: (arg1, arg2?) => Promise<IPeople | null>;
   find: (arg1, arg2?) => Promise<IPeople[]>;
   countDocuments: () => Promise<number>;
+  deleteOne: (args) => Promise<void>;
+  collection: { insertOne: (arg) => Promise<void> };
 }
 
 export type SourceName =

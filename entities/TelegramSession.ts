@@ -1,9 +1,10 @@
-import { ISession, IUser, MessageApp } from "../types.js";
+import { ISession, IUser, MessageApp } from "../types.ts";
 import TelegramBot from "node-telegram-bot-api";
-import User from "../models/User.js";
-import umami from "../utils/umami.js";
-import { splitText } from "../utils/text.utils.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+import User from "../models/User.ts";
+import { loadUser } from "./Session.ts";
+import umami from "../utils/umami.ts";
+import { splitText } from "../utils/text.utils.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
 export const telegramMessageOption: TelegramBot.SendMessageOptions = {
   parse_mode: "Markdown",
@@ -14,8 +15,10 @@ export const telegramMessageOption: TelegramBot.SendMessageOptions = {
   }
 };
 
+const TelegramMessageApp: MessageApp = "Telegram";
+
 export class TelegramSession implements ISession {
-  messageApp = "Telegram" as MessageApp;
+  messageApp = TelegramMessageApp;
   telegramBot: TelegramBot;
   language_code: string;
   chatId: number;
@@ -31,15 +34,8 @@ export class TelegramSession implements ISession {
   }
 
   // try to fetch user from db
-  async loadUser() {
-    this.user = await User.findOne({
-      chatId: this.chatId,
-      messageApp: this.messageApp
-    });
-    if (this.user != null) {
-      // If the user is known, we update the session language code
-      this.language_code = this.user.language_code;
-    }
+  async loadUser(): Promise<void> {
+    this.user = await loadUser(this);
   }
 
   // Force create a user record
@@ -124,5 +120,5 @@ export async function extractTelegramSession(
     return undefined;
   }
 
-  return session as TelegramSession;
+  return session;
 }

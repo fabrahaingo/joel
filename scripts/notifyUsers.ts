@@ -1,25 +1,26 @@
 import "dotenv/config";
-import { mongodbConnect } from "../db.js";
-import { ErrorMessages } from "../entities/ErrorMessages.js";
-import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
-import { FunctionTags } from "../entities/FunctionTags.js";
-import { IPeople, IUser, WikidataId } from "../types.js";
-import People from "../models/People.js";
+import { mongodbConnect } from "../db.ts";
+import { ErrorMessages } from "../entities/ErrorMessages.ts";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { FunctionTags } from "../entities/FunctionTags.ts";
+import { IPeople, IUser, WikidataId } from "../types.ts";
+import People from "../models/People.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
-import Blocked from "../models/Blocked.js";
-import User from "../models/User.js";
+import Blocked from "../models/Blocked.ts";
+import User from "../models/User.ts";
 import { ChatId } from "node-telegram-bot-api";
 import { Types } from "mongoose";
-import umami from "../utils/umami.js";
-import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.js";
-import { splitText } from "../utils/text.utils.js";
-import { formatSearchResult } from "../utils/formatSearchResult.js";
+import umami from "../utils/umami.ts";
+import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.ts";
+import { splitText } from "../utils/text.utils.ts";
+import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   callJORFSearchDay,
   cleanPeopleName,
   uniqueMinimalNameInfo
-} from "../utils/JORFSearch.utils.js";
-import Organisation from "../models/Organisation.js";
+} from "../utils/JORFSearch.utils.ts";
+import Organisation from "../models/Organisation.ts";
+import { migrateUser } from "../entities/Session.js";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -148,9 +149,7 @@ async function updateUserFollowedPeople(
     ) => {
       if (
         followedList.some(
-          (f) =>
-            (f.peopleId as Types.ObjectId).toString() ===
-            followed.peopleId.toString()
+          (f) => f.peopleId.toString() === followed.peopleId.toString()
         )
       )
         return followedList; // If the user follows twice the same person, we drop the second record
@@ -182,11 +181,7 @@ async function updateUserFollowedOrganisation(
   user: IUser,
   updatedOrgIds: WikidataId[]
 ) {
-  if (
-    updatedOrgIds.length == 0 ||
-    user.followedOrganisations === undefined ||
-    user.followedOrganisations.length == 0
-  ) {
+  if (updatedOrgIds.length == 0 || user.followedOrganisations.length == 0) {
     return;
   }
 
@@ -243,7 +238,8 @@ export async function notifyFunctionTagsUpdates(
       followedFunctions: 1
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res);
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of usersFollowingTags) {
@@ -291,15 +287,12 @@ export async function notifyOrganisationsUpdates(
       followedOrganisations: { wikidataId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res);
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of usersFollowingOrganisations) {
-    if (
-      user.followedOrganisations === undefined ||
-      user.followedOrganisations.length == 0
-    )
-      continue;
+    if (user.followedOrganisations.length == 0) continue;
 
     // Records which are associated with followed Organisations, and which are new for the respective People follow
     const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
@@ -352,7 +345,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: {
         $elemMatch: {
           peopleId: {
-            $in: updatedPeopleList.map((i) => i._id as Types.ObjectId)
+            $in: updatedPeopleList.map((i) => i._id)
           }
         }
       }
@@ -363,16 +356,17 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: { peopleId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
     const peopleIdStrsFollowedByUser = user.followedPeople.map((j) =>
-      (j.peopleId as Types.ObjectId).toString()
+      j.peopleId.toString()
     );
     const peopleFollowedByUser = updatedPeopleList.filter((i) =>
-      peopleIdStrsFollowedByUser.includes((i._id as Types.ObjectId).toString())
+      peopleIdStrsFollowedByUser.includes(i._id.toString())
     );
     const peopleInfoFollowedByUser =
       uniqueMinimalNameInfo(peopleFollowedByUser);
@@ -396,7 +390,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 
         // Find the follow data associated with these people record
         const followData = user.followedPeople.find(
-          (i) => i.peopleId === (updatedPeople._id as Types.ObjectId).toString()
+          (i) => i.peopleId.toString() === updatedPeople._id.toString()
         );
         if (followData === undefined) return recordList; // this should not happen
 
@@ -424,7 +418,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
           (r) => r.nom === p.nom && r.prenom === p.prenom
         )
       )
-      .map((p) => p._id as Types.ObjectId);
+      .map((p) => p._id);
 
     // update each lastUpdate fields of the user followedPeople
     await updateUserFollowedPeople(user, updatedRecordsPeopleId);
@@ -445,7 +439,8 @@ export async function notifyNameMentionUpdates(
       followedPeople: { peopleId: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
   });
 
   const recordsNamesTab = updatedRecords.reduce(
@@ -485,10 +480,7 @@ export async function notifyNameMentionUpdates(
     followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
   ) => {
     return followedPeople.some((followedPerson) => {
-      return (
-        followedPerson.peopleId.toString() ===
-        (person._id as Types.ObjectId).toString()
-      );
+      return followedPerson.peopleId.toString() === person._id.toString();
     });
   };
 
@@ -498,8 +490,6 @@ export async function notifyNameMentionUpdates(
       people: IPeople;
       nameJORFRecords: JORFSearchItem[];
     }[] = [];
-
-    user.followedNames ??= [];
 
     for (const followedName of user.followedNames) {
       const followedNameCleaned = cleanPeopleName(followedName).toUpperCase();
@@ -534,7 +524,7 @@ export async function notifyNameMentionUpdates(
 
       if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
         user.followedPeople.push({
-          peopleId: people._id as Types.ObjectId,
+          peopleId: people._id,
           lastUpdate: new Date(Date.now())
         });
       }

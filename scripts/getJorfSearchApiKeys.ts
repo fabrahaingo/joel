@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from "axios";
-import { JORFSearchResponse } from "../entities/JORFSearchResponse.js";
+import { JORFSearchResponse } from "../entities/JORFSearchResponse.ts";
 import * as fs from "node:fs";
-import { dateTOJORFFormat } from "../utils/date.utils.js";
+import { dateTOJORFFormat } from "../utils/date.utils.ts";
 
 function round(value: number, exp: number) {
   if (typeof exp === "undefined" || +exp === 0) return Math.round(value);
