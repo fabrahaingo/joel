@@ -1,10 +1,10 @@
-import { ISession, IUser, MessageApp } from "../types.js";
+import { ISession, IUser, MessageApp } from "../types.ts";
 import TelegramBot from "node-telegram-bot-api";
-import User from "../models/User.js";
-import { loadUser } from "./Session.js";
-import umami from "../utils/umami.js";
-import { splitText } from "../utils/text.utils.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+import User from "../models/User.ts";
+import { loadUser } from "./Session.ts";
+import umami from "../utils/umami.ts";
+import { splitText } from "../utils/text.utils.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
 export const telegramMessageOption: TelegramBot.SendMessageOptions = {
   parse_mode: "Markdown",

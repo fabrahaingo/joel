@@ -1,6 +1,6 @@
-import { Model, Types } from "mongoose.js";
-import { FunctionTags } from "./entities/FunctionTags.js";
-import umami from "./utils/umami.js";
+import { Model, Types } from "mongoose";
+import { FunctionTags } from "./entities/FunctionTags";
+import umami from "./utils/umami";
 
 export interface CommandType {
   regex: RegExp;

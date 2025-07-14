@@ -1,18 +1,18 @@
-import { formatSearchResult } from "../utils/formatSearchResult.js";
+import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import TelegramBot from "node-telegram-bot-api";
 import {
   callJORFSearchPeople,
   cleanPeopleName
-} from "../utils/JORFSearch.utils.js";
-import { IPeople, ISession } from "../types.js";
+} from "../utils/JORFSearch.utils.ts";
+import { IPeople, ISession } from "../types.ts";
 import { Types } from "mongoose";
-import User from "../models/User.js";
-import People from "../models/People.js";
+import User from "../models/User.ts";
+import People from "../models/People.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+} from "../entities/TelegramSession.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,

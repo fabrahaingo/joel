@@ -1,25 +1,25 @@
 import "dotenv/config";
-import { mongodbConnect } from "../db.js";
-import { ErrorMessages } from "../entities/ErrorMessages.js";
-import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
-import { FunctionTags } from "../entities/FunctionTags.js";
-import { IPeople, IUser, WikidataId } from "../types.js";
-import People from "../models/People.js";
+import { mongodbConnect } from "../db.ts";
+import { ErrorMessages } from "../entities/ErrorMessages.ts";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { FunctionTags } from "../entities/FunctionTags.ts";
+import { IPeople, IUser, WikidataId } from "../types.ts";
+import People from "../models/People.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
-import Blocked from "../models/Blocked.js";
-import User from "../models/User.js";
+import Blocked from "../models/Blocked.ts";
+import User from "../models/User.ts";
 import { ChatId } from "node-telegram-bot-api";
 import { Types } from "mongoose";
-import umami from "../utils/umami.js";
-import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.js";
-import { splitText } from "../utils/text.utils.js";
-import { formatSearchResult } from "../utils/formatSearchResult.js";
+import umami from "../utils/umami.ts";
+import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.ts";
+import { splitText } from "../utils/text.utils.ts";
+import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   callJORFSearchDay,
   cleanPeopleName,
   uniqueMinimalNameInfo
-} from "../utils/JORFSearch.utils.js";
-import Organisation from "../models/Organisation.js";
+} from "../utils/JORFSearch.utils.ts";
+import Organisation from "../models/Organisation.ts";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 

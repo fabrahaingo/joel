@@ -1,6 +1,6 @@
-import { FunctionTags } from "../entities/FunctionTags.js";
+import { FunctionTags } from "../entities/FunctionTags.ts";
 import { Document, Types } from "mongoose";
-import { IUser } from "../types.js";
+import { IUser } from "../types.ts";
 
 export type IRawUser = LegacyUser_V1 | IUser;
 

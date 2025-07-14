@@ -1,19 +1,19 @@
-import People from "../models/People.js";
+import People from "../models/People.ts";
 import {
   FunctionTags,
   getFunctionsFromValues
-} from "../entities/FunctionTags.js";
-import { IOrganisation, IPeople, ISession, IUser } from "../types.js";
-import Organisation from "../models/Organisation.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+} from "../entities/FunctionTags.ts";
+import { IOrganisation, IPeople, ISession, IUser } from "../types.ts";
+import Organisation from "../models/Organisation.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
+} from "../entities/TelegramSession.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { parseIntAnswers } from "../utils/text.utils.js";
+import { parseIntAnswers } from "../utils/text.utils.ts";
 import { Types } from "mongoose";
-import User from "../models/User.js";
+import User from "../models/User.ts";
 
 interface UserFollows {
   functions: FunctionTags[];

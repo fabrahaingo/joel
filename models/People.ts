@@ -1,6 +1,6 @@
 import { Schema as _Schema, model } from "mongoose";
-import { IPeople, PeopleModel } from "../types.js";
-import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
+import { IPeople, PeopleModel } from "../types.ts";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 const Schema = _Schema;
 
 export interface LegacyPeople_V1 {

@@ -1,7 +1,7 @@
 import { describe, expect } from "@jest/globals";
-import People, { LegacyPeople_V1 } from "../models/People";
-import { IPeople } from "../types.js";
-import { JORFSearchItem } from "../entities/JORFSearchResponse.js";
+import People, { LegacyPeople_V1 } from "../models/People.ts";
+import { IPeople } from "../types.ts";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import mongoose from "mongoose";
 import { MongoMemoryServer } from "mongodb-memory-server";
 

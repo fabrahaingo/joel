@@ -1,7 +1,7 @@
-import { ISession, IUser, MessageApp } from "../types.js";
-import { migrateUser, USER_SCHEMA_VERSION } from "../models/User.js";
-import User from "../models/User.js";
-import { IRawUser } from "../models/LegacyUser.js";
+import { ISession, IUser, MessageApp } from "../types.ts";
+import { USER_SCHEMA_VERSION } from "../models/User.ts";
+import User from "../models/User.ts";
+import { IRawUser } from "../models/LegacyUser.ts";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;

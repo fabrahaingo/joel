@@ -1,9 +1,9 @@
 import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
-import umami from "../utils/umami.js";
-import { ISession, IPeople, IUser, UserModel } from "../types.js";
-import { FunctionTags } from "../entities/FunctionTags.js";
-import { loadUser } from "../entities/Session.js";
+import umami from "../utils/umami.ts";
+import { ISession, IPeople, IUser, UserModel } from "../types.ts";
+import { FunctionTags } from "../entities/FunctionTags.ts";
+import { loadUser } from "../entities/Session.ts";
 
 export const USER_SCHEMA_VERSION = 2;
 

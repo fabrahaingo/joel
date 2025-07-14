@@ -1,5 +1,5 @@
-import { ISession } from "../types.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { ISession } from "../types.ts";
+import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
