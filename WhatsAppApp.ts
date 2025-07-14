@@ -43,7 +43,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
 const whatsAppAPI = getWhatsAppAPI();
 
 const app = express();
-app.use(express.tson());
+app.use(express.json());
 
 app.post("/webhook", async (req, res) => {
   //res.sendStatus(await Whatsapp.handle_post(req));
