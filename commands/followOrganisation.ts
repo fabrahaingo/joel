@@ -15,10 +15,7 @@ const isOrganisationAlreadyFollowed = (
   user: IUser,
   wikidataId: WikidataId
 ): boolean => {
-  return (
-    user.followedOrganisations?.some((o) => o.wikidataId === wikidataId) ??
-    false
-  );
+  return user.followedOrganisations.some((o) => o.wikidataId === wikidataId);
 };
 
 interface WikiDataAPIResponse {
@@ -119,7 +116,6 @@ Exemples:
 
           if (orgResults.length == 1) {
             session.user = await User.findOrCreate(session);
-            session.user.followedOrganisations ??= [];
 
             // If the one result is already followed
             if (
@@ -151,6 +147,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
               followConfirmation.message_id,
               (tgMsg2: TelegramBot.Message) => {
                 void (async () => {
+                  if (session.user == null) return;
                   if (tgMsg2.text !== undefined) {
                     if (new RegExp(/oui/i).test(tgMsg2.text)) {
                       const organisation: IOrganisation =
@@ -158,7 +155,6 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                           nom: orgResults[0].nom,
                           wikidataId: orgResults[0].wikidataId
                         });
-                      session.user.followedOrganisations ??= [];
                       session.user.followedOrganisations.push({
                         wikidataId: organisation.wikidataId,
                         lastUpdate: new Date()
@@ -228,7 +224,6 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   await session.sendTypingAction();
 
                   const user = await User.findOrCreate(session);
-                  user.followedOrganisations ??= [];
 
                   for (const answer of answers) {
                     // Don't call JORF if the organisation is already followed

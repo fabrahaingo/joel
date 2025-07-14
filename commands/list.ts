@@ -39,7 +39,6 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     return 0;
   });
 
-  user.followedOrganisations ??= [];
   const followedOrganisations: IOrganisation[] = await Organisation.find({
     wikidataId: {
       $in: user.followedOrganisations.map((o) => o.wikidataId)
@@ -54,7 +53,6 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     .collation({ locale: "fr" })
     .lean();
 
-  user.followedNames ??= [];
   const followedPeopleTab: {
     nomPrenom: string;
     peopleId?: Types.ObjectId;
@@ -211,7 +209,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
           if (session.user == undefined) return;
 
           if (tgMsg.text == "/list") {
-            await listCommand(session, _msg);
+            await listCommand(session);
             return;
           }
 
@@ -280,7 +278,6 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
                 return tab;
               if (session.user == null) return tab;
 
-              session.user.followedNames ??= [];
               const idInFollowedNameTab = session.user.followedNames.findIndex(
                 (name) => name === userFollows.peopleAndNames[idx].nomPrenom
               );
@@ -379,13 +376,9 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
                 .includes((people.peopleId as Types.ObjectId).toString())
           );
 
-          session.user.followedNames ??= [];
-
           session.user.followedNames = session.user.followedNames.filter(
             (_value, idx) => !unfollowedNamesIdx.includes(idx)
           );
-
-          session.user.followedOrganisations ??= [];
 
           session.user.followedOrganisations =
             session.user.followedOrganisations.filter(

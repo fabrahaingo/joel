@@ -45,6 +45,7 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
       question.message_id,
       (tgMsg: TelegramBot.Message) => {
         void (async () => {
+          if (session.user == null) return;
           if (tgMsg.text === "SUPPRIMER MON COMPTE") {
             await User.deleteOne({
               _id: session.user._id
