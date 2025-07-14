@@ -42,16 +42,25 @@ export class WhatsAppSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendMessage(msg: string, keyboard?: { text: string }[][]) {
+  async sendMessage(
+    this: WhatsAppSession,
+    msg: string,
+    keyboard?: { text: string }[][]
+  ) {
     if (msg.length > 3000) {
       await this.sendLongMessage(msg);
       return;
     }
-    await this.whatsAppAPI.sendMessage(
+    const resp = await this.whatsAppAPI.sendMessage(
       this.botPhoneID,
       this.chatId.toString(),
       new Text(msg)
     );
+
+    if (resp.error) {
+      console.log(resp.error);
+      throw new Error("Error sending WH message to user.");
+    }
   }
 
   async sendTypingAction() {

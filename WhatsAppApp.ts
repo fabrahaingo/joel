@@ -36,7 +36,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     token: WHATSAPP_USER_TOKEN,
     appSecret: WHATSAPP_APP_SECRET,
     webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-    v: "v24.0"
+    v: "v22.0"
   });
 }
 
@@ -48,7 +48,7 @@ app.use(express.json());
 app.post("/webhook", async (req, res) => {
   //res.sendStatus(await Whatsapp.handle_post(req));
   try {
-    // Inverted comparated to documentation
+    // Inverted compared to documentation
     await whatsAppAPI.post(
       req.body,
       JSON.stringify(req.body),
