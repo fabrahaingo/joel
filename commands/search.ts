@@ -27,9 +27,15 @@ export const searchCommand = async (session: ISession): Promise<void> => {
 
   const tgSession: TelegramSession | undefined = await extractTelegramSession(
     session,
-    true
+    false
   );
-  if (tgSession == null) return;
+  if (tgSession == null) {
+    await session.sendMessage(
+      'Utilisez la fonction recherche à l\'aide de la commande suivante:\nEx: "Rechercher Emmanuel Macron"',
+      session.mainMenuKeyboard
+    );
+    return;
+  }
 
   const tgBot = tgSession.telegramBot;
 
