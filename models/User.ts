@@ -253,12 +253,17 @@ UserSchema.method(
   }
 );
 
-UserSchema.method("followsNothing", function followsNothing(): boolean {
-  let nb_followed = this.followedPeople.length + this.followedFunctions.length;
-  if (this.followedNames !== undefined)
-    nb_followed += this.followedNames.length;
-  //if (this.followedOrganisations !== undefined) nb_followed+=this.followedOrganisations.length;
-  return nb_followed == 0;
-});
+UserSchema.method(
+  "followsNothing",
+  function followsNothing(this: IUser): boolean {
+    return (
+      this.followedPeople.length +
+        this.followedNames.length +
+        this.followedFunctions.length +
+        this.followedOrganisations.length ==
+      0
+    );
+  }
+);
 
 export default model<IUser, UserModel>("User", UserSchema);
