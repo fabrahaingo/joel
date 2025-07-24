@@ -5,12 +5,6 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import mongoose from "mongoose";
 
 describe("People Model Test Suite", () => {
-  let mdb: typeof mongoose.connection.db;
-
-  beforeAll(() => {
-    mdb = mongoose.connection.db;
-  });
-
   beforeEach(async () => {
     if (!mongoose.connection.db)
       throw new Error("MongoDB connection not established");
@@ -52,8 +46,6 @@ describe("People Model Test Suite", () => {
   // Only need to be checked for the current user schema
   describe("Schema Validation", () => {
     it("should insert a legacy People in the db and validate it use", async () => {
-      if (!mdb) throw new Error("MongoDB connection not established");
-
       await People.collection.insertOne(legacyPersonData);
       const legacyPeople: IPeople | null = await People.findOne({
         nom: currentPersonData.nom,
