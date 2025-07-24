@@ -43,9 +43,13 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     wikidataId: {
       $in: user.followedOrganisations.map((o) => o.wikidataId)
     }
-  })
-    .collation({ locale: "fr" })
-    .sort({ nom: 1 });
+  });
+
+  followedOrganisations.sort((a, b) => {
+    if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
+    if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;
+    return 0;
+  });
 
   const followedPeoples: IPeople[] = await People.find({
     _id: { $in: user.followedPeople.map((p) => p.peopleId) }
