@@ -3,21 +3,8 @@ import { JORFSearchResponse } from "../entities/JORFSearchResponse.ts";
 import * as fs from "node:fs";
 import { dateTOJORFFormat } from "../utils/date.utils.ts";
 
-function round(value: number, exp: number) {
-  if (typeof exp === "undefined" || +exp === 0) return Math.round(value);
-
-  value = +value;
-  exp = +exp;
-
-  if (isNaN(value) || !(exp % 1 === 0)) return NaN;
-
-  // Shift
-  value = value.toString().split("e");
-  value = Math.round(+(value[0] + "e" + (value[1] ? +value[1] + exp : exp)));
-
-  // Shift back
-  value = value.toString().split("e");
-  return +(value[0] + "e" + (value[1] ? +value[1] - exp : -exp));
+function round(value: number) {
+  return parseFloat(value.toFixed(3));
 }
 
 async function JORFSearchCallRaw(currentDay: string) {
@@ -108,7 +95,7 @@ async function main() {
       field_name: key,
       nb_presence: items_keys_occurs[key],
       is_boolean: isKeyBoolean,
-      frequency: round(items_keys_occurs[key] / nbRecordsTotal, 3)
+      frequency: round(items_keys_occurs[key] / nbRecordsTotal)
     });
   }
 
