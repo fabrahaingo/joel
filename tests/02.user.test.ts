@@ -1,79 +1,149 @@
 import { expect } from "@jest/globals";
-import mongoose from "mongoose";
-import User from "../models/User.ts";
+import mongoose, { Types } from "mongoose";
+import User, { USER_SCHEMA_VERSION } from "../models/User.ts";
 import { ISession, IUser } from "../types.ts";
 import { ChatId } from "node-telegram-bot-api";
 
+const userMockChatId = 12346789 as ChatId;
+
+const exampleFollowedFunctions = [
+  "ambassadeur",
+  "grade"
+] as IUser["followedFunctions"];
+
+const exampleFollowedNames: IUser["followedNames"] = [
+  "Jean Michel",
+  "Emmanuel Macron",
+  "Jean Luc"
+];
+
+const exampleFollowedPeople: IUser["followedPeople"] = [
+  { peopleId: new Types.ObjectId(), lastUpdate: new Date() },
+  { peopleId: new Types.ObjectId(), lastUpdate: new Date() }
+];
+
+const exampleFollowedOrganisations: IUser["followedOrganisations"] = [
+  { wikidataId: "123456789", lastUpdate: new Date() },
+  { wikidataId: "987654321", lastUpdate: new Date() }
+];
+
+const MockTelegramSession = {
+  chatId: userMockChatId,
+  messageApp: "Telegram",
+  language_code: "fr",
+  user: undefined
+} as unknown as ISession;
+
+const legacyUserData_allUndefined = {
+  //_id: Types.ObjectId: not here as the record is inserted
+  chatId: userMockChatId,
+  messageApp: undefined,
+  language_code: "fr",
+  status: "active",
+  followedPeople: undefined,
+  followedFunctions: undefined,
+  followedNames: undefined,
+  followedOrganisations: undefined,
+  schemaVersion: undefined,
+  createAt: Date.now(),
+  updatedAt: Date.now()
+};
+
+const legacyUserData_withFollows = {
+  //_id: Types.ObjectId: not here as the record is inserted
+  chatId: userMockChatId,
+  messageApp: "Telegram",
+  language_code: "fr",
+  status: "active",
+  followedPeople: exampleFollowedPeople,
+  followedFunctions: exampleFollowedFunctions,
+  followedNames: undefined,
+  followedOrganisations: undefined,
+  schemaVersion: undefined,
+  createAt: Date.now(),
+  updatedAt: Date.now()
+};
+
+const currentUserData_withFollows = {
+  _id: new Types.ObjectId(),
+  chatId: userMockChatId,
+  messageApp: "Telegram",
+  language_code: "en",
+  status: "active",
+  followedPeople: exampleFollowedPeople,
+  followedFunctions: exampleFollowedFunctions,
+  followedNames: exampleFollowedNames,
+  followedOrganisations: exampleFollowedOrganisations,
+  lastInteractionDay: Date.now(),
+  lastInteractionMonth: Date.now(),
+  lastInteractionWeek: Date.now(),
+  schemaVersion: 2,
+  createAt: Date.now(),
+  updatedAt: Date.now()
+};
+
+const testUsers = [
+  { label: "Legacy user without follows", data: legacyUserData_allUndefined },
+  { label: "Legacy user with follows", data: legacyUserData_withFollows },
+  { label: "Current user with follows", data: currentUserData_withFollows }
+];
+
 describe("User Model Test Suite", () => {
-  let mdb: typeof mongoose.connection.db;
-
-  beforeAll(() => {
-    mdb = mongoose.connection.db;
-  });
-
   beforeEach(async () => {
     if (!mongoose.connection.db)
       throw new Error("MongoDB connection not established");
     await mongoose.connection.db.dropDatabase();
   });
 
-  const userMockChatId = 12346789 as ChatId;
+  testUsers.map((user) => {
+    describe(`Schema Validation: ${user.label}`, () => {
+      it("should insert, convert and validate the user data", async () => {
+        await User.collection.insertOne(user.data);
+        const userFromDB: IUser = await User.findOrCreate(MockTelegramSession);
 
-  const MockTelegramSession = {
-    chatId: userMockChatId,
-    messageApp: "Telegram",
-    language_code: "fr",
-    user: undefined
-  } as unknown as ISession;
+        expect(userFromDB).not.toBeNull();
+        await expect(userFromDB.validate()).resolves.toBeUndefined(); // undefined = validation passed
 
-  const legacyUserData = {
-    //_id: Types.ObjectId: not here as the record is inserted
-    chatId: userMockChatId,
-    messageApp: "Telegram",
-    language_code: "fr",
-    status: "active",
-    followedPeople: undefined,
-    followedFunctions: undefined,
-    followedNames: undefined,
-    followedOrganisations: undefined,
-    schemaVersion: undefined,
-    createAt: Date.now(),
-    updatedAt: Date.now()
-  };
+        const userFromDBLean = userFromDB.toObject();
 
-  const currentUserData = {
-    //_id: Types.ObjectId: not here as the record is inserted
-    chatId: userMockChatId,
-    messageApp: "Telegram",
-    language_code: "en",
-    status: "active",
-    followedPeople: [],
-    followedFunctions: [],
-    followedNames: [],
-    followedOrganisations: [],
-    lastInteractionDay: Date.now(),
-    lastInteractionMonth: Date.now(),
-    lastInteractionWeek: Date.now(),
-    schemaVersion: 2,
-    createAt: Date.now(),
-    updatedAt: Date.now()
-  };
+        // This removes the extra _id mongoose adds when using .toObject with objects as fields
+        userFromDBLean.followedPeople = userFromDBLean.followedPeople.map(
+          (p) => ({ peopleId: p.peopleId, lastUpdate: p.lastUpdate })
+        );
 
-  // Only need to be checked for the current user schema
-  describe("Schema Validation", () => {
-    it("should convert and validate legacy users", async () => {
-      if (!mdb) throw new Error("MongoDB connection not established");
+        userFromDBLean.followedOrganisations =
+          userFromDBLean.followedOrganisations.map((o) => ({
+            wikidataId: o.wikidataId,
+            lastUpdate: o.lastUpdate
+          }));
 
-      await User.collection.insertOne(legacyUserData);
-      const legacyUser: IUser = await User.findOrCreate(MockTelegramSession);
-      expect(legacyUser).not.toBeNull();
-      await expect(legacyUser.validate()).resolves.toBeUndefined(); // undefined = validation passed
+        expect(userFromDBLean.schemaVersion).toBe(USER_SCHEMA_VERSION);
 
-      expect(legacyUser.schemaVersion).toBe(2);
-      expect(legacyUser.messageApp).toBe("Telegram");
-      expect(legacyUser.followedPeople).toEqual([]);
-      expect(legacyUser.followedFunctions).toEqual([]);
-      expect(legacyUser.followedNames).toEqual([]);
+        // User _id should be preserved if we don't upgrade the user from legacy
+        if (user.data.schemaVersion != null && user.data.schemaVersion > 1) {
+          expect(userFromDBLean._id).toEqual(user.data._id);
+        }
+
+        expect(userFromDBLean.messageApp).toBe(
+          user.data.messageApp ?? "Telegram"
+        );
+
+        expect(userFromDBLean.followedPeople).toEqual(
+          user.data.followedPeople ?? []
+        );
+
+        expect(userFromDBLean.followedFunctions).toEqual(
+          user.data.followedFunctions ?? []
+        );
+
+        expect(userFromDBLean.followedOrganisations).toEqual(
+          user.data.followedOrganisations ?? []
+        );
+
+        expect(userFromDBLean.followedNames).toEqual(
+          user.data.followedNames ?? []
+        );
+      });
     });
   });
 });
