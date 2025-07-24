@@ -54,6 +54,7 @@ export interface IUser {
 
   save: () => Promise<IUser>;
   validate: () => Promise<void>;
+  toObject: () => IUser;
 
   updateInteractionMetrics: () => Promise<void>;
 
