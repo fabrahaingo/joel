@@ -3,7 +3,7 @@ import { JORFSearchResponse } from "../entities/JORFSearchResponse.ts";
 import * as fs from "node:fs";
 import { dateTOJORFFormat } from "../utils/date.utils.ts";
 
-function round(value: number) {
+export function round(value: number) {
   return parseFloat(value.toFixed(3));
 }
 
