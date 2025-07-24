@@ -53,9 +53,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
 
   const followedPeoples: IPeople[] = await People.find({
     _id: { $in: user.followedPeople.map((p) => p.peopleId) }
-  })
-    .collation({ locale: "fr" })
-    .lean();
+  });
 
   const followedPeopleTab: {
     nomPrenom: string;
