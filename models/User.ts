@@ -246,7 +246,7 @@ UserSchema.method(
   async function removeFollowedName(this: IUser, name: string) {
     if (!this.checkFollowedName(name)) return false;
     this.followedFunctions = this.followedFunctions.filter((elem) => {
-      return elem.toUpperCase() !== name.toUpperCase();
+      return (elem as string).toUpperCase() !== name.toUpperCase();
     });
     await this.save();
     return true;

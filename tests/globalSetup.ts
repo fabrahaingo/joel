@@ -5,7 +5,9 @@ export default async function globalSetup() {
   // it's needed in global space, because we don't want to create a new instance every test-suite
   const instance = await MongoMemoryServer.create();
   const uri = instance.getUri();
-  (global as any).__MONGOINSTANCE = instance;
+  (
+    global as unknown as { __MONGOINSTANCE: MongoMemoryServer }
+  ).__MONGOINSTANCE = instance;
   process.env.MONGO_URI_TEST = uri.slice(0, uri.lastIndexOf("/"));
 
   // The following is to make sure the database is clean before a test suite starts
