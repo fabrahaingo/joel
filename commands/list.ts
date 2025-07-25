@@ -62,6 +62,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
 
   const followedPeopleTab: {
     nomPrenom: string;
+    prenomNom?: string;
     peopleId?: Types.ObjectId;
     JORFSearchLink?: string;
   }[] = [];
@@ -85,7 +86,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   });
 
   return {
-    functions: followedFunctions,
+    functions: followedFunctions as FunctionTags[],
     organisations: followedOrganisations,
     peopleAndNames: followedPeopleTab
   };
@@ -461,6 +462,11 @@ const unfollowAndConfirm = async (
             unfollowedPrenomNomTab.map((p) => `\n   - *${p}*`).join("");
         }
       }
+    }
+
+    if (session.user == null) {
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      return;
     }
 
     session.user.followedPeople = session.user.followedPeople.filter(
