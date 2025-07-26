@@ -25,14 +25,6 @@ export const followFunctionCommand = async (
 ): Promise<void> => {
   await session.log({ event: "/follow-function" });
   try {
-    if (session.user == null) {
-      await session.sendMessage(
-        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
-        session.mainMenuKeyboard
-      );
-      return;
-    }
-
     const tgSession: TelegramSession | undefined = await extractTelegramSession(
       session,
       true
