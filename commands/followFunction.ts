@@ -8,13 +8,16 @@ import {
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 
+const fonctionTagValues = Object.values(FunctionTags);
+const fonctionTagKeys = Object.keys(FunctionTags);
+
 // build the message string along with its index
 function buildSuggestions() {
   let suggestion = "";
   for (const key in FunctionTags) {
     suggestion += `${String(
       // number in the array of keys
-      Object.keys(FunctionTags).indexOf(key) + 1
+      fonctionTagKeys.indexOf(key) + 1
     )}. *${key}*\n\n`;
   }
   return suggestion;
@@ -47,17 +50,15 @@ export const followFunctionCommand = async (
       }
     );
 
-    const functionAll = Object.values(FunctionTags);
-
     tgBot.onReplyToMessage(
       session.chatId,
       question.message_id,
       (tgMsg: TelegramBot.Message) => {
         void (async () => {
-          const answers = parseIntAnswers(tgMsg.text, functionAll.length);
+          const answers = parseIntAnswers(tgMsg.text, fonctionTagValues.length);
           if (answers === null || answers.length == 0) {
             await session.sendMessage(
-              `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionAll.length)}.
+              `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(fonctionTagValues.length)}.
         👎 Veuillez essayer de nouveau la commande /followFunction.`,
               session.mainMenuKeyboard
             );
