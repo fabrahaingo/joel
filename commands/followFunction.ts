@@ -11,18 +11,6 @@ import { parseIntAnswers } from "../utils/text.utils.ts";
 const fonctionTagValues = Object.values(FunctionTags);
 const fonctionTagKeys = Object.keys(FunctionTags);
 
-// build the message string along with its index
-function buildSuggestions() {
-  let suggestion = "";
-  for (const key in FunctionTags) {
-    suggestion += `${String(
-      // number in the array of keys
-      fonctionTagKeys.indexOf(key) + 1
-    )}. *${key}*\n\n`;
-  }
-  return suggestion;
-}
-
 export const followFunctionCommand = async (
   session: ISession
 ): Promise<void> => {
@@ -37,8 +25,25 @@ export const followFunctionCommand = async (
     const tgBot = tgSession.telegramBot;
 
     await session.sendTypingAction();
+
+    let functionListMessage = "";
+    for (const key in FunctionTags) {
+      const fctIndex = fonctionTagKeys.indexOf(key);
+      const fctValue = fonctionTagValues[fctIndex];
+
+      functionListMessage += `${String(
+        // number in the array of keys
+        fctIndex + 1
+      )}. *${key}*`;
+
+      if (session.user?.followedFunctions.includes(fctValue))
+        functionListMessage += " - Followed";
+
+      functionListMessage += "\n\n";
+    }
+
     await session.sendMessage(
-      `Voici la liste des fonctions que vous pouvez suivre:\n\n${buildSuggestions()}`
+      `Voici la liste des fonctions que vous pouvez suivre:\n\n${functionListMessage}`
     );
     const question = await tgBot.sendMessage(
       session.chatId,
