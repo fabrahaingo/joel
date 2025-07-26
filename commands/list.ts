@@ -126,7 +126,7 @@ export const listCommand = async (session: ISession) => {
         if (session.messageApp === "Telegram")
           text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
             userFollows.functions[i]
-          )})\n\n`;
+          )})`;
 
         text += `\n\n`;
       }
