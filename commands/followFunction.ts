@@ -8,8 +8,8 @@ import {
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 
-const fonctionTagValues = Object.values(FunctionTags);
-const fonctionTagKeys = Object.keys(FunctionTags);
+const functionTagValues = Object.values(FunctionTags);
+const functionTagKeys = Object.keys(FunctionTags);
 
 export const followFunctionCommand = async (
   session: ISession
@@ -28,8 +28,8 @@ export const followFunctionCommand = async (
 
     let functionListMessage = "";
     for (const key in FunctionTags) {
-      const fctIndex = fonctionTagKeys.indexOf(key);
-      const fctValue = fonctionTagValues[fctIndex];
+      const fctIndex = functionTagKeys.indexOf(key);
+      const fctValue = functionTagValues[fctIndex];
 
       functionListMessage += `${String(
         // number in the array of keys
@@ -60,10 +60,10 @@ export const followFunctionCommand = async (
       question.message_id,
       (tgMsg: TelegramBot.Message) => {
         void (async () => {
-          const answers = parseIntAnswers(tgMsg.text, fonctionTagValues.length);
+          const answers = parseIntAnswers(tgMsg.text, functionTagValues.length);
           if (answers === null || answers.length == 0) {
             await session.sendMessage(
-              `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(fonctionTagValues.length)}.
+              `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}.
         👎 Veuillez essayer de nouveau la commande /followFunction.`,
               session.mainMenuKeyboard
             );
