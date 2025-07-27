@@ -13,7 +13,10 @@ import { defaultCommand } from "./default.ts";
 import { startCommand } from "./start.ts";
 import { deleteProfileCommand } from "./deleteProfile.ts";
 import { helpCommand } from "./help.ts";
-import { followFunctionCommand } from "./followFunction.ts";
+import {
+  followFunctionCommand,
+  followFunctionFromStrCommand
+} from "./followFunction.ts";
 import { listCommand, unfollowCommand } from "./list.ts";
 
 export const commands: CommandType[] = [
@@ -32,6 +35,10 @@ export const commands: CommandType[] = [
   {
     regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
     action: fullHistoryCommand
+  },
+  {
+    regex: /SuivreF \s*(.*)/i,
+    action: followFunctionFromStrCommand
   },
   {
     regex: /Suivre \s*(.*)/i,
