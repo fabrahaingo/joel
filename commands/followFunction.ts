@@ -1,7 +1,7 @@
 import User from "../models/User.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { ISession } from "../types.ts";
+import { ButtonElement, ISession } from "../types.ts";
 import {
   extractTelegramSession,
   TelegramSession
