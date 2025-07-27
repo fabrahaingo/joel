@@ -52,7 +52,10 @@ export interface IUser {
     wikidataId: WikidataId;
     lastUpdate: Date;
   }[];
-  followedFunctions: FunctionTags[];
+  followedFunctions: {
+    functionTag: FunctionTags;
+    lastUpdate: Date;
+  }[];
 
   lastInteractionDay?: Date;
   lastInteractionWeek?: Date;

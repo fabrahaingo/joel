@@ -86,7 +86,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   });
 
   return {
-    functions: followedFunctions as FunctionTags[],
+    functions: followedFunctions.map((f) => f.functionTag as FunctionTags),
     organisations: followedOrganisations,
     peopleAndNames: followedPeopleTab
   };
@@ -489,7 +489,7 @@ const unfollowAndConfirm = async (
       );
 
     session.user.followedFunctions = session.user.followedFunctions.filter(
-      (tag) => !unfollowedFunctions.includes(tag)
+      (tag) => !unfollowedFunctions.includes(tag.functionTag as FunctionTags)
     );
 
     await session.user.save();

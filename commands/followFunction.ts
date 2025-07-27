@@ -50,8 +50,12 @@ const followFunctionCommandWH = async (session: ISession): Promise<void> => {
 
       buttonText += `SuivreF ${key}`;
 
-      if (session.user?.followedFunctions.includes(fctValue))
-        buttonText += " - Followed";
+      if (
+        session.user?.followedFunctions
+          .map((f) => f.functionTag as FunctionTags)
+          .includes(fctValue)
+      )
+        buttonText += " - Suivi";
 
       functionChoices.push([
         { text: "Ajouter suivi", desc: buttonText.slice(0, 71) }
@@ -86,7 +90,11 @@ const followFunctionCommandTelegram = async (
         fctIndex + 1
       )}. *${key}*`;
 
-      if (tgSession.user?.followedFunctions.includes(fctValue))
+      if (
+        tgSession.user?.followedFunctions
+          .map((f) => f.functionTag as FunctionTags)
+          .includes(fctValue)
+      )
         functionListMessage += " - Followed";
 
       functionListMessage += "\n\n";
