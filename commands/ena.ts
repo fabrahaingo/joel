@@ -1,6 +1,5 @@
 import User from "../models/User.ts";
 import People from "../models/People.ts";
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 import { IPeople, ISession, WikidataId } from "../types.ts";
 import {
   List_Promos_INSP_ENA,
@@ -120,7 +119,7 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
           ) {
             await session.sendMessage(
               `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
@@ -133,7 +132,7 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
             await session.sendMessage(
               `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
@@ -174,7 +173,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                 if (tgMsg2.text === undefined) {
                   await session.sendMessage(
                     `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-                    mainMenuKeyboard
+                    session.mainMenuKeyboard
                   );
                   return;
                 }
@@ -206,19 +205,19 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                     `Les *${String(
                       peopleTab.length
                     )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
-                    mainMenuKeyboard
+                    session.mainMenuKeyboard
                   );
                   return;
                 } else if (new RegExp(/non/i).test(tgMsg2.text)) {
                   await session.sendMessage(
                     `Ok, aucun ajout n'a été effectué. 👌`,
-                    mainMenuKeyboard
+                    session.mainMenuKeyboard
                   );
                   return;
                 }
                 await session.sendMessage(
                   `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-                  mainMenuKeyboard
+                  session.mainMenuKeyboard
                 );
               })();
             }
@@ -255,7 +254,7 @@ export const promosCommand = async (session: ISession): Promise<void> => {
     text +=
       "\nUtilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
-    await session.sendMessage(text, mainMenuKeyboard);
+    await session.sendMessage(text, session.mainMenuKeyboard);
   } catch (error) {
     console.log(error);
   }
