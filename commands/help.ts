@@ -1,6 +1,5 @@
 import { HelpMessages } from "../entities/BotMessages.ts";
 import { ISession } from "../types.ts";
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
 export const helpCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/help" });
@@ -9,5 +8,5 @@ export const helpCommand = async (session: ISession): Promise<void> => {
     "{chatId}",
     session.chatId.toString()
   );
-  await session.sendMessage(helpText, mainMenuKeyboard);
+  await session.sendMessage(helpText, session.mainMenuKeyboard);
 };
