@@ -287,7 +287,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
           }
 
           let answers = parseIntAnswers(tgMsg.text, followTotal);
-          if (answers === null) {
+          if (answers.length === 0) {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.
 👎 Veuillez essayer de nouveau la commande /unfollow.`,

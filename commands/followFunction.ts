@@ -111,7 +111,7 @@ const followFunctionCommandTelegram = async (
       (tgMsg: TelegramBot.Message) => {
         void (async () => {
           const answers = parseIntAnswers(tgMsg.text, functionTagValues.length);
-          if (answers === null || answers.length == 0) {
+          if (answers.length == 0) {
             await tgSession.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}.
         👎 Veuillez essayer de nouveau la commande /followFunction.`,
