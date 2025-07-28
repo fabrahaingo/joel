@@ -81,7 +81,7 @@ export function buildTagMap(
   tagList: FunctionTags[]
 ) {
   return tagList.reduce(
-    (tagMap: Record<FunctionTags, JORFSearchItem[]>, tag) => {
+    (tagMap: Partial<Record<FunctionTags, JORFSearchItem[]>>, tag) => {
       // extracts the relevant tags from the daily updates
       const taggedItems = extractTaggedItems(updatedRecords, tag);
       if (taggedItems.length === 0) return tagMap; // If no tagged record: we drop the tag
@@ -90,16 +90,16 @@ export function buildTagMap(
       tagMap[tag] = taggedItems;
       return tagMap;
     },
-    {} as Record<FunctionTags, JORFSearchItem[]>
+    {}
   );
 }
 
 export function buildOrganisationMapById(
   updatedRecords: JORFSearchItem[],
   orgsInDbId: WikidataId[]
-): Record<WikidataId, JORFSearchItem[]> {
+): Partial<Record<WikidataId, JORFSearchItem[]>> {
   return updatedRecords.reduce(
-    (orgMap: Record<WikidataId, JORFSearchItem[]>, item) => {
+    (orgMap: Partial<Record<WikidataId, JORFSearchItem[]>>, item) => {
       const itemUniqueOrgIds: WikidataId[] = item.organisations.reduce(
         (idTab: WikidataId[], o) => {
           if (
@@ -121,7 +121,7 @@ export function buildOrganisationMapById(
       }
       return orgMap;
     },
-    {} as Record<FunctionTags, JORFSearchItem[]>
+    {}
   );
 }
 
@@ -229,15 +229,17 @@ export async function notifyFunctionTagsUpdates(
   const usersFollowingTags: IUser[] = await User.find(
     {
       followedFunctions: {
+        $exists: true,
+        $not: { $size: 0 },
         $elemMatch: {
-          $in: updatedTagList
+          wikidataId: { $in: updatedTagList }
         }
       }
     },
     {
       _id: 1,
       chatId: 1,
-      followedFunctions: 1
+      followedFunctions: { functionTag: 1, lastUpdate: 1 }
     }
   ).then(async (res: IUser[]) => {
     const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
@@ -245,8 +247,24 @@ export async function notifyFunctionTagsUpdates(
   });
 
   for (const user of usersFollowingTags) {
-    // send tqg notification to the user
-    await sendTagUpdates(user, updatedTagMap);
+    // send tag notification to the user
+
+    const newUserTagsUpdates: Partial<Record<FunctionTags, JORFSearchItem[]>> =
+      {};
+
+    for (const tagFollow of user.followedFunctions) {
+      if (updatedTagMap[tagFollow.functionTag as FunctionTags] == undefined)
+        continue;
+
+      newUserTagsUpdates[tagFollow.functionTag as FunctionTags] =
+        updatedTagMap[tagFollow.functionTag as FunctionTags]?.filter(
+          (record: JORFSearchItem) =>
+            JORFtoDate(record.source_date).getTime() >
+            tagFollow.lastUpdate.getTime()
+        ) ?? [];
+    }
+
+    await sendTagUpdates(user, newUserTagsUpdates);
   }
 }
 
@@ -299,17 +317,11 @@ export async function notifyOrganisationsUpdates(
     // Records which are associated with followed Organisations, and which are new for the respective People follow
     const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
       (orgTabList: Record<WikidataId, JORFSearchItem[]>, followData) => {
-        if (
-          // the map call can be undefined, here ESLINT is incorrect
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          updatedOrganisationMapById[followData.wikidataId] === undefined ||
-          updatedOrganisationMapById[followData.wikidataId].length == 0
-        )
-          return orgTabList;
+        const orgUpdates =
+          updatedOrganisationMapById[followData.wikidataId] ?? [];
+        if (orgUpdates.length == 0) return orgTabList;
 
-        const newRecordsFollowedB = updatedOrganisationMapById[
-          followData.wikidataId
-        ].filter(
+        const newRecordsFollowedB = orgUpdates.filter(
           (record) =>
             JORFtoDate(record.source_date).getTime() >
             followData.lastUpdate.getTime()
@@ -385,7 +397,9 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         // this is the first main filter
         if (
           !peopleInfoFollowedByUser.some(
-            (p) => p.nom === record.nom && p.prenom === record.prenom
+            (p) =>
+              p.nom.toUpperCase() === record.nom.toUpperCase() &&
+              p.prenom.toUpperCase() === record.prenom.toUpperCase()
           )
         )
           return recordList;
@@ -649,12 +663,10 @@ async function sendOrganisationUpdate(
 
 async function sendTagUpdates(
   user: IUser,
-  tagMap: Record<FunctionTags, JORFSearchItem[]>
+  tagMap: Partial<Record<FunctionTags, JORFSearchItem[]>>
 ) {
   // only keep the tags followed by the user
-  const tagList = (Object.keys(tagMap) as FunctionTags[]).filter((tag) =>
-    user.followedFunctions.includes(tag)
-  );
+  const tagList = Object.keys(tagMap) as FunctionTags[];
 
   if (tagList.length == 0) {
     return;
@@ -670,7 +682,8 @@ async function sendTagUpdates(
   for (const tagValue of tagList) {
     const tagKey = tagKeys[tagValues.indexOf(tagValue)];
 
-    const tagRecords: JORFSearchItem[] = tagMap[tagValue];
+    const tagRecords: JORFSearchItem[] = tagMap[tagValue] ?? [];
+    if (tagRecords.length == 0) continue;
     // Reverse array change order of records
     // updatedRecords.reverse();
 
