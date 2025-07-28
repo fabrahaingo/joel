@@ -136,8 +136,8 @@ async function searchPersonHistory(
       isUserFollowingPerson = false;
     } else {
       const people: IPeople | null = await People.findOne({
-        nom: JORFRes_data[0].nom,
-        prenom: JORFRes_data[0].prenom
+        nom: { $regex: `^${JORFRes_data[0].nom}$`, $options: "i" }, // regex makes the search case-insensitive
+        prenom: { $regex: `^${JORFRes_data[0].prenom}$`, $options: "i" }
       });
       isUserFollowingPerson = !(
         people === null ||

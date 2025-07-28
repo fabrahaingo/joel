@@ -63,8 +63,8 @@ describe("People Model Test Suite", () => {
     it("should find and remove a person from its name", async () => {
       await People.create(currentPersonData);
       const people: IPeople | null = await People.findOne({
-        nom: currentPersonData.nom,
-        prenom: currentPersonData.prenom
+        nom: { $regex: `^${currentPersonData.nom}$`, $options: "i" }, // regex makes the search case-insensitive
+        prenom: { $regex: `^${currentPersonData.prenom}$`, $options: "i" }
       });
       expect(people).not.toBeNull();
 
