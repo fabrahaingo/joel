@@ -5,7 +5,6 @@ import { IRawUser, LegacyRawUser_V1 } from "../models/LegacyUser.ts";
 import { sendTelegramMessage } from "./TelegramSession.ts";
 import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
-import { sendTelegramMessage } from "../app.js";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
