@@ -36,7 +36,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     token: WHATSAPP_USER_TOKEN,
     appSecret: WHATSAPP_APP_SECRET,
     webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-    v: "v22.0"
+    v: "v23.0"
   });
 }
 
