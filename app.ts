@@ -7,7 +7,6 @@ import umami from "./utils/umami.ts";
 import { splitText } from "./utils/text.utils.js";
 import { ErrorMessages } from "./entities/ErrorMessages.js";
 import axios, { AxiosError, isAxiosError } from "axios";
-import { TelegramAPIError } from "./scripts/notifyUsers.js";
 import Blocked from "./models/Blocked.js";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
@@ -53,6 +52,13 @@ await (async () => {
 
   console.log(`\u{2705} JOEL started successfully`);
 })();
+
+// Extend the AxiosError with the response.data.description field
+interface TelegramAPIError {
+  message: string;
+  status: number;
+  description?: string;
+}
 
 export async function sendTelegramMessage(chatId: number, message: string) {
   const messagesArray = splitText(message, 3000);

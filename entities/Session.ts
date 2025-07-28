@@ -3,6 +3,7 @@ import { USER_SCHEMA_VERSION } from "../models/User.ts";
 import User from "../models/User.ts";
 import { IRawUser, LegacyRawUser_V1 } from "../models/LegacyUser.ts";
 import { sendWhatsAppMessage } from "../WhatsAppApp.js";
+import { sendTelegramMessage } from "../app.js";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;

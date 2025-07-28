@@ -694,13 +694,6 @@ async function sendTagUpdates(
   await umami.log({ event: "/notification-update-function" });
 }
 
-// Extend the AxiosError with the response.data.description field
-export interface TelegramAPIError {
-  message: string;
-  status: number;
-  description?: string;
-}
-
 await (async () => {
   // Connect to DB
   await mongodbConnect();
