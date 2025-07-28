@@ -1,18 +1,14 @@
 import "dotenv/config";
 import { mongodbConnect } from "../db.ts";
-import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { IPeople, IUser, WikidataId } from "../types.ts";
 import People from "../models/People.ts";
-import axios, { AxiosError, isAxiosError } from "axios";
 import Blocked from "../models/Blocked.ts";
 import User from "../models/User.ts";
-import { ChatId } from "node-telegram-bot-api";
 import { Types } from "mongoose";
 import umami from "../utils/umami.ts";
 import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.ts";
-import { splitText } from "../utils/text.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   callJORFSearchDay,
@@ -20,16 +16,7 @@ import {
   uniqueMinimalNameInfo
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
-import { migrateUser } from "../entities/Session.js";
-import { getWhatsAppAPI } from "../WhatsAppApp.ts";
-import { Text } from "whatsapp-api-js/messages";
-
-const BOT_TOKEN = process.env.BOT_TOKEN;
-
-// Check that the BOT TOKEN is set: to prevent computing everything for nothing ...
-if (BOT_TOKEN === undefined) {
-  throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
-}
+import { migrateUser, sendMessage } from "../entities/Session.js";
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -588,7 +575,7 @@ async function sendNameMentionUpdate(
     if (i < nameUpdates.length - 1) notification_text += "\n\n";
   }
 
-  await sendMessageFromAxios(user, notification_text);
+  await sendMessage(user, notification_text);
 
   await umami.log({ event: "/notification-update-name" });
 }
@@ -612,7 +599,7 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
     displayName: "all"
   });
 
-  await sendMessageFromAxios(user, notification_text);
+  await sendMessage(user, notification_text);
 
   await umami.log({ event: "/notification-update-people" });
 }
@@ -656,7 +643,7 @@ async function sendOrganisationUpdate(
     notification_text += "\n";
   }
 
-  await sendMessageFromAxios(user, notification_text);
+  await sendMessage(user, notification_text);
 
   await umami.log({ event: "/notification-update-organisation" });
 }
@@ -702,7 +689,7 @@ async function sendTagUpdates(
     notification_text += "\n";
   }
 
-  await sendMessageFromAxios(user, notification_text);
+  await sendMessage(user, notification_text);
 
   await umami.log({ event: "/notification-update-function" });
 }
@@ -712,76 +699,6 @@ export interface TelegramAPIError {
   message: string;
   status: number;
   description?: string;
-}
-
-const WHATSAPP_PHONE_ID = process.env.WHATSAPP_PHONE_ID;
-if (!WHATSAPP_PHONE_ID) throw new Error("Missing env var: WHATSAPP_PHONE_ID");
-const whatsAppAPI = getWhatsAppAPI();
-
-async function sendMessageFromAxios(user: IUser, message: string) {
-  switch (user.messageApp) {
-    case "Telegram":
-      await sendTelegramMessageFromAxios(user.chatId, message);
-      break;
-
-    case "WhatsApp":
-      await sendWhatsAppMessageFromAxios(user.chatId, message);
-      break;
-
-    default:
-      throw new Error(`MessageApp ${user.messageApp} not supported`);
-  }
-}
-
-async function sendWhatsAppMessageFromAxios(
-  userPhoneId: number,
-  message: string
-) {
-  await whatsAppAPI.sendMessage(
-    WHATSAPP_PHONE_ID,
-    String(userPhoneId),
-    new Text(message)
-  );
-}
-
-async function sendTelegramMessageFromAxios(chatId: number, message: string) {
-  const messagesArray = splitText(message, 3000);
-
-  if (BOT_TOKEN === undefined) {
-    throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
-  }
-
-  for (const message of messagesArray) {
-    await axios
-      .post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        chat_id: chatId,
-        text: message,
-        parse_mode: "markdown",
-        link_preview_options: {
-          is_disabled: true
-        }
-      })
-      .catch(async (err: unknown) => {
-        if (isAxiosError(err)) {
-          const error = err as AxiosError<TelegramAPIError>;
-          if (
-            error.response?.data.description !== undefined &&
-            error.response.data.description ===
-              "Forbidden: bot was blocked by the user"
-          ) {
-            await umami.log({ event: "/user-blocked-joel" });
-            await new Blocked({
-              chatId: chatId as ChatId
-            }).save();
-            return;
-          }
-        }
-        console.log(err);
-      });
-
-    // prevent hitting the Telegram API rate limit
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
 }
 
 await (async () => {

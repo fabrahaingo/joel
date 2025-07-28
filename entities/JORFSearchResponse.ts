@@ -4,6 +4,7 @@ export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
 interface OrganisationRaw {
   nom?: string;
+  wikidata_id?: WikidataId;
 }
 
 interface Organisation extends OrganisationRaw {
@@ -192,9 +193,12 @@ export function cleanJORFItems(
     item_raw.organisations ??= [];
 
     // Drop organisations where the name is missing
-    const clean_organisations = item_raw.organisations.filter(
-      (org_raw) => org_raw.nom !== undefined
-    ) as Organisation[];
+    const clean_organisations = item_raw.organisations
+      .filter((org_raw) => org_raw.nom !== undefined)
+      .map((org) => ({
+        ...org,
+        wikidata_id: org.wikidata_id?.toUpperCase()
+      })) as Organisation[];
 
     // Drop remplacement where the name is missing
     if (

@@ -22,7 +22,8 @@ export const telegramMessageOption: TelegramBot.SendMessageOptions = {
   disable_web_page_preview: true,
   reply_markup: {
     selective: true,
-    resize_keyboard: true
+    resize_keyboard: true,
+    keyboard: []
   }
 };
 

@@ -10,6 +10,7 @@ import { mongodbConnect } from "./db.js";
 import umami from "./utils/umami.js";
 import { WhatsAppSession } from "./entities/WhatsAppSession.js";
 import { commands } from "./commands/Commands.js";
+import { Text } from "whatsapp-api-js/messages";
 
 const {
   WHATSAPP_USER_TOKEN,
@@ -144,3 +145,14 @@ await (async function () {
   console.log(`Listening on url ${url}`);
   console.log("Ngrok tunnel initialized!");
 })();
+
+export async function sendWhatsAppMessage(
+  userPhoneId: number,
+  message: string
+) {
+  await whatsAppAPI.sendMessage(
+    WHATSAPP_PHONE_ID,
+    String(userPhoneId),
+    new Text(message)
+  );
+}
