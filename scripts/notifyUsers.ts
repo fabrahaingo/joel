@@ -21,6 +21,8 @@ import {
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
 import { migrateUser } from "../entities/Session.js";
+import { getWhatsAppAPI } from "../WhatsAppApp.ts";
+import { Text } from "whatsapp-api-js/messages";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
@@ -298,6 +300,8 @@ export async function notifyOrganisationsUpdates(
     const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
       (orgTabList: Record<WikidataId, JORFSearchItem[]>, followData) => {
         if (
+          // the map call can be undefined, here ESLINT is incorrect
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           updatedOrganisationMapById[followData.wikidataId] === undefined ||
           updatedOrganisationMapById[followData.wikidataId].length == 0
         )
@@ -336,7 +340,10 @@ export async function notifyOrganisationsUpdates(
 
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   const updatedPeopleList: IPeople[] = await People.find({
-    $or: uniqueMinimalNameInfo(updatedRecords)
+    $or: updatedRecords.map((p) => ({
+      prenom: { $regex: new RegExp(`^${p.prenom}$`), $options: "i" },
+      nom: { $regex: new RegExp(`^${p.nom}$`), $options: "i" }
+    }))
   });
 
   // Fetch all users following at least one of the updated People
@@ -567,7 +574,7 @@ async function sendNameMentionUpdate(
     if (i < nameUpdates.length - 1) notification_text += "\n\n";
   }
 
-  await sendLongMessageFromAxios(user, notification_text);
+  await sendMessageFromAxios(user, notification_text);
 
   await umami.log({ event: "/notification-update-name" });
 }
@@ -591,7 +598,7 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
     displayName: "all"
   });
 
-  await sendLongMessageFromAxios(user, notification_text);
+  await sendMessageFromAxios(user, notification_text);
 
   await umami.log({ event: "/notification-update-people" });
 }
@@ -635,7 +642,7 @@ async function sendOrganisationUpdate(
     notification_text += "\n";
   }
 
-  await sendLongMessageFromAxios(user, notification_text);
+  await sendMessageFromAxios(user, notification_text);
 
   await umami.log({ event: "/notification-update-organisation" });
 }
@@ -682,7 +689,7 @@ async function sendTagUpdates(
     notification_text += "\n";
   }
 
-  await sendLongMessageFromAxios(user, notification_text);
+  await sendMessageFromAxios(user, notification_text);
 
   await umami.log({ event: "/notification-update-function" });
 }
@@ -694,7 +701,37 @@ export interface TelegramAPIError {
   description?: string;
 }
 
-async function sendLongMessageFromAxios(user: IUser, message: string) {
+const WHATSAPP_PHONE_ID = process.env.WHATSAPP_PHONE_ID;
+if (!WHATSAPP_PHONE_ID) throw new Error("Missing env var: WHATSAPP_PHONE_ID");
+const whatsAppAPI = getWhatsAppAPI();
+
+async function sendMessageFromAxios(user: IUser, message: string) {
+  switch (user.messageApp) {
+    case "Telegram":
+      await sendTelegramMessageFromAxios(user.chatId, message);
+      break;
+
+    case "WhatsApp":
+      await sendWhatsAppMessageFromAxios(user.chatId, message);
+      break;
+
+    default:
+      throw new Error(`MessageApp ${user.messageApp} not supported`);
+  }
+}
+
+async function sendWhatsAppMessageFromAxios(
+  userPhoneId: number,
+  message: string
+) {
+  await whatsAppAPI.sendMessage(
+    WHATSAPP_PHONE_ID,
+    String(userPhoneId),
+    new Text(message)
+  );
+}
+
+async function sendTelegramMessageFromAxios(chatId: number, message: string) {
   const messagesArray = splitText(message, 3000);
 
   if (BOT_TOKEN === undefined) {
@@ -704,7 +741,7 @@ async function sendLongMessageFromAxios(user: IUser, message: string) {
   for (const message of messagesArray) {
     await axios
       .post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        chat_id: user.chatId as ChatId,
+        chat_id: chatId,
         text: message,
         parse_mode: "markdown",
         link_preview_options: {
@@ -721,7 +758,7 @@ async function sendLongMessageFromAxios(user: IUser, message: string) {
           ) {
             await umami.log({ event: "/user-blocked-joel" });
             await new Blocked({
-              chatId: user.chatId as ChatId
+              chatId: chatId as ChatId
             }).save();
             return;
           }

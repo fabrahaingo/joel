@@ -1,15 +1,21 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
 import umami from "./utils/umami";
+import { ButtonElement } from "./utils/keyboards.js";
 
 export interface CommandType {
   regex: RegExp;
   action: (session: ISession, msg?: string) => Promise<void>;
 }
 
-export type MessageApp = "Telegram";
-//| "WhatsApp";
+export type MessageApp = "Telegram" | "WhatsApp";
 //| "Matrix";
+
+export interface ButtonElement {
+  text: string;
+  desc?: string;
+}
+export type KeyboardType = "Buttons" | "List";
 
 export interface ISession {
   messageApp: MessageApp;
@@ -17,10 +23,15 @@ export interface ISession {
   language_code: string;
   user: IUser | null | undefined;
   isReply: boolean | undefined;
+  mainMenuKeyboard: ButtonElement[][];
 
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
-  sendMessage: (msg: string, keyboard?: { text: string }[][]) => Promise<void>;
+  sendMessage: (
+    msg: string,
+    keyboard?: ButtonElement[][],
+    menuType?: KeyboardType
+  ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
   log: typeof umami.log;
 }

@@ -5,7 +5,6 @@ import User from "../models/User.ts";
 import { IOrganisation, ISession, IUser, WikidataId } from "../types.ts";
 import axios from "axios";
 import { parseIntAnswers } from "../utils/text.utils.ts";
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 import {
   extractTelegramSession,
   TelegramSession
@@ -64,7 +63,7 @@ export const followOrganisationCommand = async (session: ISession) => {
     if (session.user == null) {
       await session.sendMessage(
         `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -99,7 +98,7 @@ Exemples:
           if (tgMsg1.text === undefined || tgMsg1.text === "") {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
@@ -109,7 +108,7 @@ Exemples:
           if (orgResults.length == 0) {
             await session.sendMessage(
               `Votre recherche n'a donné aucun résultat.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
@@ -127,7 +126,7 @@ Exemples:
               await new Promise((resolve) => setTimeout(resolve, 500));
               await session.sendMessage(
                 `Vous suivez déjà l'organisation *${orgResults[0].nom}* ✅`,
-                mainMenuKeyboard
+                session.mainMenuKeyboard
               );
               return;
             }
@@ -162,13 +161,13 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                       await session.user.save();
                       await session.sendMessage(
                         `Vous suivez maintenant l'organisation *${orgResults[0].nom}* ✅`,
-                        mainMenuKeyboard
+                        session.mainMenuKeyboard
                       );
                       return;
                     } else if (new RegExp(/non/i).test(tgMsg2.text)) {
                       await session.sendMessage(
                         `L'organisation *${orgResults[0].nom}* n'a pas été ajoutée aux suivis.`,
-                        mainMenuKeyboard
+                        session.mainMenuKeyboard
                       );
                       return;
                     }
@@ -176,7 +175,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   // If msg.txt undefined or not "oui"/"non"
                   await session.sendMessage(
                     `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-                    mainMenuKeyboard
+                    session.mainMenuKeyboard
                   );
                   return;
                 })();
@@ -216,7 +215,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   if (answers === null || answers.length == 0) {
                     await session.sendMessage(
                       `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-                      mainMenuKeyboard
+                      session.mainMenuKeyboard
                     );
                     return;
                   }
@@ -254,7 +253,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                     `Vous suivez les organisations: ✅\n${orgResults
                       .map((org) => `\n   - *${org.nom}*`)
                       .join("\n")}`,
-                    mainMenuKeyboard
+                    session.mainMenuKeyboard
                   );
                 })();
               }

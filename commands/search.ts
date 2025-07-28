@@ -12,17 +12,13 @@ import {
   extractTelegramSession,
   TelegramSession
 } from "../entities/TelegramSession.ts";
-import { mainMenuKeyboard } from "../utils/keyboards.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
   followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
 ) => {
   return followedPeople.some((followedPerson) => {
-    return (
-      followedPerson.peopleId.toString() ===
-      (person._id as Types.ObjectId).toString()
-    );
+    return followedPerson.peopleId.toString() === person._id.toString();
   });
 };
 
@@ -31,9 +27,15 @@ export const searchCommand = async (session: ISession): Promise<void> => {
 
   const tgSession: TelegramSession | undefined = await extractTelegramSession(
     session,
-    true
+    false
   );
-  if (tgSession == null) return;
+  if (tgSession == null) {
+    await session.sendMessage(
+      'Utilisez la fonction recherche à l\'aide de la commande suivante:\nEx: "Rechercher Emmanuel Macron"',
+      session.mainMenuKeyboard
+    );
+    return;
+  }
 
   const tgBot = tgSession.telegramBot;
 
@@ -55,7 +57,7 @@ export const searchCommand = async (session: ISession): Promise<void> => {
         if (tgMsg.text == undefined || tgMsg.text.length == 0) {
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            mainMenuKeyboard
+            session.mainMenuKeyboard
           );
           return;
         }
@@ -76,7 +78,7 @@ export const fullHistoryCommand = async (
     return;
   }
 
-  const personName = msg.split(" ").slice(2).join(" ");
+  const personName = msg.split(" ").slice(1).join(" ");
 
   if (personName.length == 0) {
     await session.sendMessage("Saisie incorrecte. Veuillez réessayer.", [
@@ -134,8 +136,8 @@ async function searchPersonHistory(
       isUserFollowingPerson = false;
     } else {
       const people: IPeople | null = await People.findOne({
-        nom: JORFRes_data[0].nom,
-        prenom: JORFRes_data[0].prenom
+        nom: { $regex: `^${JORFRes_data[0].nom}$`, $options: "i" }, // regex makes the search case-insensitive
+        prenom: { $regex: `^${JORFRes_data[0].prenom}$`, $options: "i" }
       });
       isUserFollowingPerson = !(
         people === null ||
@@ -157,7 +159,7 @@ async function searchPersonHistory(
         text += `${String(nbRecords - 2)} autres mentions au JORF non affichées.\n\n`;
         temp_keyboard.unshift([
           {
-            text: `Historique de ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`
+            text: `Historique ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`
           }
         ]);
       }
@@ -198,7 +200,7 @@ export const followCommand = async (
     if (personName.length == 0) {
       await session.sendMessage(
         "Saisie incorrecte. Veuillez réessayer.",
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -211,7 +213,7 @@ export const followCommand = async (
     if (JORFRes.length == 0) {
       await session.sendMessage(
         "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement",
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -224,7 +226,7 @@ export const followCommand = async (
 
     if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
       user.followedPeople.push({
-        peopleId: people._id as Types.ObjectId,
+        peopleId: people._id,
         lastUpdate: new Date(Date.now())
       });
       await user.save();
@@ -274,7 +276,7 @@ export const manualFollowCommand = async (
   if (session.user?.checkFollowedName(nomPrenom)) {
     await session.sendMessage(
       `Vous suivez déjà *${prenomNom}* ✅`,
-      mainMenuKeyboard
+      session.mainMenuKeyboard
     );
     return;
   }
@@ -299,7 +301,7 @@ export const manualFollowCommand = async (
         if (tgMsg2.text === undefined) {
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            mainMenuKeyboard
+            session.mainMenuKeyboard
           );
           return;
         }
@@ -312,13 +314,13 @@ export const manualFollowCommand = async (
         } else if (new RegExp(/non/i).test(tgMsg2.text)) {
           await session.sendMessage(
             `Ok, aucun ajout n'a été effectué. 👌`,
-            mainMenuKeyboard
+            session.mainMenuKeyboard
           );
           return;
         }
         await session.sendMessage(
           `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-          mainMenuKeyboard
+          session.mainMenuKeyboard
         );
       })();
     }
