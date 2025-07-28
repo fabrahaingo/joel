@@ -1,5 +1,5 @@
 import mongoose, { model } from "mongoose";
-import { IBlocked } from "../types.js";
+import { IBlocked } from "../types.ts";
 const Schema = mongoose.Schema;
 
 const BlockedSchema = new Schema<IBlocked>(

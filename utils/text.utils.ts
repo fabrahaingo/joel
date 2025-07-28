@@ -33,7 +33,11 @@ export function parseIntAnswers(
   const answers = answer
     .split(/[ ,\-;:]/)
     .map((s) => parseInt(s))
-    .filter((i) => i && !isNaN(i) && i <= maxAllowedValue);
+    .filter((i) => i && !isNaN(i) && i <= maxAllowedValue)
+    .reduce((acc, i) => {
+      if (!acc.includes(i)) acc.push(i);
+      return acc;
+    }, []);
 
   if (answers.length == 0) {
     return null;

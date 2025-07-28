@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { ErrorMessages } from "./entities/ErrorMessages.js";
+import { ErrorMessages } from "./entities/ErrorMessages.ts";
 
 export const mongodbConnect = async () => {
   if (!process.env.MONGODB_URI) {
