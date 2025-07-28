@@ -25,14 +25,14 @@ const PeopleSchema = new Schema<IPeople, PeopleModel>(
 
 PeopleSchema.static(
   "firstOrCreate",
-  async function (tgPeople: { nom: string; prenom: string }) {
+  async function (peopleInfo: { nom: string; prenom: string }) {
     let people: IPeople | null = await this.findOne({
-      nom: { $regex: `^${tgPeople.nom}$`, $options: "i" }, // regex makes the search case-insensitive
-      prenom: { $regex: `^${tgPeople.prenom}$`, $options: "i" }
+      nom: { $regex: `^${peopleInfo.nom}$`, $options: "i" }, // regex makes the search case-insensitive
+      prenom: { $regex: `^${peopleInfo.prenom}$`, $options: "i" }
     });
     people ??= await this.create({
-      nom: tgPeople.nom,
-      prenom: tgPeople.prenom
+      nom: peopleInfo.nom,
+      prenom: peopleInfo.prenom
     });
 
     return people;
