@@ -46,7 +46,9 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
 
   const followedOrganisations: IOrganisation[] = await Organisation.find({
     wikidataId: {
-      $in: user.followedOrganisations.map((o) => o.wikidataId)
+      $or: user.followedOrganisations.map((o) => ({
+        wikidataId: { $regex: new RegExp(`^${o.wikidataId}$`), $options: "i" }
+      }))
     }
   });
 
