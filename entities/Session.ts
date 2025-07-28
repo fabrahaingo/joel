@@ -2,7 +2,8 @@ import { ISession, IUser, MessageApp } from "../types.ts";
 import { USER_SCHEMA_VERSION } from "../models/User.ts";
 import User from "../models/User.ts";
 import { IRawUser } from "../models/LegacyUser.ts";
-import { sendWhatsAppMessage } from "../WhatsAppApp.ts";
+import { sendTelegramMessage } from "./TelegramSession.ts";
+import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;

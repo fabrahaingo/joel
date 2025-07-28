@@ -21,6 +21,8 @@ import {
 } from "whatsapp-api-js/messages";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ServerMessageResponse } from "whatsapp-api-js/types";
+import { getWhatsAppAPI } from "../WhatsAppApp.ts";
+import { ErrorMessages } from "./ErrorMessages.ts";
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
@@ -155,4 +157,23 @@ export async function extractWhatsAppSession(
   }
 
   return session;
+}
+
+const { WHATSAPP_PHONE_ID } = process.env;
+
+const whatsAppAPI = getWhatsAppAPI();
+
+export async function sendWhatsAppMessage(
+  userPhoneId: number,
+  message: string
+) {
+  if (WHATSAPP_PHONE_ID === undefined) {
+    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+  }
+
+  await whatsAppAPI.sendMessage(
+    WHATSAPP_PHONE_ID,
+    String(userPhoneId),
+    new Text(message)
+  );
 }

@@ -5,11 +5,14 @@ import {
   KeyboardType,
   MessageApp
 } from "../types.ts";
-import TelegramBot from "node-telegram-bot-api";
+import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
+import Blocked from "../models/Blocked.ts";
 import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
+import { ErrorMessages } from "./ErrorMessages.ts";
+import axios, { AxiosError, isAxiosError } from "axios";
 
 const mainMenuKeyboardTelegram: ButtonElement[][] = [
   [{ text: "🔎 Rechercher" }, { text: "👨‍💼 Ajouter une fonction" }],
@@ -147,4 +150,53 @@ export async function extractTelegramSession(
   }
 
   return session;
+}
+
+// Extend the AxiosError with the response.data.description field
+interface TelegramAPIError {
+  message: string;
+  status: number;
+  description?: string;
+}
+
+const BOT_TOKEN = process.env.BOT_TOKEN;
+
+export async function sendTelegramMessage(chatId: number, message: string) {
+  const messagesArray = splitText(message, 3000);
+
+  if (BOT_TOKEN === undefined) {
+    throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
+  }
+
+  for (const message of messagesArray) {
+    await axios
+      .post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        chat_id: chatId,
+        text: message,
+        parse_mode: "markdown",
+        link_preview_options: {
+          is_disabled: true
+        }
+      })
+      .catch(async (err: unknown) => {
+        if (isAxiosError(err)) {
+          const error = err as AxiosError<TelegramAPIError>;
+          if (
+            error.response?.data.description !== undefined &&
+            error.response.data.description ===
+              "Forbidden: bot was blocked by the user"
+          ) {
+            await umami.log({ event: "/user-blocked-joel" });
+            await new Blocked({
+              chatId: chatId as ChatId
+            }).save();
+            return;
+          }
+        }
+        console.log(err);
+      });
+
+    // prevent hitting the Telegram API rate limit
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
 }
