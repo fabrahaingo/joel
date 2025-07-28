@@ -1,24 +1,20 @@
-import umami from "../utils/umami.js";
+import umami from "../utils/umami.ts";
 import TelegramBot from "node-telegram-bot-api";
-import Organisation from "../models/Organisation.js";
-import User from "../models/User.js";
-import { IOrganisation, ISession, IUser, WikidataId } from "../types.js";
+import Organisation from "../models/Organisation.ts";
+import User from "../models/User.ts";
+import { IOrganisation, ISession, IUser, WikidataId } from "../types.ts";
 import axios from "axios";
-import { parseIntAnswers } from "../utils/text.utils.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { parseIntAnswers } from "../utils/text.utils.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
+} from "../entities/TelegramSession.ts";
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
   wikidataId: WikidataId
 ): boolean => {
-  return (
-    user.followedOrganisations?.some((o) => o.wikidataId === wikidataId) ??
-    false
-  );
+  return user.followedOrganisations.some((o) => o.wikidataId === wikidataId);
 };
 
 interface WikiDataAPIResponse {
@@ -61,16 +57,13 @@ async function searchOrganisationWikidataId(
   }
 }
 
-export const followOrganisationCommand = async (
-  session: ISession,
-  _msg: never
-) => {
+export const followOrganisationCommand = async (session: ISession) => {
   await session.log({ event: "/follow-organisation" });
   try {
     if (session.user == null) {
       await session.sendMessage(
         `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -105,7 +98,7 @@ Exemples:
           if (tgMsg1.text === undefined || tgMsg1.text === "") {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
@@ -115,14 +108,13 @@ Exemples:
           if (orgResults.length == 0) {
             await session.sendMessage(
               `Votre recherche n'a donné aucun résultat.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
 
           if (orgResults.length == 1) {
             session.user = await User.findOrCreate(session);
-            session.user.followedOrganisations ??= [];
 
             // If the one result is already followed
             if (
@@ -134,7 +126,7 @@ Exemples:
               await new Promise((resolve) => setTimeout(resolve, 500));
               await session.sendMessage(
                 `Vous suivez déjà l'organisation *${orgResults[0].nom}* ✅`,
-                mainMenuKeyboard
+                session.mainMenuKeyboard
               );
               return;
             }
@@ -154,6 +146,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
               followConfirmation.message_id,
               (tgMsg2: TelegramBot.Message) => {
                 void (async () => {
+                  if (session.user == null) return;
                   if (tgMsg2.text !== undefined) {
                     if (new RegExp(/oui/i).test(tgMsg2.text)) {
                       const organisation: IOrganisation =
@@ -161,7 +154,6 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                           nom: orgResults[0].nom,
                           wikidataId: orgResults[0].wikidataId
                         });
-                      session.user.followedOrganisations ??= [];
                       session.user.followedOrganisations.push({
                         wikidataId: organisation.wikidataId,
                         lastUpdate: new Date()
@@ -169,13 +161,13 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                       await session.user.save();
                       await session.sendMessage(
                         `Vous suivez maintenant l'organisation *${orgResults[0].nom}* ✅`,
-                        mainMenuKeyboard
+                        session.mainMenuKeyboard
                       );
                       return;
                     } else if (new RegExp(/non/i).test(tgMsg2.text)) {
                       await session.sendMessage(
                         `L'organisation *${orgResults[0].nom}* n'a pas été ajoutée aux suivis.`,
-                        mainMenuKeyboard
+                        session.mainMenuKeyboard
                       );
                       return;
                     }
@@ -183,7 +175,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   // If msg.txt undefined or not "oui"/"non"
                   await session.sendMessage(
                     `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-                    mainMenuKeyboard
+                    session.mainMenuKeyboard
                   );
                   return;
                 })();
@@ -223,7 +215,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   if (answers === null || answers.length == 0) {
                     await session.sendMessage(
                       `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-                      mainMenuKeyboard
+                      session.mainMenuKeyboard
                     );
                     return;
                   }
@@ -231,7 +223,6 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   await session.sendTypingAction();
 
                   const user = await User.findOrCreate(session);
-                  user.followedOrganisations ??= [];
 
                   for (const answer of answers) {
                     // Don't call JORF if the organisation is already followed
@@ -262,7 +253,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                     `Vous suivez les organisations: ✅\n${orgResults
                       .map((org) => `\n   - *${org.nom}*`)
                       .join("\n")}`,
-                    mainMenuKeyboard
+                    session.mainMenuKeyboard
                   );
                 })();
               }

@@ -1,10 +1,6 @@
-import { ISession } from "../types.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+import { ISession } from "../types.ts";
 
-export const startCommand = async (
-  session: ISession,
-  _msg: never
-): Promise<void> => {
+export const startCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/start" });
   try {
     await session.sendTypingAction();
@@ -19,7 +15,7 @@ export const startCommand = async (
     const text = `\n\u{1F41D} ${botName ?? "undefined"} vous permet de *consulter et suivre les évolutions de postes* de vos collègues et connaissances au sein de l'administration française.
 		\nPour rester au courant des *nouveautés*, des *corrections* de bugs ainsi que des *améliorations* de JOEL, rejoignez notre channel officiel [@${botChannel ?? "MISSING BOTNAME"}](https://t.me/${botChannel ?? "MISSING BOTCHANNEL"})`;
 
-    await session.sendMessage(text, mainMenuKeyboard);
+    await session.sendMessage(text, session.mainMenuKeyboard);
   } catch (error) {
     console.log(error);
   }

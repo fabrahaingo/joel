@@ -1,20 +1,23 @@
-import { CommandType } from "../types.js";
+import { CommandType } from "../types.ts";
 
-import { followOrganisationCommand } from "./followOrganisation.js";
+import { followOrganisationCommand } from "./followOrganisation.ts";
 import {
   followCommand,
   fullHistoryCommand,
   manualFollowCommand,
   searchCommand
-} from "./search.js";
-import { enaCommand, promosCommand } from "./ena.js";
-import { statsCommand } from "./stats.js";
-import { defaultCommand } from "./default.js";
-import { startCommand } from "./start.js";
-import { deleteProfileCommand } from "./deleteProfile.js";
-import { helpCommand } from "./help.js";
-import { followFunctionCommand } from "./followFunction.js";
-import { listCommand, unfollowCommand } from "./list.js";
+} from "./search.ts";
+import { enaCommand, promosCommand } from "./ena.ts";
+import { statsCommand } from "./stats.ts";
+import { defaultCommand } from "./default.ts";
+import { startCommand } from "./start.ts";
+import { deleteProfileCommand } from "./deleteProfile.ts";
+import { helpCommand } from "./help.ts";
+import {
+  followFunctionCommand,
+  followFunctionFromStrCommand
+} from "./followFunction.ts";
+import { listCommand, unfollowCommand } from "./list.ts";
 
 export const commands: CommandType[] = [
   {
@@ -22,7 +25,7 @@ export const commands: CommandType[] = [
     action: startCommand
   },
   {
-    regex: /🔎 Rechercher$|🔎 Nouvelle recherche$/,
+    regex: /Rechercher$|🔎 Rechercher$|🔎 Nouvelle recherche$/,
     action: searchCommand
   },
   {
@@ -30,8 +33,12 @@ export const commands: CommandType[] = [
     action: manualFollowCommand
   },
   {
-    regex: /Historique de \s*(.*)/i,
+    regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
     action: fullHistoryCommand
+  },
+  {
+    regex: /SuivreF \s*(.*)/i,
+    action: followFunctionFromStrCommand
   },
   {
     regex: /Suivre \s*(.*)/i,
@@ -42,15 +49,15 @@ export const commands: CommandType[] = [
     action: unfollowCommand
   },
   {
-    regex: /🧐 Lister mes suivis$/,
+    regex: /🧐 Lister mes suivis$|🧐 Mes suivis$/,
     action: listCommand
   },
   {
-    regex: /❓ Aide/,
+    regex: /❓ Aide|❓ Aide & Contact/,
     action: helpCommand
   },
   {
-    regex: /👨‍💼 Ajouter une fonction/,
+    regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction/,
     action: followFunctionCommand
   },
   {
@@ -67,7 +74,7 @@ export const commands: CommandType[] = [
   },
   {
     regex:
-      /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization/i,
+      /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization|🏛️️ Ajout Organisation/i,
     action: followOrganisationCommand
   },
   {

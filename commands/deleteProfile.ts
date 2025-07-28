@@ -1,22 +1,20 @@
-import { mainMenuKeyboard } from "../utils/keyboards.js";
-import User from "../models/User.js";
-import { ISession } from "../types.js";
+import User from "../models/User.ts";
+import { ISession } from "../types.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
+} from "../entities/TelegramSession.ts";
 import TelegramBot from "node-telegram-bot-api";
 
 export const deleteProfileCommand = async (
-  session: ISession,
-  _msg: never
+  session: ISession
 ): Promise<void> => {
   await session.log({ event: "/delete-profile" });
   try {
     if (session.user == null) {
       await session.sendMessage(
         `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
-        mainMenuKeyboard
+        session.mainMenuKeyboard
       );
       return;
     }
@@ -46,19 +44,22 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
       question.message_id,
       (tgMsg: TelegramBot.Message) => {
         void (async () => {
+          if (session.user == null) return;
           if (tgMsg.text === "SUPPRIMER MON COMPTE") {
             await User.deleteOne({
-              _id: session.chatId,
-              chatId: session.chatId
+              _id: session.user._id
             });
             await session.sendMessage(
               `🗑 Votre profil a bien été supprimé ! 👋
   ⚠️ Un profil vierge sera créé lors de votre prochaine interaction avec JOEL ⚠️`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             await session.log({ event: "/user-deletion-self" });
           } else {
-            await session.sendMessage("Suppression annulée.", mainMenuKeyboard);
+            await session.sendMessage(
+              "Suppression annulée.",
+              session.mainMenuKeyboard
+            );
           }
         })();
       }
