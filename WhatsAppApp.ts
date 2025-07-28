@@ -8,7 +8,10 @@ import { ErrorMessages } from "./entities/ErrorMessages.ts";
 
 import { mongodbConnect } from "./db.ts";
 import umami from "./utils/umami.ts";
-import { WhatsAppSession } from "./entities/WhatsAppSession.ts";
+import {
+  WHATSAPP_API_VERSION,
+  WhatsAppSession
+} from "./entities/WhatsAppSession.ts";
 import { commands } from "./commands/Commands.ts";
 
 const {
@@ -36,7 +39,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     token: WHATSAPP_USER_TOKEN,
     appSecret: WHATSAPP_APP_SECRET,
     webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-    v: "v23.0"
+    v: WHATSAPP_API_VERSION
   });
 }
 

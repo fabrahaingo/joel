@@ -10,7 +10,6 @@ import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ServerMessageResponse } from "whatsapp-api-js/types";
-import { getWhatsAppAPI } from "../WhatsAppApp.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import {
   ActionButtons,
@@ -23,6 +22,8 @@ import {
   Text
 } from "whatsapp-api-js/messages";
 import { splitText } from "../utils/text.utils.ts";
+
+export const WHATSAPP_API_VERSION = "v23.0";
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
@@ -161,9 +162,8 @@ export async function extractWhatsAppSession(
 
 const { WHATSAPP_PHONE_ID } = process.env;
 
-const whatsAppAPI = getWhatsAppAPI();
-
 export async function sendWhatsAppMessage(
+  whatsAppAPI: WhatsAppAPI,
   userPhoneId: number,
   message: string
 ) {
