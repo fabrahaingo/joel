@@ -8,7 +8,10 @@ import {
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
-import { splitText } from "../utils/text.utils.ts";
+import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
+import { ServerMessageResponse } from "whatsapp-api-js/types";
+import { getWhatsAppAPI } from "../WhatsAppApp.ts";
+import { ErrorMessages } from "./ErrorMessages.ts";
 import {
   ActionButtons,
   ActionList,
@@ -19,10 +22,7 @@ import {
   Row,
   Text
 } from "whatsapp-api-js/messages";
-import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
-import { ServerMessageResponse } from "whatsapp-api-js/types";
-import { getWhatsAppAPI } from "../WhatsAppApp.ts";
-import { ErrorMessages } from "./ErrorMessages.ts";
+import { splitText } from "../utils/text.utils.ts";
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
