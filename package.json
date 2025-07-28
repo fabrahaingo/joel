@@ -13,10 +13,10 @@
   },
   "dependencies": {
     "axios": "^1.11.0",
-    "dotenv": "^17.2.0",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "mongodb": "^6.18.0",
-    "mongoose": "^8.16.4",
+    "mongoose": "^8.16.5",
     "ngrok": "^5.0.0-beta.2",
     "node-telegram-bot-api": "^0.66.0",
     "nodemon": "^3.1.10",
@@ -24,13 +24,13 @@
     "whatsapp-api-js": "^6.0.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.31.0",
+    "@eslint/js": "^9.32.0",
     "@jest/globals": "^30.0.5",
     "@tsconfig/node24": "^24.0.1",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
     "@types/node-telegram-bot-api": "^0.64.9",
-    "eslint": "^9.31.0",
+    "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.3",
     "jest": "^30.0.5",
