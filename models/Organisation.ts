@@ -24,14 +24,14 @@ OrganisationSchema.static(
   "firstOrCreate",
   async function (args: { nom: string; wikidataId: WikidataId }) {
     const organization: IOrganisation | null = await this.findOne({
-      wikidataId: args.wikidataId
+      wikidataId: { $regex: new RegExp(`^${args.wikidataId}$`), $options: "i" }
     });
 
     if (organization === null) {
       await umami.log({ event: "/new-organisation" });
       const newOrganization: IOrganisation = new this({
         nom: args.nom,
-        wikidataId: args.wikidataId
+        wikidataId: args.wikidataId.toUpperCase()
       });
       await newOrganization.save();
       return newOrganization;

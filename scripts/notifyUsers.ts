@@ -340,7 +340,10 @@ export async function notifyOrganisationsUpdates(
 
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   const updatedPeopleList: IPeople[] = await People.find({
-    $or: uniqueMinimalNameInfo(updatedRecords)
+    $or: updatedRecords.map((p) => ({
+      prenom: { $regex: new RegExp(`^${p.prenom}$`), $options: "i" },
+      nom: { $regex: new RegExp(`^${p.nom}$`), $options: "i" }
+    }))
   });
 
   // Fetch all users following at least one of the updated People
