@@ -1,6 +1,13 @@
 import { Schema as _Schema, model } from "mongoose";
-import { IPeople, PeopleModel } from "../types.js";
+import { IPeople, PeopleModel } from "../types.ts";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 const Schema = _Schema;
+
+export interface LegacyPeople_V1 {
+  nom: string;
+  prenom: string;
+  lastKnownPosition: JORFSearchItem;
+}
 
 const PeopleSchema = new Schema<IPeople, PeopleModel>(
   {
@@ -18,15 +25,15 @@ const PeopleSchema = new Schema<IPeople, PeopleModel>(
 
 PeopleSchema.static(
   "firstOrCreate",
-  async function (tgPeople: { nom: string; prenom: string }) {
+  async function (peopleInfo: { nom: string; prenom: string }) {
     let people: IPeople | null = await this.findOne({
-      nom: tgPeople.nom,
-      prenom: tgPeople.prenom
+      nom: { $regex: `^${peopleInfo.nom}$`, $options: "i" }, // regex makes the search case-insensitive
+      prenom: { $regex: `^${peopleInfo.prenom}$`, $options: "i" }
     });
-    people ??= await new this({
-      nom: tgPeople.nom,
-      prenom: tgPeople.prenom
-    }).save();
+    people ??= await this.create({
+      nom: peopleInfo.nom,
+      prenom: peopleInfo.prenom
+    });
 
     return people;
   }

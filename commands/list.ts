@@ -1,19 +1,24 @@
-import People from "../models/People.js";
+import People from "../models/People.ts";
 import {
   FunctionTags,
   getFunctionsFromValues
-} from "../entities/FunctionTags.js";
-import { IOrganisation, IPeople, ISession, IUser } from "../types.js";
-import Organisation from "../models/Organisation.js";
-import { mainMenuKeyboard } from "../utils/keyboards.js";
+} from "../entities/FunctionTags.ts";
+import {
+  ButtonElement,
+  IOrganisation,
+  IPeople,
+  ISession,
+  IUser
+} from "../types.ts";
+import Organisation from "../models/Organisation.ts";
 import {
   extractTelegramSession,
   TelegramSession
-} from "../entities/TelegramSession.js";
+} from "../entities/TelegramSession.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { parseIntAnswers } from "../utils/text.utils.js";
+import { parseIntAnswers } from "../utils/text.utils.ts";
 import { Types } from "mongoose";
-import User from "../models/User.js";
+import User from "../models/User.ts";
 
 interface UserFollows {
   functions: FunctionTags[];
@@ -39,24 +44,27 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     return 0;
   });
 
-  user.followedOrganisations ??= [];
   const followedOrganisations: IOrganisation[] = await Organisation.find({
     wikidataId: {
-      $in: user.followedOrganisations.map((o) => o.wikidataId)
+      $or: user.followedOrganisations.map((o) => ({
+        wikidataId: { $regex: new RegExp(`^${o.wikidataId}$`), $options: "i" }
+      }))
     }
-  })
-    .collation({ locale: "fr" })
-    .sort({ nom: 1 });
+  });
+
+  followedOrganisations.sort((a, b) => {
+    if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
+    if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;
+    return 0;
+  });
 
   const followedPeoples: IPeople[] = await People.find({
     _id: { $in: user.followedPeople.map((p) => p.peopleId) }
-  })
-    .collation({ locale: "fr" })
-    .lean();
+  });
 
-  user.followedNames ??= [];
   const followedPeopleTab: {
     nomPrenom: string;
+    prenomNom?: string;
     peopleId?: Types.ObjectId;
     JORFSearchLink?: string;
   }[] = [];
@@ -80,13 +88,13 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   });
 
   return {
-    functions: followedFunctions,
+    functions: followedFunctions as FunctionTags[],
     organisations: followedOrganisations,
     peopleAndNames: followedPeopleTab
   };
 }
 
-export const listCommand = async (session: ISession, _msg: never) => {
+export const listCommand = async (session: ISession) => {
   await session.log({ event: "/list" });
 
   try {
@@ -94,7 +102,7 @@ export const listCommand = async (session: ISession, _msg: never) => {
 
     // We only want to create a user upon use of the follow function
     if (session.user == null) {
-      await session.sendMessage(noDataText, mainMenuKeyboard);
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
@@ -104,7 +112,7 @@ export const listCommand = async (session: ISession, _msg: never) => {
       userFollows.organisations.length +
       userFollows.peopleAndNames.length;
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, mainMenuKeyboard);
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
     }
 
@@ -115,11 +123,14 @@ export const listCommand = async (session: ISession, _msg: never) => {
       text += `Vous suivez ${String(userFollows.functions.length)} fonction${userFollows.functions.length > 1 ? "s" : ""} : \n\n`;
       const functionsKeys = getFunctionsFromValues(userFollows.functions);
       for (; i < userFollows.functions.length; i++) {
-        text += `${String(
-          i + 1
-        )}. *${functionsKeys[i]}* - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
-          userFollows.functions[i]
-        )})\n\n`;
+        text += `${String(i + 1)}. *${functionsKeys[i]}*`;
+
+        if (session.messageApp === "Telegram")
+          text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
+            userFollows.functions[i]
+          )})`;
+
+        text += `\n\n`;
       }
     }
 
@@ -127,11 +138,14 @@ export const listCommand = async (session: ISession, _msg: never) => {
     if (userFollows.organisations.length > 0) {
       text += `Vous suivez ${String(userFollows.organisations.length)} organisation${userFollows.organisations.length > 1 ? "s" : ""} : \n\n`;
       for (; k < userFollows.organisations.length; k++) {
-        text += `${String(
-          i + k + 1
-        )}. *${userFollows.organisations[k].nom}* - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(
-          userFollows.organisations[k].wikidataId
-        )})\n\n`;
+        text += `${String(i + k + 1)}. *${userFollows.organisations[k].nom}*`;
+
+        if (session.messageApp === "Telegram")
+          text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(
+            userFollows.organisations[k].wikidataId
+          )})\n\n`;
+
+        text += `\n\n`;
       }
     }
 
@@ -142,7 +156,9 @@ export const listCommand = async (session: ISession, _msg: never) => {
         const followedName = userFollows.peopleAndNames[j];
         text += `${String(i + k + j + 1)}. *${followedName.nomPrenom}* - `;
         if (followedName.JORFSearchLink !== undefined) {
-          text += `[JORFSearch](${followedName.JORFSearchLink})\n`;
+          if (session.messageApp === "Telegram")
+            text += `[JORFSearch](${followedName.JORFSearchLink})`;
+          text += `\n`;
         } else {
           text += `Suivi manuel\n`;
         }
@@ -163,16 +179,73 @@ export const listCommand = async (session: ISession, _msg: never) => {
   }
 };
 
-export const unfollowCommand = async (session: ISession, _msg: never) => {
+export const unfollowCommand = async (session: ISession) => {
   try {
     await session.log({ event: "/unfollow" });
     await session.sendTypingAction();
 
     // We only want to create a user upon use of the follow function
     if (session.user == null) {
-      await session.sendMessage(noDataText, mainMenuKeyboard);
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
     }
+
+    switch (session.messageApp) {
+      case "Telegram": {
+        await unfollowTelegram(session);
+        return;
+      }
+
+      case "WhatsApp": {
+        await unfollowMenuWhatsApp(session);
+        return;
+      }
+      default:
+        throw new Error("Unknown message app");
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const unfollowMenuWhatsApp = async (session: ISession) => {
+  try {
+    await session.sendTypingAction();
+
+    if (session.user == null) return;
+
+    const userFollows = await getAllUserFollowsOrdered(session.user);
+
+    let unfollowButtons: ButtonElement[] = [];
+
+    unfollowButtons = unfollowButtons.concat(
+      getFunctionsFromValues(userFollows.functions).map((f) => ({ text: f }))
+    );
+
+    unfollowButtons = unfollowButtons.concat(
+      userFollows.organisations.map((f) => ({ text: f.nom }))
+    );
+
+    unfollowButtons = unfollowButtons.concat(
+      userFollows.peopleAndNames.map((p) => ({ text: p.nomPrenom }))
+    );
+
+    await session.sendMessage(
+      "Choisissez un contact à retirer",
+      [unfollowButtons.map((b) => ({ text: `Retirer ${b.text}` }))],
+      "List"
+    );
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const unfollowTelegram = async (session: ISession) => {
+  try {
+    await session.sendTypingAction();
+
+    // We only want to create a user upon use of the follow function
+    if (session.user == null) return;
     const userFollows = await getAllUserFollowsOrdered(session.user);
 
     const followTotal =
@@ -180,7 +253,7 @@ export const unfollowCommand = async (session: ISession, _msg: never) => {
       userFollows.organisations.length +
       userFollows.peopleAndNames.length;
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, mainMenuKeyboard);
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
     }
 
@@ -211,7 +284,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
           if (session.user == undefined) return;
 
           if (tgMsg.text == "/list") {
-            await listCommand(session, _msg);
+            await listCommand(session);
             return;
           }
 
@@ -220,7 +293,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.
 👎 Veuillez essayer de nouveau la commande /unfollow.`,
-              mainMenuKeyboard
+              session.mainMenuKeyboard
             );
             return;
           }
@@ -278,7 +351,8 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
             (tab: number[], idx) => {
               if (userFollows.peopleAndNames[idx].peopleId !== undefined)
                 return tab;
-              session.user.followedNames ??= [];
+              if (session.user == null) return tab;
+
               const idInFollowedNameTab = session.user.followedNames.findIndex(
                 (name) => name === userFollows.peopleAndNames[idx].nomPrenom
               );
@@ -294,122 +368,141 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
             []
           );
 
-          let text = "";
-
-          const unfollowedFunctionsKeys =
-            getFunctionsFromValues(unfollowedFunctions);
-
-          const unfollowedTotal =
-            unfollowedFunctions.length +
-            unfollowedOrganisations.length +
-            unfollowedPeopleIdx.length;
-
-          // If only 1 item unfollowed
-          if (unfollowedTotal === 1) {
-            if (unfollowedFunctions.length === 1) {
-              text += `Vous ne suivez plus la fonction *${
-                unfollowedFunctionsKeys[0]
-              }* 🙅‍♂️`;
-            } else if (unfollowedOrganisations.length === 1) {
-              text += `Vous ne suivez plus l'organisation *${unfollowedOrganisations[0].nom}* 🙅‍♂️`;
-            } else if (unfollowedPrenomNomTab.length === 1) {
-              text += `Vous ne suivez plus la personne *${unfollowedPrenomNomTab[0]}* 🙅‍♂️`;
-            }
-          } else if (unfollowedTotal === unfollowedFunctions.length) {
-            // If only 1 type of unfollowed items: functions
-            text +=
-              "Vous ne suivez plus les fonctions 🙅‍ :" +
-              unfollowedFunctions
-                .map((_fct, i) => `\n - *${unfollowedFunctionsKeys[i]}*`)
-                .join("");
-          } else if (unfollowedTotal === unfollowedOrganisations.length) {
-            // If only 1 type of unfollowed items: organisations
-            text +=
-              "Vous ne suivez plus les organisations 🙅‍ :" +
-              unfollowedOrganisations
-                .map((org) => `\n - *${org.nom}*`)
-                .join("");
-          } else if (unfollowedTotal === unfollowedPrenomNomTab.length) {
-            // If only 1 type of unfollowed items: people
-            text +=
-              "Vous ne suivez plus les personnes 🙅‍ :" +
-              unfollowedPrenomNomTab.map((p) => `\n - *${p}*`).join("");
-          } else {
-            // Mixed types of unfollowed items
-            text += "Vous ne suivez plus les items 🙅‍ :";
-            if (unfollowedFunctions.length > 0) {
-              if (unfollowedFunctions.length === 1) {
-                text += `\n- Fonction : *${unfollowedFunctionsKeys[0]}*`;
-              } else {
-                text +=
-                  `\n- Fonctions :` +
-                  unfollowedFunctions
-                    .map((_fct, i) => `\n   - *${unfollowedFunctionsKeys[i]}*`)
-                    .join("");
-              }
-            }
-            if (unfollowedOrganisations.length > 0) {
-              if (unfollowedOrganisations.length === 1) {
-                text += `\n- Organisation : *${unfollowedOrganisations[0].nom}*`;
-              } else {
-                text +=
-                  `\n- Organisations :` +
-                  unfollowedOrganisations
-                    .map((org) => `\n   - *${org.nom}*`)
-                    .join("");
-              }
-            }
-            if (unfollowedPrenomNomTab.length > 0) {
-              if (unfollowedPrenomNomTab.length === 1) {
-                text += `\n- Personne : *${unfollowedPrenomNomTab[0]}`;
-              } else {
-                text +=
-                  `\n- Personnes :` +
-                  unfollowedPrenomNomTab.map((p) => `\n   - *${p}*`).join("");
-              }
-            }
-          }
-
-          session.user.followedPeople = session.user.followedPeople.filter(
-            (people) =>
-              !unfollowedPeopleId
-                .map((id) => id.toString())
-                .includes((people.peopleId as Types.ObjectId).toString())
+          await unfollowAndConfirm(
+            session,
+            unfollowedFunctions,
+            unfollowedPrenomNomTab,
+            unfollowedOrganisations,
+            unfollowedNamesIdx,
+            unfollowedPeopleId
           );
-
-          session.user.followedNames ??= [];
-
-          session.user.followedNames = session.user.followedNames.filter(
-            (_value, idx) => !unfollowedNamesIdx.includes(idx)
-          );
-
-          session.user.followedOrganisations ??= [];
-
-          session.user.followedOrganisations =
-            session.user.followedOrganisations.filter(
-              (org) =>
-                !unfollowedOrganisations
-                  .map((o) => o.wikidataId)
-                  .includes(org.wikidataId)
-            );
-
-          session.user.followedFunctions =
-            session.user.followedFunctions.filter(
-              (tag) => !unfollowedFunctions.includes(tag)
-            );
-
-          await session.user.save();
-
-          // Delete the user if it doesn't follow anything any more
-          if (session.user.followsNothing()) {
-            await User.deleteOne({ _id: session.chatId });
-            await session.log({ event: "/user-deletion-no-follow" });
-          }
-
-          await session.sendMessage(text, mainMenuKeyboard);
         })();
       }
     );
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const unfollowAndConfirm = async (
+  session: ISession,
+  unfollowedFunctions: FunctionTags[],
+  unfollowedPrenomNomTab: string[],
+  unfollowedOrganisations: IOrganisation[],
+  unfollowedNamesIdx: number[],
+  unfollowedPeopleId: Types.ObjectId[]
+) => {
+  try {
+    let text = "";
+
+    const unfollowedFunctionsKeys = getFunctionsFromValues(unfollowedFunctions);
+
+    const unfollowedTotal =
+      unfollowedFunctions.length +
+      unfollowedOrganisations.length +
+      unfollowedPeopleId.length;
+
+    // If only 1 item unfollowed
+    if (unfollowedTotal === 1) {
+      if (unfollowedFunctions.length === 1) {
+        text += `Vous ne suivez plus la fonction *${
+          unfollowedFunctionsKeys[0]
+        }* 🙅‍♂️`;
+      } else if (unfollowedOrganisations.length === 1) {
+        text += `Vous ne suivez plus l'organisation *${unfollowedOrganisations[0].nom}* 🙅‍♂️`;
+      } else if (unfollowedPrenomNomTab.length === 1) {
+        text += `Vous ne suivez plus la personne *${unfollowedPrenomNomTab[0]}* 🙅‍♂️`;
+      }
+    } else if (unfollowedTotal === unfollowedFunctions.length) {
+      // If only 1 type of unfollowed items: functions
+      text +=
+        "Vous ne suivez plus les fonctions 🙅‍ :" +
+        unfollowedFunctions
+          .map((_fct, i) => `\n - *${unfollowedFunctionsKeys[i]}*`)
+          .join("");
+    } else if (unfollowedTotal === unfollowedOrganisations.length) {
+      // If only 1 type of unfollowed items: organisations
+      text +=
+        "Vous ne suivez plus les organisations 🙅‍ :" +
+        unfollowedOrganisations.map((org) => `\n - *${org.nom}*`).join("");
+    } else if (unfollowedTotal === unfollowedPrenomNomTab.length) {
+      // If only 1 type of unfollowed items: people
+      text +=
+        "Vous ne suivez plus les personnes 🙅‍ :" +
+        unfollowedPrenomNomTab.map((p) => `\n - *${p}*`).join("");
+    } else {
+      // Mixed types of unfollowed items
+      text += "Vous ne suivez plus les items 🙅‍ :";
+      if (unfollowedFunctions.length > 0) {
+        if (unfollowedFunctions.length === 1) {
+          text += `\n- Fonction : *${unfollowedFunctionsKeys[0]}*`;
+        } else {
+          text +=
+            `\n- Fonctions :` +
+            unfollowedFunctions
+              .map((_fct, i) => `\n   - *${unfollowedFunctionsKeys[i]}*`)
+              .join("");
+        }
+      }
+      if (unfollowedOrganisations.length > 0) {
+        if (unfollowedOrganisations.length === 1) {
+          text += `\n- Organisation : *${unfollowedOrganisations[0].nom}*`;
+        } else {
+          text +=
+            `\n- Organisations :` +
+            unfollowedOrganisations
+              .map((org) => `\n   - *${org.nom}*`)
+              .join("");
+        }
+      }
+      if (unfollowedPrenomNomTab.length > 0) {
+        if (unfollowedPrenomNomTab.length === 1) {
+          text += `\n- Personne : *${unfollowedPrenomNomTab[0]}`;
+        } else {
+          text +=
+            `\n- Personnes :` +
+            unfollowedPrenomNomTab.map((p) => `\n   - *${p}*`).join("");
+        }
+      }
+    }
+
+    if (session.user == null) {
+      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      return;
+    }
+
+    session.user.followedPeople = session.user.followedPeople.filter(
+      (people) =>
+        !unfollowedPeopleId
+          .map((id) => id.toString())
+          .includes(people.peopleId.toString())
+    );
+
+    session.user.followedNames = session.user.followedNames.filter(
+      (_value, idx) => !unfollowedNamesIdx.includes(idx)
+    );
+
+    session.user.followedOrganisations =
+      session.user.followedOrganisations.filter(
+        (org) =>
+          !unfollowedOrganisations
+            .map((o) => o.wikidataId)
+            .includes(org.wikidataId)
+      );
+
+    session.user.followedFunctions = session.user.followedFunctions.filter(
+      (tag) => !unfollowedFunctions.includes(tag)
+    );
+
+    await session.user.save();
+
+    // Delete the user if it doesn't follow anything any more
+    if (session.user.followsNothing()) {
+      await User.deleteOne({ _id: session.user._id });
+      await session.log({ event: "/user-deletion-no-follow" });
+    }
+
+    await session.sendMessage(text, session.mainMenuKeyboard);
   } catch (error) {
     console.log(error);
   }

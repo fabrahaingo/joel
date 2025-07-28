@@ -1,8 +1,9 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
-import { mongodbConnect } from "./db.js";
-import { TelegramSession } from "./entities/TelegramSession.js";
-import { commands } from "./commands/Commands.js";
+import { mongodbConnect } from "./db.ts";
+import { TelegramSession } from "./entities/TelegramSession.ts";
+import { commands } from "./commands/Commands.ts";
+import umami from "./utils/umami.ts";
 
 const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN ?? "", {
   polling: true,
@@ -15,6 +16,7 @@ await (async () => {
   commands.forEach((command) => {
     bot.onText(command.regex, (tgMsg: TelegramBot.Message) => {
       void (async () => {
+        await umami.log({ event: "/message-telegram" });
         try {
           // Check if the user is known
           const tgUser: TelegramBot.User | undefined = tgMsg.from;
