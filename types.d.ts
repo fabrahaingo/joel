@@ -1,7 +1,7 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
 import umami from "./utils/umami";
-import { ButtonElement } from "./utils/keyboards.js";
+import { ButtonElement } from "./utils/keyboards.ts";
 
 export interface CommandType {
   regex: RegExp;

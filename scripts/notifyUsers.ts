@@ -16,7 +16,28 @@ import {
   uniqueMinimalNameInfo
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
-import { migrateUser, sendMessage } from "../entities/Session.js";
+import { migrateUser, sendMessage } from "../entities/Session.ts";
+import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
+import { ErrorMessages } from "../entities/ErrorMessages.ts";
+import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
+
+const { WHATSAPP_USER_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN } =
+  process.env;
+
+if (
+  WHATSAPP_USER_TOKEN === undefined ||
+  WHATSAPP_APP_SECRET === undefined ||
+  WHATSAPP_VERIFY_TOKEN === undefined
+) {
+  throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+}
+
+const whatsAppAPI = new WhatsAppAPI({
+  token: WHATSAPP_USER_TOKEN,
+  appSecret: WHATSAPP_APP_SECRET,
+  webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
+  v: WHATSAPP_API_VERSION
+});
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -575,7 +596,7 @@ async function sendNameMentionUpdate(
     if (i < nameUpdates.length - 1) notification_text += "\n\n";
   }
 
-  await sendMessage(user, notification_text);
+  await sendMessage(user, notification_text, whatsAppAPI);
 
   await umami.log({ event: "/notification-update-name" });
 }
@@ -599,7 +620,7 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
     displayName: "all"
   });
 
-  await sendMessage(user, notification_text);
+  await sendMessage(user, notification_text, whatsAppAPI);
 
   await umami.log({ event: "/notification-update-people" });
 }
@@ -643,7 +664,7 @@ async function sendOrganisationUpdate(
     notification_text += "\n";
   }
 
-  await sendMessage(user, notification_text);
+  await sendMessage(user, notification_text, whatsAppAPI);
 
   await umami.log({ event: "/notification-update-organisation" });
 }
@@ -689,7 +710,7 @@ async function sendTagUpdates(
     notification_text += "\n";
   }
 
-  await sendMessage(user, notification_text);
+  await sendMessage(user, notification_text, whatsAppAPI);
 
   await umami.log({ event: "/notification-update-function" });
 }

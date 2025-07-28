@@ -4,10 +4,7 @@ import { mongodbConnect } from "./db.ts";
 import { TelegramSession } from "./entities/TelegramSession.ts";
 import { commands } from "./commands/Commands.ts";
 import umami from "./utils/umami.ts";
-import { splitText } from "./utils/text.utils.js";
-import { ErrorMessages } from "./entities/ErrorMessages.js";
-import axios, { AxiosError, isAxiosError } from "axios";
-import Blocked from "./models/Blocked.js";
+import { ErrorMessages } from "./entities/ErrorMessages.ts";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (BOT_TOKEN === undefined)
@@ -52,50 +49,3 @@ await (async () => {
 
   console.log(`\u{2705} JOEL started successfully`);
 })();
-
-// Extend the AxiosError with the response.data.description field
-interface TelegramAPIError {
-  message: string;
-  status: number;
-  description?: string;
-}
-
-export async function sendTelegramMessage(chatId: number, message: string) {
-  const messagesArray = splitText(message, 3000);
-
-  if (BOT_TOKEN === undefined) {
-    throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
-  }
-
-  for (const message of messagesArray) {
-    await axios
-      .post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        chat_id: chatId,
-        text: message,
-        parse_mode: "markdown",
-        link_preview_options: {
-          is_disabled: true
-        }
-      })
-      .catch(async (err: unknown) => {
-        if (isAxiosError(err)) {
-          const error = err as AxiosError<TelegramAPIError>;
-          if (
-            error.response?.data.description !== undefined &&
-            error.response.data.description ===
-              "Forbidden: bot was blocked by the user"
-          ) {
-            await umami.log({ event: "/user-blocked-joel" });
-            await new Blocked({
-              chatId: chatId as ChatId
-            }).save();
-            return;
-          }
-        }
-        console.log(err);
-      });
-
-    // prevent hitting the Telegram API rate limit
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-}
