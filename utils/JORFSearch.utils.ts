@@ -1,10 +1,10 @@
 import {
   cleanJORFItems,
   JORFSearchResponse
-} from "../entities/JORFSearchResponse.js";
-import { WikidataId } from "../types.js";
+} from "../entities/JORFSearchResponse.ts";
+import { WikidataId } from "../types.ts";
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import umami from "./umami.js";
+import umami from "./umami.ts";
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
