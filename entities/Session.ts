@@ -2,6 +2,7 @@ import { ISession, IUser, MessageApp } from "../types.ts";
 import { USER_SCHEMA_VERSION } from "../models/User.ts";
 import User from "../models/User.ts";
 import { IRawUser } from "../models/LegacyUser.ts";
+import { sendWhatsAppMessage } from "../WhatsAppApp.js";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
@@ -52,5 +53,20 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
     return user;
   } else {
     throw new Error("Unknown schema version");
+  }
+}
+
+export async function sendMessage(user: IUser, message: string) {
+  switch (user.messageApp) {
+    case "Telegram":
+      await sendTelegramMessage(user.chatId, message);
+      break;
+
+    case "WhatsApp":
+      await sendWhatsAppMessage(user.chatId, message);
+      break;
+
+    default:
+      throw new Error(`MessageApp ${user.messageApp} not supported`);
   }
 }
