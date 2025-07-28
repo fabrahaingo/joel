@@ -30,7 +30,7 @@ export function parseIntAnswers(
 ): number[] {
   if (answer === undefined) return [];
 
-    return answer
+  return answer
     .split(/[ ,\-;:]/)
     .map((s) => parseInt(s))
     .filter((i) => i && !isNaN(i) && i <= maxAllowedValue)
