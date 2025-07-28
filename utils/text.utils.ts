@@ -30,11 +30,11 @@ export function parseIntAnswers(
 ) {
   if (answer === undefined) return null;
 
-  const answers = answer
+  const answers: number[] = answer
     .split(/[ ,\-;:]/)
     .map((s) => parseInt(s))
     .filter((i) => i && !isNaN(i) && i <= maxAllowedValue)
-    .reduce((acc, i) => {
+    .reduce((acc: number[], i) => {
       if (!acc.includes(i)) acc.push(i);
       return acc;
     }, []);
