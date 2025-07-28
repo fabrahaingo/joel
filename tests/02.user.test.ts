@@ -125,6 +125,13 @@ describe("User Model Test Suite", () => {
             lastUpdate: o.lastUpdate
           }));
 
+        userFromDBLean.followedFunctions = userFromDBLean.followedFunctions.map(
+          (f) => ({
+            functionTag: f.functionTag,
+            lastUpdate: f.lastUpdate
+          })
+        );
+
         expect(userFromDBLean.schemaVersion).toBe(USER_SCHEMA_VERSION);
 
         // User _id should be preserved if we don't upgrade the user from legacy
@@ -140,9 +147,36 @@ describe("User Model Test Suite", () => {
           user.data.followedPeople ?? []
         );
 
-        expect(userFromDBLean.followedFunctions).toEqual(
-          user.data.followedFunctions ?? []
-        );
+        let expectedFollowedFunctions: IUser["followedFunctions"] = [];
+
+        if (user.data.followedFunctions == null) {
+          expectedFollowedFunctions = [];
+        } else if (
+          user.data.schemaVersion == null ||
+          user.data.schemaVersion <= 2
+        ) {
+          expectedFollowedFunctions = (
+            user.data.followedFunctions as FunctionTags[]
+          ).map((f) => ({
+            functionTag: f,
+            lastUpdate: new Date()
+          }));
+        } else {
+          expectedFollowedFunctions = user.data.followedFunctions;
+        }
+
+        for (
+          let idx = 0;
+          idx < userFromDBLean.followedFunctions.length;
+          idx++
+        ) {
+          expect(userFromDBLean.followedFunctions[idx].functionTag).toEqual(
+            expectedFollowedFunctions[idx].functionTag
+          );
+          expect(
+            userFromDBLean.followedFunctions[idx].lastUpdate
+          ).toBeDefined();
+        }
 
         expect(userFromDBLean.followedOrganisations).toEqual(
           user.data.followedOrganisations ?? []
