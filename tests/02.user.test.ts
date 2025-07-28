@@ -3,13 +3,21 @@ import mongoose, { Types } from "mongoose";
 import User, { USER_SCHEMA_VERSION } from "../models/User.ts";
 import { ISession, IUser } from "../types.ts";
 import { ChatId } from "node-telegram-bot-api";
+import { LegacyRawUser_V1 } from "../models/LegacyUser.js";
+import { FunctionTags } from "../entities/FunctionTags.ts";
 
 const userMockChatId = 12346789 as ChatId;
 
-const exampleFollowedFunctions = [
-  "ambassadeur",
-  "grade"
-] as IUser["followedFunctions"];
+const exampleLegacyFollowedFunctions: LegacyRawUser_V1["followedFunctions"] = [
+  "ambassadeur" as FunctionTags,
+  "grade" as FunctionTags
+];
+
+const exampleCurrentFollowedFunctions: IUser["followedFunctions"] = [
+  { functionTag: "ambassadeur" as FunctionTags, lastUpdate: new Date() },
+  { functionTag: "consul" as FunctionTags, lastUpdate: new Date() },
+  { functionTag: "Jean Luc" as FunctionTags, lastUpdate: new Date() }
+];
 
 const exampleFollowedNames: IUser["followedNames"] = [
   "Jean Michel",
@@ -35,7 +43,7 @@ const MockTelegramSession = {
 } as unknown as ISession;
 
 const legacyUserData_allUndefined = {
-  //_id: Types.ObjectId: not here as the record is inserted
+  _id: userMockChatId,
   chatId: userMockChatId,
   messageApp: undefined,
   language_code: "fr",
@@ -50,13 +58,13 @@ const legacyUserData_allUndefined = {
 };
 
 const legacyUserData_withFollows = {
-  //_id: Types.ObjectId: not here as the record is inserted
+  _id: userMockChatId,
   chatId: userMockChatId,
   messageApp: "Telegram",
   language_code: "fr",
   status: "active",
   followedPeople: exampleFollowedPeople,
-  followedFunctions: exampleFollowedFunctions,
+  followedFunctions: exampleLegacyFollowedFunctions,
   followedNames: undefined,
   followedOrganisations: undefined,
   schemaVersion: undefined,
@@ -71,7 +79,7 @@ const currentUserData_withFollows = {
   language_code: "en",
   status: "active",
   followedPeople: exampleFollowedPeople,
-  followedFunctions: exampleFollowedFunctions,
+  followedFunctions: exampleCurrentFollowedFunctions,
   followedNames: exampleFollowedNames,
   followedOrganisations: exampleFollowedOrganisations,
   lastInteractionDay: Date.now(),
