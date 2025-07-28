@@ -1,7 +1,7 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import { USER_SCHEMA_VERSION } from "../models/User.ts";
 import User from "../models/User.ts";
-import { IRawUser } from "../models/LegacyUser.ts";
+import { IRawUser, LegacyRawUser_V1 } from "../models/LegacyUser.ts";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
@@ -30,15 +30,24 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
   if (rawUser.schemaVersion == null || rawUser.schemaVersion === 1) {
     const telegramMessageApp: MessageApp = "Telegram"; // To ensure typing
 
+    const legacyUser = rawUser as LegacyRawUser_V1;
+
     await User.deleteOne({ chatId: rawUser.chatId });
 
+    let newFollowedFunctions: IUser["followedFunctions"] = [];
+    if (legacyUser.followedFunctions !== undefined)
+      newFollowedFunctions = legacyUser.followedFunctions.map((tag) => ({
+        functionTag: tag,
+        lastUpdate: new Date()
+      }));
+
     const user: IUser = new User({
-      chatId: rawUser.chatId,
+      chatId: legacyUser.chatId,
       messageApp: telegramMessageApp,
-      language_code: rawUser.language_code ?? "fr",
-      status: rawUser.status ?? "active",
-      followedPeople: rawUser.followedPeople ?? [],
-      followedFunctions: rawUser.followedFunctions ?? [],
+      language_code: legacyUser.language_code ?? "fr",
+      status: legacyUser.status ?? "active",
+      followedPeople: legacyUser.followedPeople ?? [],
+      followedFunctions: newFollowedFunctions,
       followedOrganisations: [],
       followedNames: [],
       schemaVersion: 2
