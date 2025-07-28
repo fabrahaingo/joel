@@ -4,12 +4,12 @@ import ngrok from "ngrok";
 import express from "express";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 
-import { ErrorMessages } from "./entities/ErrorMessages.js";
+import { ErrorMessages } from "./entities/ErrorMessages.ts";
 
-import { mongodbConnect } from "./db.js";
-import umami from "./utils/umami.js";
-import { WhatsAppSession } from "./entities/WhatsAppSession.js";
-import { commands } from "./commands/Commands.js";
+import { mongodbConnect } from "./db.ts";
+import umami from "./utils/umami.ts";
+import { WhatsAppSession } from "./entities/WhatsAppSession.ts";
+import { commands } from "./commands/Commands.ts";
 import { Text } from "whatsapp-api-js/messages";
 
 const {
@@ -44,7 +44,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
 const whatsAppAPI = getWhatsAppAPI();
 
 const app = express();
-app.use(express.json());
+app.use(express.tson());
 
 app.post("/webhook", async (req, res) => {
   //res.sendStatus(await Whatsapp.handle_post(req));

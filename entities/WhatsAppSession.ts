@@ -4,11 +4,11 @@ import {
   IUser,
   KeyboardType,
   MessageApp
-} from "../types.js";
-import User from "../models/User.js";
-import { loadUser } from "./Session.js";
-import umami from "../utils/umami.js";
-import { splitText } from "../utils/text.utils.js";
+} from "../types.ts";
+import User from "../models/User.ts";
+import { loadUser } from "./Session.ts";
+import umami from "../utils/umami.ts";
+import { splitText } from "../utils/text.utils.ts";
 import {
   ActionButtons,
   ActionList,

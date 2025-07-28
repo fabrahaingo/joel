@@ -16,7 +16,7 @@ import {
   uniqueMinimalNameInfo
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
-import { migrateUser, sendMessage } from "../entities/Session.js";
+import { migrateUser, sendMessage } from "../entities/Session.ts";
 
 async function getJORFRecordsFromDate(
   startDate: Date

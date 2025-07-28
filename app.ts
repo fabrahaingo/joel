@@ -4,11 +4,11 @@ import { mongodbConnect } from "./db.ts";
 import { TelegramSession } from "./entities/TelegramSession.ts";
 import { commands } from "./commands/Commands.ts";
 import umami from "./utils/umami.ts";
-import { splitText } from "./utils/text.utils.js";
-import { ErrorMessages } from "./entities/ErrorMessages.js";
+import { splitText } from "./utils/text.utils.ts";
+import { ErrorMessages } from "./entities/ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
-import { TelegramAPIError } from "./scripts/notifyUsers.js";
-import Blocked from "./models/Blocked.js";
+import { TelegramAPIError } from "./scripts/notifyUsers.ts";
+import Blocked from "./models/Blocked.ts";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (BOT_TOKEN === undefined)
