@@ -11,18 +11,26 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
 
   let user: IUser | null;
 
-  user = await User.collection.findOne({
+  user = await User.findOne({
     messageApp: session.messageApp,
     chatId: session.chatId
   });
 
   // Legacy for Telegram users stored with a number chatId and without messageApp
-  user ??= await User.collection.findOne({
-    chatId: session.chatId
-  });
-
   // migrate the user schema if necessary
-  if (user != null) user = await migrateUser(user);
+  if (user == null) {
+    const rawLegacyUser = await User.collection.findOne({
+      chatId: session.chatId
+    });
+    if (rawLegacyUser !== null) {
+      await migrateUser(rawLegacyUser);
+      // now return the migrated user
+      user = await User.findOne({
+        messageApp: session.messageApp,
+        chatId: session.chatId
+      });
+    }
+  }
 
   return user;
 }
@@ -38,7 +46,7 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
     await User.deleteOne({ chatId: rawUser.chatId });
 
     let newFollowedFunctions: IUser["followedFunctions"] = [];
-    if (legacyUser.followedFunctions !== undefined)
+    if (legacyUser.followedFunctions != null)
       newFollowedFunctions = legacyUser.followedFunctions.map((tag) => ({
         functionTag: tag,
         lastUpdate: new Date()
