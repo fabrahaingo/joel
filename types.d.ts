@@ -57,6 +57,10 @@ export interface IUser {
     functionTag: FunctionTags;
     lastUpdate: Date;
   }[];
+  followedMeta: {
+    metaType: string;
+    lastUpdate: Date;
+  }[];
 
   lastInteractionDay?: Date;
   lastInteractionWeek?: Date;

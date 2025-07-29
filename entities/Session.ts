@@ -60,6 +60,7 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
       followedPeople: legacyUser.followedPeople ?? [],
       followedFunctions: newFollowedFunctions,
       followedOrganisations: [],
+      followedMeta: [],
       followedNames: [],
       schemaVersion: 2
     });
