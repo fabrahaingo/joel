@@ -1,5 +1,5 @@
 import "dotenv/config";
-import TelegramBot, { ChatId } from "node-telegram-bot-api";
+import TelegramBot from "node-telegram-bot-api";
 import { mongodbConnect } from "./db.ts";
 import { TelegramSession } from "./entities/TelegramSession.ts";
 import { commands } from "./commands/Commands.ts";
