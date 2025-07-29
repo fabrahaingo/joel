@@ -137,9 +137,17 @@ describe("User Model Test Suite", () => {
           expect(userFromDBLean._id).toEqual(user.data._id);
         }
 
+        expect(userFromDBLean.status).toEqual(user.data.status ?? "active");
+
+        expect(userFromDBLean.language_code).toEqual(
+          user.data.language_code ?? "fr"
+        );
+
         expect(userFromDBLean.messageApp).toBe(
           user.data.messageApp ?? "Telegram"
         );
+
+        expect(userFromDBLean.chatId).toEqual(user.data.chatId);
 
         expect(userFromDBLean.followedPeople).toEqual(
           user.data.followedPeople ?? []
@@ -151,7 +159,7 @@ describe("User Model Test Suite", () => {
           expectedFollowedFunctions = [];
         } else if (
           user.data.schemaVersion == null ||
-          user.data.schemaVersion <= 2
+          user.data.schemaVersion < 2
         ) {
           expectedFollowedFunctions = (
             user.data.followedFunctions as FunctionTags[]
