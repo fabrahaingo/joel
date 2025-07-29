@@ -454,6 +454,19 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
     });
 
+  // Now we need to get the hydrated records from the DB
+  const updatedUsers: IUser[] = await User.find(
+    {
+      _id: { $in: updatedUsersRaw.map((u) => u._id) }
+    },
+    {
+      _id: 1,
+      messageApp: 1,
+      chatId: 1,
+      followedPeople: { peopleId: 1, lastUpdate: 1 }
+    }
+  );
+
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
     const peopleIdStrsFollowedByUser = user.followedPeople.map((j) =>
@@ -526,24 +539,21 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 export async function notifyNameMentionUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
-  const userFollowingNames: IUser[] = await User.collection
-    .find(
-      {
-        followedNames: { $exists: true, $not: { $size: 0 } }
-      }
-      /*
-      {
-        _id: 1,
-        chatId: 1,
-        followedNames: 1,
-        followedPeople: { peopleId: 1, lastUpdate: 1 }
-      }*/
-    )
-    .toArray()
-    .then(async (res: IUser[]) => {
-      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-    });
+  const userFollowingNames: IUser[] = await User.find(
+    {
+      followedNames: { $exists: true, $not: { $size: 0 } }
+    },
+    {
+      _id: 1,
+      messageApp: 1,
+      chatId: 1,
+      followedNames: 1,
+      followedPeople: { peopleId: 1, lastUpdate: 1 }
+    }
+  ).then(async (res: IUser[]) => {
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+  });
 
   const recordsNamesTab = updatedRecords.reduce(
     (
