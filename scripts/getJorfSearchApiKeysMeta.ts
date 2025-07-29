@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from "axios";
 import * as fs from "node:fs";
-import { dateTOJORFFormat } from "../utils/date.utils.js";
-import { JORFSearchResponseMeta } from "../entities/JORFSearchResponseMeta.js";
+import { dateTOJORFFormat } from "../utils/date.utils.ts";
+import { JORFSearchResponseMeta } from "../entities/JORFSearchResponseMeta.ts";
 import {
   getOccurrenceCount,
   round,
