@@ -3,13 +3,21 @@ import mongoose, { Types } from "mongoose";
 import User, { USER_SCHEMA_VERSION } from "../models/User.ts";
 import { ISession, IUser } from "../types.ts";
 import { ChatId } from "node-telegram-bot-api";
+import { LegacyRawUser_V1 } from "../models/LegacyUser.js";
+import { FunctionTags } from "../entities/FunctionTags.ts";
 
 const userMockChatId = 12346789 as ChatId;
 
-const exampleFollowedFunctions = [
-  "ambassadeur",
-  "grade"
-] as IUser["followedFunctions"];
+const exampleLegacyFollowedFunctions: LegacyRawUser_V1["followedFunctions"] = [
+  "ambassadeur" as FunctionTags,
+  "grade" as FunctionTags
+];
+
+const exampleCurrentFollowedFunctions: IUser["followedFunctions"] = [
+  { functionTag: "ambassadeur" as FunctionTags, lastUpdate: new Date() },
+  { functionTag: "consul" as FunctionTags, lastUpdate: new Date() },
+  { functionTag: "Jean Luc" as FunctionTags, lastUpdate: new Date() }
+];
 
 const exampleFollowedNames: IUser["followedNames"] = [
   "Jean Michel",
@@ -35,30 +43,30 @@ const MockTelegramSession = {
 } as unknown as ISession;
 
 const legacyUserData_allUndefined = {
-  //_id: Types.ObjectId: not here as the record is inserted
+  _id: userMockChatId,
   chatId: userMockChatId,
   messageApp: undefined,
-  language_code: "fr",
-  status: "active",
+  language_code: undefined,
+  status: undefined,
   followedPeople: undefined,
   followedFunctions: undefined,
   followedNames: undefined,
   followedOrganisations: undefined,
-  schemaVersion: undefined,
-  createAt: Date.now(),
-  updatedAt: Date.now()
+  followedMeta: undefined,
+  schemaVersion: undefined
 };
 
 const legacyUserData_withFollows = {
-  //_id: Types.ObjectId: not here as the record is inserted
+  _id: userMockChatId,
   chatId: userMockChatId,
-  messageApp: "Telegram",
+  messageApp: undefined,
   language_code: "fr",
   status: "active",
   followedPeople: exampleFollowedPeople,
-  followedFunctions: exampleFollowedFunctions,
+  followedFunctions: exampleLegacyFollowedFunctions,
   followedNames: undefined,
   followedOrganisations: undefined,
+  followedMeta: undefined,
   schemaVersion: undefined,
   createAt: Date.now(),
   updatedAt: Date.now()
@@ -71,9 +79,10 @@ const currentUserData_withFollows = {
   language_code: "en",
   status: "active",
   followedPeople: exampleFollowedPeople,
-  followedFunctions: exampleFollowedFunctions,
+  followedFunctions: exampleCurrentFollowedFunctions,
   followedNames: exampleFollowedNames,
   followedOrganisations: exampleFollowedOrganisations,
+  followedMeta: [],
   lastInteractionDay: Date.now(),
   lastInteractionMonth: Date.now(),
   lastInteractionWeek: Date.now(),
@@ -117,6 +126,13 @@ describe("User Model Test Suite", () => {
             lastUpdate: o.lastUpdate
           }));
 
+        userFromDBLean.followedFunctions = userFromDBLean.followedFunctions.map(
+          (f) => ({
+            functionTag: f.functionTag,
+            lastUpdate: f.lastUpdate
+          })
+        );
+
         expect(userFromDBLean.schemaVersion).toBe(USER_SCHEMA_VERSION);
 
         // User _id should be preserved if we don't upgrade the user from legacy
@@ -124,17 +140,54 @@ describe("User Model Test Suite", () => {
           expect(userFromDBLean._id).toEqual(user.data._id);
         }
 
+        expect(userFromDBLean._id).not.toEqual(user.data.chatId);
+
+        expect(userFromDBLean.status).toEqual(user.data.status ?? "active");
+
+        expect(userFromDBLean.language_code).toEqual(
+          user.data.language_code ?? "fr"
+        );
+
         expect(userFromDBLean.messageApp).toBe(
           user.data.messageApp ?? "Telegram"
         );
+
+        expect(userFromDBLean.chatId).toEqual(user.data.chatId);
 
         expect(userFromDBLean.followedPeople).toEqual(
           user.data.followedPeople ?? []
         );
 
-        expect(userFromDBLean.followedFunctions).toEqual(
-          user.data.followedFunctions ?? []
-        );
+        let expectedFollowedFunctions: IUser["followedFunctions"] = [];
+
+        if (user.data.followedFunctions == null) {
+          expectedFollowedFunctions = [];
+        } else if (
+          user.data.schemaVersion == null ||
+          user.data.schemaVersion < 2
+        ) {
+          expectedFollowedFunctions = (
+            user.data.followedFunctions as FunctionTags[]
+          ).map((f) => ({
+            functionTag: f,
+            lastUpdate: new Date()
+          }));
+        } else {
+          expectedFollowedFunctions = user.data.followedFunctions;
+        }
+
+        for (
+          let idx = 0;
+          idx < userFromDBLean.followedFunctions.length;
+          idx++
+        ) {
+          expect(userFromDBLean.followedFunctions[idx].functionTag).toEqual(
+            expectedFollowedFunctions[idx].functionTag
+          );
+          expect(
+            userFromDBLean.followedFunctions[idx].lastUpdate
+          ).toBeDefined();
+        }
 
         expect(userFromDBLean.followedOrganisations).toEqual(
           user.data.followedOrganisations ?? []
@@ -142,6 +195,10 @@ describe("User Model Test Suite", () => {
 
         expect(userFromDBLean.followedNames).toEqual(
           user.data.followedNames ?? []
+        );
+
+        expect(userFromDBLean.followedMeta).toEqual(
+          user.data.followedMeta ?? []
         );
       });
     });

@@ -23,7 +23,11 @@ export const log = async (args: { event: UmamiEvent; data?: never }) => {
     }
   };
 
-  await axios.post(endpoint, payload, options);
+  try {
+    await axios.post(endpoint, payload, options);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 export default {
@@ -44,6 +48,7 @@ export type UmamiEvent =
   | "/jorfsearch-request-tag"
   | "/jorfsearch-request-organisation"
   | "/jorfsearch-request-date"
+  | "/jorfsearch-request-meta"
   | "/jorfsearch-request-wikidata-names"
   | "/search"
   | "/history"

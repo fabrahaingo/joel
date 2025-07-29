@@ -1,12 +1,25 @@
 {
   "extends": "@tsconfig/node24/tsconfig.json",
   "compilerOptions": {
-    "moduleResolution": "node16",
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "node",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "moduleDetection": "force",
-    "preserveConstEnums": true
+    "preserveConstEnums": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "outDir": "./dist",
+    "incremental": true,
+    "sourceMap": true
   },
   "include": ["**/*"],
-  "exclude": ["**/*.spec.ts"]
+  "exclude": ["node_modules", "**/*.spec.ts"]
 }
