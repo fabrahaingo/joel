@@ -4,12 +4,15 @@ import ngrok from "ngrok";
 import express from "express";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 
-import { ErrorMessages } from "./entities/ErrorMessages.js";
+import { ErrorMessages } from "./entities/ErrorMessages.ts";
 
-import { mongodbConnect } from "./db.js";
-import umami from "./utils/umami.js";
-import { WhatsAppSession } from "./entities/WhatsAppSession.js";
-import { commands } from "./commands/Commands.js";
+import { mongodbConnect } from "./db.ts";
+import umami from "./utils/umami.ts";
+import {
+  WHATSAPP_API_VERSION,
+  WhatsAppSession
+} from "./entities/WhatsAppSession.ts";
+import { commands } from "./commands/Commands.ts";
 
 const {
   WHATSAPP_USER_TOKEN,
@@ -36,7 +39,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     token: WHATSAPP_USER_TOKEN,
     appSecret: WHATSAPP_APP_SECRET,
     webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-    v: "v22.0"
+    v: WHATSAPP_API_VERSION
   });
 }
 

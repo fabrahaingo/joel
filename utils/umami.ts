@@ -23,7 +23,11 @@ export const log = async (args: { event: UmamiEvent; data?: never }) => {
     }
   };
 
-  await axios.post(endpoint, payload, options);
+  try {
+    await axios.post(endpoint, payload, options);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 export default {

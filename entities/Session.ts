@@ -2,6 +2,9 @@ import { ISession, IUser, MessageApp } from "../types.ts";
 import { USER_SCHEMA_VERSION } from "../models/User.ts";
 import User from "../models/User.ts";
 import { IRawUser } from "../models/LegacyUser.ts";
+import { sendTelegramMessage } from "./TelegramSession.ts";
+import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
+import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
@@ -52,5 +55,22 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
     return user;
   } else {
     throw new Error("Unknown schema version");
+  }
+}
+
+export async function sendMessage(
+  user: IUser,
+  message: string,
+  whatsAppAPI?: WhatsAppAPI
+) {
+  switch (user.messageApp) {
+    case "Telegram":
+      await sendTelegramMessage(user.chatId, message);
+      return;
+
+    case "WhatsApp":
+      if (whatsAppAPI == null) throw new Error("WhatsAppAPI is required");
+      await sendWhatsAppMessage(whatsAppAPI, user.chatId, message);
+      return;
   }
 }
