@@ -241,7 +241,7 @@ export async function notifyFunctionTagsUpdates(
           $exists: true,
           $not: { $size: 0 },
           $elemMatch: {
-            wikidataId: { $in: updatedTagList }
+            functionTag: { $in: updatedTagList }
           }
         }
       } /*,
