@@ -1,7 +1,7 @@
 import User from "../models/User.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { ISession } from "../types.ts";
+import { ButtonElement, ISession } from "../types.ts";
 import {
   extractTelegramSession,
   TelegramSession
@@ -50,8 +50,12 @@ const followFunctionCommandWH = async (session: ISession): Promise<void> => {
 
       buttonText += `SuivreF ${key}`;
 
-      if (session.user?.followedFunctions.includes(fctValue))
-        buttonText += " - Followed";
+      if (
+        session.user?.followedFunctions
+          .map((f) => f.functionTag as FunctionTags)
+          .includes(fctValue)
+      )
+        buttonText += " - Suivi";
 
       functionChoices.push([
         { text: "Ajouter suivi", desc: buttonText.slice(0, 71) }
@@ -86,7 +90,11 @@ const followFunctionCommandTelegram = async (
         fctIndex + 1
       )}. *${key}*`;
 
-      if (tgSession.user?.followedFunctions.includes(fctValue))
+      if (
+        tgSession.user?.followedFunctions
+          .map((f) => f.functionTag as FunctionTags)
+          .includes(fctValue)
+      )
         functionListMessage += " - Followed";
 
       functionListMessage += "\n\n";
@@ -111,7 +119,7 @@ const followFunctionCommandTelegram = async (
       (tgMsg: TelegramBot.Message) => {
         void (async () => {
           const answers = parseIntAnswers(tgMsg.text, functionTagValues.length);
-          if (answers === null || answers.length == 0) {
+          if (answers.length == 0) {
             await tgSession.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}.
         👎 Veuillez essayer de nouveau la commande /followFunction.`,
