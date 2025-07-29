@@ -316,7 +316,8 @@ export async function notifyFunctionTagsUpdates(
       _id: 1,
       messageApp: 1,
       chatId: 1,
-      followedFunctions: { functionTag: 1, lastUpdate: 1 }
+      followedFunctions: { functionTag: 1, lastUpdate: 1 },
+      schemaVersion: 1
     }
   );
 
@@ -387,7 +388,8 @@ export async function notifyOrganisationsUpdates(
       _id: 1,
       chatId: 1,
       messageApp: 1,
-      followedOrganisations: { wikidataId: 1, lastUpdate: 1 }
+      followedOrganisations: { wikidataId: 1, lastUpdate: 1 },
+      schemaVersion: 1
     }
   ).then(async (res: IUser[]) => {
     const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
@@ -467,7 +469,8 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       _id: 1,
       messageApp: 1,
       chatId: 1,
-      followedPeople: { peopleId: 1, lastUpdate: 1 }
+      followedPeople: { peopleId: 1, lastUpdate: 1 },
+      schemaVersion: 1
     }
   );
 
@@ -552,7 +555,8 @@ export async function notifyNameMentionUpdates(
       messageApp: 1,
       chatId: 1,
       followedNames: 1,
-      followedPeople: { peopleId: 1, lastUpdate: 1 }
+      followedPeople: { peopleId: 1, lastUpdate: 1 },
+      schemaVersion: 1
     }
   ).then(async (res: IUser[]) => {
     const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
@@ -646,7 +650,7 @@ export async function notifyNameMentionUpdates(
       }
     }
 
-    await sendNameMentionUpdate(
+    await sendNameMentionUpdates(
       user,
       nameUpdates.map((i) => ({
         people: i.people,
@@ -658,7 +662,7 @@ export async function notifyNameMentionUpdates(
   }
 }
 
-async function sendNameMentionUpdate(
+async function sendNameMentionUpdates(
   user: IUser,
   nameUpdates: { people: IPeople; updateItems: JORFSearchItem[] }[]
 ) {
