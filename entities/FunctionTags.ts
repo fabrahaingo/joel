@@ -28,7 +28,8 @@ export enum FunctionTags {
   "Élève Mines" = "eleve_mines",
   "Élève Polytechnique" = "eleve_polytechnique",
   "Élève Ponts et chaussées" = "eleve_ponts_et_chaussees",
-  "Grade" = "grade",
+  // "ecole" // sometimes only boolean, sometimes value is "ecole"="Ecole", sometimes acual name "Ecole supérieure ..."
+  //"Grade" = "grade",
   "Greffier" = "greffier",
   //"Greffier résidence" = "greffier_residence",
   //"Greffier résidence département code" = "greffier_residence_departement_code",
