@@ -327,14 +327,18 @@ export async function notifyFunctionTagsUpdates(
       {};
 
     for (const tagFollow of user.followedFunctions) {
-      if (updatedTagMap[tagFollow.functionTag] == undefined) continue;
+      if ((updatedTagMap[tagFollow.functionTag]?.length ?? 0) == 0) continue;
 
-      newUserTagsUpdates[tagFollow.functionTag] =
+      const dateFilteredUserTagUpdates: JORFSearchItem[] =
         updatedTagMap[tagFollow.functionTag]?.filter(
           (record: JORFSearchItem) =>
             JORFtoDate(record.source_date).getTime() >
             tagFollow.lastUpdate.getTime()
         ) ?? [];
+
+      if (dateFilteredUserTagUpdates.length == 0) continue;
+
+      newUserTagsUpdates[tagFollow.functionTag] = dateFilteredUserTagUpdates;
     }
 
     await sendTagUpdates(user, newUserTagsUpdates);
