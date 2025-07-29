@@ -2,6 +2,7 @@ import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
 import umami from "./utils/umami";
 import { ButtonElement } from "./utils/keyboards.ts";
+import { FindCursor } from "mongodb";
 
 export interface CommandType {
   regex: RegExp;
@@ -104,13 +105,15 @@ export interface OrganisationModel extends Model<IOrganisation> {
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
-  findOne: (arg1, arg2?) => Promise<IUser | null>;
-  find: (arg1, arg2?) => Promise<IUser[]>;
   countDocuments: () => Promise<number>;
   updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
-  collection: { insertOne: (arg) => Promise<void> };
+  collection: {
+    insertOne(arg): Promise<void>;
+    find(arg): FindCursor<IUser>; //  ← cursor, not IUser[]
+    findOne(arg): Promise<IUser | null>;
+  };
 }
 
 export interface IBlocked {

@@ -234,25 +234,28 @@ export async function notifyFunctionTagsUpdates(
   );
   const updatedTagList = Object.keys(updatedTagMap) as FunctionTags[];
 
-  const usersFollowingTags: IUser[] = await User.find(
-    {
-      followedFunctions: {
-        $exists: true,
-        $not: { $size: 0 },
-        $elemMatch: {
-          wikidataId: { $in: updatedTagList }
+  const usersFollowingTags: IUser[] = await User.collection
+    .find(
+      {
+        followedFunctions: {
+          $exists: true,
+          $not: { $size: 0 },
+          $elemMatch: {
+            wikidataId: { $in: updatedTagList }
+          }
         }
-      }
-    },
-    {
-      _id: 1,
-      chatId: 1,
-      followedFunctions: { functionTag: 1, lastUpdate: 1 }
-    }
-  ).then(async (res: IUser[]) => {
-    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-  });
+      } /*,
+      {
+        _id: 1,
+        chatId: 1,
+        followedFunctions: { functionTag: 1, lastUpdate: 1 }
+      }*/
+    )
+    .toArray()
+    .then(async (res: IUser[]) => {
+      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+    });
 
   for (const user of usersFollowingTags) {
     // send tag notification to the user
@@ -261,11 +264,10 @@ export async function notifyFunctionTagsUpdates(
       {};
 
     for (const tagFollow of user.followedFunctions) {
-      if (updatedTagMap[tagFollow.functionTag as FunctionTags] == undefined)
-        continue;
+      if (updatedTagMap[tagFollow.functionTag] == undefined) continue;
 
-      newUserTagsUpdates[tagFollow.functionTag as FunctionTags] =
-        updatedTagMap[tagFollow.functionTag as FunctionTags]?.filter(
+      newUserTagsUpdates[tagFollow.functionTag] =
+        updatedTagMap[tagFollow.functionTag]?.filter(
           (record: JORFSearchItem) =>
             JORFtoDate(record.source_date).getTime() >
             tagFollow.lastUpdate.getTime()
@@ -297,27 +299,30 @@ export async function notifyOrganisationsUpdates(
     orgsInDbIds
   );
 
-  const usersFollowingOrganisations: IUser[] = await User.find(
-    {
-      followedOrganisations: {
-        $exists: true,
-        $not: { $size: 0 },
-        $elemMatch: {
-          wikidataId: {
-            $in: Object.keys(updatedOrganisationMapById)
+  const usersFollowingOrganisations: IUser[] = await User.collection
+    .find(
+      {
+        followedOrganisations: {
+          $exists: true,
+          $not: { $size: 0 },
+          $elemMatch: {
+            wikidataId: {
+              $in: Object.keys(updatedOrganisationMapById)
+            }
           }
         }
-      }
-    },
-    {
-      _id: 1,
-      chatId: 1,
-      followedOrganisations: { wikidataId: 1, lastUpdate: 1 }
-    }
-  ).then(async (res: IUser[]) => {
-    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-  });
+      } /* ,
+      {
+        _id: 1,
+        chatId: 1,
+        followedOrganisations: { wikidataId: 1, lastUpdate: 1 }
+      } */
+    )
+    .toArray()
+    .then(async (res: IUser[]) => {
+      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+    });
 
   for (const user of usersFollowingOrganisations) {
     if (user.followedOrganisations.length == 0) continue;
@@ -367,25 +372,28 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   });
 
   // Fetch all users following at least one of the updated People
-  const updatedUsers: IUser[] = await User.find(
-    {
-      followedPeople: {
-        $elemMatch: {
-          peopleId: {
-            $in: updatedPeopleList.map((i) => i._id)
+  const updatedUsers: IUser[] = await User.collection
+    .find(
+      {
+        followedPeople: {
+          $elemMatch: {
+            peopleId: {
+              $in: updatedPeopleList.map((i) => i._id)
+            }
           }
         }
-      }
-    },
-    {
-      _id: 1,
-      chatId: 1,
-      followedPeople: { peopleId: 1, lastUpdate: 1 }
-    }
-  ).then(async (res: IUser[]) => {
-    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-  });
+      } /* ,
+      {
+        _id: 1,
+        chatId: 1,
+        followedPeople: { peopleId: 1, lastUpdate: 1 }
+      } */
+    )
+    .toArray()
+    .then(async (res: IUser[]) => {
+      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+    });
 
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
@@ -457,20 +465,24 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 export async function notifyNameMentionUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
-  const userFollowingNames: IUser[] = await User.find(
-    {
-      followedNames: { $exists: true, $not: { $size: 0 } }
-    },
-    {
-      _id: 1,
-      chatId: 1,
-      followedNames: 1,
-      followedPeople: { peopleId: 1, lastUpdate: 1 }
-    }
-  ).then(async (res: IUser[]) => {
-    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-  });
+  const userFollowingNames: IUser[] = await User.collection
+    .find(
+      {
+        followedNames: { $exists: true, $not: { $size: 0 } }
+      }
+      /*
+      {
+        _id: 1,
+        chatId: 1,
+        followedNames: 1,
+        followedPeople: { peopleId: 1, lastUpdate: 1 }
+      }*/
+    )
+    .toArray()
+    .then(async (res: IUser[]) => {
+      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+    });
 
   const recordsNamesTab = updatedRecords.reduce(
     (

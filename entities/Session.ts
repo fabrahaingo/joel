@@ -11,13 +11,13 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
 
   let user: IUser | null;
 
-  user = await User.findOne({
+  user = await User.collection.findOne({
     messageApp: session.messageApp,
     chatId: session.chatId
   });
 
   // Legacy for Telegram users stored with a number chatId and without messageApp
-  user ??= await User.findOne({
+  user ??= await User.collection.findOne({
     chatId: session.chatId
   });
 
