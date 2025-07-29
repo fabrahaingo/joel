@@ -311,6 +311,7 @@ export const manualFollowCommand = async (
           await session.sendMessage(
             `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`
           );
+          return;
         } else if (new RegExp(/non/i).test(tgMsg2.text)) {
           await session.sendMessage(
             `Ok, aucun ajout n'a été effectué. 👌`,
@@ -319,7 +320,7 @@ export const manualFollowCommand = async (
           return;
         }
         await session.sendMessage(
-          `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
+          `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
           session.mainMenuKeyboard
         );
       })();
