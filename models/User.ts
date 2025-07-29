@@ -73,6 +73,21 @@ const UserSchema = new Schema<IUser, UserModel>(
       ],
       default: []
     },
+    followedMeta: {
+      // Placeholder before implementation
+      type: [
+        {
+          metaType: {
+            type: String
+          },
+          lastUpdate: {
+            type: Date,
+            default: Date.now
+          }
+        }
+      ],
+      default: []
+    },
     schemaVersion: {
       type: Number,
       required: true

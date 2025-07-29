@@ -48,6 +48,7 @@ export type UmamiEvent =
   | "/jorfsearch-request-tag"
   | "/jorfsearch-request-organisation"
   | "/jorfsearch-request-date"
+  | "/jorfsearch-request-meta"
   | "/jorfsearch-request-wikidata-names"
   | "/search"
   | "/history"

@@ -52,6 +52,7 @@ const legacyUserData_allUndefined = {
   followedFunctions: undefined,
   followedNames: undefined,
   followedOrganisations: undefined,
+  followedMeta: undefined,
   schemaVersion: undefined
 };
 
@@ -65,6 +66,7 @@ const legacyUserData_withFollows = {
   followedFunctions: exampleLegacyFollowedFunctions,
   followedNames: undefined,
   followedOrganisations: undefined,
+  followedMeta: undefined,
   schemaVersion: undefined,
   createAt: Date.now(),
   updatedAt: Date.now()
@@ -80,6 +82,7 @@ const currentUserData_withFollows = {
   followedFunctions: exampleCurrentFollowedFunctions,
   followedNames: exampleFollowedNames,
   followedOrganisations: exampleFollowedOrganisations,
+  followedMeta: [],
   lastInteractionDay: Date.now(),
   lastInteractionMonth: Date.now(),
   lastInteractionWeek: Date.now(),
@@ -137,6 +140,8 @@ describe("User Model Test Suite", () => {
           expect(userFromDBLean._id).toEqual(user.data._id);
         }
 
+        expect(userFromDBLean._id).not.toEqual(user.data.chatId);
+
         expect(userFromDBLean.status).toEqual(user.data.status ?? "active");
 
         expect(userFromDBLean.language_code).toEqual(
@@ -190,6 +195,10 @@ describe("User Model Test Suite", () => {
 
         expect(userFromDBLean.followedNames).toEqual(
           user.data.followedNames ?? []
+        );
+
+        expect(userFromDBLean.followedMeta).toEqual(
+          user.data.followedMeta ?? []
         );
       });
     });
