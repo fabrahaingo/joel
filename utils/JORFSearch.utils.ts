@@ -1,10 +1,14 @@
 import {
   cleanJORFItems,
   JORFSearchResponse
-} from "../entities/JORFSearchResponse.js";
-import { WikidataId } from "../types.js";
+} from "../entities/JORFSearchResponse.ts";
+import { WikidataId } from "../types.ts";
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
-import umami from "./umami.js";
+import umami from "./umami.ts";
+import {
+  cleanJORFPublication,
+  JORFSearchResponseMeta
+} from "../entities/JORFSearchResponseMeta.ts";
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -110,6 +114,25 @@ export async function callJORFSearchOrganisation(wikiId: WikidataId) {
       .then((res) => {
         if (res.data === null || typeof res.data === "string") return [];
         return cleanJORFItems(res.data);
+      });
+  } catch (error) {
+    console.log(error);
+  }
+  return [];
+}
+
+async function JORFSearchCallPublications(currentDay: string) {
+  try {
+    await umami.log({ event: "/jorfsearch-request-meta" });
+    return await axios
+      .get<JORFSearchResponseMeta>(
+        `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`
+      )
+      .then((res) => {
+        if (res.data === null || typeof res.data === "string") {
+          return [];
+        }
+        return cleanJORFPublication(res.data);
       });
   } catch (error) {
     console.log(error);

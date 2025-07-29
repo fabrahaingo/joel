@@ -212,7 +212,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                     tgMsg3.text,
                     orgResults.length
                   );
-                  if (answers === null || answers.length == 0) {
+                  if (answers.length == 0) {
                     await session.sendMessage(
                       `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
                       session.mainMenuKeyboard

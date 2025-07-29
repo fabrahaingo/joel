@@ -4,11 +4,13 @@ import {
   IUser,
   KeyboardType,
   MessageApp
-} from "../types.js";
-import User from "../models/User.js";
-import { loadUser } from "./Session.js";
-import umami from "../utils/umami.js";
-import { splitText } from "../utils/text.utils.js";
+} from "../types.ts";
+import User from "../models/User.ts";
+import { loadUser } from "./Session.ts";
+import umami from "../utils/umami.ts";
+import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
+import { ServerMessageResponse } from "whatsapp-api-js/types";
+import { ErrorMessages } from "./ErrorMessages.ts";
 import {
   ActionButtons,
   ActionList,
@@ -19,8 +21,9 @@ import {
   Row,
   Text
 } from "whatsapp-api-js/messages";
-import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
-import { ServerMessageResponse } from "whatsapp-api-js/types";
+import { splitText } from "../utils/text.utils.ts";
+
+export const WHATSAPP_API_VERSION = "v23.0";
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
@@ -155,4 +158,22 @@ export async function extractWhatsAppSession(
   }
 
   return session;
+}
+
+const { WHATSAPP_PHONE_ID } = process.env;
+
+export async function sendWhatsAppMessage(
+  whatsAppAPI: WhatsAppAPI,
+  userPhoneId: number,
+  message: string
+) {
+  if (WHATSAPP_PHONE_ID === undefined) {
+    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+  }
+
+  await whatsAppAPI.sendMessage(
+    WHATSAPP_PHONE_ID,
+    String(userPhoneId),
+    new Text(message)
+  );
 }
