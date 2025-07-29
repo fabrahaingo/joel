@@ -140,6 +140,8 @@ describe("User Model Test Suite", () => {
           expect(userFromDBLean._id).toEqual(user.data._id);
         }
 
+        expect(userFromDBLean._id).not.toEqual(user.data.chatId);
+
         expect(userFromDBLean.status).toEqual(user.data.status ?? "active");
 
         expect(userFromDBLean.language_code).toEqual(
