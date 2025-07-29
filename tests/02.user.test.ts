@@ -46,15 +46,13 @@ const legacyUserData_allUndefined = {
   _id: userMockChatId,
   chatId: userMockChatId,
   messageApp: undefined,
-  language_code: "fr",
-  status: "active",
+  language_code: undefined,
+  status: undefined,
   followedPeople: undefined,
   followedFunctions: undefined,
   followedNames: undefined,
   followedOrganisations: undefined,
-  schemaVersion: undefined,
-  createAt: Date.now(),
-  updatedAt: Date.now()
+  schemaVersion: undefined
 };
 
 const legacyUserData_withFollows = {
