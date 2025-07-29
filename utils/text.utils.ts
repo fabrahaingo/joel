@@ -27,10 +27,10 @@ export function splitText(text: string, max: number): string[] {
 export function parseIntAnswers(
   answer: string | undefined,
   maxAllowedValue: number
-) {
-  if (answer === undefined) return null;
+): number[] {
+  if (answer === undefined) return [];
 
-  const answers: number[] = answer
+  return answer
     .split(/[ ,\-;:]/)
     .map((s) => parseInt(s))
     .filter((i) => i && !isNaN(i) && i <= maxAllowedValue)
@@ -38,9 +38,4 @@ export function parseIntAnswers(
       if (!acc.includes(i)) acc.push(i);
       return acc;
     }, []);
-
-  if (answers.length == 0) {
-    return null;
-  }
-  return answers;
 }

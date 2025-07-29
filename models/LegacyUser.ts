@@ -2,9 +2,9 @@ import { FunctionTags } from "../entities/FunctionTags.ts";
 import { Document, Types } from "mongoose";
 import { IUser } from "../types.ts";
 
-export type IRawUser = LegacyUser_V1 | IUser;
+export type IRawUser = LegacyRawUser_V1 | IUser;
 
-export interface LegacyUser_V1 extends Document {
+export interface LegacyRawUser_V1 extends Document {
   _id: number | string | Types.ObjectId;
   chatId: number;
   language_code?: string;

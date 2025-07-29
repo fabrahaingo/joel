@@ -42,7 +42,17 @@ const UserSchema = new Schema<IUser, UserModel>(
       default: []
     },
     followedFunctions: {
-      type: [String],
+      type: [
+        {
+          functionTag: {
+            type: String
+          },
+          lastUpdate: {
+            type: Date,
+            default: Date.now
+          }
+        }
+      ],
       default: []
     },
     followedNames: {
@@ -195,7 +205,7 @@ UserSchema.method(
   "checkFollowedFunction",
   function checkFollowedFunction(this: IUser, fct: FunctionTags): boolean {
     return this.followedFunctions.some((elem) => {
-      return elem === fct;
+      return elem.functionTag === fct;
     });
   }
 );
@@ -204,7 +214,7 @@ UserSchema.method(
   "addFollowedFunction",
   async function addFollowedFunction(this: IUser, fct: FunctionTags) {
     if (this.checkFollowedFunction(fct)) return false;
-    this.followedFunctions.push(fct);
+    this.followedFunctions.push({ functionTag: fct, lastUpdate: new Date() });
     await this.save();
     return true;
   }
@@ -215,7 +225,7 @@ UserSchema.method(
   async function removeFollowedFunctions(this: IUser, fct: FunctionTags) {
     if (!this.checkFollowedFunction(fct)) return false;
     this.followedFunctions = this.followedFunctions.filter((elem) => {
-      return elem !== fct;
+      return elem.functionTag !== fct;
     });
     await this.save();
     return true;
@@ -245,8 +255,8 @@ UserSchema.method(
   "removeFollowedName",
   async function removeFollowedName(this: IUser, name: string) {
     if (!this.checkFollowedName(name)) return false;
-    this.followedFunctions = this.followedFunctions.filter((elem) => {
-      return (elem as string).toUpperCase() !== name.toUpperCase();
+    this.followedNames = this.followedNames.filter((elem) => {
+      return elem !== name.toUpperCase();
     });
     await this.save();
     return true;
@@ -260,7 +270,7 @@ UserSchema.method(
       this.followedPeople.length +
         this.followedNames.length +
         this.followedFunctions.length +
-        this.followedOrganisations.length ==
+        this.followedOrganisations.length ===
       0
     );
   }
