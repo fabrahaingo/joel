@@ -361,10 +361,9 @@ interface miniOrg {
 export async function notifyOrganisationsUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
-  const orgsInDb: miniOrg[] = await Organisation.find(
-    {},
-    { wikidataId: 1 }
-  ).then((orgs) => orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId })));
+  const orgsInDb: miniOrg[] = await Organisation.find({}).then((orgs) =>
+    orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId }))
+  );
   const orgsInDbIds: WikidataId[] = orgsInDb.map((o) => o.wikidataId);
 
   const updatedOrganisationMapById = buildOrganisationMapById(
