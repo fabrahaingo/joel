@@ -285,7 +285,8 @@ UserSchema.method(
       this.followedPeople.length +
         this.followedNames.length +
         this.followedFunctions.length +
-        this.followedOrganisations.length ===
+        this.followedOrganisations.length +
+        this.followedMeta.length ===
       0
     );
   }

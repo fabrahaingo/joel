@@ -19,6 +19,7 @@ export enum FunctionTags {
   "Cour d'appel" = "cour_appel",
   "Cour de cassation" = "cour_cassation",
   "Cour des comptes" = "cour_comptes",
+  // "Corps" = "corps" // ex: corps="Ingénieurs de l'armement"
   "Décoration: Légion d'honneur" = "legion_honneur",
   "Décoration: Médaille de la sécurité intérieure" = "medaille_securite_interieure",
   "Décoration: Médaille militaire" = "medaille_militaire",
