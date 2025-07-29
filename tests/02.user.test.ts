@@ -60,7 +60,7 @@ const legacyUserData_allUndefined = {
 const legacyUserData_withFollows = {
   _id: userMockChatId,
   chatId: userMockChatId,
-  messageApp: "Telegram",
+  messageApp: undefined,
   language_code: "fr",
   status: "active",
   followedPeople: exampleFollowedPeople,
