@@ -88,7 +88,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   });
 
   return {
-    functions: followedFunctions as FunctionTags[],
+    functions: followedFunctions.map((f) => f.functionTag as FunctionTags),
     organisations: followedOrganisations,
     peopleAndNames: followedPeopleTab
   };
@@ -289,7 +289,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
           }
 
           let answers = parseIntAnswers(tgMsg.text, followTotal);
-          if (answers === null) {
+          if (answers.length === 0) {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.
 👎 Veuillez essayer de nouveau la commande /unfollow.`,
@@ -491,7 +491,7 @@ const unfollowAndConfirm = async (
       );
 
     session.user.followedFunctions = session.user.followedFunctions.filter(
-      (tag) => !unfollowedFunctions.includes(tag)
+      (tag) => !unfollowedFunctions.includes(tag.functionTag as FunctionTags)
     );
 
     await session.user.save();

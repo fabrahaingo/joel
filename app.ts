@@ -4,8 +4,13 @@ import { mongodbConnect } from "./db.ts";
 import { TelegramSession } from "./entities/TelegramSession.ts";
 import { commands } from "./commands/Commands.ts";
 import umami from "./utils/umami.ts";
+import { ErrorMessages } from "./entities/ErrorMessages.ts";
 
-const bot: TelegramBot = new TelegramBot(process.env.BOT_TOKEN ?? "", {
+const BOT_TOKEN = process.env.BOT_TOKEN;
+if (BOT_TOKEN === undefined)
+  throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
+
+const bot: TelegramBot = new TelegramBot(BOT_TOKEN, {
   polling: true,
   onlyFirstMatch: true
 });
