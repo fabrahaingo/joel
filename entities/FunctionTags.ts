@@ -19,6 +19,7 @@ export enum FunctionTags {
   "Cour d'appel" = "cour_appel",
   "Cour de cassation" = "cour_cassation",
   "Cour des comptes" = "cour_comptes",
+  // "Corps" = "corps" // ex: corps="Ingénieurs de l'armement"
   "Délégation parlementaire" = "delegation_parlementaire",
   "Directeur académie" = "directeur_academie",
   "Direction hôpital" = "direction_hopital",
