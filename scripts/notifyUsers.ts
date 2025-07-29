@@ -459,11 +459,12 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     const peopleIdStrsFollowedByUser = user.followedPeople.map((j) =>
       j.peopleId.toString()
     );
-    const peopleFollowedByUser = updatedPeopleList.filter((i) =>
+    const updatedPeopleFollowedByUser = updatedPeopleList.filter((i) =>
       peopleIdStrsFollowedByUser.includes(i._id.toString())
     );
-    const peopleInfoFollowedByUser =
-      uniqueMinimalNameInfo(peopleFollowedByUser);
+    const updatedPeopleInfoFollowedByUser = uniqueMinimalNameInfo(
+      updatedPeopleFollowedByUser
+    );
 
     // Records which are associated with followed People, and which are new for the respective People follow
     const newRecordsFollowedByUser = updatedRecords.reduce(
@@ -471,7 +472,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         // remove records not associated with followed people
         // this is the first main filter
         if (
-          !peopleInfoFollowedByUser.some(
+          !updatedPeopleInfoFollowedByUser.some(
             (p) =>
               p.nom.toUpperCase() === record.nom.toUpperCase() &&
               p.prenom.toUpperCase() === record.prenom.toUpperCase()
@@ -479,9 +480,10 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         )
           return recordList;
 
-        const updatedPeople: IPeople | undefined = peopleFollowedByUser.find(
-          (i) => i.nom === record.nom && i.prenom === record.prenom
-        );
+        const updatedPeople: IPeople | undefined =
+          updatedPeopleFollowedByUser.find(
+            (i) => i.nom === record.nom && i.prenom === record.prenom
+          );
         if (updatedPeople == null) return recordList; // this should not happen
 
         // Find the follow data associated with these people record
@@ -508,7 +510,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     await sendPeopleUpdate(user, newRecordsFollowedByUser);
 
     // Ids of updated peoples:
-    const updatedRecordsPeopleId: Types.ObjectId[] = peopleFollowedByUser
+    const updatedRecordsPeopleId: Types.ObjectId[] = updatedPeopleFollowedByUser
       .filter((p) =>
         newRecordsFollowedByUser.some(
           (r) => r.nom === p.nom && r.prenom === p.prenom
