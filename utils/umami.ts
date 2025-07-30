@@ -62,6 +62,7 @@ export type UmamiEvent =
   | "/new-user"
   | "/new-organisation"
   | "/user-blocked-joel"
+  | "/user-unblocked-joel"
   | "/user-deletion-no-follow"
   | "/user-deletion-self"
   | "/notification-update-people"

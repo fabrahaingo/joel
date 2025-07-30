@@ -4,7 +4,6 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { IPeople, IUser, WikidataId } from "../types.ts";
 import People from "../models/People.ts";
-import Blocked from "../models/Blocked.ts";
 import User from "../models/User.ts";
 import { Types } from "mongoose";
 import umami from "../utils/umami.ts";
@@ -134,7 +133,10 @@ export function buildOrganisationMapById(
 
 async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
   const blockedIds = new Set(
-    (await Blocked.find({}, { _id: 1 }).lean()).map((b) => String(b._id))
+    (await User.find(
+        { status: "blocked" },
+        { _id: 1 }
+    ).lean()).map((b) => String(b._id))
   );
   return users.filter((u) => !blockedIds.has(String(u._id)));
 }
@@ -359,11 +361,9 @@ interface miniOrg {
 export async function notifyOrganisationsUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
-  const orgsInDb: miniOrg[] = await Organisation.find({})
-    .lean()
-    .then((orgs) =>
-      orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId }))
-    );
+  const orgsInDb: miniOrg[] = await Organisation.find({}).then((orgs) =>
+    orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId }))
+  );
   const orgsInDbIds: WikidataId[] = orgsInDb.map((o) => o.wikidataId);
 
   const updatedOrganisationMapById = buildOrganisationMapById(
@@ -440,7 +440,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       prenom: { $regex: new RegExp(`^${p.prenom}$`), $options: "i" },
       nom: { $regex: new RegExp(`^${p.nom}$`), $options: "i" }
     }))
-  }).lean();
+  });
 
   // Fetch all users following at least one of the updated People
   const updatedUsersRaw: IUser[] = await User.collection
@@ -603,8 +603,6 @@ export async function notifyNameMentionUpdates(
     });
   };
 
-  const currentDate = new Date();
-
   for (const user of userFollowingNames) {
     const nameUpdates: {
       followedName: string;
@@ -646,7 +644,7 @@ export async function notifyNameMentionUpdates(
       if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
         user.followedPeople.push({
           peopleId: people._id,
-          lastUpdate: currentDate
+          lastUpdate: new Date(Date.now())
         });
       }
     }
