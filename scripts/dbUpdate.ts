@@ -24,7 +24,7 @@ await (async () => {
     modifiedUsersNb++;
   }
 
-  const incorrectPeople = await User.find({
+  const incorrectPeople = await People.find({
     $or: [
       { prenom: { $exists: false } },
       { nom: { $exists: false } },
