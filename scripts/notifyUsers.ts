@@ -4,7 +4,6 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { IPeople, IUser, WikidataId } from "../types.ts";
 import People from "../models/People.ts";
-import Blocked from "../models/Blocked.ts";
 import User from "../models/User.ts";
 import { Types } from "mongoose";
 import umami from "../utils/umami.ts";
@@ -134,7 +133,10 @@ export function buildOrganisationMapById(
 }
 
 async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
-  const blockedUsers: IUser[] = await Blocked.find({}, { _id: 1 });
+  const blockedUsers: IUser[] = await User.find(
+    { status: "blocked" },
+    { _id: 1 }
+  ).lean();
   for (const blockedUser of blockedUsers) {
     users = users.filter((user) => user._id === blockedUser._id);
   }
