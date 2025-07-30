@@ -4,10 +4,6 @@ export const startCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/start" });
   try {
     await session.sendTypingAction();
-    if (session.user != null && session.user.status === "blocked") {
-      session.user.status = "active";
-      await session.user.save();
-    }
 
     const botName = process.env.BOT_NAME;
     const botChannel = process.env.BOT_CHANNEL;
