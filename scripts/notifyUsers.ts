@@ -4,7 +4,6 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { IPeople, IUser, WikidataId } from "../types.ts";
 import People from "../models/People.ts";
-import Blocked from "../models/Blocked.ts";
 import User from "../models/User.ts";
 import { Types } from "mongoose";
 import umami from "../utils/umami.ts";
@@ -134,7 +133,10 @@ export function buildOrganisationMapById(
 }
 
 async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
-  const blockedUsers: IUser[] = await Blocked.find({}, { _id: 1 });
+  const blockedUsers: IUser[] = await User.find(
+    { status: "blocked" },
+    { _id: 1 }
+  ).lean();
   for (const blockedUser of blockedUsers) {
     users = users.filter((user) => user._id === blockedUser._id);
   }
@@ -186,8 +188,49 @@ async function updateUserFollowedPeople(
   await user.save();
 }
 
+// Update the timestamp of the last update date for a user-specific people follow
+async function updateUserFollowedFunctions(
+  user: IUser,
+  updatedFunctionTags: FunctionTags[]
+) {
+  if (updatedFunctionTags.length == 0) {
+    return;
+  }
+
+  const currentDate = new Date();
+
+  user.followedFunctions = user.followedFunctions.reduce(
+    (
+      followedList: IUser["followedFunctions"],
+      followed: { functionTag: FunctionTags; lastUpdate: Date }
+    ) => {
+      if (followedList.some((f) => f.functionTag === followed.functionTag))
+        return followedList; // If the user follows twice the same tag, we drop the second record
+
+      // if updated people: we update the timestamp
+      if (
+        updatedFunctionTags.some(
+          (functionTag) => functionTag === followed.functionTag
+        )
+      ) {
+        followedList.push({
+          functionTag: followed.functionTag,
+          lastUpdate: currentDate
+        });
+      } else {
+        followedList.push(followed); // otherwise, we don't change the item
+      }
+      return followedList;
+    },
+    []
+  );
+
+  // save user
+  await user.save();
+}
+
 // Update the timestamp of the last update date for a user-specific organisation follow
-async function updateUserFollowedOrganisation(
+async function updateUserFollowedOrganisations(
   user: IUser,
   updatedOrgIds: WikidataId[]
 ) {
@@ -234,28 +277,51 @@ export async function notifyFunctionTagsUpdates(
   );
   const updatedTagList = Object.keys(updatedTagMap) as FunctionTags[];
 
-  const usersFollowingTags: IUser[] = await User.collection
-    .find(
-      {
-        followedFunctions: {
-          $exists: true,
-          $not: { $size: 0 },
-          $elemMatch: {
-            wikidataId: { $in: updatedTagList }
+  const usersFollowingTagsRaw: IUser[] = await User.collection
+    .find({
+      $or: [
+        {
+          followedFunctions: {
+            $exists: true,
+            $not: { $size: 0 },
+            $elemMatch: {
+              functionTag: { $in: updatedTagList }
+            }
+          }
+        },
+        {
+          followedFunctions: {
+            $exists: true,
+            $not: {
+              $size: 0,
+              $elemMatch: {
+                // … any element that satisfies…
+                functionTag: { $exists: true } // if the field functionTag doesn't exist: the user is a legacy User
+              }
+            }
           }
         }
-      } /*,
-      {
-        _id: 1,
-        chatId: 1,
-        followedFunctions: { functionTag: 1, lastUpdate: 1 }
-      }*/
-    )
+      ]
+    })
     .toArray()
     .then(async (res: IUser[]) => {
       const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
       return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
     });
+
+  // Now we need to get the hydrated records from the DB
+  const usersFollowingTags: IUser[] = await User.find(
+    {
+      _id: { $in: usersFollowingTagsRaw.map((u) => u._id) }
+    },
+    {
+      _id: 1,
+      messageApp: 1,
+      chatId: 1,
+      followedFunctions: { functionTag: 1, lastUpdate: 1 },
+      schemaVersion: 1
+    }
+  );
 
   for (const user of usersFollowingTags) {
     // send tag notification to the user
@@ -264,17 +330,26 @@ export async function notifyFunctionTagsUpdates(
       {};
 
     for (const tagFollow of user.followedFunctions) {
-      if (updatedTagMap[tagFollow.functionTag] == undefined) continue;
+      if ((updatedTagMap[tagFollow.functionTag]?.length ?? 0) == 0) continue;
 
-      newUserTagsUpdates[tagFollow.functionTag] =
+      const dateFilteredUserTagUpdates: JORFSearchItem[] =
         updatedTagMap[tagFollow.functionTag]?.filter(
           (record: JORFSearchItem) =>
             JORFtoDate(record.source_date).getTime() >
             tagFollow.lastUpdate.getTime()
         ) ?? [];
+
+      if (dateFilteredUserTagUpdates.length == 0) continue;
+
+      newUserTagsUpdates[tagFollow.functionTag] = dateFilteredUserTagUpdates;
     }
 
     await sendTagUpdates(user, newUserTagsUpdates);
+
+    await updateUserFollowedFunctions(
+      user,
+      Object.keys(newUserTagsUpdates) as FunctionTags[]
+    );
   }
 }
 
@@ -288,10 +363,9 @@ interface miniOrg {
 export async function notifyOrganisationsUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
-  const orgsInDb: miniOrg[] = await Organisation.find(
-    {},
-    { wikidataId: 1 }
-  ).then((orgs) => orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId })));
+  const orgsInDb: miniOrg[] = await Organisation.find({}).then((orgs) =>
+    orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId }))
+  );
   const orgsInDbIds: WikidataId[] = orgsInDb.map((o) => o.wikidataId);
 
   const updatedOrganisationMapById = buildOrganisationMapById(
@@ -299,30 +373,29 @@ export async function notifyOrganisationsUpdates(
     orgsInDbIds
   );
 
-  const usersFollowingOrganisations: IUser[] = await User.collection
-    .find(
-      {
-        followedOrganisations: {
-          $exists: true,
-          $not: { $size: 0 },
-          $elemMatch: {
-            wikidataId: {
-              $in: Object.keys(updatedOrganisationMapById)
-            }
+  const usersFollowingOrganisations: IUser[] = await User.find(
+    {
+      followedOrganisations: {
+        $exists: true,
+        $not: { $size: 0 },
+        $elemMatch: {
+          wikidataId: {
+            $in: Object.keys(updatedOrganisationMapById)
           }
         }
-      } /* ,
-      {
-        _id: 1,
-        chatId: 1,
-        followedOrganisations: { wikidataId: 1, lastUpdate: 1 }
-      } */
-    )
-    .toArray()
-    .then(async (res: IUser[]) => {
-      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-    });
+      }
+    },
+    {
+      _id: 1,
+      chatId: 1,
+      messageApp: 1,
+      followedOrganisations: { wikidataId: 1, lastUpdate: 1 },
+      schemaVersion: 1
+    }
+  ).then(async (res: IUser[]) => {
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+  });
 
   for (const user of usersFollowingOrganisations) {
     if (user.followedOrganisations.length == 0) continue;
@@ -356,7 +429,7 @@ export async function notifyOrganisationsUpdates(
     );
 
     // update each lastUpdate fields of the user followedPeople
-    await updateUserFollowedOrganisation(
+    await updateUserFollowedOrganisations(
       user,
       Object.keys(orgsFollowedByUserAndUpdatedMap)
     );
@@ -372,39 +445,47 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   });
 
   // Fetch all users following at least one of the updated People
-  const updatedUsers: IUser[] = await User.collection
-    .find(
-      {
-        followedPeople: {
-          $elemMatch: {
-            peopleId: {
-              $in: updatedPeopleList.map((i) => i._id)
-            }
+  const updatedUsersRaw: IUser[] = await User.collection
+    .find({
+      followedPeople: {
+        $elemMatch: {
+          peopleId: {
+            $in: updatedPeopleList.map((i) => i._id)
           }
         }
-      } /* ,
-      {
-        _id: 1,
-        chatId: 1,
-        followedPeople: { peopleId: 1, lastUpdate: 1 }
-      } */
-    )
+      }
+    })
     .toArray()
     .then(async (res: IUser[]) => {
       const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
       return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
     });
 
+  // Now we need to get the hydrated records from the DB
+  const updatedUsers: IUser[] = await User.find(
+    {
+      _id: { $in: updatedUsersRaw.map((u) => u._id) }
+    },
+    {
+      _id: 1,
+      messageApp: 1,
+      chatId: 1,
+      followedPeople: { peopleId: 1, lastUpdate: 1 },
+      schemaVersion: 1
+    }
+  );
+
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
     const peopleIdStrsFollowedByUser = user.followedPeople.map((j) =>
       j.peopleId.toString()
     );
-    const peopleFollowedByUser = updatedPeopleList.filter((i) =>
+    const updatedPeopleFollowedByUser = updatedPeopleList.filter((i) =>
       peopleIdStrsFollowedByUser.includes(i._id.toString())
     );
-    const peopleInfoFollowedByUser =
-      uniqueMinimalNameInfo(peopleFollowedByUser);
+    const updatedPeopleInfoFollowedByUser = uniqueMinimalNameInfo(
+      updatedPeopleFollowedByUser
+    );
 
     // Records which are associated with followed People, and which are new for the respective People follow
     const newRecordsFollowedByUser = updatedRecords.reduce(
@@ -412,7 +493,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         // remove records not associated with followed people
         // this is the first main filter
         if (
-          !peopleInfoFollowedByUser.some(
+          !updatedPeopleInfoFollowedByUser.some(
             (p) =>
               p.nom.toUpperCase() === record.nom.toUpperCase() &&
               p.prenom.toUpperCase() === record.prenom.toUpperCase()
@@ -420,9 +501,10 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         )
           return recordList;
 
-        const updatedPeople: IPeople | undefined = peopleFollowedByUser.find(
-          (i) => i.nom === record.nom && i.prenom === record.prenom
-        );
+        const updatedPeople: IPeople | undefined =
+          updatedPeopleFollowedByUser.find(
+            (i) => i.nom === record.nom && i.prenom === record.prenom
+          );
         if (updatedPeople == null) return recordList; // this should not happen
 
         // Find the follow data associated with these people record
@@ -449,7 +531,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     await sendPeopleUpdate(user, newRecordsFollowedByUser);
 
     // Ids of updated peoples:
-    const updatedRecordsPeopleId: Types.ObjectId[] = peopleFollowedByUser
+    const updatedRecordsPeopleId: Types.ObjectId[] = updatedPeopleFollowedByUser
       .filter((p) =>
         newRecordsFollowedByUser.some(
           (r) => r.nom === p.nom && r.prenom === p.prenom
@@ -465,24 +547,22 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 export async function notifyNameMentionUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
-  const userFollowingNames: IUser[] = await User.collection
-    .find(
-      {
-        followedNames: { $exists: true, $not: { $size: 0 } }
-      }
-      /*
-      {
-        _id: 1,
-        chatId: 1,
-        followedNames: 1,
-        followedPeople: { peopleId: 1, lastUpdate: 1 }
-      }*/
-    )
-    .toArray()
-    .then(async (res: IUser[]) => {
-      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-    });
+  const userFollowingNames: IUser[] = await User.find(
+    {
+      followedNames: { $exists: true, $not: { $size: 0 } }
+    },
+    {
+      _id: 1,
+      messageApp: 1,
+      chatId: 1,
+      followedNames: 1,
+      followedPeople: { peopleId: 1, lastUpdate: 1 },
+      schemaVersion: 1
+    }
+  ).then(async (res: IUser[]) => {
+    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+  });
 
   const recordsNamesTab = updatedRecords.reduce(
     (
@@ -571,7 +651,7 @@ export async function notifyNameMentionUpdates(
       }
     }
 
-    await sendNameMentionUpdate(
+    await sendNameMentionUpdates(
       user,
       nameUpdates.map((i) => ({
         people: i.people,
@@ -583,7 +663,7 @@ export async function notifyNameMentionUpdates(
   }
 }
 
-async function sendNameMentionUpdate(
+async function sendNameMentionUpdates(
   user: IUser,
   nameUpdates: { people: IPeople; updateItems: JORFSearchItem[] }[]
 ) {

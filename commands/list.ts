@@ -45,11 +45,9 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   });
 
   const followedOrganisations: IOrganisation[] = await Organisation.find({
-    wikidataId: {
-      $or: user.followedOrganisations.map((o) => ({
-        wikidataId: { $regex: new RegExp(`^${o.wikidataId}$`), $options: "i" }
-      }))
-    }
+    $or: user.followedOrganisations.map((o) => ({
+      wikidataId: new RegExp(`^${o.wikidataId}$`, "i") // same value, ignore case
+    }))
   });
 
   followedOrganisations.sort((a, b) => {
@@ -88,7 +86,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   });
 
   return {
-    functions: followedFunctions.map((f) => f.functionTag as FunctionTags),
+    functions: followedFunctions.map((f) => f.functionTag),
     organisations: followedOrganisations,
     peopleAndNames: followedPeopleTab
   };
@@ -143,7 +141,7 @@ export const listCommand = async (session: ISession) => {
         if (session.messageApp === "Telegram")
           text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(
             userFollows.organisations[k].wikidataId
-          )})\n\n`;
+          )})`;
 
         text += `\n\n`;
       }
@@ -491,7 +489,7 @@ const unfollowAndConfirm = async (
       );
 
     session.user.followedFunctions = session.user.followedFunctions.filter(
-      (tag) => !unfollowedFunctions.includes(tag.functionTag as FunctionTags)
+      (tag) => !unfollowedFunctions.includes(tag.functionTag)
     );
 
     await session.user.save();

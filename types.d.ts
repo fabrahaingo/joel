@@ -43,7 +43,7 @@ export interface IUser {
   messageApp: MessageApp;
   chatId: number;
   language_code: string;
-  status: string;
+  status: "active" | "blocked";
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
@@ -118,10 +118,6 @@ export interface UserModel extends Model<IUser> {
     find(arg): FindCursor<IUser>; //  ← cursor, not IUser[]
     findOne(arg): Promise<IUser | null>;
   };
-}
-
-export interface IBlocked {
-  chatId: string;
 }
 
 export interface IPeople {
