@@ -133,10 +133,9 @@ export function buildOrganisationMapById(
 
 async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
   const blockedIds = new Set(
-    (await User.find(
-        { status: "blocked" },
-        { _id: 1 }
-    ).lean()).map((b) => String(b._id))
+    (await User.find({ status: "blocked" }, { _id: 1 }).lean()).map((b) =>
+      String(b._id)
+    )
   );
   return users.filter((u) => !blockedIds.has(String(u._id)));
 }
