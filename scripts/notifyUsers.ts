@@ -604,6 +604,8 @@ export async function notifyNameMentionUpdates(
     });
   };
 
+  const currentDate = new Date();
+
   for (const user of userFollowingNames) {
     const nameUpdates: {
       followedName: string;
@@ -645,7 +647,7 @@ export async function notifyNameMentionUpdates(
       if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
         user.followedPeople.push({
           peopleId: people._id,
-          lastUpdate: new Date(Date.now())
+          lastUpdate: currentDate
         });
       }
     }
