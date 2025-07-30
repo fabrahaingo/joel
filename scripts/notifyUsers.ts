@@ -105,26 +105,25 @@ export function buildOrganisationMapById(
   updatedRecords: JORFSearchItem[],
   orgsInDbId: WikidataId[]
 ): Partial<Record<WikidataId, JORFSearchItem[]>> {
-  return updatedRecords.reduce(
-    (orgMap: Partial<Record<WikidataId, JORFSearchItem[]>>, item) => {
-      const itemUniqueOrgIds: WikidataId[] = item.organisations.reduce(
-        (idTab: WikidataId[], o) => {
-          if (
-            o.wikidata_id === undefined ||
-            !orgsInDbId.includes(o.wikidata_id) ||
-            idTab.some((id) => id === o.wikidata_id)
-          )
-            return idTab;
+  // Pre‑compute for constant‑time membership tests
+  const orgIdSet = new Set<WikidataId>(orgsInDbId);
 
-          idTab.push(o.wikidata_id);
-          return idTab;
-        },
-        []
-      );
+  return updatedRecords.reduce<Record<WikidataId, JORFSearchItem[]>>(
+    (orgMap, item) => {
+      // De‑duplicate wikidata ids that appear more than once **inside the same record**
+      const seen = new Set<WikidataId>();
 
-      for (const wikiId of itemUniqueOrgIds) {
-        orgMap[wikiId] ??= [];
-        orgMap[wikiId].push(item);
+      for (const { wikidata_id } of item.organisations) {
+        if (
+          wikidata_id === undefined || // skip if no id
+          !orgIdSet.has(wikidata_id) || // skip if org not in DB
+          seen.has(wikidata_id) // skip if we handled it already for this item
+        ) {
+          continue;
+        }
+
+        seen.add(wikidata_id); // remember we handled it
+        (orgMap[wikidata_id] ??= []).push(item); // push + init on first use
       }
       return orgMap;
     },
@@ -133,14 +132,12 @@ export function buildOrganisationMapById(
 }
 
 async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
-  const blockedUsers: IUser[] = await User.find(
-    { status: "blocked" },
-    { _id: 1 }
-  ).lean();
-  for (const blockedUser of blockedUsers) {
-    users = users.filter((user) => user._id === blockedUser._id);
-  }
-  return users;
+  const blockedIds = new Set(
+    (await User.find({ status: "blocked" }, { _id: 1 }).lean()).map((b) =>
+      String(b._id)
+    )
+  );
+  return users.filter((u) => !blockedIds.has(String(u._id)));
 }
 
 // Update the timestamp of the last update date for a user-specific people follow

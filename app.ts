@@ -35,14 +35,8 @@ await (async () => {
           await tgSession.loadUser();
           tgSession.isReply = tgMsg.reply_to_message !== undefined;
 
-          if (tgSession.user != null) {
+          if (tgSession.user != null)
             await tgSession.user.updateInteractionMetrics();
-            if (tgSession.user.status === "blocked") {
-              await umami.log({ event: "/user-unblocked-joel" });
-              tgSession.user.status = "active";
-              await tgSession.user.save();
-            }
-          }
 
           // Process user message
           await command.action(tgSession, tgMsg.text);
