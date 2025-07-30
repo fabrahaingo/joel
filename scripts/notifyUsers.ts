@@ -134,11 +134,10 @@ export function buildOrganisationMapById(
 }
 
 async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
-  const blockedUsers: IUser[] = await Blocked.find({}, { _id: 1 });
-  for (const blockedUser of blockedUsers) {
-    users = users.filter((user) => user._id === blockedUser._id);
-  }
-  return users;
+  const blockedIds = new Set(
+    (await Blocked.find({}, { _id: 1 }).lean()).map((b) => String(b._id))
+  );
+  return users.filter((u) => !blockedIds.has(String(u._id)));
 }
 
 // Update the timestamp of the last update date for a user-specific people follow
