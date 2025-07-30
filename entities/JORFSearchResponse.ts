@@ -35,6 +35,12 @@ interface JORFSearchRawItem {
     nom?: string;
     prenom?: string;
   };
+
+  ambassadeur?: boolean;
+  ambassadeur_pays?: string;
+  ambassadeur_thematique?: boolean;
+  cabinet?: string;
+  cabinet_ministeriel?: boolean;
 }
 
 // Record after parsing and data cleaning
@@ -216,6 +222,17 @@ export function cleanJORFItems(
       case "conférés":
         item_raw.type_ordre = "conféré";
         break;
+    }
+
+    if (item_raw.cabinet != undefined) {
+      item_raw.cabinet_ministeriel = true;
+    }
+
+    if (
+      item_raw.ambassadeur_pays != undefined ||
+      item_raw.ambassadeur_thematique != undefined
+    ) {
+      item_raw.ambassadeur = true;
     }
 
     const clean_item: JORFSearchItem = {
