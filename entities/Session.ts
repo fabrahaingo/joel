@@ -46,11 +46,14 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
     await User.deleteOne({ chatId: rawUser.chatId });
 
     let newFollowedFunctions: IUser["followedFunctions"] = [];
-    if (legacyUser.followedFunctions != null)
+    if (legacyUser.followedFunctions != null) {
+      const yesterday: Date = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
       newFollowedFunctions = legacyUser.followedFunctions.map((tag) => ({
         functionTag: tag,
-        lastUpdate: new Date()
+        lastUpdate: yesterday
       }));
+    }
 
     const user: IUser = new User({
       chatId: legacyUser.chatId,
