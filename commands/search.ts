@@ -309,7 +309,8 @@ export const manualFollowCommand = async (
           session.user = await User.findOrCreate(session);
           await session.user.addFollowedName(nomPrenom);
           await session.sendMessage(
-            `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`
+            `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
+            session.mainMenuKeyboard
           );
           return;
         } else if (new RegExp(/non/i).test(tgMsg2.text)) {
