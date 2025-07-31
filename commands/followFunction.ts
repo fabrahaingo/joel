@@ -149,9 +149,10 @@ const followFunctionsCommand = async (
   functions: (keyof typeof FunctionTags)[]
 ): Promise<void> => {
   try {
+    if (functions.length == 0) return;
     await session.sendTypingAction();
 
-    const user = await User.findOrCreate(session);
+    session.user ??= await User.findOrCreate(session);
 
     const addedFunctions: (typeof FunctionTags)[] = [];
     const alreadyFollowedFunctions: (typeof FunctionTags)[] = [];
@@ -159,7 +160,7 @@ const followFunctionsCommand = async (
     for (const functionToFollow of functions) {
       const fctIndex = functionTagValues.indexOf(functionToFollow);
       const fctValue = functionTagKeys[fctIndex];
-      if (await user.addFollowedFunction(functionToFollow)) {
+      if (await session.user.addFollowedFunction(functionToFollow)) {
         addedFunctions.push(fctValue);
       } else {
         alreadyFollowedFunctions.push(fctValue);

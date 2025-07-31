@@ -179,7 +179,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                 if (new RegExp(/oui/i).test(tgMsg2.text)) {
                   await session.sendMessage(`Ajout en cours... ⏰`);
                   await session.sendTypingAction();
-                  const user = await User.findOrCreate(session);
+                  session.user ??= await User.findOrCreate(session);
 
                   const peopleTab: IPeople[] = [];
 
@@ -190,8 +190,8 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                     });
                     peopleTab.push(people);
                   }
-                  await user.addFollowedPeopleBulk(peopleTab);
-                  await user.save();
+                  await session.user.addFollowedPeopleBulk(peopleTab);
+                  await session.user.save();
                   await session.sendMessage(
                     `Les *${String(
                       peopleTab.length
