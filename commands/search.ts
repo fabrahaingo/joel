@@ -110,14 +110,25 @@ async function searchPersonHistory(
         return;
       }
 
-      await session.sendMessage(
-        "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.",
-        [
+      let text =
+        "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.";
+
+      const prenomNom = personNameSplit.join(" ");
+      const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
+
+      if (session.user?.checkFollowedName(nomPrenom)) {
+        text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
+        await session.sendMessage(text, [
           [{ text: "🔎 Nouvelle recherche" }],
-          [{ text: `🕵️ Forcer le suivi de ${cleanPeopleName(personName)}` }],
           [{ text: "🏠 Menu principal" }]
-        ]
-      );
+        ]);
+        return;
+      }
+      await session.sendMessage(text, [
+        [{ text: "🔎 Nouvelle recherche" }],
+        [{ text: `🕵️ Forcer le suivi de ${prenomNom}` }],
+        [{ text: "🏠 Menu principal" }]
+      ]);
       return;
     }
 
@@ -269,7 +280,6 @@ export const manualFollowCommand = async (
 
   const personNameSplit = cleanPeopleName(msg).split(" ").slice(5);
 
-  // Command is
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 

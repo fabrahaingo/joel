@@ -259,7 +259,7 @@ UserSchema.method(
   function checkFollowedName(this: IUser, name: string): boolean {
     const nameClean = cleanPeopleName(name);
     return this.followedNames.some((elem) => {
-      return cleanPeopleName(elem).toUpperCase() === nameClean.toUpperCase();
+      return elem.toUpperCase() === nameClean.toUpperCase();
     });
   }
 );
