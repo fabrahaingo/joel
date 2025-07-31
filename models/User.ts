@@ -132,6 +132,12 @@ UserSchema.method(
   async function updateInteractionMetrics(this: IUser) {
     let needSaving = false;
 
+    if (this.status === "blocked") {
+      await umami.log({ event: "/user-unblocked-joel" });
+      this.status = "active";
+      needSaving = true;
+    }
+
     const currentDay = new Date();
     currentDay.setHours(4, 0, 0, 0);
     if (

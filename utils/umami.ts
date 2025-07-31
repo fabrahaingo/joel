@@ -61,7 +61,9 @@ export type UmamiEvent =
   | "/unfollow"
   | "/new-user"
   | "/new-organisation"
+  | "/person-added"
   | "/user-blocked-joel"
+  | "/user-unblocked-joel"
   | "/user-deletion-no-follow"
   | "/user-deletion-self"
   | "/notification-update-people"
@@ -70,7 +72,6 @@ export type UmamiEvent =
   | "/notification-update-organisation"
   | "/notification-update-meta"
   | "/notification-process-completed"
-  | "/person-added"
   | "/daily-active-user"
   | "/weekly-active-user"
   | "/monthly-active-user";

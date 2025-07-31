@@ -8,7 +8,6 @@ import {
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
-import Blocked from "../models/Blocked.ts";
 import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
@@ -187,9 +186,14 @@ export async function sendTelegramMessage(chatId: number, message: string) {
               "Forbidden: bot was blocked by the user"
           ) {
             await umami.log({ event: "/user-blocked-joel" });
-            await new Blocked({
+            const user: IUser | null = await User.findOne({
+              messageApp: "Telegram",
               chatId: chatId as ChatId
-            }).save();
+            });
+            if (user != null) {
+              user.status = "blocked";
+              await user.save();
+            }
             return;
           }
         }

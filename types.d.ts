@@ -43,7 +43,7 @@ export interface IUser {
   messageApp: MessageApp;
   chatId: number;
   language_code: string;
-  status: string;
+  status: "active" | "blocked";
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
@@ -102,14 +102,11 @@ export interface OrganisationModel extends Model<IOrganisation> {
     nom: string;
     wikidataId: WikidataId;
   }) => Promise<IOrganisation>;
-  findOne: (arg1, arg2?) => Promise<IOrganisation | null>;
-  find: (arg1, arg2?) => Promise<IOrganisation[]>;
   countDocuments: () => Promise<number>;
 }
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
-  find: (arg1, arg2?) => Promise<IUser[]>;
   countDocuments: () => Promise<number>;
   updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
@@ -119,10 +116,6 @@ export interface UserModel extends Model<IUser> {
     find(arg): FindCursor<IUser>; //  ← cursor, not IUser[]
     findOne(arg): Promise<IUser | null>;
   };
-}
-
-export interface IBlocked {
-  chatId: string;
 }
 
 export interface IPeople {
@@ -138,10 +131,7 @@ export interface IPeople {
 }
 
 export interface PeopleModel extends Model<IPeople> {
-  create: (arg1, arg2?) => Promise<IPeople>;
   firstOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
-  findOne: (arg1, arg2?) => Promise<IPeople | null>;
-  find: (arg1, arg2?) => Promise<IPeople[]>;
   countDocuments: () => Promise<number>;
   deleteOne: (args) => Promise<void>;
   collection: { insertOne: (arg) => Promise<void> };
