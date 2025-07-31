@@ -198,9 +198,8 @@ export const unfollowCommand = async (session: ISession) => {
         await unfollowMenuWhatsApp(session);
         return;
       }
-      default:
-        throw new Error("Unknown message app");
     }
+    console.log(`Unknown message app ${session.messageApp}`);
   } catch (error) {
     console.log(error);
   }
