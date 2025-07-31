@@ -4,6 +4,7 @@ import umami from "../utils/umami.ts";
 import { ISession, IPeople, IUser, UserModel } from "../types.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { loadUser } from "../entities/Session.ts";
+import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
 
 export const USER_SCHEMA_VERSION = 2;
 
@@ -256,8 +257,9 @@ UserSchema.method(
 UserSchema.method(
   "checkFollowedName",
   function checkFollowedName(this: IUser, name: string): boolean {
+    const nameClean = cleanPeopleName(name);
     return this.followedNames.some((elem) => {
-      return elem.toUpperCase() === name.toUpperCase();
+      return elem.toUpperCase() === nameClean.toUpperCase();
     });
   }
 );
