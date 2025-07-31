@@ -275,7 +275,7 @@ export const manualFollowCommand = async (
 
   if (session.user?.checkFollowedName(nomPrenom)) {
     await session.sendMessage(
-      `Vous suivez déjà *${prenomNom}* ✅`,
+      `Vous suivez déjà *${prenomNom}* (ou orthographe alternative prise en compte) ✅`,
       session.mainMenuKeyboard
     );
     return;
