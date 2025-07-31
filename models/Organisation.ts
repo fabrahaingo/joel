@@ -22,26 +22,23 @@ const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
 
 OrganisationSchema.static(
   "firstOrCreate",
-  async function (args: { nom: string; wikidataId: WikidataId }) {
-    const organization: IOrganisation | null = await this.findOne({
+  async function (args: { nom: string; wikidataId: WikidataId }, lean = true) {
+    const query = this.findOne({
       wikidataId: { $regex: new RegExp(`^${args.wikidataId}$`), $options: "i" }
     });
+    if (lean) query.lean();
 
-    if (organization === null) {
+    let organisation: IOrganisation | null = await query.exec();
+
+    if (organisation === null) {
       await umami.log({ event: "/new-organisation" });
-      const newOrganization: IOrganisation = new this({
+      organisation = await this.create({
         nom: args.nom,
         wikidataId: args.wikidataId.toUpperCase()
       });
-      await newOrganization.save();
-      return newOrganization;
-    } else if (args.nom !== organization.nom) {
-      // Update the organisation name if it has changed
-      organization.nom = args.nom;
-      await organization.save();
     }
 
-    return organization;
+    return organisation;
   }
 );
 

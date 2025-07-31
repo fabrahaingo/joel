@@ -102,7 +102,6 @@ export interface OrganisationModel extends Model<IOrganisation> {
     nom: string;
     wikidataId: WikidataId;
   }) => Promise<IOrganisation>;
-  findOne: (arg1, arg2?) => Promise<IOrganisation | null>;
   countDocuments: () => Promise<number>;
 }
 
