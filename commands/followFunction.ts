@@ -7,6 +7,7 @@ import {
   TelegramSession
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
+import { defaultCommand } from "./default.ts";
 
 const functionTagValues = Object.values(FunctionTags);
 const functionTagKeys = Object.keys(FunctionTags);
@@ -52,7 +53,7 @@ const followFunctionCommandWH = async (session: ISession): Promise<void> => {
 
       if (
         session.user?.followedFunctions
-          .map((f) => f.functionTag as FunctionTags)
+          .map((f) => f.functionTag)
           .includes(fctValue)
       )
         buttonText += " - Suivi";
@@ -92,7 +93,7 @@ const followFunctionCommandTelegram = async (
 
       if (
         tgSession.user?.followedFunctions
-          .map((f) => f.functionTag as FunctionTags)
+          .map((f) => f.functionTag)
           .includes(fctValue)
       )
         functionListMessage += " - Followed";
@@ -194,9 +195,13 @@ const followFunctionsCommand = async (
 
 export const followFunctionFromStrCommand = async (
   session: ISession,
-  msg: string
+  msg?: string
 ): Promise<void> => {
   try {
+    if (msg == undefined) {
+      await defaultCommand(session);
+      return;
+    }
     const fctValue = msg.split(" ").slice(1).join(" ");
 
     let fctIndex = functionTagValues.findIndex(
