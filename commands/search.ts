@@ -110,14 +110,25 @@ async function searchPersonHistory(
         return;
       }
 
-      await session.sendMessage(
-        "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.",
-        [
+      let text =
+        "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.";
+
+      const prenomNom = personNameSplit.join(" ");
+      const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
+
+      if (session.user?.checkFollowedName(nomPrenom)) {
+        text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
+        await session.sendMessage(text, [
           [{ text: "🔎 Nouvelle recherche" }],
-          [{ text: `🕵️ Forcer le suivi de ${cleanPeopleName(personName)}` }],
           [{ text: "🏠 Menu principal" }]
-        ]
-      );
+        ]);
+        return;
+      }
+      await session.sendMessage(text, [
+        [{ text: "🔎 Nouvelle recherche" }],
+        [{ text: `🕵️ Forcer le suivi de ${prenomNom}` }],
+        [{ text: "🏠 Menu principal" }]
+      ]);
       return;
     }
 
@@ -222,7 +233,6 @@ export const followCommand = async (
       nom: JORFRes[0].nom,
       prenom: JORFRes[0].prenom
     });
-    await people.save();
 
     if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
       user.followedPeople.push({
@@ -269,13 +279,12 @@ export const manualFollowCommand = async (
 
   const personNameSplit = cleanPeopleName(msg).split(" ").slice(5);
 
-  // Command is
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
   if (session.user?.checkFollowedName(nomPrenom)) {
     await session.sendMessage(
-      `Vous suivez déjà *${prenomNom}* ✅`,
+      `Vous suivez déjà *${prenomNom}* (ou orthographe alternative prise en compte) ✅`,
       session.mainMenuKeyboard
     );
     return;
@@ -309,7 +318,8 @@ export const manualFollowCommand = async (
           session.user = await User.findOrCreate(session);
           await session.user.addFollowedName(nomPrenom);
           await session.sendMessage(
-            `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`
+            `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
+            session.mainMenuKeyboard
           );
           return;
         } else if (new RegExp(/non/i).test(tgMsg2.text)) {
