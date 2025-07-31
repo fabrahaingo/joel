@@ -132,9 +132,7 @@ export interface IPeople {
 }
 
 export interface PeopleModel extends Model<IPeople> {
-  create: (arg1, arg2?) => Promise<IPeople>;
   firstOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
-  findOne: (arg1, arg2?) => Promise<IPeople | null>;
   countDocuments: () => Promise<number>;
   deleteOne: (args) => Promise<void>;
   collection: { insertOne: (arg) => Promise<void> };
