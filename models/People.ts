@@ -1,6 +1,7 @@
 import { Schema as _Schema, model } from "mongoose";
 import { IPeople, PeopleModel } from "../types.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import umami from "../utils/umami.ts";
 const Schema = _Schema;
 
 export interface LegacyPeople_V1 {
@@ -34,10 +35,13 @@ PeopleSchema.static(
 
     let people: IPeople | null = await query.exec();
 
-    people ??= await this.create({
-      nom: peopleInfo.nom,
-      prenom: peopleInfo.prenom
-    });
+    if (people == null) {
+      await umami.log({ event: "/person-added" });
+      people = await this.create({
+        nom: peopleInfo.nom,
+        prenom: peopleInfo.prenom
+      });
+    }
 
     return people;
   }
