@@ -233,7 +233,6 @@ export const followCommand = async (
       nom: JORFRes[0].nom,
       prenom: JORFRes[0].prenom
     });
-    await people.save();
 
     if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
       user.followedPeople.push({
