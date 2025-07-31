@@ -141,25 +141,26 @@ async function JORFSearchCallPublications(currentDay: string) {
 }
 
 // Format a string to match the expected search format on JORFSearch: first letter capitalised and no accent
+/**
+ * Normalises diacritics, trims/lowers the string, and
+ * title-cases every segment separated by space, hyphen, or apostrophe.
+ */
 export function cleanPeopleName(input: string): string {
-  /// To lower case
-  input = input.trim().toLowerCase();
+  if (!input) return "";
 
-  // Replace non-standard URL characters
-  input = input.replace(/[àáâãäå]/g, "a");
-  input = input.replace(/[èéêë]/g, "e");
-  input = input.replace(/[ìíîï]/g, "i");
-  input = input.replace(/[òóôõö]/g, "o");
-  input = input.replace(/[ùúûü]/g, "u");
-  input = input.replace(/ç/g, "c");
+  // 1. Trim & lowercase
+  let out = input.trim().toLowerCase();
 
-  // Capitalised the first letter of each part of the name
-  input = input
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+  // 2. Strip common Western diacritics in one shot
+  out = out
+    .normalize("NFD") // decompose e.g. "é" → "é"
+    .replace(/[\u0300-\u036f]/g, ""); // remove combining marks
 
-  return input;
+  // 3. Capitalise first letter after start, space, hyphen or apostrophe
+  //    - keeps the delimiter (p1) and upper-cases the following char (p2)
+  out = out.replace(/(^|[\s\-'])\p{L}/gu, (m) => m.toUpperCase());
+
+  return out;
 }
 
 interface NameInfo {

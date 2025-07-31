@@ -195,7 +195,6 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                         nom: people_data[0].nom,
                         prenom: people_data[0].prenom
                       });
-                      await people.save();
                       peopleTab.push(people);
                     }
                   }
