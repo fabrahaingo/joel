@@ -9,7 +9,6 @@ import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import {
   callJORFSearchOrganisation,
-  callJORFSearchPeople,
   callJORFSearchTag,
   cleanPeopleName
 } from "../utils/JORFSearch.utils.ts";
@@ -178,28 +177,21 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                   return;
                 }
                 if (new RegExp(/oui/i).test(tgMsg2.text)) {
-                  await session.sendMessage(
-                    `Ajout en cours... Cela peut prendre plusieurs minutes. ⏰`
-                  );
+                  await session.sendMessage(`Ajout en cours... ⏰`);
                   await session.sendTypingAction();
-                  const user = await User.findOrCreate(session);
+                  session.user ??= await User.findOrCreate(session);
 
                   const peopleTab: IPeople[] = [];
 
                   for (const contact of promoJORFList) {
-                    const people_data = await callJORFSearchPeople(
-                      `${contact.prenom} ${contact.nom}`
-                    );
-                    if (people_data.length > 0) {
-                      const people = await People.firstOrCreate({
-                        nom: people_data[0].nom,
-                        prenom: people_data[0].prenom
-                      });
-                      peopleTab.push(people);
-                    }
+                    const people = await People.firstOrCreate({
+                      nom: contact.nom,
+                      prenom: contact.prenom
+                    });
+                    peopleTab.push(people);
                   }
-                  await user.addFollowedPeopleBulk(peopleTab);
-                  await user.save();
+                  await session.user.addFollowedPeopleBulk(peopleTab);
+                  await session.user.save();
                   await session.sendMessage(
                     `Les *${String(
                       peopleTab.length

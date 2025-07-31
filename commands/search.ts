@@ -218,8 +218,6 @@ export const followCommand = async (
 
     await session.sendTypingAction();
 
-    const user = await User.findOrCreate(session);
-
     const JORFRes = await callJORFSearchPeople(personName);
     if (JORFRes.length == 0) {
       await session.sendMessage(
@@ -229,17 +227,19 @@ export const followCommand = async (
       return;
     }
 
+    session.user ??= await User.findOrCreate(session);
+
     const people = await People.firstOrCreate({
       nom: JORFRes[0].nom,
       prenom: JORFRes[0].prenom
     });
 
-    if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
-      user.followedPeople.push({
+    if (!isPersonAlreadyFollowed(people, session.user.followedPeople)) {
+      session.user.followedPeople.push({
         peopleId: people._id,
         lastUpdate: new Date(Date.now())
       });
-      await user.save();
+      await session.user.save();
       await new Promise((resolve) => setTimeout(resolve, 500));
       await session.sendMessage(
         `Vous suivez maintenant *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`,
