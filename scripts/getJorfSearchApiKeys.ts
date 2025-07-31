@@ -3,8 +3,8 @@ import { JORFSearchResponse } from "../entities/JORFSearchResponse.ts";
 import * as fs from "node:fs";
 import { dateTOJORFFormat } from "../utils/date.utils.ts";
 
-export function round(value: number) {
-  return parseFloat(value.toFixed(3));
+export function round(value: number, precision = 0): number {
+  return parseFloat(value.toFixed(precision));
 }
 
 async function JORFSearchCallRaw(currentDay: string) {
