@@ -170,10 +170,13 @@ export async function sendWhatsAppMessage(
   if (WHATSAPP_PHONE_ID === undefined) {
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
-
-  await whatsAppAPI.sendMessage(
-    WHATSAPP_PHONE_ID,
-    String(userPhoneId),
-    new Text(message)
-  );
+  try {
+    await whatsAppAPI.sendMessage(
+      WHATSAPP_PHONE_ID,
+      String(userPhoneId),
+      new Text(message)
+    );
+  } catch (error) {
+    console.log(error);
+  }
 }

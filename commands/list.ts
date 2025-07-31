@@ -48,7 +48,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     $or: user.followedOrganisations.map((o) => ({
       wikidataId: new RegExp(`^${o.wikidataId}$`, "i") // same value, ignore case
     }))
-  });
+  }).lean();
 
   followedOrganisations.sort((a, b) => {
     if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
@@ -58,7 +58,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
 
   const followedPeoples: IPeople[] = await People.find({
     _id: { $in: user.followedPeople.map((p) => p.peopleId) }
-  });
+  }).lean();
 
   const followedPeopleTab: {
     nomPrenom: string;
@@ -198,9 +198,8 @@ export const unfollowCommand = async (session: ISession) => {
         await unfollowMenuWhatsApp(session);
         return;
       }
-      default:
-        throw new Error("Unknown message app");
     }
+    console.log(`Unknown message app ${session.messageApp}`);
   } catch (error) {
     console.log(error);
   }

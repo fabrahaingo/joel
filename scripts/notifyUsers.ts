@@ -360,9 +360,11 @@ interface miniOrg {
 export async function notifyOrganisationsUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
-  const orgsInDb: miniOrg[] = await Organisation.find({}).then((orgs) =>
-    orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId }))
-  );
+  const orgsInDb: miniOrg[] = await Organisation.find({})
+    .lean()
+    .then((orgs) =>
+      orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId }))
+    );
   const orgsInDbIds: WikidataId[] = orgsInDb.map((o) => o.wikidataId);
 
   const updatedOrganisationMapById = buildOrganisationMapById(
@@ -439,7 +441,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       prenom: { $regex: new RegExp(`^${p.prenom}$`), $options: "i" },
       nom: { $regex: new RegExp(`^${p.nom}$`), $options: "i" }
     }))
-  });
+  }).lean();
 
   // Fetch all users following at least one of the updated People
   const updatedUsersRaw: IUser[] = await User.collection
