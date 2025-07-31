@@ -222,13 +222,13 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
 
                   await session.sendTypingAction();
 
-                  const user = await User.findOrCreate(session);
+                  session.user ??= await User.findOrCreate(session);
 
                   for (const answer of answers) {
                     // Don't call JORF if the organisation is already followed
                     if (
                       isOrganisationAlreadyFollowed(
-                        user,
+                        session.user,
                         orgResults[answer - 1].wikidataId
                       )
                     )
@@ -240,13 +240,13 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                         wikidataId: orgResults[answer - 1].wikidataId
                       });
 
-                    user.followedOrganisations.push({
+                    session.user.followedOrganisations.push({
                       wikidataId: organisation.wikidataId,
                       lastUpdate: new Date()
                     });
                   }
 
-                  await user.save();
+                  await session.user.save();
 
                   await new Promise((resolve) => setTimeout(resolve, 500));
                   await session.sendMessage(
