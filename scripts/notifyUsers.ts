@@ -678,11 +678,15 @@ async function sendNameMentionUpdates(
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
 
   for (let i = 0; i < nameUpdates.length; i++) {
-    notification_text += formatSearchResult(nameUpdates[i].updateItems, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "first"
-    });
+    notification_text += formatSearchResult(
+      nameUpdates[i].updateItems,
+      user.messageApp === "Telegram",
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "first"
+      }
+    );
     notification_text += `Vous suivez maintenant *${nameUpdates[i].people.prenom} ${nameUpdates[i].people.nom}* ✅`;
     if (i < nameUpdates.length - 1) notification_text += "\n\n";
   }
@@ -705,11 +709,15 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
   const pluralHandler = updatedRecords.length > 1 ? "s" : "";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les personnes que vous suivez :\n\n`;
-  notification_text += formatSearchResult(updatedRecords, {
-    isConfirmation: false,
-    isListing: true,
-    displayName: "all"
-  });
+  notification_text += formatSearchResult(
+    updatedRecords,
+    user.messageApp === "Telegram",
+    {
+      isConfirmation: false,
+      isListing: true,
+      displayName: "all"
+    }
+  );
 
   await sendMessage(user, notification_text, whatsAppAPI);
 
@@ -743,11 +751,15 @@ async function sendOrganisationUpdate(
     const pluralHandler = orgRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${orgName}*\n\n`;
 
-    notification_text += formatSearchResult(orgRecords, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "all"
-    });
+    notification_text += formatSearchResult(
+      orgRecords,
+      user.messageApp === "Telegram",
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "all"
+      }
+    );
 
     if (orgsUpdated.indexOf(orgId) + 1 !== orgsUpdated.length)
       notification_text += "====================\n\n";
@@ -789,11 +801,15 @@ async function sendTagUpdates(
     const pluralHandler = tagRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${tagKey}*\n\n`;
 
-    notification_text += formatSearchResult(tagRecords, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "all"
-    });
+    notification_text += formatSearchResult(
+      tagRecords,
+      user.messageApp === "Telegram",
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "all"
+      }
+    );
 
     if (tagList.indexOf(tagValue) + 1 !== tagList.length)
       notification_text += "====================\n\n";

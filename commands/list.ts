@@ -121,6 +121,10 @@ export const listCommand = async (session: ISession) => {
           text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
             userFollows.functions[i]
           )})`;
+        else
+          text += `\nhttps://jorfsearch.steinertriples.ch/tag/${encodeURI(
+            userFollows.functions[i]
+          )}`;
 
         text += `\n\n`;
       }
@@ -136,6 +140,10 @@ export const listCommand = async (session: ISession) => {
           text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(
             userFollows.organisations[k].wikidataId
           )})`;
+        else
+          text += `\nhttps://jorfsearch.steinertriples.ch/${encodeURI(
+            userFollows.organisations[k].wikidataId
+          )}`;
 
         text += `\n\n`;
       }
@@ -150,6 +158,7 @@ export const listCommand = async (session: ISession) => {
         if (followedName.JORFSearchLink !== undefined) {
           if (session.messageApp === "Telegram")
             text += `[JORFSearch](${followedName.JORFSearchLink})`;
+          else text += `\n${followedName.JORFSearchLink}`;
           text += `\n`;
         } else {
           text += ` - Suivi manuel\n`;
@@ -167,7 +176,7 @@ export const listCommand = async (session: ISession) => {
       ]);
     else {
       text +=
-        "\nPour retirer un suivi, précisez le(s) nombre(s) à supprimer:\n*Retirer 1 4 7*";
+        "\nPour retirer un suivi, précisez le(s) nombre(s) à supprimer: *Retirer 1 4 7*";
       await session.sendMessage(text, session.mainMenuKeyboard);
     }
   } catch (error) {

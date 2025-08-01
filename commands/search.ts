@@ -146,11 +146,18 @@ async function searchPersonHistory(
 
     let text = "";
     if (historyType === "latest") {
-      text += formatSearchResult(JORFRes_data.slice(0, 2), {
-        isConfirmation: true
-      });
+      text += formatSearchResult(
+        JORFRes_data.slice(0, 2),
+        session.messageApp === "Telegram",
+        {
+          isConfirmation: true
+        }
+      );
     } else {
-      text += formatSearchResult(JORFRes_data);
+      text += formatSearchResult(
+        JORFRes_data,
+        session.messageApp === "Telegram"
+      );
     }
 
     // Check if the user has an account and follows the person
