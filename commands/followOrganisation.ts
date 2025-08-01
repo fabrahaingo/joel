@@ -148,63 +148,11 @@ export const searchOrganisationFromStr = async (
         else await session.sendMessage(text, session.mainMenuKeyboard);
         return;
       } else {
-        if (session.messageApp === "Telegram") {
-          const tgSession: TelegramSession | undefined =
-            await extractTelegramSession(session, false);
-          if (tgSession == null) return;
-          const tgBot = tgSession.telegramBot;
-
-          await session.sendMessage(text);
-
-          const followConfirmation = await tgBot.sendMessage(
-            session.chatId,
-            `Voulez-vous être notifié de toutes les nominations en rapport avec cette organisation ? (répondez *oui* ou *non*)`,
-            {
-              parse_mode: "Markdown",
-              reply_markup: {
-                force_reply: true
-              }
-            }
-          );
-          tgBot.onReplyToMessage(
-            session.chatId,
-            followConfirmation.message_id,
-            (tgMsg2: TelegramBot.Message) => {
-              void (async () => {
-                if (tgMsg2.text != undefined) {
-                  if (new RegExp(/oui/i).test(tgMsg2.text)) {
-                    await followOrganisationsFromWikidataIdStr(
-                      session,
-                      `SuivreO ${orgResults[0].wikidataId}`,
-                      false
-                    );
-                  } else if (new RegExp(/non/i).test(tgMsg2.text)) {
-                    await session.sendMessage(
-                      `L'organisation *${orgResults[0].nom}* n'a pas été ajoutée aux suivis.`,
-                      session.mainMenuKeyboard
-                    );
-                  }
-                  return;
-                }
-                // If msg.txt undefined or not "oui"/"non"
-                await session.sendMessage(
-                  `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande.`,
-                  [
-                    [{ text: `🏛️️ Ajouter une organisation` }],
-                    [{ text: "🏠 Menu principal" }]
-                  ]
-                );
-                return;
-              })();
-            }
-          );
-        } else {
-          text += `\n\nPour suivre l'organisation utilisez le bouton ci-dessous ou la commande: *SuivreO ${orgResults[0].wikidataId}*`;
-          await session.sendMessage(text, [
-            [{ text: `SuivreO ${orgResults[0].wikidataId}` }],
-            [{ text: "🏠 Menu principal" }]
-          ]);
-        }
+        text += `\nPour être notifié de toutes les nominations en rapport avec cette organisation ? Utilisez le bouton ci-dessous ou la commande: *SuivreO ${orgResults[0].wikidataId}*`;
+        await session.sendMessage(text, [
+          [{ text: `SuivreO ${orgResults[0].wikidataId}` }],
+          [{ text: "🏠 Menu principal" }]
+        ]);
       }
       // More than one org results
     } else {
