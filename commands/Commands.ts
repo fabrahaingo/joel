@@ -9,7 +9,7 @@ import {
 } from "./search.ts";
 import { enaCommand, promosCommand } from "./ena.ts";
 import { statsCommand } from "./stats.ts";
-import { defaultCommand } from "./default.ts";
+import { defaultCommand, showCommands } from "./default.ts";
 import { startCommand } from "./start.ts";
 import { deleteProfileCommand } from "./deleteProfile.ts";
 import { helpCommand } from "./help.ts";
@@ -23,6 +23,10 @@ export const commands: CommandType[] = [
   {
     regex: /\/start$|🏠 Menu principal/,
     action: startCommand
+  },
+  {
+    regex: /🔎 Commandes$/,
+    action: showCommands
   },
   {
     regex: /Rechercher$|🔎 Rechercher$|🔎 Nouvelle recherche$/,
