@@ -29,13 +29,12 @@ const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
 const mainMenuKeyboardWH: ButtonElement[][] = [
   [
-    {
-      text: "🔎 Rechercher"
-    },
-    { text: "👨‍💼 Ajout Fonction" },
-    { text: "🏛️️ Ajout Organisation" },
-    { text: "🧐 Mes suivis" },
-    { text: "❓ Aide & Contact" }
+    { text: "🔎 Commandes" }
+    // { text: "🔎 Rechercher" },
+    // { text: "👨‍💼 Ajout Fonction" },
+    //{ text: "🏛️️ Ajout Organisation" },
+    //{ text: "🧐 Mes suivis" },
+    //{ text: "❓ Aide & Contact" }
   ]
 ];
 

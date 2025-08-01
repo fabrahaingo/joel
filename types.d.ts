@@ -98,7 +98,7 @@ export interface IOrganisation {
 }
 
 export interface OrganisationModel extends Model<IOrganisation> {
-  firstOrCreate: (args: {
+  findOrCreate: (args: {
     nom: string;
     wikidataId: WikidataId;
   }) => Promise<IOrganisation>;
@@ -131,7 +131,7 @@ export interface IPeople {
 }
 
 export interface PeopleModel extends Model<IPeople> {
-  firstOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
+  findOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
   countDocuments: () => Promise<number>;
   deleteOne: (args) => Promise<void>;
   collection: { insertOne: (arg) => Promise<void> };

@@ -107,7 +107,7 @@ describe("People Model Test Suite", () => {
   };
 
   describe("Static Methods", () => {
-    describe("firstOrCreate", () => {
+    describe("findOrCreate", () => {
       it("should create a new person if not exists", async () => {
         const newPerson = {
           nom: "Dupont",
@@ -115,7 +115,7 @@ describe("People Model Test Suite", () => {
           lastKnownPosition: mockJORFItem
         };
 
-        const person: IPeople = await People.firstOrCreate(newPerson);
+        const person: IPeople = await People.findOrCreate(newPerson);
 
         expect(person.nom).toBe(newPerson.nom);
         expect(person.prenom).toBe(newPerson.prenom);
@@ -126,7 +126,7 @@ describe("People Model Test Suite", () => {
       it("should find person case-insensitively", async () => {
         const existingPerson: IPeople = await People.create(currentPersonData);
 
-        const personCAPS = await People.firstOrCreate({
+        const personCAPS = await People.findOrCreate({
           nom: currentPersonData.nom.toUpperCase(),
           prenom: currentPersonData.prenom.toUpperCase()
         });

@@ -47,16 +47,9 @@ function addPoste(elem: JORFSearchItem, message: string) {
   return message;
 }
 
-function addLinkJO(elem: JORFSearchItem, message: string) {
-  if (elem.source_id && elem.source_date) {
-    message += `🔗 _${elem.source_name} du ${dateToFrenchString(elem.source_date)}_: `;
-    message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}/redirect)\n`;
-  }
-  return message;
-}
-
 export function formatSearchResult(
   result: JORFSearchItem[],
+  markdownLink: boolean,
   options?: {
     isConfirmation?: boolean;
     isListing?: boolean;
@@ -66,9 +59,14 @@ export function formatSearchResult(
   let message = "";
   for (const elem of result) {
     const prenomNom = `${elem.prenom} ${elem.nom}`;
-    const prenomNomLink = `[${prenomNom}](https://jorfsearch.steinertriples.ch/name/${encodeURI(
+    const url = `https://jorfsearch.steinertriples.ch/name/${encodeURI(
       prenomNom
-    )})`;
+    )}`;
+
+    const prenomNomLink = markdownLink
+      ? `[${prenomNom}](${url})`
+      : `*${prenomNom}*\n${url}\n`;
+
     if (result.indexOf(elem) == 0) {
       if (options?.isConfirmation) {
         if (result.length === 1)
@@ -107,7 +105,14 @@ export function formatSearchResult(
     } else if (elem.date_fin) {
       message += `🗓 Jusqu'au ${dateToFrenchString(elem.date_fin)}\n`;
     }
-    message = addLinkJO(elem, message);
+    if (elem.source_id && elem.source_date) {
+      message += `🔗 _${elem.source_name} du ${dateToFrenchString(elem.source_date)}_: `;
+      if (markdownLink)
+        message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}/redirect)\n`;
+      else
+        message += `\nhttps://bodata.steinertriples.ch/${elem.source_id}/redirect\n`;
+    }
+
     message += "\n";
   }
   return message;

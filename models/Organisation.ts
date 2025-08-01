@@ -21,10 +21,13 @@ const OrganisationSchema = new Schema<IOrganisation, OrganisationModel>(
 );
 
 OrganisationSchema.static(
-  "firstOrCreate",
-  async function (args: { nom: string; wikidataId: WikidataId }, lean = true) {
+  "findOrCreate",
+  async function (
+    args: { nom: string; wikidataId: WikidataId },
+    lean = true
+  ): Promise<IOrganisation> {
     const query = this.findOne({
-      wikidataId: { $regex: new RegExp(`^${args.wikidataId}$`), $options: "i" }
+      wikidataId: args.wikidataId.toUpperCase()
     });
     if (lean) query.lean();
 

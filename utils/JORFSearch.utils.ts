@@ -1,5 +1,6 @@
 import {
   cleanJORFItems,
+  JORFSearchItem,
   JORFSearchResponse
 } from "../entities/JORFSearchResponse.ts";
 import { WikidataId } from "../types.ts";
@@ -17,7 +18,9 @@ interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
   };
 }
 
-export async function callJORFSearchPeople(peopleName: string) {
+export async function callJORFSearchPeople(
+  peopleName: string
+): Promise<JORFSearchItem[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-people" });
     return await axios
@@ -60,7 +63,7 @@ export async function callJORFSearchPeople(peopleName: string) {
   }
 }
 
-export async function callJORFSearchDay(day: Date) {
+export async function callJORFSearchDay(day: Date): Promise<JORFSearchItem[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-date" });
     return await axios
@@ -81,7 +84,10 @@ export async function callJORFSearchDay(day: Date) {
   return [];
 }
 
-export async function callJORFSearchTag(tag: string, tagValue?: string) {
+export async function callJORFSearchTag(
+  tag: string,
+  tagValue?: string
+): Promise<JORFSearchItem[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-tag" });
     return await axios
@@ -102,7 +108,9 @@ export async function callJORFSearchTag(tag: string, tagValue?: string) {
   return [];
 }
 
-export async function callJORFSearchOrganisation(wikiId: WikidataId) {
+export async function callJORFSearchOrganisation(
+  wikiId: WikidataId
+): Promise<JORFSearchItem[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-organisation" });
     return await axios
@@ -121,7 +129,9 @@ export async function callJORFSearchOrganisation(wikiId: WikidataId) {
   return [];
 }
 
-async function JORFSearchCallPublications(currentDay: string) {
+async function JORFSearchCallPublications(
+  currentDay: string
+): Promise<JORFSearchItem[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-meta" });
     return await axios

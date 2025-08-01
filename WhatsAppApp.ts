@@ -3,6 +3,7 @@ import ngrok from "ngrok";
 
 import express from "express";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
+import { PostData } from "whatsapp-api-js/types";
 
 import { ErrorMessages } from "./entities/ErrorMessages.ts";
 
@@ -51,12 +52,16 @@ app.use(express.json());
 app.post("/webhook", async (req, res) => {
   //res.sendStatus(await Whatsapp.handle_post(req));
   try {
+    const signature = req.header("x-hub-signature-256");
+    if (!signature) {
+      res.sendStatus(401); // Unauthorized if signature is missing
+      return;
+    }
+
+    const postData = req.body as PostData;
+
     // Inverted compared to documentation
-    await whatsAppAPI.post(
-      req.body,
-      JSON.stringify(req.body),
-      req.header("x-hub-signature-256")!
-    );
+    await whatsAppAPI.post(postData, JSON.stringify(postData), signature);
 
     res.sendStatus(200);
   } catch (error) {
@@ -74,7 +79,7 @@ app.get("/webhook", (req, res) => {
 });
 
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
-  if (message.type !== "text" && message.type !== "interactive") return 200;
+  if (message.type !== "text" && message.type !== "interactive") return;
 
   if (phoneID !== WHATSAPP_PHONE_ID) throw new Error("Invalid bot phone ID");
 
@@ -107,12 +112,10 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
         return;
       }
     }
-
-    return 200;
   } catch (error) {
     console.log(error);
   }
-  return 500;
+  return;
 };
 
 whatsAppAPI.on.sent = ({ phoneID, to }) => {
