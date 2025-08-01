@@ -85,10 +85,10 @@ export const fullHistoryCommand = async (
   const personName = msg.split(" ").slice(1).join(" ");
 
   if (personName.length == 0) {
-    await session.sendMessage("Saisie incorrecte. Veuillez réessayer.", [
-      [{ text: "🔎 Nouvelle recherche" }],
-      [{ text: "🏠 Menu principal" }]
-    ]);
+    await session.sendMessage(
+      "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
+      [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
+    );
     return;
   }
   await searchPersonHistory(session, personName, "full");
@@ -224,8 +224,11 @@ export const followCommand = async (
 ): Promise<void> => {
   await session.log({ event: "/follow" });
 
-  if (msg == undefined) {
-    console.log("/follow command called without msg argument");
+  const wrongParametersMsg =
+    "Saisie incorrecte. Veuillez réessayer:\nFormat : *Suivre Prénom Nom*";
+
+  if (msg == undefined || msg.length == 0) {
+    await session.sendMessage(wrongParametersMsg, session.mainMenuKeyboard);
     return;
   }
 
@@ -233,10 +236,7 @@ export const followCommand = async (
     const personName = msg.split(" ").slice(1).join(" ");
 
     if (personName.length == 0) {
-      await session.sendMessage(
-        "Saisie incorrecte. Veuillez réessayer.",
-        session.mainMenuKeyboard
-      );
+      await session.sendMessage(wrongParametersMsg, session.mainMenuKeyboard);
       return;
     }
 
@@ -244,6 +244,7 @@ export const followCommand = async (
 
     const JORFRes = await callJORFSearchPeople(personName);
     if (JORFRes.length == 0) {
+      // redirect to manual follow
       await searchPersonHistory(session, personName, "latest", true);
       return;
     }
@@ -299,7 +300,10 @@ export const manualFollowCommandShort = async (
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
   if (personNameSplit.length === 0) {
-    console.log("/follow-name command called without msg argument");
+    await session.sendMessage(
+      "Saisie incorrecte. Veuillez réessayer:\nFormat : *SuivreN Prénom Nom*",
+      session.mainMenuKeyboard
+    );
     return;
   }
 
