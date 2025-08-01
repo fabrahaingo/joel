@@ -208,7 +208,7 @@ export const searchOrganisationFromStr = async (
               const answers = parseIntAnswers(tgMsg3.text, orgResults.length);
               await followOrganisationsFromWikidataIdStr(
                 session,
-                `SuivreO ${answers.map((k) => orgResults[k].wikidataId).join(" ")}`,
+                `SuivreO ${answers.map((k) => orgResults[k - 1].wikidataId).join(" ")}`,
                 false
               );
               return;
