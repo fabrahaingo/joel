@@ -18,7 +18,7 @@ import {
   followFunctionCommand,
   followFunctionFromStrCommand
 } from "./followFunction.ts";
-import { listCommand, unfollowCommand } from "./list.ts";
+import { listCommand, unfollowFromStr, unfollowTelegram } from "./list.ts";
 
 export const commands: CommandType[] = [
   {
@@ -55,7 +55,11 @@ export const commands: CommandType[] = [
   },
   {
     regex: /✋ Retirer un suivi$/i,
-    action: unfollowCommand
+    action: unfollowTelegram
+  },
+  {
+    regex: /Retirer \s*(.*)/i,
+    action: unfollowFromStr
   },
   {
     regex: /🧐 Lister mes suivis$|🧐 Mes suivis$|Suivis$/i,
