@@ -148,7 +148,7 @@ export const searchOrganisationFromStr = async (
         else await session.sendMessage(text, session.mainMenuKeyboard);
         return;
       } else {
-        text += `\nPour être notifié de toutes les nominations en rapport avec cette organisation ? Utilisez le bouton ci-dessous ou la commande: *SuivreO ${orgResults[0].wikidataId}*`;
+        text += `\nPour être notifié de toutes les nominations en rapport avec cette organisation ?\nUtilisez le bouton ci-dessous ou la commande: *SuivreO ${orgResults[0].wikidataId}*`;
         await session.sendMessage(text, [
           [{ text: `SuivreO ${orgResults[0].wikidataId}` }],
           [{ text: "🏠 Menu principal" }]
@@ -245,7 +245,7 @@ export const followOrganisationsFromWikidataIdStr = async (
     if (selectedWikiDataIds.length == 0) {
       if (session.messageApp === "Telegram")
         await session.sendMessage(
-          `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.`,
+          `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`,
           [
             [{ text: `🏛️️ Ajouter une organisation` }],
             [{ text: "🏠 Menu principal" }]
@@ -253,7 +253,7 @@ export const followOrganisationsFromWikidataIdStr = async (
         );
       else
         await session.sendMessage(
-          `Votre recherche n'a donné aucun résultat.👎\nVeuillez essayer de nouveau la commande.`,
+          `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`,
           session.mainMenuKeyboard
         );
       return;
