@@ -250,7 +250,7 @@ export const followCommand = async (
 
     session.user ??= await User.findOrCreate(session);
 
-    const people = await People.firstOrCreate({
+    const people = await People.findOrCreate({
       nom: JORFRes[0].nom,
       prenom: JORFRes[0].prenom
     });

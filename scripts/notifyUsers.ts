@@ -631,7 +631,7 @@ export async function notifyNameMentionUpdates(
       )
         continue;
 
-      const people = await People.firstOrCreate({
+      const people = await People.findOrCreate({
         nom: mention.nom,
         prenom: mention.prenom
       });

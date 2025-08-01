@@ -231,7 +231,7 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
 
                   await session.sendTypingAction();
 
-                  session.user ??= await User.findOrCreate(session);
+    session.user ??= await User.findOrCreate(session);
 
                   for (const answer of answers) {
                     // Don't call JORF if the organisation is already followed
