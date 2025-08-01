@@ -139,7 +139,7 @@ export const searchOrganisationFromStr = async (
       if (
         isOrganisationAlreadyFollowed(session.user, orgResults[0].wikidataId)
       ) {
-        text += `\nVous suivez déjà  *${orgResults[0].nom} * ✅`;
+        text += `\nVous suivez déjà *${orgResults[0].nom} * ✅`;
         if (session.messageApp === "Telegram")
           await session.sendMessage(text, [
             [{ text: `🏛️️ Ajouter une organisation` }],
