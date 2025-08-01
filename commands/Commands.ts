@@ -1,15 +1,20 @@
 import { CommandType } from "../types.ts";
 
-import { followOrganisationCommand } from "./followOrganisation.ts";
+import {
+  followOrganisationTelegram,
+  searchOrganisationFromStr,
+  followOrganisationsFromWikidataIdStr
+} from "./followOrganisation.ts";
 import {
   followCommand,
   fullHistoryCommand,
-  manualFollowCommand,
+  manualFollowCommandLong,
+  manualFollowCommandShort,
   searchCommand
 } from "./search.ts";
 import { enaCommand, promosCommand } from "./ena.ts";
 import { statsCommand } from "./stats.ts";
-import { defaultCommand } from "./default.ts";
+import { defaultCommand, showCommands } from "./default.ts";
 import { startCommand } from "./start.ts";
 import { deleteProfileCommand } from "./deleteProfile.ts";
 import { helpCommand } from "./help.ts";
@@ -17,27 +22,31 @@ import {
   followFunctionCommand,
   followFunctionFromStrCommand
 } from "./followFunction.ts";
-import { listCommand, unfollowCommand } from "./list.ts";
+import { listCommand, unfollowFromStr, unfollowTelegram } from "./list.ts";
 
 export const commands: CommandType[] = [
   {
-    regex: /\/start$|🏠 Menu principal/,
+    regex: /\/start$|🏠 Menu principal/i,
     action: startCommand
   },
   {
-    regex: /Rechercher$|🔎 Rechercher$|🔎 Nouvelle recherche$/,
+    regex: /🔎 Commandes$/i,
+    action: showCommands
+  },
+  {
+    regex: /Rechercher$|🔎 Rechercher$|🔎 Nouvelle recherche$/i,
     action: searchCommand
   },
   {
     regex: /🕵️ Forcer le suivi de \s*(.*)/i,
-    action: manualFollowCommand
+    action: manualFollowCommandLong
   },
   {
-    regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
-    action: fullHistoryCommand
+    regex: /SuivreN \s*(.*)/i,
+    action: manualFollowCommandShort
   },
   {
-    regex: /SuivreF \s*(.*)/i,
+    regex: /SuivreF \s*(.*)|Suivre une fonction/i,
     action: followFunctionFromStrCommand
   },
   {
@@ -45,40 +54,56 @@ export const commands: CommandType[] = [
     action: followCommand
   },
   {
-    regex: /✋ Retirer un suivi$/,
-    action: unfollowCommand
+    regex: /✋ Retirer un suivi$/i,
+    action: unfollowTelegram
   },
   {
-    regex: /🧐 Lister mes suivis$|🧐 Mes suivis$/,
+    regex: /Retirer \s*(.*)/i,
+    action: unfollowFromStr
+  },
+  {
+    regex: /🧐 Lister mes suivis$|🧐 Mes suivis$|Suivis$/i,
     action: listCommand
   },
   {
-    regex: /❓ Aide|❓ Aide & Contact/,
+    regex: /❓ Aide|❓ Aide & Contact/i,
     action: helpCommand
   },
   {
-    regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction/,
+    regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Fonctions|Fonction$/i,
     action: followFunctionCommand
   },
   {
-    regex: /\/secret|\/ENA|\/INSP/i,
-    action: enaCommand
+    regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
+    action: fullHistoryCommand
   },
   {
-    regex: /\/promos/,
+    regex: /\/promos|Liste des promos ENA\/INSP/i,
     action: promosCommand
   },
   {
-    regex: /\/stats/,
+    regex: /\/secret|\/ENA|\/INSP|Rechercher une promo ENA\/INSP/i,
+    action: enaCommand
+  },
+  {
+    regex: /\/stats/i,
     action: statsCommand
   },
   {
     regex:
       /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization|🏛️️ Ajout Organisation/i,
-    action: followOrganisationCommand
+    action: followOrganisationTelegram
   },
   {
-    regex: /\/supprimerCompte/,
+    regex: /RechercherO \s*(.*)/i,
+    action: searchOrganisationFromStr
+  },
+  {
+    regex: /SuivreO \s*(.*)/i,
+    action: followOrganisationsFromWikidataIdStr
+  },
+  {
+    regex: /\/supprimerCompte/i,
     action: deleteProfileCommand
   },
   {

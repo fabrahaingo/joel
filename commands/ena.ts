@@ -95,9 +95,12 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
       (tgMsg1: TelegramBot.Message) => {
         void (async () => {
           if (tgMsg1.text == undefined || tgMsg1.text.length == 0) {
-            await tgBot.sendMessage(
-              session.chatId,
-              `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena.`
+            await session.sendMessage(
+              `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
+              [
+                [{ text: "Rechercher une promo ENA/INSP" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
             );
             return;
           }
@@ -117,8 +120,13 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
             promoJORFList.length == 0
           ) {
             await session.sendMessage(
-              `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
-              session.mainMenuKeyboard
+              `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande. Veuillez essayer de nouveau la commande.
+Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
+              [
+                [{ text: "Rechercher une promo ENA/INSP" }],
+                [{ text: "Liste des promos ENA/INSP" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
             );
             return;
           }
@@ -131,7 +139,11 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
             await session.sendMessage(
               `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
-              session.mainMenuKeyboard
+              [
+                [{ text: "Rechercher une promo ENA/INSP" }],
+                [{ text: "Liste des promos ENA/INSP" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
             );
             return;
           }
@@ -139,9 +151,6 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
           await session.sendMessage(
             `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`
           );
-
-          // wait 2 seconds
-          await new Promise((resolve) => setTimeout(resolve, 2000));
 
           // sort JORFSearchRes by the upper lastname: to account for French "particule"
           promoJORFList.sort((a, b) => {
@@ -169,46 +178,44 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             followConfirmation.message_id,
             (tgMsg2: TelegramBot.Message) => {
               void (async () => {
-                if (tgMsg2.text === undefined) {
-                  await session.sendMessage(
-                    `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-                    session.mainMenuKeyboard
-                  );
-                  return;
-                }
-                if (new RegExp(/oui/i).test(tgMsg2.text)) {
-                  await session.sendMessage(`Ajout en cours... ⏰`);
-                  await session.sendTypingAction();
-                  session.user ??= await User.findOrCreate(session);
+                if (tgMsg2.text != undefined) {
+                  if (new RegExp(/oui/i).test(tgMsg2.text)) {
+                    await session.sendMessage(`Ajout en cours... ⏰`);
+                    await session.sendTypingAction();
+                    session.user ??= await User.findOrCreate(session);
 
-                  const peopleTab: IPeople[] = [];
+                    const peopleTab: IPeople[] = [];
 
-                  for (const contact of promoJORFList) {
-                    const people = await People.firstOrCreate({
-                      nom: contact.nom,
-                      prenom: contact.prenom
-                    });
-                    peopleTab.push(people);
+                    for (const contact of promoJORFList) {
+                      const people = await People.findOrCreate({
+                        nom: contact.nom,
+                        prenom: contact.prenom
+                      });
+                      peopleTab.push(people);
+                    }
+                    await session.user.addFollowedPeopleBulk(peopleTab);
+                    await session.user.save();
+                    await session.sendMessage(
+                      `Les *${String(
+                        peopleTab.length
+                      )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
+                      session.mainMenuKeyboard
+                    );
+                    return;
+                  } else if (new RegExp(/non/i).test(tgMsg2.text)) {
+                    await session.sendMessage(
+                      `Ok, aucun ajout n'a été effectué. 👌`,
+                      session.mainMenuKeyboard
+                    );
+                    return;
                   }
-                  await session.user.addFollowedPeopleBulk(peopleTab);
-                  await session.user.save();
-                  await session.sendMessage(
-                    `Les *${String(
-                      peopleTab.length
-                    )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
-                    session.mainMenuKeyboard
-                  );
-                  return;
-                } else if (new RegExp(/non/i).test(tgMsg2.text)) {
-                  await session.sendMessage(
-                    `Ok, aucun ajout n'a été effectué. 👌`,
-                    session.mainMenuKeyboard
-                  );
-                  return;
                 }
                 await session.sendMessage(
-                  `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-                  session.mainMenuKeyboard
+                  `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
+                  [
+                    [{ text: "Rechercher une promo ENA/INSP" }],
+                    [{ text: "🏠 Menu principal" }]
+                  ]
                 );
               })();
             }
@@ -243,7 +250,10 @@ export const promosCommand = async (session: ISession): Promise<void> => {
     }
 
     text +=
-      "\nUtilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
+      "\nLes promotions antérieures ne sont pas disponibles sur JORFSearch.\n\n";
+
+    text +=
+      "Utilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
     await session.sendMessage(text, session.mainMenuKeyboard);
   } catch (error) {

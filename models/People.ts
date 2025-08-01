@@ -25,7 +25,7 @@ const PeopleSchema = new Schema<IPeople, PeopleModel>(
 );
 
 PeopleSchema.static(
-  "firstOrCreate",
+  "findOrCreate",
   async function (peopleInfo: { nom: string; prenom: string }, lean = true) {
     const query = this.findOne({
       nom: new RegExp(`^${peopleInfo.nom}$`, "i"),

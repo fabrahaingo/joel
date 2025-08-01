@@ -1,13 +1,13 @@
 import User from "../models/User.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { ButtonElement, ISession } from "../types.ts";
 import {
   extractTelegramSession,
   TelegramSession
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import { defaultCommand } from "./default.ts";
+import { ISession } from "../types";
 
 const functionTagValues = Object.values(FunctionTags);
 const functionTagKeys = Object.keys(FunctionTags);
@@ -17,69 +17,7 @@ export const followFunctionCommand = async (
 ): Promise<void> => {
   await session.log({ event: "/follow-function" });
   try {
-    switch (session.messageApp) {
-      case "Telegram": {
-        const tgSession: TelegramSession | undefined =
-          await extractTelegramSession(session, true);
-        if (tgSession == null) return;
-        await followFunctionCommandTelegram(tgSession);
-        return;
-      }
-
-      case "WhatsApp":
-        await followFunctionCommandWH(session);
-        return;
-
-      default:
-        await session.sendMessage("Votre session n'est pas supportée");
-    }
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-const followFunctionCommandWH = async (session: ISession): Promise<void> => {
-  try {
     await session.sendTypingAction();
-
-    const functionChoices: ButtonElement[][] = [];
-
-    for (const key in FunctionTags) {
-      let buttonText = "";
-      const fctIndex = functionTagKeys.indexOf(key);
-      const fctValue = functionTagValues[fctIndex];
-
-      buttonText += `SuivreF ${key}`;
-
-      if (
-        session.user?.followedFunctions
-          .map((f) => f.functionTag)
-          .includes(fctValue)
-      )
-        buttonText += " - Suivi";
-
-      functionChoices.push([
-        { text: "Ajouter suivi", desc: buttonText.slice(0, 71) }
-      ]);
-    }
-
-    await session.sendMessage(
-      "Choisissez une fonction à ajouter",
-      functionChoices,
-      "List"
-    );
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-const followFunctionCommandTelegram = async (
-  tgSession: TelegramSession
-): Promise<void> => {
-  try {
-    const tgBot = tgSession.telegramBot;
-
-    await tgSession.sendTypingAction();
 
     let functionListMessage = "";
     for (const key in FunctionTags) {
@@ -92,7 +30,7 @@ const followFunctionCommandTelegram = async (
       )}. *${key}*`;
 
       if (
-        tgSession.user?.followedFunctions
+        session.user?.followedFunctions
           .map((f) => f.functionTag)
           .includes(fctValue)
       )
@@ -101,44 +39,52 @@ const followFunctionCommandTelegram = async (
       functionListMessage += "\n\n";
     }
 
-    await tgSession.sendMessage(
+    await session.sendMessage(
       `Voici la liste des fonctions que vous pouvez suivre:\n\n${functionListMessage}`
     );
-    const question = await tgBot.sendMessage(
-      tgSession.chatId,
-      "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\nExemple: 1 4 7",
-      {
+    let text = "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\n";
+
+    if (session.messageApp === "Telegram") {
+      text += `Exemples: 1 4 7`;
+
+      const tgSession: TelegramSession | undefined =
+        await extractTelegramSession(session, true);
+      if (tgSession == null) return;
+      const tgBot = tgSession.telegramBot;
+
+      const question = await tgBot.sendMessage(tgSession.chatId, text, {
         reply_markup: {
           force_reply: true
         }
-      }
-    );
+      });
 
-    tgBot.onReplyToMessage(
-      tgSession.chatId,
-      question.message_id,
-      (tgMsg: TelegramBot.Message) => {
-        void (async () => {
-          const answers = parseIntAnswers(tgMsg.text, functionTagValues.length);
-          if (answers.length == 0) {
-            await tgSession.sendMessage(
-              `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}.
-        👎 Veuillez essayer de nouveau la commande /followFunction.`,
-              tgSession.mainMenuKeyboard
+      tgBot.onReplyToMessage(
+        tgSession.chatId,
+        question.message_id,
+        (tgMsg: TelegramBot.Message) => {
+          void (async () => {
+            if (tgMsg.text == undefined || tgMsg.text.length == 0) {
+              await tgSession.sendMessage(
+                `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}.
+            👎 Veuillez essayer de nouveau la commande.`,
+                [
+                  [{ text: "Suivre une fonction" }],
+                  [{ text: "🏠 Menu principal" }]
+                ]
+              );
+              return;
+            }
+            await followFunctionFromStrCommand(
+              session,
+              "SuivreF " + tgMsg.text
             );
-            return;
-          }
-
-          const functionsSelected: (keyof typeof FunctionTags)[] = [];
-
-          for (const answer of answers) {
-            functionsSelected.push(functionTagValues[answer - 1]);
-          }
-
-          await followFunctionsCommand(tgSession, functionsSelected);
-        })();
-      }
-    );
+          })();
+        }
+      );
+    } else {
+      text += "Exemples: SuivreF 1 4 7";
+      await session.sendMessage(text);
+    }
   } catch (error) {
     console.log(error);
   }
@@ -146,7 +92,7 @@ const followFunctionCommandTelegram = async (
 
 const followFunctionsCommand = async (
   session: ISession,
-  functions: (keyof typeof FunctionTags)[]
+  functions: FunctionTags[]
 ): Promise<void> => {
   try {
     if (functions.length == 0) return;
@@ -154,12 +100,12 @@ const followFunctionsCommand = async (
 
     session.user ??= await User.findOrCreate(session);
 
-    const addedFunctions: (typeof FunctionTags)[] = [];
-    const alreadyFollowedFunctions: (typeof FunctionTags)[] = [];
+    const addedFunctions: (keyof typeof FunctionTags)[] = [];
+    const alreadyFollowedFunctions: (keyof typeof FunctionTags)[] = [];
 
     for (const functionToFollow of functions) {
       const fctIndex = functionTagValues.indexOf(functionToFollow);
-      const fctValue = functionTagKeys[fctIndex];
+      const fctValue = functionTagKeys[fctIndex] as keyof typeof FunctionTags;
       if (await session.user.addFollowedFunction(functionToFollow)) {
         addedFunctions.push(fctValue);
       } else {
@@ -203,23 +149,56 @@ export const followFunctionFromStrCommand = async (
       await defaultCommand(session);
       return;
     }
-    const fctValue = msg.split(" ").slice(1).join(" ");
 
-    let fctIndex = functionTagValues.findIndex(
-      (s: string) => s.toLowerCase() === fctValue.toLowerCase()
+    const selectedFunctions: FunctionTags[] = [];
+
+    const textValues = msg.split(" ").slice(1);
+
+    const selectionTexts = textValues.join(" ");
+
+    const answersInt = parseIntAnswers(
+      selectionTexts,
+      functionTagValues.length
     );
 
-    if (fctIndex == -1)
-      fctIndex = functionTagKeys.findIndex(
+    answersInt.forEach((i) => {
+      selectedFunctions.push(functionTagValues[i - 1]);
+    });
+
+    for (const fctValue of textValues) {
+      let fctIndex = functionTagValues.findIndex(
         (s: string) => s.toLowerCase() === fctValue.toLowerCase()
       );
 
-    if (fctIndex == -1) {
-      await session.sendMessage("La fonction demandée n'est pas reconnue.");
+      if (fctIndex == -1)
+        fctIndex = functionTagKeys.findIndex(
+          (s: string) => s.toLowerCase() === fctValue.toLowerCase()
+        );
+
+      if (fctIndex != -1) selectedFunctions.push(functionTagValues[fctIndex]);
+    }
+
+    const selectedFunctionsUnique = selectedFunctions.reduce(
+      (tab: FunctionTags[], fct) => {
+        if (tab.includes(fct)) return tab;
+        return [...tab, fct];
+      },
+      []
+    );
+
+    const keyboard =
+      session.messageApp === "Telegram"
+        ? [[{ text: "Suivre une fonction" }], [{ text: "🏠 Menu principal" }]]
+        : session.mainMenuKeyboard;
+    if (selectedFunctions.length == 0) {
+      await session.sendMessage(
+        "La fonction demandée n'est pas reconnue.",
+        keyboard
+      );
       return;
     }
 
-    await followFunctionsCommand(session, [functionTagValues[fctIndex]]);
+    await followFunctionsCommand(session, selectedFunctionsUnique);
   } catch (error) {
     console.log(error);
   }

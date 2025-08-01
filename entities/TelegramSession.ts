@@ -14,8 +14,11 @@ import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 
 const mainMenuKeyboardTelegram: ButtonElement[][] = [
-  [{ text: "🔎 Rechercher" }, { text: "👨‍💼 Ajouter une fonction" }],
-  [{ text: "🏛️️ Ajouter une organisation" }, { text: "🧐 Lister mes suivis" }],
+  [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
+  [
+    { text: "🏛️️ Ajouter une organisation" },
+    { text: "👨‍💼 Ajouter une fonction" }
+  ],
   [{ text: "❓ Aide / Contact" }]
 ];
 
