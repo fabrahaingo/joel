@@ -95,9 +95,12 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
       (tgMsg1: TelegramBot.Message) => {
         void (async () => {
           if (tgMsg1.text == undefined || tgMsg1.text.length == 0) {
-            await tgBot.sendMessage(
-              session.chatId,
-              `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena.`
+            await session.sendMessage(
+              `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
+              [
+                [{ text: "Rechercher une promo ENA/INSP" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
             );
             return;
           }
@@ -117,8 +120,13 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
             promoJORFList.length == 0
           ) {
             await session.sendMessage(
-              `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande /ena`,
-              session.mainMenuKeyboard
+              `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande. Veuillez essayer de nouveau la commande.
+Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
+              [
+                [{ text: "Rechercher une promo ENA/INSP" }],
+                [{ text: "Liste des promos ENA/INSP" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
             );
             return;
           }
@@ -131,7 +139,11 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
             await session.sendMessage(
               `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
-              session.mainMenuKeyboard
+              [
+                [{ text: "Rechercher une promo ENA/INSP" }],
+                [{ text: "Liste des promos ENA/INSP" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
             );
             return;
           }
@@ -171,8 +183,11 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
               void (async () => {
                 if (tgMsg2.text === undefined) {
                   await session.sendMessage(
-                    `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-                    session.mainMenuKeyboard
+                    `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande .`,
+                    [
+                      [{ text: "Liste des promos ENA/INSP" }],
+                      [{ text: "🏠 Menu principal" }]
+                    ]
                   );
                   return;
                 }
@@ -207,8 +222,11 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                   return;
                 }
                 await session.sendMessage(
-                  `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /ena.`,
-                  session.mainMenuKeyboard
+                  `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
+                  [
+                    [{ text: "Rechercher une promo ENA/INSP" }],
+                    [{ text: "🏠 Menu principal" }]
+                  ]
                 );
               })();
             }
@@ -243,7 +261,10 @@ export const promosCommand = async (session: ISession): Promise<void> => {
     }
 
     text +=
-      "\nUtilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
+      "\nLes promotions antérieures ne sont pas disponibles sur JORFSearch.\n\n";
+
+    text +=
+      "Utilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
     await session.sendMessage(text, session.mainMenuKeyboard);
   } catch (error) {

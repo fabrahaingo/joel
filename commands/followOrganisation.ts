@@ -107,8 +107,11 @@ Exemples:
 
           if (orgResults.length == 0) {
             await session.sendMessage(
-              `Votre recherche n'a donné aucun résultat.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-              session.mainMenuKeyboard
+              `Votre recherche n'a donné aucun résultat.\n👎 Veuillez essayer de nouveau la commande.`,
+              [
+                [{ text: `🏛️️ Ajouter une organisation` }],
+                [{ text: "🏠 Menu principal" }]
+              ]
             );
             return;
           }
@@ -174,8 +177,11 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   }
                   // If msg.txt undefined or not "oui"/"non"
                   await session.sendMessage(
-                    `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-                    session.mainMenuKeyboard
+                    `Votre réponse n'a pas été reconnue.\n👎 Veuillez essayer de nouveau la commande.`,
+                    [
+                      [{ text: `🏛️️ Ajouter une organisation` }],
+                      [{ text: "🏠 Menu principal" }]
+                    ]
                   );
                   return;
                 })();
@@ -214,8 +220,11 @@ Voulez-vous être notifié de toutes les nominations en rapport avec cette organ
                   );
                   if (answers.length == 0) {
                     await session.sendMessage(
-                      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.\n👎 Veuillez essayer de nouveau la commande /followOrganisation.`,
-                      session.mainMenuKeyboard
+                      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(orgResults.length)}.\n👎 Veuillez essayer de nouveau la commande.`,
+                      [
+                        [{ text: `🏛️️ Ajouter une organisation` }],
+                        [{ text: "🏠 Menu principal" }]
+                      ]
                     );
                     return;
                   }

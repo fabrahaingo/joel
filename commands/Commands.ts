@@ -42,11 +42,7 @@ export const commands: CommandType[] = [
     action: manualFollowCommandShort
   },
   {
-    regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
-    action: fullHistoryCommand
-  },
-  {
-    regex: /SuivreF \s*(.*)/i,
+    regex: /SuivreF \s*(.*)|Suivre une fonction/i,
     action: followFunctionFromStrCommand
   },
   {
@@ -74,12 +70,16 @@ export const commands: CommandType[] = [
     action: followFunctionCommand
   },
   {
-    regex: /\/secret|\/ENA|\/INSP/i,
-    action: enaCommand
+    regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
+    action: fullHistoryCommand
   },
   {
-    regex: /\/promos/i,
+    regex: /\/promos|Liste des promos ENA\/INSP/i,
     action: promosCommand
+  },
+  {
+    regex: /\/secret|\/ENA|\/INSP|Rechercher une promo ENA\/INSP/i,
+    action: enaCommand
   },
   {
     regex: /\/stats/i,

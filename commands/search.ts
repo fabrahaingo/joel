@@ -57,8 +57,11 @@ export const searchCommand = async (session: ISession): Promise<void> => {
       void (async () => {
         if (tgMsg.text == undefined || tgMsg.text.length == 0) {
           await session.sendMessage(
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            session.mainMenuKeyboard
+            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
+            [
+              [{ text: "🔎 Nouvelle recherche" }],
+              [{ text: "🏠 Menu principal" }]
+            ]
           );
           return;
         }
@@ -331,8 +334,11 @@ export const manualFollowCommandShort = async (
         void (async () => {
           if (tgMsg2.text === undefined) {
             await session.sendMessage(
-              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-              session.mainMenuKeyboard
+              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
+              [
+                [{ text: `🕵️ Forcer le suivi de ${prenomNom}` }],
+                [{ text: "🏠 Menu principal" }]
+              ]
             );
             return;
           }
@@ -352,8 +358,11 @@ export const manualFollowCommandShort = async (
             return;
           }
           await session.sendMessage(
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            session.mainMenuKeyboard
+            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
+            [
+              [{ text: `🕵️ Forcer le suivi de ${prenomNom}` }],
+              [{ text: "🏠 Menu principal" }]
+            ]
           );
         })();
       }
