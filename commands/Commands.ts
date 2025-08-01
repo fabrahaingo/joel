@@ -22,15 +22,15 @@ import { listCommand, unfollowCommand } from "./list.ts";
 
 export const commands: CommandType[] = [
   {
-    regex: /\/start$|🏠 Menu principal/,
+    regex: /\/start$|🏠 Menu principal/i,
     action: startCommand
   },
   {
-    regex: /🔎 Commandes$/,
+    regex: /🔎 Commandes$/i,
     action: showCommands
   },
   {
-    regex: /Rechercher$|🔎 Rechercher$|🔎 Nouvelle recherche$/,
+    regex: /Rechercher$|🔎 Rechercher$|🔎 Nouvelle recherche$/i,
     action: searchCommand
   },
   {
@@ -54,19 +54,19 @@ export const commands: CommandType[] = [
     action: followCommand
   },
   {
-    regex: /✋ Retirer un suivi$/,
+    regex: /✋ Retirer un suivi$/i,
     action: unfollowCommand
   },
   {
-    regex: /🧐 Lister mes suivis$|🧐 Mes suivis$/,
+    regex: /🧐 Lister mes suivis$|🧐 Mes suivis$|Suivis$/i,
     action: listCommand
   },
   {
-    regex: /❓ Aide|❓ Aide & Contact/,
+    regex: /❓ Aide|❓ Aide & Contact/i,
     action: helpCommand
   },
   {
-    regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction/,
+    regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Fonctions|Fonction$/i,
     action: followFunctionCommand
   },
   {
@@ -74,11 +74,11 @@ export const commands: CommandType[] = [
     action: enaCommand
   },
   {
-    regex: /\/promos/,
+    regex: /\/promos/i,
     action: promosCommand
   },
   {
-    regex: /\/stats/,
+    regex: /\/stats/i,
     action: statsCommand
   },
   {
@@ -87,7 +87,7 @@ export const commands: CommandType[] = [
     action: followOrganisationCommand
   },
   {
-    regex: /\/supprimerCompte/,
+    regex: /\/supprimerCompte/i,
     action: deleteProfileCommand
   },
   {
