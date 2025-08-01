@@ -1,6 +1,10 @@
 import { CommandType } from "../types.ts";
 
-import { followOrganisationCommand } from "./followOrganisation.ts";
+import {
+  followOrganisationTelegram,
+  searchOrganisationFromStr,
+  followOrganisationsFromWikidataIdStr
+} from "./followOrganisation.ts";
 import {
   followCommand,
   fullHistoryCommand,
@@ -88,7 +92,15 @@ export const commands: CommandType[] = [
   {
     regex:
       /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization|🏛️️ Ajout Organisation/i,
-    action: followOrganisationCommand
+    action: followOrganisationTelegram
+  },
+  {
+    regex: /RechercherO \s*(.*)/i,
+    action: searchOrganisationFromStr
+  },
+  {
+    regex: /SuivreO \s*(.*)/i,
+    action: followOrganisationsFromWikidataIdStr
   },
   {
     regex: /\/supprimerCompte/i,
