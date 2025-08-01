@@ -89,7 +89,7 @@ export const followFunctionCommand = async (
 
 const followFunctionsCommand = async (
   session: ISession,
-  functions: (keyof typeof FunctionTags)[]
+  functions: FunctionTags[]
 ): Promise<void> => {
   try {
     if (functions.length == 0) return;
@@ -97,12 +97,12 @@ const followFunctionsCommand = async (
 
     session.user ??= await User.findOrCreate(session);
 
-    const addedFunctions: (typeof FunctionTags)[] = [];
-    const alreadyFollowedFunctions: (typeof FunctionTags)[] = [];
+    const addedFunctions: (keyof typeof FunctionTags)[] = [];
+    const alreadyFollowedFunctions: (keyof typeof FunctionTags)[] = [];
 
     for (const functionToFollow of functions) {
       const fctIndex = functionTagValues.indexOf(functionToFollow);
-      const fctValue = functionTagKeys[fctIndex];
+      const fctValue = functionTagKeys[fctIndex] as keyof typeof FunctionTags;
       if (await session.user.addFollowedFunction(functionToFollow)) {
         addedFunctions.push(fctValue);
       } else {
