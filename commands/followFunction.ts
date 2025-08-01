@@ -146,23 +146,49 @@ export const followFunctionFromStrCommand = async (
       await defaultCommand(session);
       return;
     }
-    const fctValue = msg.split(" ").slice(1).join(" ");
 
-    let fctIndex = functionTagValues.findIndex(
-      (s: string) => s.toLowerCase() === fctValue.toLowerCase()
+    const selectedFunctions: FunctionTags[] = [];
+
+    const textValues = msg.split(" ").slice(1);
+
+    const selectionTexts = textValues.join(" ");
+
+    const answersInt = parseIntAnswers(
+      selectionTexts,
+      functionTagValues.length
     );
 
-    if (fctIndex == -1)
-      fctIndex = functionTagKeys.findIndex(
+    answersInt.forEach((i) => {
+      selectedFunctions.push(functionTagValues[i - 1]);
+    });
+
+    for (const fctValue of textValues) {
+      let fctIndex = functionTagValues.findIndex(
         (s: string) => s.toLowerCase() === fctValue.toLowerCase()
       );
 
-    if (fctIndex == -1) {
+      if (fctIndex == -1)
+        fctIndex = functionTagKeys.findIndex(
+          (s: string) => s.toLowerCase() === fctValue.toLowerCase()
+        );
+
+      if (fctIndex != -1) selectedFunctions.push(functionTagValues[fctIndex]);
+    }
+
+    const selectedFunctionsUnique = selectedFunctions.reduce(
+      (tab: FunctionTags[], fct) => {
+        if (tab.includes(fct)) return tab;
+        return [...tab, fct];
+      },
+      []
+    );
+
+    if (selectedFunctions.length == 0) {
       await session.sendMessage("La fonction demandée n'est pas reconnue.");
       return;
     }
 
-    await followFunctionsCommand(session, [functionTagValues[fctIndex]]);
+    await followFunctionsCommand(session, selectedFunctionsUnique);
   } catch (error) {
     console.log(error);
   }
