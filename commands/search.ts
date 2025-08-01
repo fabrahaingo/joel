@@ -283,23 +283,17 @@ export const manualFollowCommandShort = async (
 ): Promise<void> => {
   await session.log({ event: "/follow-name" });
 
-  if (msg == undefined) {
-    console.log("/follow-name command called without msg argument");
-    return;
-  }
-
-  const tgSession: TelegramSession | undefined = await extractTelegramSession(
-    session,
-    true
-  );
-  if (tgSession == null) return;
-
-  const tgBot = tgSession.telegramBot;
-
-  const personNameSplit = cleanPeopleName(msg).split(" ").slice(1);
+  const personNameSplit = cleanPeopleName(msg ?? "")
+    .split(" ")
+    .slice(1);
 
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
+
+  if (personNameSplit.length === 0) {
+    console.log("/follow-name command called without msg argument");
+    return;
+  }
 
   if (session.user?.checkFollowedName(nomPrenom)) {
     await session.sendMessage(
@@ -309,50 +303,67 @@ export const manualFollowCommandShort = async (
     return;
   }
 
-  await session.sendTypingAction();
-  const question = await tgBot.sendMessage(
-    session.chatId,
-    `Voulez-vous forcer le suivi de *${prenomNom}* ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *en cas de variation d'orthographe ou de nom (mariage, divorce), il est possible que les nominations futures ne soient pas notifiées*`,
-    {
-      reply_markup: {
-        force_reply: true
-      },
-      parse_mode: "Markdown"
-    }
-  );
+  if (session.messageApp === "Telegram") {
+    const tgSession: TelegramSession | undefined = await extractTelegramSession(
+      session,
+      false
+    );
+    if (tgSession == null) return;
 
-  tgBot.onReplyToMessage(
-    session.chatId,
-    question.message_id,
-    (tgMsg2: TelegramBot.Message) => {
-      void (async () => {
-        if (tgMsg2.text === undefined) {
+    const tgBot = tgSession.telegramBot;
+
+    await session.sendTypingAction();
+    const question = await tgBot.sendMessage(
+      session.chatId,
+      `Voulez-vous forcer le suivi de *${prenomNom}* ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *en cas de variation d'orthographe ou de nom (mariage, divorce), il est possible que les nominations futures ne soient pas notifiées*`,
+      {
+        reply_markup: {
+          force_reply: true
+        },
+        parse_mode: "Markdown"
+      }
+    );
+
+    tgBot.onReplyToMessage(
+      session.chatId,
+      question.message_id,
+      (tgMsg2: TelegramBot.Message) => {
+        void (async () => {
+          if (tgMsg2.text === undefined) {
+            await session.sendMessage(
+              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
+              session.mainMenuKeyboard
+            );
+            return;
+          }
+          if (new RegExp(/oui/i).test(tgMsg2.text)) {
+            session.user = await User.findOrCreate(session);
+            await session.user.addFollowedName(nomPrenom);
+            await session.sendMessage(
+              `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
+              session.mainMenuKeyboard
+            );
+            return;
+          } else if (new RegExp(/non/i).test(tgMsg2.text)) {
+            await session.sendMessage(
+              `Ok, aucun ajout n'a été effectué. 👌`,
+              session.mainMenuKeyboard
+            );
+            return;
+          }
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
             session.mainMenuKeyboard
           );
-          return;
-        }
-        if (new RegExp(/oui/i).test(tgMsg2.text)) {
-          session.user = await User.findOrCreate(session);
-          await session.user.addFollowedName(nomPrenom);
-          await session.sendMessage(
-            `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
-            session.mainMenuKeyboard
-          );
-          return;
-        } else if (new RegExp(/non/i).test(tgMsg2.text)) {
-          await session.sendMessage(
-            `Ok, aucun ajout n'a été effectué. 👌`,
-            session.mainMenuKeyboard
-          );
-          return;
-        }
-        await session.sendMessage(
-          `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-          session.mainMenuKeyboard
-        );
-      })();
-    }
-  );
+        })();
+      }
+    );
+  } else {
+    session.user = await User.findOrCreate(session);
+    await session.user.addFollowedName(nomPrenom);
+    await session.sendMessage(
+      `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
+      session.mainMenuKeyboard
+    );
+  }
 };
