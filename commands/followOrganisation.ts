@@ -274,9 +274,13 @@ export const followOrganisationsFromWikidataIdStr = async (
         const orgRecordsFromJORF = await callJORFSearchOrganisation(id);
         if (orgRecordsFromJORF.length > 0) {
           if (orgRecordsFromJORF[0].organisations.length == 0) continue;
+          const org = orgRecordsFromJORF[0].organisations.find(
+            (o) => o.wikidata_id === id
+          );
+          if (org?.wikidata_id === undefined) continue;
           const newOrg: IOrganisation = await Organisation.findOrCreate({
-            nom: orgRecordsFromJORF[0].organisations[0].nom,
-            wikidataId: id
+            nom: org.nom,
+            wikidataId: org.wikidata_id
           });
           orgResults.push(newOrg);
         }
