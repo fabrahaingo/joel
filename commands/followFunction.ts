@@ -1,13 +1,13 @@
 import User from "../models/User.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import TelegramBot from "node-telegram-bot-api";
-import { ButtonElement, ISession } from "../types.ts";
 import {
   extractTelegramSession,
   TelegramSession
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import { defaultCommand } from "./default.ts";
+import { ISession } from "../types";
 
 const functionTagValues = Object.values(FunctionTags);
 const functionTagKeys = Object.keys(FunctionTags);
