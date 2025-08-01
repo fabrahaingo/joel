@@ -152,9 +152,6 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`
           );
 
-          // wait 2 seconds
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-
           // sort JORFSearchRes by the upper lastname: to account for French "particule"
           promoJORFList.sort((a, b) => {
             if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
@@ -181,45 +178,37 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             followConfirmation.message_id,
             (tgMsg2: TelegramBot.Message) => {
               void (async () => {
-                if (tgMsg2.text === undefined) {
-                  await session.sendMessage(
-                    `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande .`,
-                    [
-                      [{ text: "Liste des promos ENA/INSP" }],
-                      [{ text: "🏠 Menu principal" }]
-                    ]
-                  );
-                  return;
-                }
-                if (new RegExp(/oui/i).test(tgMsg2.text)) {
-                  await session.sendMessage(`Ajout en cours... ⏰`);
-                  await session.sendTypingAction();
-                  session.user ??= await User.findOrCreate(session);
+                if (tgMsg2.text != undefined) {
+                  if (new RegExp(/oui/i).test(tgMsg2.text)) {
+                    await session.sendMessage(`Ajout en cours... ⏰`);
+                    await session.sendTypingAction();
+                    session.user ??= await User.findOrCreate(session);
 
-                  const peopleTab: IPeople[] = [];
+                    const peopleTab: IPeople[] = [];
 
-                  for (const contact of promoJORFList) {
-                    const people = await People.firstOrCreate({
-                      nom: contact.nom,
-                      prenom: contact.prenom
-                    });
-                    peopleTab.push(people);
+                    for (const contact of promoJORFList) {
+                      const people = await People.findOrCreate({
+                        nom: contact.nom,
+                        prenom: contact.prenom
+                      });
+                      peopleTab.push(people);
+                    }
+                    await session.user.addFollowedPeopleBulk(peopleTab);
+                    await session.user.save();
+                    await session.sendMessage(
+                      `Les *${String(
+                        peopleTab.length
+                      )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
+                      session.mainMenuKeyboard
+                    );
+                    return;
+                  } else if (new RegExp(/non/i).test(tgMsg2.text)) {
+                    await session.sendMessage(
+                      `Ok, aucun ajout n'a été effectué. 👌`,
+                      session.mainMenuKeyboard
+                    );
+                    return;
                   }
-                  await session.user.addFollowedPeopleBulk(peopleTab);
-                  await session.user.save();
-                  await session.sendMessage(
-                    `Les *${String(
-                      peopleTab.length
-                    )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
-                    session.mainMenuKeyboard
-                  );
-                  return;
-                } else if (new RegExp(/non/i).test(tgMsg2.text)) {
-                  await session.sendMessage(
-                    `Ok, aucun ajout n'a été effectué. 👌`,
-                    session.mainMenuKeyboard
-                  );
-                  return;
                 }
                 await session.sendMessage(
                   `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,

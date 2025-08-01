@@ -57,7 +57,7 @@ export const searchCommand = async (session: ISession): Promise<void> => {
       void (async () => {
         if (tgMsg.text == undefined || tgMsg.text.length == 0) {
           await session.sendMessage(
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
+            `Votre réponse n'a pas été reconnue 👎.\n Veuillez essayer de nouveau la commande.`,
             [
               [{ text: "🔎 Nouvelle recherche" }],
               [{ text: "🏠 Menu principal" }]
@@ -265,8 +265,6 @@ export const followCommand = async (
       text += `Vous suivez maintenant *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     } else {
       // With the search/follow flow this would happen only if the user types the "Suivre **" manually
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
       text += `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     }
     if (session.messageApp === "Telegram")
@@ -339,30 +337,22 @@ export const manualFollowCommandShort = async (
       question.message_id,
       (tgMsg2: TelegramBot.Message) => {
         void (async () => {
-          if (tgMsg2.text === undefined) {
-            await session.sendMessage(
-              `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
-              [
-                [{ text: `🕵️ Forcer le suivi de ${prenomNom}` }],
-                [{ text: "🏠 Menu principal" }]
-              ]
-            );
-            return;
-          }
-          if (new RegExp(/oui/i).test(tgMsg2.text)) {
-            session.user = await User.findOrCreate(session);
-            await session.user.addFollowedName(nomPrenom);
-            await session.sendMessage(
-              `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
-              session.mainMenuKeyboard
-            );
-            return;
-          } else if (new RegExp(/non/i).test(tgMsg2.text)) {
-            await session.sendMessage(
-              `Ok, aucun ajout n'a été effectué. 👌`,
-              session.mainMenuKeyboard
-            );
-            return;
+          if (tgMsg2.text != undefined) {
+            if (new RegExp(/oui/i).test(tgMsg2.text)) {
+              session.user = await User.findOrCreate(session);
+              await session.user.addFollowedName(nomPrenom);
+              await session.sendMessage(
+                `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
+                session.mainMenuKeyboard
+              );
+              return;
+            } else if (new RegExp(/non/i).test(tgMsg2.text)) {
+              await session.sendMessage(
+                `Ok, aucun ajout n'a été effectué. 👌`,
+                session.mainMenuKeyboard
+              );
+              return;
+            }
           }
           await session.sendMessage(
             `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
