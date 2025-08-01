@@ -23,6 +23,7 @@ interface UserFollows {
     peopleId?: Types.ObjectId;
     JORFSearchLink?: string;
   }[];
+  meta: never[];
 }
 
 const noDataText = `Vous ne suivez aucun contact, fonction, ni organisation pour le moment.`;
@@ -82,7 +83,8 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   return {
     functions: followedFunctions.map((f) => f.functionTag),
     organisations: followedOrganisations,
-    peopleAndNames: followedPeopleTab
+    peopleAndNames: followedPeopleTab,
+    meta: []
   };
 }
 
@@ -102,7 +104,8 @@ export const listCommand = async (session: ISession) => {
     const followTotal =
       userFollows.functions.length +
       userFollows.organisations.length +
-      userFollows.peopleAndNames.length;
+      userFollows.peopleAndNames.length +
+      userFollows.meta.length;
     if (followTotal == 0) {
       await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
@@ -199,7 +202,8 @@ export const unfollowTelegram = async (session: ISession) => {
     const followTotal =
       userFollows.functions.length +
       userFollows.organisations.length +
-      userFollows.peopleAndNames.length;
+      userFollows.peopleAndNames.length +
+      userFollows.meta.length;
     if (followTotal == 0) {
       await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
@@ -266,7 +270,8 @@ export const unfollowFromStr = async (
     const followTotal =
       userFollows.functions.length +
       userFollows.organisations.length +
-      userFollows.peopleAndNames.length;
+      userFollows.peopleAndNames.length +
+      userFollows.meta.length;
     if (followTotal == 0) {
       await session.sendMessage(noDataText, session.mainMenuKeyboard);
       return;
