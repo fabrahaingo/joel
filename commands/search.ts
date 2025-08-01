@@ -120,19 +120,24 @@ async function searchPersonHistory(
       const prenomNom = personNameSplit.join(" ");
       const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
-      if (session.user?.checkFollowedName(nomPrenom)) {
-        text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
-        await session.sendMessage(text, [
-          [{ text: "🔎 Nouvelle recherche" }],
-          [{ text: "🏠 Menu principal" }]
-        ]);
-        return;
-      }
-      await session.sendMessage(text, [
+      let tgKeyboard = [
         [{ text: "🔎 Nouvelle recherche" }],
         [{ text: `🕵️ Forcer le suivi de ${prenomNom}` }],
         [{ text: "🏠 Menu principal" }]
-      ]);
+      ];
+      if (session.user?.checkFollowedName(nomPrenom)) {
+        text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
+        tgKeyboard = [
+          [{ text: "🔎 Nouvelle recherche" }],
+          [{ text: "🏠 Menu principal" }]
+        ];
+      } else if (session.messageApp !== "Telegram") {
+        text += `\n\nPour forcer le suivi manuel, utilisez le commande:\n*SuivreN ${prenomNom}*`;
+      }
+
+      if (session.messageApp === "Telegram")
+        await session.sendMessage(text, tgKeyboard);
+      else await session.sendMessage(text, session.mainMenuKeyboard);
       return;
     }
 
@@ -191,8 +196,13 @@ async function searchPersonHistory(
       text += `Vous suivez *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`;
     } else {
       text += `Vous ne suivez pas *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* 🙅‍♂️`;
+      text += `\nPour suivre, utilisez la commande:\n*Suivre ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}*`;
     }
-    await session.sendMessage(text, temp_keyboard);
+    if (session.messageApp === "Telegram") {
+      await session.sendMessage(text, temp_keyboard);
+    } else {
+      await session.sendMessage(text, session.mainMenuKeyboard);
+    }
   } catch (error) {
     console.log(error);
   }
@@ -235,25 +245,26 @@ export const followCommand = async (
       prenom: JORFRes[0].prenom
     });
 
+    let text = "";
     if (!isPersonAlreadyFollowed(people, session.user.followedPeople)) {
       session.user.followedPeople.push({
         peopleId: people._id,
         lastUpdate: new Date(Date.now())
       });
       await session.user.save();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await session.sendMessage(
-        `Vous suivez maintenant *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`,
-        [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
-      );
+      text += `Vous suivez maintenant *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     } else {
       // With the search/follow flow this would happen only if the user types the "Suivre **" manually
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await session.sendMessage(
-        `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`,
-        [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
-      );
+
+      text += `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     }
+    if (session.messageApp === "Telegram")
+      await session.sendMessage(text, [
+        [{ text: "🔎 Nouvelle recherche" }],
+        [{ text: "🏠 Menu principal" }]
+      ]);
+    else await session.sendMessage(text, session.mainMenuKeyboard);
   } catch (error) {
     console.log(error);
   }
