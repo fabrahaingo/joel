@@ -243,19 +243,23 @@ export const followOrganisationsFromWikidataIdStr = async (
         .map((s) => s.toUpperCase()) ?? [];
 
     if (selectedWikiDataIds.length == 0) {
+      const text = `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`;
       if (session.messageApp === "Telegram")
-        await session.sendMessage(
-          `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`,
-          [
-            [{ text: `🏛️️ Ajouter une organisation` }],
-            [{ text: "🏠 Menu principal" }]
-          ]
-        );
-      else
-        await session.sendMessage(
-          `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`,
-          session.mainMenuKeyboard
-        );
+        await session.sendMessage(text, [
+          [{ text: `🏛️️ Ajouter une organisation` }],
+          [{ text: "🏠 Menu principal" }]
+        ]);
+      else await session.sendMessage(text, session.mainMenuKeyboard);
+      return;
+    }
+
+    const parameterString = selectedWikiDataIds.join(" ");
+    // if the id don't contain any number, it's an organisation name
+    if (!/\d/.test(parameterString)) {
+      await searchOrganisationFromStr(
+        session,
+        "RechercherO " + parameterString
+      );
       return;
     }
 
