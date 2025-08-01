@@ -6,7 +6,5 @@ Le robot s'appuie principalement sur l'outil [JORFSearch](https://www.steinertri
 Des questions ? Un bug ? 🤔
 Vous pouvez contacter ses créateurs [Fabien](https://www.linkedin.com/in/fabien-rahaingomanana/) ([@hellofabien](https://t.me/hellofabien)) et [Philémon](https://www.linkedin.com/in/philemon-perrot/) en mentionnant votre id Telegram: *{chatId}*.
 
-Pour rester au courant des nouveautés, des corrections de bugs ainsi que des améliorations de JOEL, rejoignez notre channel officiel [@joel_news](https://t.me/joel_news).
-
-Si vous souhaitez supprimer votre compte: utilisez la commande /supprimerCompte`
+Pour rester au courant des nouveautés, des corrections de bugs ainsi que des améliorations de JOEL, rejoignez notre channel officiel [@joel_news](https://t.me/joel_news).`
 }

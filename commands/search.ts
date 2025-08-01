@@ -12,6 +12,7 @@ import {
   extractTelegramSession,
   TelegramSession
 } from "../entities/TelegramSession.ts";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -56,8 +57,11 @@ export const searchCommand = async (session: ISession): Promise<void> => {
       void (async () => {
         if (tgMsg.text == undefined || tgMsg.text.length == 0) {
           await session.sendMessage(
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            session.mainMenuKeyboard
+            `Votre réponse n'a pas été reconnue 👎.\n Veuillez essayer de nouveau la commande.`,
+            [
+              [{ text: "🔎 Nouvelle recherche" }],
+              [{ text: "🏠 Menu principal" }]
+            ]
           );
           return;
         }
@@ -81,10 +85,10 @@ export const fullHistoryCommand = async (
   const personName = msg.split(" ").slice(1).join(" ");
 
   if (personName.length == 0) {
-    await session.sendMessage("Saisie incorrecte. Veuillez réessayer.", [
-      [{ text: "🔎 Nouvelle recherche" }],
-      [{ text: "🏠 Menu principal" }]
-    ]);
+    await session.sendMessage(
+      "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
+      [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
+    );
     return;
   }
   await searchPersonHistory(session, personName, "full");
@@ -93,10 +97,13 @@ export const fullHistoryCommand = async (
 async function searchPersonHistory(
   session: ISession,
   personName: string,
-  historyType: "full" | "latest"
+  historyType: "full" | "latest",
+  noSearch = false
 ) {
   try {
-    const JORFRes_data = await callJORFSearchPeople(personName);
+    let JORFRes_data: JORFSearchItem[] = [];
+
+    if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
     const nbRecords = JORFRes_data.length;
 
     if (nbRecords == 0) {
@@ -116,29 +123,41 @@ async function searchPersonHistory(
       const prenomNom = personNameSplit.join(" ");
       const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
-      if (session.user?.checkFollowedName(nomPrenom)) {
-        text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
-        await session.sendMessage(text, [
-          [{ text: "🔎 Nouvelle recherche" }],
-          [{ text: "🏠 Menu principal" }]
-        ]);
-        return;
-      }
-      await session.sendMessage(text, [
+      let tgKeyboard = [
         [{ text: "🔎 Nouvelle recherche" }],
         [{ text: `🕵️ Forcer le suivi de ${prenomNom}` }],
         [{ text: "🏠 Menu principal" }]
-      ]);
+      ];
+      if (session.user?.checkFollowedName(nomPrenom)) {
+        text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
+        tgKeyboard = [
+          [{ text: "🔎 Nouvelle recherche" }],
+          [{ text: "🏠 Menu principal" }]
+        ];
+      } else if (session.messageApp !== "Telegram") {
+        text += `\n\nPour forcer le suivi manuel, utilisez le commande:\n*SuivreN ${prenomNom}*`;
+      }
+
+      if (session.messageApp === "Telegram")
+        await session.sendMessage(text, tgKeyboard);
+      else await session.sendMessage(text, session.mainMenuKeyboard);
       return;
     }
 
     let text = "";
     if (historyType === "latest") {
-      text += formatSearchResult(JORFRes_data.slice(0, 2), {
-        isConfirmation: true
-      });
+      text += formatSearchResult(
+        JORFRes_data.slice(0, 2),
+        session.messageApp === "Telegram",
+        {
+          isConfirmation: true
+        }
+      );
     } else {
-      text += formatSearchResult(JORFRes_data);
+      text += formatSearchResult(
+        JORFRes_data,
+        session.messageApp === "Telegram"
+      );
     }
 
     // Check if the user has an account and follows the person
@@ -187,8 +206,13 @@ async function searchPersonHistory(
       text += `Vous suivez *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`;
     } else {
       text += `Vous ne suivez pas *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* 🙅‍♂️`;
+      text += `\nPour suivre, utilisez la commande:\n*Suivre ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}*`;
     }
-    await session.sendMessage(text, temp_keyboard);
+    if (session.messageApp === "Telegram") {
+      await session.sendMessage(text, temp_keyboard);
+    } else {
+      await session.sendMessage(text, session.mainMenuKeyboard);
+    }
   } catch (error) {
     console.log(error);
   }
@@ -200,8 +224,11 @@ export const followCommand = async (
 ): Promise<void> => {
   await session.log({ event: "/follow" });
 
-  if (msg == undefined) {
-    console.log("/follow command called without msg argument");
+  const wrongParametersMsg =
+    "Saisie incorrecte. Veuillez réessayer:\nFormat : *Suivre Prénom Nom*";
+
+  if (msg == undefined || msg.length == 0) {
+    await session.sendMessage(wrongParametersMsg, session.mainMenuKeyboard);
     return;
   }
 
@@ -209,10 +236,7 @@ export const followCommand = async (
     const personName = msg.split(" ").slice(1).join(" ");
 
     if (personName.length == 0) {
-      await session.sendMessage(
-        "Saisie incorrecte. Veuillez réessayer.",
-        session.mainMenuKeyboard
-      );
+      await session.sendMessage(wrongParametersMsg, session.mainMenuKeyboard);
       return;
     }
 
@@ -220,67 +244,68 @@ export const followCommand = async (
 
     const JORFRes = await callJORFSearchPeople(personName);
     if (JORFRes.length == 0) {
-      await session.sendMessage(
-        "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement",
-        session.mainMenuKeyboard
-      );
+      // redirect to manual follow
+      await searchPersonHistory(session, personName, "latest", true);
       return;
     }
 
     session.user ??= await User.findOrCreate(session);
 
-    const people = await People.firstOrCreate({
+    const people = await People.findOrCreate({
       nom: JORFRes[0].nom,
       prenom: JORFRes[0].prenom
     });
 
+    let text = "";
     if (!isPersonAlreadyFollowed(people, session.user.followedPeople)) {
       session.user.followedPeople.push({
         peopleId: people._id,
         lastUpdate: new Date(Date.now())
       });
       await session.user.save();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await session.sendMessage(
-        `Vous suivez maintenant *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`,
-        [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
-      );
+      text += `Vous suivez maintenant *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     } else {
       // With the search/follow flow this would happen only if the user types the "Suivre **" manually
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await session.sendMessage(
-        `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`,
-        [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
-      );
+      text += `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     }
+    if (session.messageApp === "Telegram")
+      await session.sendMessage(text, [
+        [{ text: "🔎 Nouvelle recherche" }],
+        [{ text: "🏠 Menu principal" }]
+      ]);
+    else await session.sendMessage(text, session.mainMenuKeyboard);
   } catch (error) {
     console.log(error);
   }
 };
 
-export const manualFollowCommand = async (
+export const manualFollowCommandLong = async (
+  session: ISession,
+  msg?: string
+): Promise<void> => {
+  await manualFollowCommandShort(session, msg?.split(" ").slice(4).join(" "));
+};
+
+export const manualFollowCommandShort = async (
   session: ISession,
   msg?: string
 ): Promise<void> => {
   await session.log({ event: "/follow-name" });
 
-  if (msg == undefined) {
-    console.log("/follow-name command called without msg argument");
-    return;
-  }
-
-  const tgSession: TelegramSession | undefined = await extractTelegramSession(
-    session,
-    true
-  );
-  if (tgSession == null) return;
-
-  const tgBot = tgSession.telegramBot;
-
-  const personNameSplit = cleanPeopleName(msg).split(" ").slice(5);
+  const personNameSplit = cleanPeopleName(msg ?? "")
+    .split(" ")
+    .slice(1);
 
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
+
+  if (personNameSplit.length === 0) {
+    await session.sendMessage(
+      "Saisie incorrecte. Veuillez réessayer:\nFormat : *SuivreN Prénom Nom*",
+      session.mainMenuKeyboard
+    );
+    return;
+  }
 
   if (session.user?.checkFollowedName(nomPrenom)) {
     await session.sendMessage(
@@ -290,50 +315,11 @@ export const manualFollowCommand = async (
     return;
   }
 
-  await session.sendTypingAction();
-  const question = await tgBot.sendMessage(
-    session.chatId,
-    `Voulez-vous forcer le suivi de *${prenomNom}* ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *en cas de variation d'orthographe ou de nom (mariage, divorce), il est possible que les nominations futures ne soient pas notifiées*`,
-    {
-      reply_markup: {
-        force_reply: true
-      },
-      parse_mode: "Markdown"
-    }
-  );
+  session.user = await User.findOrCreate(session);
+  await session.user.addFollowedName(nomPrenom);
 
-  tgBot.onReplyToMessage(
-    session.chatId,
-    question.message_id,
-    (tgMsg2: TelegramBot.Message) => {
-      void (async () => {
-        if (tgMsg2.text === undefined) {
-          await session.sendMessage(
-            `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-            session.mainMenuKeyboard
-          );
-          return;
-        }
-        if (new RegExp(/oui/i).test(tgMsg2.text)) {
-          session.user = await User.findOrCreate(session);
-          await session.user.addFollowedName(nomPrenom);
-          await session.sendMessage(
-            `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
-            session.mainMenuKeyboard
-          );
-          return;
-        } else if (new RegExp(/non/i).test(tgMsg2.text)) {
-          await session.sendMessage(
-            `Ok, aucun ajout n'a été effectué. 👌`,
-            session.mainMenuKeyboard
-          );
-          return;
-        }
-        await session.sendMessage(
-          `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande /search.`,
-          session.mainMenuKeyboard
-        );
-      })();
-    }
+  await session.sendMessage(
+    `Le suivi manuel a été ajouté à votre profil en tant que *${nomPrenom}* ✅`,
+    session.mainMenuKeyboard
   );
 };
