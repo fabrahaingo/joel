@@ -12,6 +12,7 @@ import {
   extractTelegramSession,
   TelegramSession
 } from "../entities/TelegramSession.ts";
+import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -93,10 +94,13 @@ export const fullHistoryCommand = async (
 async function searchPersonHistory(
   session: ISession,
   personName: string,
-  historyType: "full" | "latest"
+  historyType: "full" | "latest",
+  noSearch = false
 ) {
   try {
-    const JORFRes_data = await callJORFSearchPeople(personName);
+    let JORFRes_data: JORFSearchItem[] = [];
+
+    if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
     const nbRecords = JORFRes_data.length;
 
     if (nbRecords == 0) {
@@ -220,10 +224,7 @@ export const followCommand = async (
 
     const JORFRes = await callJORFSearchPeople(personName);
     if (JORFRes.length == 0) {
-      await session.sendMessage(
-        "Personne introuvable, assurez vous d'avoir bien tapé le nom et le prénom correctement",
-        session.mainMenuKeyboard
-      );
+      await searchPersonHistory(session, personName, "latest", true);
       return;
     }
 
@@ -258,7 +259,14 @@ export const followCommand = async (
   }
 };
 
-export const manualFollowCommand = async (
+export const manualFollowCommandLong = async (
+  session: ISession,
+  msg?: string
+): Promise<void> => {
+  await manualFollowCommandShort(session, msg?.split(" ").slice(4).join(" "));
+};
+
+export const manualFollowCommandShort = async (
   session: ISession,
   msg?: string
 ): Promise<void> => {
@@ -277,7 +285,7 @@ export const manualFollowCommand = async (
 
   const tgBot = tgSession.telegramBot;
 
-  const personNameSplit = cleanPeopleName(msg).split(" ").slice(5);
+  const personNameSplit = cleanPeopleName(msg).split(" ").slice(1);
 
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;

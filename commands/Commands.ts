@@ -4,7 +4,8 @@ import { followOrganisationCommand } from "./followOrganisation.ts";
 import {
   followCommand,
   fullHistoryCommand,
-  manualFollowCommand,
+  manualFollowCommandLong,
+  manualFollowCommandShort,
   searchCommand
 } from "./search.ts";
 import { enaCommand, promosCommand } from "./ena.ts";
@@ -34,7 +35,11 @@ export const commands: CommandType[] = [
   },
   {
     regex: /🕵️ Forcer le suivi de \s*(.*)/i,
-    action: manualFollowCommand
+    action: manualFollowCommandLong
+  },
+  {
+    regex: /SuivreN \s*(.*)/i,
+    action: manualFollowCommandShort
   },
   {
     regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
