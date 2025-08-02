@@ -8,6 +8,7 @@ import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import umami from "./umami.ts";
 import {
   cleanJORFPublication,
+  JORFSearchPublication,
   JORFSearchResponseMeta
 } from "../entities/JORFSearchResponseMeta.ts";
 
@@ -133,7 +134,7 @@ export async function callJORFSearchOrganisation(
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function JORFSearchCallPublications(
   currentDay: string
-): Promise<JORFSearchItem[]> {
+): Promise<JORFSearchPublication[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-meta" });
     return await axios
