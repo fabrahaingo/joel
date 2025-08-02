@@ -43,5 +43,5 @@ export function getISOWeek(date: Date): string {
         ((week1.getDay() + 6) % 7)) /
         7
     );
-  return `${target.getFullYear()}-W${weekNum}`;
+  return `${String(target.getFullYear())}-W${String(weekNum)}`;
 }
