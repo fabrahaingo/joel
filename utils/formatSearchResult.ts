@@ -37,6 +37,8 @@ function addPoste(elem: JORFSearchItem, message: string) {
     const ambassadePoste = elem.organisations[0]?.nom ?? elem.ambassadeur_pays;
     if (ambassadePoste)
       message += `🏛️ Ambassadeur auprès de *${ambassadePoste}*\n`;
+    else if (elem.ambassadeur_thematique)
+      message += `🏛️ Ambassadeur thématique\n`;
     else message += `🏛️ Ambassadeur\n`;
   } else if (elem.organisations[0]?.nom) {
     message += `*👉 ${elem.organisations[0].nom}*\n`;
