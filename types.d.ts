@@ -93,7 +93,6 @@ export interface IOrganisation {
   nom: string;
   wikidataId: WikidataId;
   save: () => Promise<IOrganisation>;
-  countDocuments: () => Promise<number>;
 }
 
 export interface OrganisationModel extends Model<IOrganisation> {
@@ -101,12 +100,10 @@ export interface OrganisationModel extends Model<IOrganisation> {
     nom: string;
     wikidataId: WikidataId;
   }) => Promise<IOrganisation>;
-  countDocuments: () => Promise<number>;
 }
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
-  countDocuments: () => Promise<number>;
   updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
@@ -131,7 +128,6 @@ export interface IPeople {
 
 export interface PeopleModel extends Model<IPeople> {
   findOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
-  countDocuments: () => Promise<number>;
   deleteOne: (args) => Promise<void>;
   collection: { insertOne: (arg) => Promise<void> };
 }
