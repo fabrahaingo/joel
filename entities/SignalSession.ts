@@ -134,7 +134,9 @@ export async function sendSignalAppMessage(
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
   try {
-    await signalCli.sendMessage(userPhoneId, message);
+    const cleanMessage = cleanMessageForSignal(message);
+    const userPhoneIdInt = "+" + String(userPhoneId);
+    await signalCli.sendMessage(userPhoneIdInt, cleanMessage);
   } catch (error) {
     console.log(error);
   }
