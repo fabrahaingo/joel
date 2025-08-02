@@ -131,7 +131,7 @@ app.listen(WHATSAPP_APP_PORT, function () {
 await (async function () {
   await mongodbConnect();
 
-  console.log("Initializing Ngrok tunnel...");
+  console.log("WhatsApp: Initializing Ngrok tunnel...");
 
   // Initialize ngrok using the auth token and hostname
   const url = await ngrok.connect({
@@ -149,8 +149,8 @@ await (async function () {
          */
   });
 
-  console.log(`Listening on url ${url}`);
-  console.log("Ngrok tunnel initialized!");
+  console.log(`WhatsApp: Listening on url ${url}`);
+  console.log("WhatsApp: Ngrok tunnel initialized!");
 
-  console.log(`\u{2705} JOEL started successfully`);
+  console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();

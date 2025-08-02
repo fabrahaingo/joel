@@ -67,7 +67,7 @@ await (async () => {
       })();
     });
 
-    console.log(`\u{2705} JOEL started successfully`);
+    console.log(`Signal: JOEL started successfully \u{2705}`);
 
     // Graceful shutdown
     //await signal.gracefulShutdown();
