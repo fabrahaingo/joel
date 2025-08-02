@@ -267,7 +267,7 @@ export const followOrganisationsFromWikidataIdStr = async (
 
     const orgsInDb: IOrganisation[] = await Organisation.find({
       wikidataId: { $in: selectedWikiDataIds }
-    });
+    }).lean();
     for (const id of selectedWikiDataIds) {
       const orgFromDb: IOrganisation | undefined = orgsInDb.find(
         (o) => o.wikidataId === id

@@ -16,7 +16,6 @@ export interface ButtonElement {
   text: string;
   desc?: string;
 }
-export type KeyboardType = "Buttons" | "List";
 
 export interface ISession {
   messageApp: MessageApp;
