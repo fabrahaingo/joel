@@ -39,11 +39,13 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     return 0;
   });
 
-  const followedOrganisations: IOrganisation[] = await Organisation.find({
-    $or: user.followedOrganisations.map((o) => ({
-      wikidataId: new RegExp(`^${o.wikidataId}$`, "i") // same value, ignore case
-    }))
-  }).lean();
+  let followedOrganisations: IOrganisation[] = [];
+  if (user.followedOrganisations.length > 0)
+    followedOrganisations = await Organisation.find({
+      $or: user.followedOrganisations.map((o) => ({
+        wikidataId: new RegExp(`^${o.wikidataId}$`, "i") // same value, ignore case
+      }))
+    }).lean();
 
   followedOrganisations.sort((a, b) => {
     if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
@@ -51,9 +53,11 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
     return 0;
   });
 
-  const followedPeoples: IPeople[] = await People.find({
-    _id: { $in: user.followedPeople.map((p) => p.peopleId) }
-  }).lean();
+  let followedPeoples: IPeople[] = [];
+  if (user.followedPeople.length > 0)
+    followedPeoples = await People.find({
+      _id: { $in: user.followedPeople.map((p) => p.peopleId) }
+    }).lean();
 
   const followedPeopleTab: {
     nomPrenom: string;

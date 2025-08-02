@@ -135,7 +135,7 @@ async function searchPersonHistory(
           [{ text: "🏠 Menu principal" }]
         ];
       } else if (session.messageApp !== "Telegram") {
-        text += `\n\nPour forcer le suivi manuel, utilisez le commande:\n*SuivreN ${prenomNom}*`;
+        text += `\n\nPour forcer le suivi manuel, utilisez la commande:\n*SuivreN ${prenomNom}*`;
       }
 
       if (session.messageApp === "Telegram")
