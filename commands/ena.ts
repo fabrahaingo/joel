@@ -46,9 +46,9 @@ function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
 
 async function getJORFPromoSearchResult(
   promo: Promo_ENA_INSP | null
-): Promise<JORFSearchItem[] | null> {
+): Promise<JORFSearchItem[]> {
   if (promo === null) {
-    return null;
+    return [];
   }
 
   switch (promo.school) {
@@ -112,15 +112,31 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
           }
 
           const promoInfo = findENAINSPPromo(tgMsg1.text);
-          const promoJORFList = await getJORFPromoSearchResult(promoInfo);
 
-          if (
-            promoInfo == null ||
-            promoJORFList == null ||
-            promoJORFList.length == 0
-          ) {
+          if (promoInfo && !promoInfo.onJORF) {
+            const promoStr = promoInfo.name
+              ? `${promoInfo.name} (${promoInfo.period})`
+              : promoInfo.period;
+
             await session.sendMessage(
-              `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande. Veuillez essayer de nouveau la commande.
+              `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.\n
+Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
+              [
+                [{ text: "Rechercher une promo ENA/INSP" }],
+                [{ text: "Liste des promos ENA/INSP" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
+            );
+            return;
+          }
+
+          let promoJORFList: JORFSearchItem[] = [];
+          if (promoInfo !== null)
+            promoJORFList = await getJORFPromoSearchResult(promoInfo);
+
+          if (promoInfo == null || promoJORFList.length == 0) {
+            await session.sendMessage(
+              `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.\n\n
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
               [
                 [{ text: "Rechercher une promo ENA/INSP" }],
@@ -134,19 +150,6 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
           const promoStr = promoInfo.name
             ? `${promoInfo.name} (${promoInfo.period})`
             : promoInfo.period;
-
-          if (!promoInfo.onJORF) {
-            await session.sendMessage(
-              `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.
-Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
-              [
-                [{ text: "Rechercher une promo ENA/INSP" }],
-                [{ text: "Liste des promos ENA/INSP" }],
-                [{ text: "🏠 Menu principal" }]
-              ]
-            );
-            return;
-          }
 
           await session.sendMessage(
             `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`
