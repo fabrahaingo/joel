@@ -129,6 +129,8 @@ export async function callJORFSearchOrganisation(
   return [];
 }
 
+// not used for now
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function JORFSearchCallPublications(
   currentDay: string
 ): Promise<JORFSearchItem[]> {
