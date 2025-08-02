@@ -3,7 +3,7 @@ import { JORFSearchResponse } from "../entities/JORFSearchResponse.ts";
 import * as fs from "node:fs";
 import { dateTOJORFFormat } from "../utils/date.utils.ts";
 
-export function round(value: number, precision = 0): number {
+function round(value: number, precision = 0): number {
   return parseFloat(value.toFixed(precision));
 }
 
@@ -20,7 +20,7 @@ async function JORFSearchCallRaw(currentDay: string) {
     });
 }
 
-export function getOccurrenceCount(values: string[]) {
+function getOccurrenceCount(values: string[]) {
   return values.reduce<Record<string, number>>((acc, val) => {
     acc[val] = (acc[val] || 0) + 1;
     return acc;
@@ -40,8 +40,15 @@ interface Incomplete {
   nb_occurrences: number;
 }
 
+// This form is used as JORFSearchRawItem is not exported
+type JORFSearchRawItemArray = Awaited<ReturnType<typeof JORFSearchCallRaw>>;
+type JORFSearchRawItem = Awaited<ReturnType<typeof JORFSearchCallRaw>>[number];
+type OrganisationRaw = NonNullable<
+  NonNullable<JORFSearchRawItem["organisations"]>[number]
+>;
+
 // Function to convert an array to CSV
-export function convertToCSV(array: never[]) {
+function convertToCSV(array: never[]) {
   if (array.length < 1) {
     return null;
   }
@@ -63,8 +70,6 @@ async function main() {
 
   const currentDay = new Date();
 
-  type JORFSearchRawItemArray = Awaited<ReturnType<typeof JORFSearchCallRaw>>; // This form is used as JORFSearchRawItem is not exported
-
   let res_data: JORFSearchRawItemArray = [];
   for (let i = 0; i < nbDays; i++) {
     // currentDay minus i days
@@ -85,7 +90,9 @@ async function main() {
 
   const item_keys_stats: JORFKeyStat[] = [];
 
-  for (const key of Object.keys(items_keys_occurs)) {
+  for (const key of Object.keys(
+    items_keys_occurs
+  ) as (keyof JORFSearchRawItem)[]) {
     const isKeyBoolean = !res_data
       .filter((i) => i[key] !== undefined)
       .map((i) => i[key])
@@ -139,10 +146,14 @@ async function main() {
     });
   }
 
-  const res_org = res_data
-    .filter((i) => i.organisations && i.organisations.length > 0)
-    .map((i) => i.organisations)
+  const res_org: OrganisationRaw[] = res_data
+    .reduce((tab: OrganisationRaw[][], item) => {
+      if (item.organisations && item.organisations.length > 0)
+        tab.push(item.organisations);
+      return tab;
+    }, [])
     .flat();
+
   const nbRecordsOrg = res_org.length;
 
   const res_org_keys = res_org.map((i) => Object.keys(i)).flat();
@@ -151,7 +162,7 @@ async function main() {
 
   const org_keys_stats: JORFKeyStat[] = [];
 
-  for (const key of Object.keys(org_keys_occurs)) {
+  for (const key of Object.keys(org_keys_occurs) as (keyof OrganisationRaw)[]) {
     const isKeyBoolean = !res_org
       .filter((i) => i[key])
       .map((i) => i[key])
@@ -170,16 +181,18 @@ async function main() {
     .map((i) => i.remplacement);
   const nbRecordsRempl = res_rempl.length;
 
-  const res_rempl_keys = res_rempl.map((i) => Object.keys(i)).flat();
+  const res_rempl_keys = res_rempl.map((i) => Object.keys(i as object)).flat();
 
   const rempl_keys_occurs = getOccurrenceCount(res_rempl_keys);
 
   const rempl_keys_stats: JORFKeyStat[] = [];
 
-  for (const key of Object.keys(rempl_keys_occurs)) {
+  for (const key of Object.keys(rempl_keys_occurs) as (keyof NonNullable<
+    JORFSearchRawItem["remplacement"]
+  >)[]) {
     const isKeyBoolean = !res_rempl
-      .filter((i) => i[key])
-      .map((i) => i[key])
+      .filter((i) => i?.[key])
+      .map((i) => i?.[key])
       .some((v) => !(v === "true" || v === "false"));
 
     rempl_keys_stats.push({

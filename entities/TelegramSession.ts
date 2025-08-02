@@ -1,10 +1,4 @@
-import {
-  ButtonElement,
-  ISession,
-  IUser,
-  KeyboardType,
-  MessageApp
-} from "../types.ts";
+import { ButtonElement, ISession, IUser, MessageApp } from "../types.ts";
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
@@ -62,11 +56,7 @@ export class TelegramSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendMessage(
-    msg: string,
-    keyboard?: { text: string }[][],
-    menuType?: KeyboardType
-  ) {
+  async sendMessage(msg: string, keyboard?: { text: string }[][]) {
     if (msg.length > 3000) {
       await this.sendLongMessage(msg, keyboard);
       return;
@@ -94,8 +84,7 @@ export class TelegramSession implements ISession {
 
   async sendLongMessage(
     formattedData: string,
-    keyboard?: ButtonElement[][],
-    menuType?: KeyboardType
+    keyboard?: ButtonElement[][]
   ): Promise<void> {
     let optionsWithKeyboard = telegramMessageOption;
     if (keyboard != null) {

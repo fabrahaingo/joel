@@ -95,11 +95,11 @@ function cleanMessageForSignal(msg: string): string {
 
     // 2. Strip all combining diacritical marks (U+0300–036F)
     const stripped = decomposed.replace(
-      /\s[\u0300-\u036f]|[\u0300-\u036f]/gu,
+      /\s[\u0300-\u036f]|[\u0300-\u036f]|🛡/gu,
       ""
     );
 
-    // 3. Map remaining special-case runes that don’t decompose nicely
+    // 3. Map remaining special-case runes that don't decompose nicely
     return stripped
       .replace(/ß/g, "ss")
       .replace(/Æ/g, "AE")
@@ -116,7 +116,7 @@ function cleanMessageForSignal(msg: string): string {
 
   const emoteFreeText = msg.replace(emojiRegex(), "");
 
-  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/g, "");
+  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/gu, "");
 
   const accentFreeText = deburr(formattingFreeText);
 
@@ -135,7 +135,9 @@ export async function sendSignalAppMessage(
   }
   try {
     const cleanMessage = cleanMessageForSignal(message);
-    const userPhoneIdInt = "+" + String(userPhoneId);
+    const userPhoneIdInt = userPhoneId.startsWith("+")
+      ? userPhoneId
+      : "+" + userPhoneId;
     await signalCli.sendMessage(userPhoneIdInt, cleanMessage);
   } catch (error) {
     console.log(error);
