@@ -65,7 +65,7 @@ interface Incomplete {
 }
 
 async function main() {
-  const nbDays = 8300;
+  const nbDays = 1400;
   // Max 8300
 
   const currentDay = new Date();

@@ -47,5 +47,5 @@ await (async () => {
     });
   });
 
-  console.log(`\u{2705} JOEL started successfully`);
+  console.log(`Telegram: JOEL started successfully \u{2705}`);
 })();

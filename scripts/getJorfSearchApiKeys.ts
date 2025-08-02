@@ -65,7 +65,7 @@ function convertToCSV(array: never[]) {
 }
 
 async function main() {
-  const nbDays = 14000;
+  const nbDays = 30;
   // Max 14000
 
   const currentDay = new Date();
