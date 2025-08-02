@@ -116,7 +116,7 @@ function cleanMessageForSignal(msg: string): string {
 
   const emoteFreeText = msg.replace(emojiRegex(), "");
 
-  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/g, "");
+  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/gu, "");
 
   const accentFreeText = deburr(formattingFreeText);
 
@@ -135,7 +135,9 @@ export async function sendSignalAppMessage(
   }
   try {
     const cleanMessage = cleanMessageForSignal(message);
-    const userPhoneIdInt = "+" + String(userPhoneId);
+    const userPhoneIdInt = userPhoneId.startsWith("+")
+      ? userPhoneId
+      : "+" + userPhoneId;
     await signalCli.sendMessage(userPhoneIdInt, cleanMessage);
   } catch (error) {
     console.log(error);
