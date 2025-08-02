@@ -8,6 +8,7 @@ import {
 import {
   followCommand,
   fullHistoryCommand,
+  fullHistoryCommandLong,
   manualFollowCommandLong,
   manualFollowCommandShort,
   searchCommand
@@ -72,6 +73,10 @@ export const commands: CommandType[] = [
   {
     regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Fonctions|Fonction$/i,
     action: followFunctionCommand
+  },
+  {
+    regex: /Historique complet de \s*(.*)/i,
+    action: fullHistoryCommandLong
   },
   {
     regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
