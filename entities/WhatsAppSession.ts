@@ -1,10 +1,4 @@
-import {
-  ButtonElement,
-  ISession,
-  IUser,
-  KeyboardType,
-  MessageApp
-} from "../types.ts";
+import { ButtonElement, ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
@@ -13,12 +7,9 @@ import { ServerMessageResponse } from "whatsapp-api-js/types";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import {
   ActionButtons,
-  ActionList,
   Body,
   Button,
   Interactive,
-  ListSection,
-  Row,
   Text
 } from "whatsapp-api-js/messages";
 import { splitText } from "../utils/text.utils.ts";
@@ -80,9 +71,7 @@ export class WhatsAppSession implements ISession {
 
   async sendMessage(
     formattedData: string,
-    keyboard?: { text: string }[][],
-    menuType?: KeyboardType,
-    listName?: string
+    keyboard?: { text: string }[][]
   ): Promise<void> {
     const mArr = splitText(formattedData, 3000);
 
@@ -97,30 +86,16 @@ export class WhatsAppSession implements ISession {
         );
       } else {
         const keyboardFlat = keyboard.flat();
-        let actionList: Interactive;
 
-        if (menuType === "List" || keyboardFlat.length > 3) {
-          const buttons = keyboardFlat.map(
-            (u, idx) => new Row(`reply_${String(idx)}`, u.text)
-          );
-          actionList = new Interactive(
-            new ActionList(
-              listName ?? "Menu principal",
-              // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
-              new ListSection(undefined, ...buttons)
-            ),
-            new Body(formattedData)
-          );
-        } else {
-          const buttons = keyboardFlat.map(
-            (u, idx) => new Button(`reply_${String(idx)}`, u.text)
-          );
-          actionList = new Interactive(
-            // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
-            new ActionButtons(...buttons),
-            new Body(formattedData)
-          );
-        }
+        const buttons = keyboardFlat.map(
+          (u, idx) => new Button(`reply_${String(idx)}`, u.text)
+        );
+        const actionList: Interactive = new Interactive(
+          // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
+          new ActionButtons(...buttons),
+          new Body(formattedData)
+        );
+
         resp = await this.whatsAppAPI.sendMessage(
           this.botPhoneID,
           this.chatId.toString(),
