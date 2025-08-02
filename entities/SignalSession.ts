@@ -99,7 +99,7 @@ function cleanMessageForSignal(msg: string): string {
       ""
     );
 
-    // 3. Map remaining special-case runes that don’t decompose nicely
+    // 3. Map remaining special-case runes that don't decompose nicely
     return stripped
       .replace(/ß/g, "ss")
       .replace(/Æ/g, "AE")
