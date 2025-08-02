@@ -23,6 +23,17 @@ const isPersonAlreadyFollowed = (
   });
 };
 
+export const fullHistoryCommandLong = async (
+  session: ISession,
+  msg?: string
+): Promise<void> => {
+  if (!msg) return;
+  await fullHistoryCommand(
+    session,
+    "Historique " + msg.split(" ").slice(3).join(" ")
+  );
+};
+
 export const searchCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/search" });
 
@@ -189,7 +200,7 @@ async function searchPersonHistory(
         text += `${String(nbRecords - 2)} autres mentions au JORF non affichées.\n\n`;
         temp_keyboard.unshift([
           {
-            text: `Historique ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`
+            text: `Historique complet de ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`
           }
         ]);
       }
@@ -205,8 +216,8 @@ async function searchPersonHistory(
     if (isUserFollowingPerson) {
       text += `Vous suivez *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`;
     } else {
-      text += `Vous ne suivez pas *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* 🙅‍♂️`;
-      text += `\nPour suivre, utilisez la commande:\n*Suivre ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}*`;
+      text += `Vous ne suivez pas *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* 🙅‍♂️\n\n`;
+      text += `Pour suivre, utilisez la commande:\n*Suivre ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}*`;
     }
     if (session.messageApp === "Telegram") {
       await session.sendMessage(text, temp_keyboard);
