@@ -19,6 +19,7 @@
     "@babel/preset-env": "^7.28.0",
     "axios": "^1.11.0",
     "dotenv": "^17.2.1",
+    "emoji-regex": "^10.4.0",
     "express": "^5.1.0",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.0",
