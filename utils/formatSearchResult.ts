@@ -33,12 +33,17 @@ function addPoste(elem: JORFSearchItem, message: string) {
     }
   } else if (elem.cabinet) {
     message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+  } else if (elem.ambassadeur) {
+    const ambassadePoste = elem.organisations[0]?.nom ?? elem.ambassadeur_pays;
+    if (ambassadePoste)
+      message += `🏛️ Ambassadeur auprès de *${ambassadePoste}*\n`;
+    else message += `🏛️ Ambassadeur\n`;
   } else if (elem.organisations[0]?.nom) {
     message += `*👉 ${elem.organisations[0].nom}*\n`;
   } else if (elem.ministre) {
     message += `*👉 ${elem.ministre}*\n`;
   } else if (elem.inspecteur_general) {
-    message += `*👉 Inspecteur général des ${elem.inspecteur_general}*\n`;
+    message += `*👉 Inspecteur général ${elem.inspecteur_general}*\n`;
   } else if (elem.autorite_delegation) {
     message += `👉 par le _${elem.autorite_delegation}_\n`;
   } else if (elem.corps) {
