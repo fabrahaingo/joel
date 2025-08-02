@@ -35,6 +35,7 @@ export default {
 };
 
 export type UmamiEvent =
+  | "/message-signal"
   | "/message-telegram"
   | "/message-whatsapp"
   | "/start"
