@@ -5,6 +5,7 @@ import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
 import emojiRegex from "emoji-regex";
+import { ErrorMessages } from "./ErrorMessages.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
@@ -45,7 +46,7 @@ export class SignalSession implements ISession {
 
   async sendTypingAction() {
     await Promise.resolve();
-    // TODO: check implementation in WH
+    // TODO: check implementation in Signal
   }
 
   async sendMessage(formattedData: string): Promise<void> {
@@ -120,4 +121,23 @@ function cleanMessageForSignal(msg: string): string {
   const accentFreeText = deburr(formattingFreeText);
 
   return accentFreeText;
+}
+
+const { WHATSAPP_PHONE_ID } = process.env;
+
+export async function sendSignalAppMessage(
+  signalCli: SignalCli,
+  userPhoneId: string,
+  message: string
+) {
+  if (WHATSAPP_PHONE_ID === undefined) {
+    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+  }
+  try {
+    const cleanMessage = cleanMessageForSignal(message);
+    const userPhoneIdInt = "+" + String(userPhoneId);
+    await signalCli.sendMessage(userPhoneIdInt, cleanMessage);
+  } catch (error) {
+    console.log(error);
+  }
 }

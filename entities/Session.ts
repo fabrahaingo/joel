@@ -5,6 +5,7 @@ import { IRawUser, LegacyRawUser_V1 } from "../models/LegacyUser.ts";
 import { sendTelegramMessage } from "./TelegramSession.ts";
 import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
+import { sendSignalAppMessage } from "./SignalSession.ts";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
@@ -82,16 +83,25 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
 export async function sendMessage(
   user: IUser,
   message: string,
-  whatsAppAPI?: WhatsAppAPI
+  options?: {
+    signalCli?: signalCli;
+    whatsAppAPI?: WhatsAppAPI;
+  }
 ) {
   switch (user.messageApp) {
+    case "Signal":
+      if (options?.signalCli == null) throw new Error("signalCli is required");
+      await sendSignalAppMessage(options.signalCli, user.chatId, message);
+      return;
+
     case "Telegram":
       await sendTelegramMessage(user.chatId, message);
       return;
 
     case "WhatsApp":
-      if (whatsAppAPI == null) throw new Error("WhatsAppAPI is required");
-      await sendWhatsAppMessage(whatsAppAPI, user.chatId, message);
+      if (options?.whatsAppAPI == null)
+        throw new Error("WhatsAppAPI is required");
+      await sendWhatsAppMessage(options.whatsAppAPI, user.chatId, message);
       return;
   }
 }

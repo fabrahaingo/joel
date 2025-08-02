@@ -5,15 +5,15 @@ import express from "express";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { PostData } from "whatsapp-api-js/types";
 
-import { ErrorMessages } from "./entities/ErrorMessages.ts";
+import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
-import { mongodbConnect } from "./db.ts";
-import umami from "./utils/umami.ts";
+import { mongodbConnect } from "../db.ts";
+import umami from "../utils/umami.ts";
 import {
   WHATSAPP_API_VERSION,
   WhatsAppSession
-} from "./entities/WhatsAppSession.ts";
-import { commands } from "./commands/Commands.ts";
+} from "../entities/WhatsAppSession.ts";
+import { commands } from "../commands/Commands.ts";
 
 const {
   WHATSAPP_USER_TOKEN,

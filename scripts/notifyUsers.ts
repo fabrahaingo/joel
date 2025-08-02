@@ -19,6 +19,7 @@ import { migrateUser, sendMessage } from "../entities/Session.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
+import { SignalCli } from "signal-sdk";
 
 const { WHATSAPP_USER_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN } =
   process.env;
@@ -37,6 +38,15 @@ const whatsAppAPI = new WhatsAppAPI({
   webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
   v: WHATSAPP_API_VERSION
 });
+
+const { SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER } = process.env;
+
+if (SIGNAL_BAT_PATH === undefined || SIGNAL_PHONE_NUMBER === undefined) {
+  throw new Error(ErrorMessages.SIGNAL_ENV_NOT_SET);
+}
+
+const signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
+await signalCli.connect();
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -691,7 +701,10 @@ async function sendNameMentionUpdates(
     if (i < nameUpdates.length - 1) notification_text += "\n\n";
   }
 
-  await sendMessage(user, notification_text, whatsAppAPI);
+  await sendMessage(user, notification_text, {
+    signalCli: signalCli,
+    whatsAppAPI: whatsAppAPI
+  });
 
   await umami.log({ event: "/notification-update-name" });
 }
@@ -719,7 +732,10 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
     }
   );
 
-  await sendMessage(user, notification_text, whatsAppAPI);
+  await sendMessage(user, notification_text, {
+    signalCli: signalCli,
+    whatsAppAPI: whatsAppAPI
+  });
 
   await umami.log({ event: "/notification-update-people" });
 }
@@ -767,7 +783,10 @@ async function sendOrganisationUpdate(
     notification_text += "\n";
   }
 
-  await sendMessage(user, notification_text, whatsAppAPI);
+  await sendMessage(user, notification_text, {
+    signalCli: signalCli,
+    whatsAppAPI: whatsAppAPI
+  });
 
   await umami.log({ event: "/notification-update-organisation" });
 }
@@ -817,7 +836,10 @@ async function sendTagUpdates(
     notification_text += "\n";
   }
 
-  await sendMessage(user, notification_text, whatsAppAPI);
+  await sendMessage(user, notification_text, {
+    signalCli: signalCli,
+    whatsAppAPI: whatsAppAPI
+  });
 
   await umami.log({ event: "/notification-update-function" });
 }
