@@ -1,10 +1,10 @@
 import "dotenv/config";
 
 import { SignalCli } from "signal-sdk";
-import { mongodbConnect } from "./db.ts";
-import { SignalSession } from "./entities/SignalSession.ts";
-import { commands } from "./commands/Commands.ts";
-import umami from "./utils/umami.ts";
+import { mongodbConnect } from "../db.ts";
+import { SignalSession } from "../entities/SignalSession.ts";
+import { commands } from "../commands/Commands.ts";
+import umami from "../utils/umami.ts";
 
 const { SIGNAL_PHONE_NUMBER, TEST_TARGET_PHONE_NUMBER, SIGNAL_BAT_PATH } =
   process.env;
@@ -34,13 +34,13 @@ await (async () => {
     await mongodbConnect();
 
     // Initialize SignalCli with phone number
-    const signal = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
+    const signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
 
     // Connect to signal-cli daemon
-    await signal.connect();
+    await signalCli.connect();
 
     // Listen for incoming messages
-    signal.on("message", (message: ISignalMessage) => {
+    signalCli.on("message", (message: ISignalMessage) => {
       void (async () => {
         const msgText = message.envelope.dataMessage?.message;
         if (msgText === undefined) return;
@@ -48,7 +48,7 @@ await (async () => {
         await umami.log({ event: "/message-signal" });
 
         const signalSession = new SignalSession(
-          signal,
+          signalCli,
           SIGNAL_PHONE_NUMBER,
           message.envelope.sourceNumber,
           "fr"
