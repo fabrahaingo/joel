@@ -5,15 +5,15 @@ import express from "express";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { PostData } from "whatsapp-api-js/types";
 
-import { ErrorMessages } from "./entities/ErrorMessages.ts";
+import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
-import { mongodbConnect } from "./db.ts";
-import umami from "./utils/umami.ts";
+import { mongodbConnect } from "../db.ts";
+import umami from "../utils/umami.ts";
 import {
   WHATSAPP_API_VERSION,
   WhatsAppSession
-} from "./entities/WhatsAppSession.ts";
-import { commands } from "./commands/Commands.ts";
+} from "../entities/WhatsAppSession.ts";
+import { commands } from "../commands/Commands.ts";
 
 const {
   WHATSAPP_USER_TOKEN,
@@ -118,6 +118,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   return;
 };
 
+/*
 whatsAppAPI.on.sent = ({ phoneID, to }) => {
   console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
 };
@@ -125,6 +126,7 @@ whatsAppAPI.on.sent = ({ phoneID, to }) => {
 app.listen(WHATSAPP_APP_PORT, function () {
   console.log(`Example Whatsapp listening at ${String(WHATSAPP_APP_PORT)}`);
 });
+*/
 
 await (async function () {
   await mongodbConnect();
@@ -149,4 +151,6 @@ await (async function () {
 
   console.log(`Listening on url ${url}`);
   console.log("Ngrok tunnel initialized!");
+
+  console.log(`\u{2705} JOEL started successfully`);
 })();

@@ -9,7 +9,7 @@ export interface CommandType {
   action: (session: ISession, msg?: string) => Promise<void>;
 }
 
-export type MessageApp = "Telegram" | "WhatsApp";
+export type MessageApp = "Telegram" | "WhatsApp" | "Signal";
 //| "Matrix";
 
 export interface ButtonElement {
