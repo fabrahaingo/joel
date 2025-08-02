@@ -161,14 +161,14 @@ export const listCommand = async (session: ISession) => {
       text += `Vous suivez ${String(userFollows.peopleAndNames.length)} personne${userFollows.peopleAndNames.length > 1 ? "s" : ""} : \n\n`;
       for (; j < userFollows.peopleAndNames.length; j++) {
         const followedName = userFollows.peopleAndNames[j];
-        text += `${String(i + k + j + 1)}. *${followedName.nomPrenom}* - `;
+        text += `${String(i + k + j + 1)}. *${followedName.nomPrenom}*`;
         if (followedName.JORFSearchLink !== undefined) {
           if (session.messageApp === "Telegram")
-            text += `[JORFSearch](${followedName.JORFSearchLink})`;
+            text += ` - [JORFSearch](${followedName.JORFSearchLink})`;
           else text += `\n${followedName.JORFSearchLink}`;
           text += `\n`;
         } else {
-          text += `Suivi manuel\n`;
+          text += ` - Suivi manuel\n`;
         }
         if (userFollows.peopleAndNames[j + 1]) {
           text += `\n`;
