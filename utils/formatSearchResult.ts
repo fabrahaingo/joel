@@ -33,6 +33,10 @@ function addPoste(elem: JORFSearchItem, message: string) {
     }
   } else if (elem.cabinet) {
     message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+  } else if (elem.cabinet_ministeriel) {
+    if (elem.organisations[0].nom)
+      message += `🏛️ Cabinet *${elem.organisations[0].nom}*\n`;
+    else message += `🏛️ Cabinet\n`;
   } else if (elem.ambassadeur) {
     const ambassadePoste = elem.organisations[0]?.nom ?? elem.ambassadeur_pays;
     if (ambassadePoste)
