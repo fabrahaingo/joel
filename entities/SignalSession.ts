@@ -95,7 +95,7 @@ function cleanMessageForSignal(msg: string): string {
 
     // 2. Strip all combining diacritical marks (U+0300–036F)
     const stripped = decomposed.replace(
-      /\s[\u0300-\u036f]|[\u0300-\u036f]/gu,
+      /\s[\u0300-\u036f]|[\u0300-\u036f]|🛡/gu,
       ""
     );
 
