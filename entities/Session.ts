@@ -6,6 +6,7 @@ import { sendTelegramMessage } from "./TelegramSession.ts";
 import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { sendSignalAppMessage } from "./SignalSession.ts";
+import { SignalCli } from "signal-sdk";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
@@ -84,14 +85,18 @@ export async function sendMessage(
   user: IUser,
   message: string,
   options?: {
-    signalCli?: signalCli;
+    signalCli?: SignalCli;
     whatsAppAPI?: WhatsAppAPI;
   }
 ) {
   switch (user.messageApp) {
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");
-      await sendSignalAppMessage(options.signalCli, user.chatId, message);
+      await sendSignalAppMessage(
+        options.signalCli,
+        user.chatId.toString(),
+        message
+      );
       return;
 
     case "Telegram":
