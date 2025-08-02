@@ -10,11 +10,13 @@ await (async () => {
 
   const allPeople: IPeople[] = await People.find({});
 
-  let modifiedPeopleNb = 0;
-  for (const people of allPeople) {
-    //await people.save();
-    modifiedPeopleNb++;
-  }
+  /*
+  const result = await People.updateMany(
+    {},
+    { $unset: { JORFSearchData: 1 } },
+    { strict: false }
+  );
+  */
 
   const allUsersRaw = await User.collection.find({}).toArray();
 
@@ -48,7 +50,6 @@ await (async () => {
   });
   const incorrectUsersNb = incorrectUsers.length;
 
-  console.log(`Modified people: ${String(modifiedPeopleNb)}`);
   console.log(`Remaining incorrected users: ${String(incorrectPeopleNb)}`);
 
   console.log(`Modified users: ${String(modifiedUsersNb)}`);

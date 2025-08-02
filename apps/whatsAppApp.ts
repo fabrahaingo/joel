@@ -19,7 +19,7 @@ const {
   WHATSAPP_USER_TOKEN,
   WHATSAPP_APP_SECRET,
   WHATSAPP_VERIFY_TOKEN,
-  WHATSAPP_GRAPH_API_TOKEN,
+  //WHATSAPP_GRAPH_API_TOKEN,
   WHATSAPP_APP_PORT,
   WHATSAPP_PHONE_ID,
   NGROK_AUTH_TOKEN,
@@ -30,7 +30,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
   if (
     WHATSAPP_USER_TOKEN === undefined ||
     WHATSAPP_APP_SECRET === undefined ||
-    WHATSAPP_GRAPH_API_TOKEN === undefined ||
+    //WHATSAPP_GRAPH_API_TOKEN === undefined ||
     WHATSAPP_PHONE_ID === undefined
   ) {
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
@@ -118,20 +118,18 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   return;
 };
 
-/*
 whatsAppAPI.on.sent = ({ phoneID, to }) => {
-  console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
+  //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
 };
 
 app.listen(WHATSAPP_APP_PORT, function () {
-  console.log(`Example Whatsapp listening at ${String(WHATSAPP_APP_PORT)}`);
+  //console.log(`Example Whatsapp listening at ${String(WHATSAPP_APP_PORT)}`);
 });
-*/
 
 await (async function () {
   await mongodbConnect();
 
-  console.log("Initializing Ngrok tunnel...");
+  console.log("WhatsApp: Initializing Ngrok tunnel...");
 
   // Initialize ngrok using the auth token and hostname
   const url = await ngrok.connect({
@@ -142,15 +140,15 @@ await (async function () {
     hostname: NGROK_DEV_HOOK,
     // Your app port
     addr: WHATSAPP_APP_PORT
-    /**
+    /*
          verify_webhook_provider: "whatsapp",
          verify_webhook_secret: WHATSAPP_VERIFY_TOKEN,
          verify_webhook: WHATSAPP_GRAPH_API_TOKEN
          */
   });
 
-  console.log(`Listening on url ${url}`);
-  console.log("Ngrok tunnel initialized!");
+  console.log(`WhatsApp: Listening on url ${url}`);
+  console.log("WhatsApp: Ngrok tunnel initialized!");
 
-  console.log(`\u{2705} JOEL started successfully`);
+  console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
