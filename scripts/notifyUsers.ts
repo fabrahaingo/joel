@@ -284,8 +284,8 @@ export async function notifyFunctionTagsUpdates(
   );
   const updatedTagList = Object.keys(updatedTagMap) as FunctionTags[];
 
-  const usersFollowingTagsRaw: IUser[] = await User.collection
-    .find({
+  const usersFollowingTags: IUser[] = await User.find(
+    {
       $or: [
         {
           followedFunctions: {
@@ -295,31 +295,8 @@ export async function notifyFunctionTagsUpdates(
               functionTag: { $in: updatedTagList }
             }
           }
-        },
-        {
-          followedFunctions: {
-            $exists: true,
-            $not: {
-              $size: 0,
-              $elemMatch: {
-                // … any element that satisfies…
-                functionTag: { $exists: true } // if the field functionTag doesn't exist: the user is a legacy User
-              }
-            }
-          }
         }
       ]
-    })
-    .toArray()
-    .then(async (res: IUser[]) => {
-      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-    });
-
-  // Now we need to get the hydrated records from the DB
-  const usersFollowingTags: IUser[] = await User.find(
-    {
-      _id: { $in: usersFollowingTagsRaw.map((u) => u._id) }
     },
     {
       _id: 1,
@@ -328,7 +305,9 @@ export async function notifyFunctionTagsUpdates(
       followedFunctions: { functionTag: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  );
+  ).then(async (res: IUser[]) => {
+    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+  });
 
   for (const user of usersFollowingTags) {
     // send tag notification to the user
@@ -402,8 +381,7 @@ export async function notifyOrganisationsUpdates(
       schemaVersion: 1
     }
   ).then(async (res: IUser[]) => {
-    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
   });
 
   for (const user of usersFollowingOrganisations) {
@@ -454,8 +432,8 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   }).lean();
 
   // Fetch all users following at least one of the updated People
-  const updatedUsersRaw: IUser[] = await User.collection
-    .find({
+  const updatedUsers: IUser[] = await User.find(
+    {
       followedPeople: {
         $elemMatch: {
           peopleId: {
@@ -463,17 +441,6 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
           }
         }
       }
-    })
-    .toArray()
-    .then(async (res: IUser[]) => {
-      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-    });
-
-  // Now we need to get the hydrated records from the DB
-  const updatedUsers: IUser[] = await User.find(
-    {
-      _id: { $in: updatedUsersRaw.map((u) => u._id) }
     },
     {
       _id: 1,
@@ -482,7 +449,9 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: { peopleId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  );
+  ).then(async (res: IUser[]) => {
+    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+  });
 
   for (const user of updatedUsers) {
     // Ids of all people followed by the user

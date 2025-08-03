@@ -47,7 +47,12 @@ export const commands: CommandType[] = [
     action: manualFollowCommandShort
   },
   {
-    regex: /SuivreF \s*(.*)|Suivre une fonction/i,
+    regex:
+      /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Suivre une fonction|Fonctions|Fonction$/i,
+    action: followFunctionCommand
+  },
+  {
+    regex: /SuivreF \s*(.*)/i,
     action: followFunctionFromStrCommand
   },
   {
@@ -69,10 +74,6 @@ export const commands: CommandType[] = [
   {
     regex: /❓ Aide|❓ Aide & Contact/i,
     action: helpCommand
-  },
-  {
-    regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Fonctions|Fonction$/i,
-    action: followFunctionCommand
   },
   {
     regex: /Historique complet de \s*(.*)/i,
