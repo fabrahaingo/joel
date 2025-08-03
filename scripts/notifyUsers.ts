@@ -2,7 +2,7 @@ import "dotenv/config";
 import { mongodbConnect } from "../db.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
-import { IPeople, IUser, WikidataId } from "../types.ts";
+import { IPeople, IUser, MessageApp, WikidataId } from "../types.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import { Types } from "mongoose";
@@ -21,32 +21,40 @@ import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { SignalCli } from "signal-sdk";
 
-const { WHATSAPP_USER_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN } =
-  process.env;
+const { ENABLED_APPS } = process.env;
 
-if (
-  WHATSAPP_USER_TOKEN === undefined ||
-  WHATSAPP_APP_SECRET === undefined ||
-  WHATSAPP_VERIFY_TOKEN === undefined
-) {
-  throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+if (ENABLED_APPS === undefined) throw new Error("ENABLED_APPS env var not set");
+
+const enabledApps = JSON.parse(ENABLED_APPS) as MessageApp[];
+
+let whatsAppAPI: WhatsAppAPI | undefined = undefined;
+if (enabledApps.includes("WhatsApp")) {
+  const { WHATSAPP_USER_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN } =
+    process.env;
+  if (
+    WHATSAPP_USER_TOKEN === undefined ||
+    WHATSAPP_APP_SECRET === undefined ||
+    WHATSAPP_VERIFY_TOKEN === undefined
+  )
+    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+
+  whatsAppAPI = new WhatsAppAPI({
+    token: WHATSAPP_USER_TOKEN,
+    appSecret: WHATSAPP_APP_SECRET,
+    webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
+    v: WHATSAPP_API_VERSION
+  });
 }
 
-const whatsAppAPI = new WhatsAppAPI({
-  token: WHATSAPP_USER_TOKEN,
-  appSecret: WHATSAPP_APP_SECRET,
-  webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-  v: WHATSAPP_API_VERSION
-});
+let signalCli: SignalCli | undefined = undefined;
+if (enabledApps.includes("Signal")) {
+  const { SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER } = process.env;
+  if (SIGNAL_BAT_PATH === undefined || SIGNAL_PHONE_NUMBER === undefined)
+    throw new Error(ErrorMessages.SIGNAL_ENV_NOT_SET);
 
-const { SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER } = process.env;
-
-if (SIGNAL_BAT_PATH === undefined || SIGNAL_PHONE_NUMBER === undefined) {
-  throw new Error(ErrorMessages.SIGNAL_ENV_NOT_SET);
+  signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
+  await signalCli.connect();
 }
-
-const signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
-await signalCli.connect();
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -286,17 +294,14 @@ export async function notifyFunctionTagsUpdates(
 
   const usersFollowingTags: IUser[] = await User.find(
     {
-      $or: [
-        {
-          followedFunctions: {
-            $exists: true,
-            $not: { $size: 0 },
-            $elemMatch: {
-              functionTag: { $in: updatedTagList }
-            }
-          }
+      followedFunctions: {
+        $exists: true,
+        $not: { $size: 0 },
+        $elemMatch: {
+          functionTag: { $in: updatedTagList }
         }
-      ]
+      },
+      messageApp: { $in: enabledApps }
     },
     {
       _id: 1,
@@ -371,7 +376,8 @@ export async function notifyOrganisationsUpdates(
             $in: Object.keys(updatedOrganisationMapById)
           }
         }
-      }
+      },
+      messageApp: { $in: enabledApps }
     },
     {
       _id: 1,
@@ -440,7 +446,8 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
             $in: updatedPeopleList.map((i) => i._id)
           }
         }
-      }
+      },
+      messageApp: { $in: enabledApps }
     },
     {
       _id: 1,
@@ -527,7 +534,8 @@ export async function notifyNameMentionUpdates(
 ) {
   const userFollowingNames: IUser[] = await User.find(
     {
-      followedNames: { $exists: true, $not: { $size: 0 } }
+      followedNames: { $exists: true, $not: { $size: 0 } },
+      messageApp: { $in: enabledApps }
     },
     {
       _id: 1,
@@ -818,7 +826,7 @@ await (async () => {
   await mongodbConnect();
 
   // Number of days to go back: 0 means we just fetch today's info
-  const shiftDays = 0;
+  const shiftDays = 1;
 
   // the currentDate is today
   const currentDate = new Date();
