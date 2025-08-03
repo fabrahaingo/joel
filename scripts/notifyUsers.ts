@@ -54,7 +54,7 @@ async function getJORFRecordsFromDate(
   const todayDate = new Date();
 
   // In place operations
-  startDate.setHours(0, 0, 0, 0);
+  startDate.setHours(5, 0, 0, 0);
   todayDate.setHours(0, 0, 0, 0);
 
   const targetDateStr = dateTOJORFFormat(startDate);
@@ -818,7 +818,7 @@ await (async () => {
   await mongodbConnect();
 
   // Number of days to go back: 0 means we just fetch today's info
-  const shiftDays = 0;
+  const shiftDays = 1;
 
   // the currentDate is today
   const currentDate = new Date();
