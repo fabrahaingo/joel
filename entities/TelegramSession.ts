@@ -56,33 +56,11 @@ export class TelegramSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendMessage(msg: string, keyboard?: { text: string }[][]) {
-    if (msg.length > 3000) {
-      await this.sendLongMessage(msg, keyboard);
-      return;
-    }
-
-    let options = telegramMessageOption;
-    if (keyboard != null) {
-      const keyboardFormatted = keyboard.map((row) =>
-        row.map(({ text }) => ({ text }))
-      );
-      options = {
-        ...telegramMessageOption,
-        reply_markup: {
-          ...telegramMessageOption.reply_markup,
-          keyboard: keyboardFormatted
-        }
-      };
-    }
-    await this.telegramBot.sendMessage(this.chatId, msg, options);
-  }
-
   async sendTypingAction() {
     await this.telegramBot.sendChatAction(this.chatId, "typing");
   }
 
-  async sendLongMessage(
+  async sendMessage(
     formattedData: string,
     keyboard?: ButtonElement[][]
   ): Promise<void> {
