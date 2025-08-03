@@ -173,7 +173,7 @@ export async function sendTelegramMessage(chatId: number, message: string) {
               error.response.data.description ===
               "Forbidden: user is deactivated"
             ) {
-              await umami.log({ event: "/user-blocked-joel" });
+              await umami.log({ event: "/user-deactivated" });
               await User.deleteOne({
                 messageApp: "Telegram",
                 chatId: chatId as ChatId
