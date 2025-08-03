@@ -7,6 +7,8 @@ import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 
+const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
+
 const mainMenuKeyboardTelegram: ButtonElement[][] = [
   [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
   [
@@ -56,33 +58,11 @@ export class TelegramSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendMessage(msg: string, keyboard?: { text: string }[][]) {
-    if (msg.length > 3000) {
-      await this.sendLongMessage(msg, keyboard);
-      return;
-    }
-
-    let options = telegramMessageOption;
-    if (keyboard != null) {
-      const keyboardFormatted = keyboard.map((row) =>
-        row.map(({ text }) => ({ text }))
-      );
-      options = {
-        ...telegramMessageOption,
-        reply_markup: {
-          ...telegramMessageOption.reply_markup,
-          keyboard: keyboardFormatted
-        }
-      };
-    }
-    await this.telegramBot.sendMessage(this.chatId, msg, options);
-  }
-
   async sendTypingAction() {
     await this.telegramBot.sendChatAction(this.chatId, "typing");
   }
 
-  async sendLongMessage(
+  async sendMessage(
     formattedData: string,
     keyboard?: ButtonElement[][]
   ): Promise<void> {
@@ -99,7 +79,7 @@ export class TelegramSession implements ISession {
         }
       };
     }
-    const mArr = splitText(formattedData, 3000);
+    const mArr = splitText(formattedData, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
     for (let i = 0; i < mArr.length; i++) {
       if (i == mArr.length - 1 && keyboard !== undefined) {
@@ -115,6 +95,7 @@ export class TelegramSession implements ISession {
           telegramMessageOption
         );
       }
+      await umami.log({ event: "/message-sent-telegram" });
     }
   }
 }
@@ -153,7 +134,7 @@ interface TelegramAPIError {
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
 export async function sendTelegramMessage(chatId: number, message: string) {
-  const messagesArray = splitText(message, 3000);
+  const messagesArray = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
   if (BOT_TOKEN === undefined) {
     throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
@@ -191,6 +172,7 @@ export async function sendTelegramMessage(chatId: number, message: string) {
         }
         console.log(err);
       });
+    await umami.log({ event: "/message-sent-telegram" });
 
     // prevent hitting the Telegram API rate limit
     await new Promise((resolve) => setTimeout(resolve, 100));

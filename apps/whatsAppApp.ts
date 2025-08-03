@@ -118,6 +118,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   return;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 whatsAppAPI.on.sent = ({ phoneID, to }) => {
   //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
 };
