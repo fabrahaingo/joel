@@ -13,7 +13,7 @@ const mainMenuKeyboardTelegram: ButtonElement[][] = [
     { text: "🏛️️ Ajouter une organisation" },
     { text: "👨‍💼 Ajouter une fonction" }
   ],
-  [{ text: "❓ Aide / Contact" }]
+  [{ text: "❓ Aide & Contact" }]
 ];
 
 export const telegramMessageOption: TelegramBot.SendMessageOptions = {
