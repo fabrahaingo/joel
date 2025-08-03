@@ -93,6 +93,7 @@ export class TelegramSession implements ISession {
           telegramMessageOption
         );
       }
+      await umami.log({ event: "/message-sent-telegram" });
     }
   }
 }
@@ -169,6 +170,7 @@ export async function sendTelegramMessage(chatId: number, message: string) {
         }
         console.log(err);
       });
+    await umami.log({ event: "/message-sent-telegram" });
 
     // prevent hitting the Telegram API rate limit
     await new Promise((resolve) => setTimeout(resolve, 100));

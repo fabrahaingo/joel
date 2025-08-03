@@ -101,6 +101,7 @@ export class WhatsAppSession implements ISession {
           this.chatId.toString(),
           actionList
         );
+        await umami.log({ event: "/message-sent-whatsapp" });
       }
       if (resp.error) {
         console.log(resp.error);
@@ -150,6 +151,7 @@ export async function sendWhatsAppMessage(
       String(userPhoneId),
       new Text(message)
     );
+    await umami.log({ event: "/message-sent-whatsapp" });
   } catch (error) {
     console.log(error);
   }

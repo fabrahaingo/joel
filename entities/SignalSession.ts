@@ -54,6 +54,7 @@ export class SignalSession implements ISession {
 
     for (const elem of mArr) {
       await this.signalCli.sendMessage(this.chatId.toString(), elem);
+      await umami.log({ event: "/message-sent-signal" });
     }
   }
 }
@@ -139,6 +140,7 @@ export async function sendSignalAppMessage(
       ? userPhoneId
       : "+" + userPhoneId;
     await signalCli.sendMessage(userPhoneIdInt, cleanMessage);
+    await umami.log({ event: "/message-sent-signal" });
   } catch (error) {
     console.log(error);
   }
