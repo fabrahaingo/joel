@@ -11,13 +11,12 @@ import { SignalCli } from "signal-sdk";
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
 
-  let user: IUser | null;
-
-  user = await User.findOne({
+  return User.findOne({
     messageApp: session.messageApp,
     chatId: session.chatId
   });
 
+  /*
   // Legacy for Telegram users stored with a number chatId and without messageApp
   // migrate the user schema if necessary
   if (user == null) {
@@ -33,8 +32,7 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
       });
     }
   }
-
-  return user;
+   */
 }
 
 export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
