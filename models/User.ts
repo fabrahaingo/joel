@@ -156,13 +156,14 @@ UserSchema.method(
 
     // For weekly active users - check if last interaction was in a different ISO week
     const thisWeek = getISOWeek(now);
-    const lastWeek = this.lastInteractionWeek
+    const lastInteractionWeek = this.lastInteractionWeek
       ? getISOWeek(this.lastInteractionWeek)
       : undefined;
-    if (this.lastInteractionWeek === undefined || thisWeek !== lastWeek) {
-      const startWeek = new Date(currentDay);
-      startWeek.setDate(startWeek.getDate() - startWeek.getDay() + 1);
-      this.lastInteractionWeek = startWeek;
+    if (
+      this.lastInteractionWeek === undefined ||
+      thisWeek !== lastInteractionWeek
+    ) {
+      this.lastInteractionWeek = currentDay;
       await umami.log({ event: "/weekly-active-user" });
       needSaving = true;
     }
