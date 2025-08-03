@@ -50,7 +50,7 @@ export class SignalSession implements ISession {
   }
 
   async sendMessage(formattedData: string): Promise<void> {
-    const mArr = splitText(cleanMessageForSignal(formattedData), 3000);
+    const mArr = splitText(cleanMessageForSignal(formattedData), 2000);
 
     for (const elem of mArr) {
       await this.signalCli.sendMessage(this.chatId.toString(), elem);

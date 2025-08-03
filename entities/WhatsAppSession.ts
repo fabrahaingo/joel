@@ -73,7 +73,7 @@ export class WhatsAppSession implements ISession {
     formattedData: string,
     keyboard?: { text: string }[][]
   ): Promise<void> {
-    const mArr = splitText(formattedData, 3000);
+    const mArr = splitText(formattedData, 4000);
 
     let resp: ServerMessageResponse;
 
