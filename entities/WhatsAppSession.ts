@@ -16,6 +16,8 @@ import { splitText } from "../utils/text.utils.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
+const WHATSAPP_MESSAGE_CHAR_LIMIT = 4000;
+
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
 const mainMenuKeyboardWH: ButtonElement[][] = [
@@ -73,7 +75,7 @@ export class WhatsAppSession implements ISession {
     formattedData: string,
     keyboard?: { text: string }[][]
   ): Promise<void> {
-    const mArr = splitText(formattedData, 4000);
+    const mArr = splitText(formattedData, WHATSAPP_MESSAGE_CHAR_LIMIT);
 
     let resp: ServerMessageResponse;
 
@@ -146,12 +148,15 @@ export async function sendWhatsAppMessage(
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
   try {
-    await whatsAppAPI.sendMessage(
-      WHATSAPP_PHONE_ID,
-      String(userPhoneId),
-      new Text(message)
-    );
-    await umami.log({ event: "/message-sent-whatsapp" });
+    const mArr = splitText(message, WHATSAPP_MESSAGE_CHAR_LIMIT);
+    for (const elem of mArr) {
+      await whatsAppAPI.sendMessage(
+        WHATSAPP_PHONE_ID,
+        String(userPhoneId),
+        new Text(elem)
+      );
+      await umami.log({ event: "/message-sent-whatsapp" });
+    }
   } catch (error) {
     console.log(error);
   }

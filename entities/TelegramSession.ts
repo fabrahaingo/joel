@@ -7,6 +7,8 @@ import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 
+const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
+
 const mainMenuKeyboardTelegram: ButtonElement[][] = [
   [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
   [
@@ -77,7 +79,7 @@ export class TelegramSession implements ISession {
         }
       };
     }
-    const mArr = splitText(formattedData, 3000);
+    const mArr = splitText(formattedData, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
     for (let i = 0; i < mArr.length; i++) {
       if (i == mArr.length - 1 && keyboard !== undefined) {
@@ -132,7 +134,7 @@ interface TelegramAPIError {
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
 export async function sendTelegramMessage(chatId: number, message: string) {
-  const messagesArray = splitText(message, 3000);
+  const messagesArray = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
   if (BOT_TOKEN === undefined) {
     throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);

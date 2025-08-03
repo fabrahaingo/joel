@@ -9,6 +9,8 @@ import { ErrorMessages } from "./ErrorMessages.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
+const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
+
 export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
   signalCli: SignalCli;
@@ -50,7 +52,10 @@ export class SignalSession implements ISession {
   }
 
   async sendMessage(formattedData: string): Promise<void> {
-    const mArr = splitText(cleanMessageForSignal(formattedData), 2000);
+    const mArr = splitText(
+      cleanMessageForSignal(formattedData),
+      SIGNAL_MESSAGE_CHAR_LIMIT
+    );
 
     for (const elem of mArr) {
       await this.signalCli.sendMessage(this.chatId.toString(), elem);
@@ -139,8 +144,11 @@ export async function sendSignalAppMessage(
     const userPhoneIdInt = userPhoneId.startsWith("+")
       ? userPhoneId
       : "+" + userPhoneId;
-    await signalCli.sendMessage(userPhoneIdInt, cleanMessage);
-    await umami.log({ event: "/message-sent-signal" });
+    const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
+    for (const elem of mArr) {
+      await signalCli.sendMessage(userPhoneIdInt, elem);
+      await umami.log({ event: "/message-sent-signal" });
+    }
   } catch (error) {
     console.log(error);
   }
