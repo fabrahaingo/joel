@@ -1,5 +1,13 @@
-[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
+[![TypeScript](https://badges.frapsoft.com/typescript/code/typescript.svg?v=101)](https://github.com/microsoft/TypeScript)
 [![ESLint](https://github.com/DanyPM/joel_fork/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/DanyPM/joel_fork/actions/workflows/main.yml)
+[![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
+<br />
+[![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
+[![MongoDB](https://img.shields.io/badge/MongoDB-%234ea94b.svg?style=for-the-badge&logo=mongodb&logoColor=white)]((https://www.mongodb.com/))
+<br />
+[![GitHub contributors](https://img.shields.io/github/contributors-anon/fabrahaingo/joel)](https://github.com/fabrahaingo/joel/graphs/contributors)
+[![GitHub last commit](https://img.shields.io/github/last-commit/fabrahaingo/joel)](https://github.com/fabrahaingo/joel/commits/main/)
+
 
 <!-- PROJECT LOGO -->
 <br />

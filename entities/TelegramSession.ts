@@ -153,21 +153,33 @@ export async function sendTelegramMessage(chatId: number, message: string) {
       .catch(async (err: unknown) => {
         if (isAxiosError(err)) {
           const error = err as AxiosError<TelegramAPIError>;
-          if (
-            error.response?.data.description !== undefined &&
-            error.response.data.description ===
+          if (error.response?.data.description !== undefined) {
+            if (
+              error.response.data.description ===
               "Forbidden: bot was blocked by the user"
-          ) {
-            await umami.log({ event: "/user-blocked-joel" });
-            const user: IUser | null = await User.findOne({
-              messageApp: "Telegram",
-              chatId: chatId as ChatId
-            });
-            if (user != null) {
-              user.status = "blocked";
-              await user.save();
+            ) {
+              await umami.log({ event: "/user-blocked-joel" });
+              const user: IUser | null = await User.findOne({
+                messageApp: "Telegram",
+                chatId: chatId as ChatId
+              });
+              if (user != null) {
+                user.status = "blocked";
+                await user.save();
+              }
+              return;
             }
-            return;
+            if (
+              error.response.data.description ===
+              "Forbidden: user is deactivated"
+            ) {
+              await umami.log({ event: "/user-deactivated" });
+              await User.deleteOne({
+                messageApp: "Telegram",
+                chatId: chatId as ChatId
+              });
+              return;
+            }
           }
         }
         console.log(err);
