@@ -2,6 +2,7 @@ import axios, { AxiosResponse } from "axios";
 import { JORFSearchResponse } from "../entities/JORFSearchResponse.ts";
 import * as fs from "node:fs";
 import { dateTOJORFFormat } from "../utils/date.utils.ts";
+import { convertToCSV } from "../utils/text.utils";
 
 function round(value: number, precision = 0): number {
   return parseFloat(value.toFixed(precision));
@@ -46,23 +47,6 @@ type JORFSearchRawItem = Awaited<ReturnType<typeof JORFSearchCallRaw>>[number];
 type OrganisationRaw = NonNullable<
   NonNullable<JORFSearchRawItem["organisations"]>[number]
 >;
-
-// Function to convert an array to CSV
-function convertToCSV(array: never[]) {
-  if (array.length < 1) {
-    return null;
-  }
-  // Extract the keys from the first element
-  const headers = Object.keys(array[0]).join(",");
-
-  // Convert each element to a CSV row
-  const rows = array
-    .map((element: never) => Object.values(element).join(","))
-    .join("\n");
-
-  // Combine headers and rows
-  return `${headers}\n${rows}`;
-}
 
 async function main() {
   const nbDays = 30;
