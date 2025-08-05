@@ -28,7 +28,7 @@ export async function callJORFSearchPeople(
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/name/${
-            cleanPeopleName(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
+            cleanPeopleNameJORFURL(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
           }?format=JSON`
         )
       )
@@ -168,6 +168,22 @@ export function cleanPeopleName(input: string): string {
   out = out
     .normalize("NFD") // decompose e.g. "é" → "é"
     .replace(/[\u0300-\u036f]/g, ""); // remove combining marks
+
+  // 3. Capitalise first letter after start, space, hyphen or apostrophe
+  //    - keeps the delimiter (p1) and upper-cases the following char (p2)
+  out = out.replace(/(^|[\s\-'])\p{L}/gu, (m) => m.toUpperCase());
+
+  return out;
+}
+
+export function cleanPeopleNameJORFURL(input: string): string {
+  if (!input) return "";
+
+  // 1. Trim & lowercase
+  let out = input.trim().toLowerCase();
+
+  // 2. Strip common Western diacritics in one shot
+  out = out.replace(/[\u0300-\u036f]/g, ""); // remove combining marks
 
   // 3. Capitalise first letter after start, space, hyphen or apostrophe
   //    - keeps the delimiter (p1) and upper-cases the following char (p2)
