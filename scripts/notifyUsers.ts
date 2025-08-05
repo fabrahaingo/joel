@@ -431,8 +431,9 @@ export async function notifyOrganisationsUpdates(
 }
 
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
+  const minimalInfoUpdated = uniqueMinimalNameInfo(updatedRecords);
   const updatedPeopleList: IPeople[] = await People.find({
-    $or: updatedRecords.map((p) => ({
+    $or: minimalInfoUpdated.map((p) => ({
       prenom: {
         $regex: new RegExp(`^${escapeRegExp(p.prenom)}$`),
         $options: "i"

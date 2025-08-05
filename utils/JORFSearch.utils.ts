@@ -198,14 +198,16 @@ interface NameInfo {
   nom: string;
   prenom: string;
 }
-export function uniqueMinimalNameInfo(records: NameInfo[]) {
-  return records.reduce((infoList: { nom: string; prenom: string }[], item) => {
-    if (
-      infoList.find((i) => i.nom === item.nom && i.prenom == item.prenom) !==
-      undefined
-    )
-      return infoList;
-    infoList.push({ nom: item.nom, prenom: item.prenom });
-    return infoList;
-  }, []);
+export function uniqueMinimalNameInfo(
+  records: NameInfo[]
+): { nom: string; prenom: string }[] {
+  const seen = new Set<string>(); // ← O(1) membership tests
+  return records
+    .filter(({ nom, prenom }) => {
+      const key = `${nom}|${prenom}`; // cheap composite key
+      if (seen.has(key)) return false; // already kept → skip
+      seen.add(key);
+      return true; // first time → keep
+    })
+    .map(({ nom, prenom }) => ({ nom, prenom })); // drop other fields
 }
