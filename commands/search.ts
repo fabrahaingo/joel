@@ -304,9 +304,11 @@ export const manualFollowCommandShort = async (
 ): Promise<void> => {
   await session.log({ event: "/follow-name" });
 
-  const personNameSplit = removeSpecialCharacters(cleanPeopleName(msg ?? ""))
-    .trim()
-    .replaceAll("  ", " ")
+  const personNameSplit = cleanPeopleName(
+    removeSpecialCharacters(msg ?? "")
+      .trim()
+      .replaceAll("  ", " ")
+  )
     .split(" ")
     .slice(1);
 
