@@ -3,7 +3,7 @@ import mongoose, { Types } from "mongoose";
 import { IPeople, IUser } from "../types";
 import User from "../models/User.ts";
 import { callJORFSearchPeople } from "../utils/JORFSearch.utils.ts";
-import { JORFtoDate } from "../utils/date.utils.ts";
+import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.ts";
 import fs from "node:fs";
 import { convertToCSV } from "../utils/text.utils";
 
@@ -49,13 +49,21 @@ await (async () => {
         const follow = userFollowing.followedPeople.find(
           (f) => f.peopleId.toString() === people._id.toString()
         );
-        if (follow === undefined) throw Error("Follow not found");
+        if (follow === undefined) {
+          console.log(
+            people.prenom + " " + people.nom,
+            userFollowing._id.toString()
+          );
+          throw Error("Follow not found");
+        }
         if (follow.lastUpdate.getTime() < worstLastUpdate.getTime())
           worstLastUpdate = follow.lastUpdate;
       }
-      const peopleName = people.prenom + " " + people.nom;
-      const peopleItems = await callJORFSearchPeople(peopleName);
+      const prenomNom = people.prenom + " " + people.nom;
+      const nomPrenom = people.nom + " " + people.prenom;
+      const peopleItems = await callJORFSearchPeople(prenomNom);
       if (peopleItems.length == 0) {
+        console.log(prenomNom);
         throw Error("No people found");
       }
 
@@ -66,7 +74,10 @@ await (async () => {
         const follow = userFollowing.followedPeople.find(
           (f) => f.peopleId.toString() === people._id.toString()
         );
-        if (follow == undefined) throw Error("Follow not found");
+        if (follow == undefined) {
+          console.log(prenomNom);
+          throw Error("Follow not found");
+        }
         if (follow.lastUpdate.getTime() < newestUpdateDate.getTime())
           usersNotNotified.push(userFollowing);
       }
@@ -80,7 +91,7 @@ await (async () => {
           peopleId: people._id,
           nbLateRecords: nbLateRecords,
           nbLateFollowers: usersNotNotified.length,
-          peopleName: peopleName,
+          peopleName: nomPrenom,
           userIds: usersNotNotified.map((u) => u._id),
           newestJORFDate: newestUpdateDate,
           worstUpdateInDb: worstLastUpdate
@@ -89,25 +100,19 @@ await (async () => {
     }
     backlogTab.sort((a, b) => b.nbLateRecords - a.nbLateRecords);
 
-    const nbLateRecords = backlogTab.reduce(
-      (acc, item) => acc + item.nbLateRecords,
-      0
-    );
-
-    const worstDate = backlogTab.reduce((worstDate, item) => {
-      if (worstDate.getTime() > item.worstUpdateInDb.getTime()) {
-        return item.worstUpdateInDb;
-      }
-      return worstDate;
-    }, new Date());
-
     const backlog_csv = convertToCSV(
       backlogTab.map((item) => ({
         peopleName: item.peopleName,
         nbLateRecords: item.nbLateRecords,
         nbLateFollowers: item.nbLateFollowers,
-        newestJORFDate: item.newestJORFDate,
-        worstUpdateInDb: item.worstUpdateInDb
+        newestJORFDate: dateTOJORFFormat(item.newestJORFDate)
+          .split("-")
+          .reverse()
+          .join("-"),
+        worstUpdateInDb: dateTOJORFFormat(item.worstUpdateInDb)
+          .split("-")
+          .reverse()
+          .join("-")
       })) as never[]
     );
 
