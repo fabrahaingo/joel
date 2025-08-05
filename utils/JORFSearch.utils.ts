@@ -189,6 +189,8 @@ export function cleanPeopleNameJORFURL(input: string): string {
   //    - keeps the delimiter (p1) and upper-cases the following char (p2)
   out = out.replace(/(^|[\s\-'])\p{L}/gu, (m) => m.toUpperCase());
 
+  out = out.replace(/[()]/g, "");
+
   return out;
 }
 
