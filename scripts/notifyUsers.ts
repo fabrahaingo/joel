@@ -433,14 +433,14 @@ export async function notifyOrganisationsUpdates(
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   const minimalInfoUpdated = uniqueMinimalNameInfo(updatedRecords);
 
-  const byNom = groupBy(minimalInfoUpdated, "nom"); // { "Doe": [{…}, …], "Dupont": … }
+  const byPrenom = groupBy(minimalInfoUpdated, "prenom"); // { "Doe": [{…}, …], "Dupont": … }
 
-  const filters = Object.entries(byNom).map(([nom, arr]) => ({
-    nom, // equality ⇒ index-friendly
-    prenom: { $in: arr.map((a) => a.prenom) } // still index-friendly
+  const filters = Object.entries(byPrenom).map(([prenom, arr]) => ({
+    prenom, // equality ⇒ index-friendly
+    nom: { $in: arr.map((a) => a.nom) } // still index-friendly
   }));
 
-  const updatedPeopleList = await People.find({ $or: filters })
+  const updatedPeopleList: IPeople[] = await People.find({ $or: filters })
     .collation({ locale: "fr", strength: 2 }) // case-insensitive, no regex
     .lean();
 
