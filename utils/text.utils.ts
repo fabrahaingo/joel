@@ -45,3 +45,9 @@ export function escapeRegExp(text: string): string {
   // is prefixed with a backslash.
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+
+export function removeSpecialCharacters(text: string): string {
+  // $& in the replacement expands to the whole match, so each metacharacter
+  // is prefixed with a backslash.
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "");
+}

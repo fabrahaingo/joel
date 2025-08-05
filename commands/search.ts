@@ -13,6 +13,7 @@ import {
   TelegramSession
 } from "../entities/TelegramSession.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { removeSpecialCharacters } from "../utils/text.utils.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -303,20 +304,22 @@ export const manualFollowCommandShort = async (
 ): Promise<void> => {
   await session.log({ event: "/follow-name" });
 
-  const personNameSplit = cleanPeopleName(msg ?? "")
+  const personNameSplit = removeSpecialCharacters(cleanPeopleName(msg ?? ""))
+    .trim()
+    .replaceAll("  ", " ")
     .split(" ")
     .slice(1);
 
-  const prenomNom = personNameSplit.join(" ");
-  const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
-
-  if (personNameSplit.length === 0) {
+  if (personNameSplit.length < 2) {
     await session.sendMessage(
       "Saisie incorrecte. Veuillez réessayer:\nFormat : *SuivreN Prénom Nom*",
       session.mainMenuKeyboard
     );
     return;
   }
+
+  const prenomNom = personNameSplit.join(" ");
+  const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
   if (session.user?.checkFollowedName(nomPrenom)) {
     await session.sendMessage(
