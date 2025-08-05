@@ -43,7 +43,7 @@ export const commands: CommandType[] = [
     action: manualFollowCommandLong
   },
   {
-    regex: /SuivreN \s*(.*)/i,
+    regex: /SuivreN/i,
     action: manualFollowCommandShort
   },
   {

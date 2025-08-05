@@ -1,4 +1,5 @@
 import { SourceName, TypeOrdre, WikidataId } from "../types.ts";
+import Organisation from "../models/Organisation.ts";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
@@ -199,12 +200,19 @@ export function cleanJORFItems(
     item_raw.organisations ??= [];
 
     // Drop organisations where the name is missing
-    const clean_organisations = item_raw.organisations
-      .filter((org_raw) => org_raw.nom !== undefined)
-      .map((org) => ({
-        ...org,
-        wikidata_id: org.wikidata_id?.toUpperCase()
-      })) as Organisation[];
+    const clean_organisations = item_raw.organisations.reduce(
+      (tab: Organisation[], org_raw) => {
+        if (org_raw.nom === undefined) return tab;
+        const org: Organisation = {
+          ...org_raw,
+          nom: org_raw.nom.trim(),
+          wikidata_id: org_raw.wikidata_id?.toUpperCase()
+        };
+        tab.push(org);
+        return tab;
+      },
+      []
+    );
 
     // Drop remplacement where the name is missing
     if (
@@ -237,6 +245,8 @@ export function cleanJORFItems(
 
     const clean_item: JORFSearchItem = {
       ...item_raw,
+      prenom: item_raw.prenom.trim(),
+      nom: item_raw.nom.trim(),
       organisations: clean_organisations
     } as JORFSearchItem;
 
