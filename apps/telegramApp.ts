@@ -1,10 +1,10 @@
 import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
-import { mongodbConnect } from "./db.ts";
-import { TelegramSession } from "./entities/TelegramSession.ts";
-import { commands } from "./commands/Commands.ts";
-import umami from "./utils/umami.ts";
-import { ErrorMessages } from "./entities/ErrorMessages.ts";
+import { mongodbConnect } from "../db.ts";
+import { TelegramSession } from "../entities/TelegramSession.ts";
+import { commands } from "../commands/Commands.ts";
+import umami from "../utils/umami.ts";
+import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (BOT_TOKEN === undefined)
@@ -47,5 +47,5 @@ await (async () => {
     });
   });
 
-  console.log(`\u{2705} JOEL started successfully`);
+  console.log(`Telegram: JOEL started successfully \u{2705}`);
 })();

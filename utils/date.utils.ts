@@ -28,3 +28,20 @@ export function JORFtoDate(dateStr: string): Date {
     parseInt(dateSplit[2])
   );
 }
+
+// Helper function to get ISO week number
+export function getISOWeek(date: Date): string {
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+  target.setDate(target.getDate() + 3 - ((target.getDay() + 6) % 7));
+  const week1 = new Date(target.getFullYear(), 0, 4);
+  const weekNum =
+    1 +
+    Math.round(
+      ((target.getTime() - week1.getTime()) / 86400000 -
+        3 +
+        ((week1.getDay() + 6) % 7)) /
+        7
+    );
+  return `${String(target.getFullYear())}-W${String(weekNum)}`;
+}

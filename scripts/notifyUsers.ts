@@ -2,7 +2,7 @@ import "dotenv/config";
 import { mongodbConnect } from "../db.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
-import { IPeople, IUser, WikidataId } from "../types.ts";
+import { IPeople, IUser, MessageApp, WikidataId } from "../types.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import { Types } from "mongoose";
@@ -19,24 +19,43 @@ import { migrateUser, sendMessage } from "../entities/Session.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
+import { SignalCli } from "signal-sdk";
+import groupBy from "lodash/groupBy";
 
-const { WHATSAPP_USER_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN } =
-  process.env;
+const { ENABLED_APPS } = process.env;
 
-if (
-  WHATSAPP_USER_TOKEN === undefined ||
-  WHATSAPP_APP_SECRET === undefined ||
-  WHATSAPP_VERIFY_TOKEN === undefined
-) {
-  throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+if (ENABLED_APPS === undefined) throw new Error("ENABLED_APPS env var not set");
+
+const enabledApps = JSON.parse(ENABLED_APPS) as MessageApp[];
+
+let whatsAppAPI: WhatsAppAPI | undefined = undefined;
+if (enabledApps.includes("WhatsApp")) {
+  const { WHATSAPP_USER_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN } =
+    process.env;
+  if (
+    WHATSAPP_USER_TOKEN === undefined ||
+    WHATSAPP_APP_SECRET === undefined ||
+    WHATSAPP_VERIFY_TOKEN === undefined
+  )
+    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+
+  whatsAppAPI = new WhatsAppAPI({
+    token: WHATSAPP_USER_TOKEN,
+    appSecret: WHATSAPP_APP_SECRET,
+    webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
+    v: WHATSAPP_API_VERSION
+  });
 }
 
-const whatsAppAPI = new WhatsAppAPI({
-  token: WHATSAPP_USER_TOKEN,
-  appSecret: WHATSAPP_APP_SECRET,
-  webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-  v: WHATSAPP_API_VERSION
-});
+let signalCli: SignalCli | undefined = undefined;
+if (enabledApps.includes("Signal")) {
+  const { SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER } = process.env;
+  if (SIGNAL_BAT_PATH === undefined || SIGNAL_PHONE_NUMBER === undefined)
+    throw new Error(ErrorMessages.SIGNAL_ENV_NOT_SET);
+
+  signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
+  await signalCli.connect();
+}
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -44,7 +63,7 @@ async function getJORFRecordsFromDate(
   const todayDate = new Date();
 
   // In place operations
-  startDate.setHours(0, 0, 0, 0);
+  startDate.setHours(5, 0, 0, 0);
   todayDate.setHours(0, 0, 0, 0);
 
   const targetDateStr = dateTOJORFFormat(startDate);
@@ -274,42 +293,16 @@ export async function notifyFunctionTagsUpdates(
   );
   const updatedTagList = Object.keys(updatedTagMap) as FunctionTags[];
 
-  const usersFollowingTagsRaw: IUser[] = await User.collection
-    .find({
-      $or: [
-        {
-          followedFunctions: {
-            $exists: true,
-            $not: { $size: 0 },
-            $elemMatch: {
-              functionTag: { $in: updatedTagList }
-            }
-          }
-        },
-        {
-          followedFunctions: {
-            $exists: true,
-            $not: {
-              $size: 0,
-              $elemMatch: {
-                // … any element that satisfies…
-                functionTag: { $exists: true } // if the field functionTag doesn't exist: the user is a legacy User
-              }
-            }
-          }
-        }
-      ]
-    })
-    .toArray()
-    .then(async (res: IUser[]) => {
-      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-    });
-
-  // Now we need to get the hydrated records from the DB
   const usersFollowingTags: IUser[] = await User.find(
     {
-      _id: { $in: usersFollowingTagsRaw.map((u) => u._id) }
+      followedFunctions: {
+        $exists: true,
+        $not: { $size: 0 },
+        $elemMatch: {
+          functionTag: { $in: updatedTagList }
+        }
+      },
+      messageApp: { $in: enabledApps }
     },
     {
       _id: 1,
@@ -318,7 +311,9 @@ export async function notifyFunctionTagsUpdates(
       followedFunctions: { functionTag: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  );
+  ).then(async (res: IUser[]) => {
+    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+  });
 
   for (const user of usersFollowingTags) {
     // send tag notification to the user
@@ -382,7 +377,8 @@ export async function notifyOrganisationsUpdates(
             $in: Object.keys(updatedOrganisationMapById)
           }
         }
-      }
+      },
+      messageApp: { $in: enabledApps }
     },
     {
       _id: 1,
@@ -392,8 +388,7 @@ export async function notifyOrganisationsUpdates(
       schemaVersion: 1
     }
   ).then(async (res: IUser[]) => {
-    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
+    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
   });
 
   for (const user of usersFollowingOrganisations) {
@@ -436,34 +431,30 @@ export async function notifyOrganisationsUpdates(
 }
 
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
-  const updatedPeopleList: IPeople[] = await People.find({
-    $or: updatedRecords.map((p) => ({
-      prenom: { $regex: new RegExp(`^${p.prenom}$`), $options: "i" },
-      nom: { $regex: new RegExp(`^${p.nom}$`), $options: "i" }
-    }))
-  }).lean();
+  const minimalInfoUpdated = uniqueMinimalNameInfo(updatedRecords);
+
+  const byPrenom = groupBy(minimalInfoUpdated, "prenom"); // { "Doe": [{…}, …], "Dupont": … }
+
+  const filters = Object.entries(byPrenom).map(([prenom, arr]) => ({
+    prenom, // equality ⇒ index-friendly
+    nom: { $in: arr.map((a) => a.nom) } // still index-friendly
+  }));
+
+  const updatedPeopleList: IPeople[] = await People.find({ $or: filters })
+    .collation({ locale: "fr", strength: 2 }) // case-insensitive, no regex
+    .lean();
 
   // Fetch all users following at least one of the updated People
-  const updatedUsersRaw: IUser[] = await User.collection
-    .find({
+  const updatedUsers: IUser[] = await User.find(
+    {
       followedPeople: {
         $elemMatch: {
           peopleId: {
             $in: updatedPeopleList.map((i) => i._id)
           }
         }
-      }
-    })
-    .toArray()
-    .then(async (res: IUser[]) => {
-      const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-      return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-    });
-
-  // Now we need to get the hydrated records from the DB
-  const updatedUsers: IUser[] = await User.find(
-    {
-      _id: { $in: updatedUsersRaw.map((u) => u._id) }
+      },
+      messageApp: { $in: enabledApps }
     },
     {
       _id: 1,
@@ -472,7 +463,9 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: { peopleId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  );
+  ).then(async (res: IUser[]) => {
+    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
+  });
 
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
@@ -548,7 +541,8 @@ export async function notifyNameMentionUpdates(
 ) {
   const userFollowingNames: IUser[] = await User.find(
     {
-      followedNames: { $exists: true, $not: { $size: 0 } }
+      followedNames: { $exists: true, $not: { $size: 0 } },
+      messageApp: { $in: enabledApps }
     },
     {
       _id: 1,
@@ -631,7 +625,7 @@ export async function notifyNameMentionUpdates(
       )
         continue;
 
-      const people = await People.firstOrCreate({
+      const people = await People.findOrCreate({
         nom: mention.nom,
         prenom: mention.prenom
       });
@@ -678,16 +672,23 @@ async function sendNameMentionUpdates(
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
 
   for (let i = 0; i < nameUpdates.length; i++) {
-    notification_text += formatSearchResult(nameUpdates[i].updateItems, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "first"
-    });
+    notification_text += formatSearchResult(
+      nameUpdates[i].updateItems,
+      user.messageApp === "Telegram",
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "first"
+      }
+    );
     notification_text += `Vous suivez maintenant *${nameUpdates[i].people.prenom} ${nameUpdates[i].people.nom}* ✅`;
     if (i < nameUpdates.length - 1) notification_text += "\n\n";
   }
 
-  await sendMessage(user, notification_text, whatsAppAPI);
+  await sendMessage(user, notification_text, {
+    signalCli: signalCli,
+    whatsAppAPI: whatsAppAPI
+  });
 
   await umami.log({ event: "/notification-update-name" });
 }
@@ -705,13 +706,20 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
   const pluralHandler = updatedRecords.length > 1 ? "s" : "";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les personnes que vous suivez :\n\n`;
-  notification_text += formatSearchResult(updatedRecords, {
-    isConfirmation: false,
-    isListing: true,
-    displayName: "all"
-  });
+  notification_text += formatSearchResult(
+    updatedRecords,
+    user.messageApp === "Telegram",
+    {
+      isConfirmation: false,
+      isListing: true,
+      displayName: "all"
+    }
+  );
 
-  await sendMessage(user, notification_text, whatsAppAPI);
+  await sendMessage(user, notification_text, {
+    signalCli: signalCli,
+    whatsAppAPI: whatsAppAPI
+  });
 
   await umami.log({ event: "/notification-update-people" });
 }
@@ -743,11 +751,15 @@ async function sendOrganisationUpdate(
     const pluralHandler = orgRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${orgName}*\n\n`;
 
-    notification_text += formatSearchResult(orgRecords, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "all"
-    });
+    notification_text += formatSearchResult(
+      orgRecords,
+      user.messageApp === "Telegram",
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "all"
+      }
+    );
 
     if (orgsUpdated.indexOf(orgId) + 1 !== orgsUpdated.length)
       notification_text += "====================\n\n";
@@ -755,7 +767,10 @@ async function sendOrganisationUpdate(
     notification_text += "\n";
   }
 
-  await sendMessage(user, notification_text, whatsAppAPI);
+  await sendMessage(user, notification_text, {
+    signalCli: signalCli,
+    whatsAppAPI: whatsAppAPI
+  });
 
   await umami.log({ event: "/notification-update-organisation" });
 }
@@ -789,11 +804,15 @@ async function sendTagUpdates(
     const pluralHandler = tagRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${tagKey}*\n\n`;
 
-    notification_text += formatSearchResult(tagRecords, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "all"
-    });
+    notification_text += formatSearchResult(
+      tagRecords,
+      user.messageApp === "Telegram",
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "all"
+      }
+    );
 
     if (tagList.indexOf(tagValue) + 1 !== tagList.length)
       notification_text += "====================\n\n";
@@ -801,7 +820,10 @@ async function sendTagUpdates(
     notification_text += "\n";
   }
 
-  await sendMessage(user, notification_text, whatsAppAPI);
+  await sendMessage(user, notification_text, {
+    signalCli: signalCli,
+    whatsAppAPI: whatsAppAPI
+  });
 
   await umami.log({ event: "/notification-update-function" });
 }
@@ -811,7 +833,7 @@ await (async () => {
   await mongodbConnect();
 
   // Number of days to go back: 0 means we just fetch today's info
-  const shiftDays = 0;
+  const shiftDays = 1;
 
   // the currentDate is today
   const currentDate = new Date();

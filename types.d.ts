@@ -9,14 +9,13 @@ export interface CommandType {
   action: (session: ISession, msg?: string) => Promise<void>;
 }
 
-export type MessageApp = "Telegram" | "WhatsApp";
+export type MessageApp = "Telegram" | "WhatsApp" | "Signal";
 //| "Matrix";
 
 export interface ButtonElement {
   text: string;
   desc?: string;
 }
-export type KeyboardType = "Buttons" | "List";
 
 export interface ISession {
   messageApp: MessageApp;
@@ -94,20 +93,17 @@ export interface IOrganisation {
   nom: string;
   wikidataId: WikidataId;
   save: () => Promise<IOrganisation>;
-  countDocuments: () => Promise<number>;
 }
 
 export interface OrganisationModel extends Model<IOrganisation> {
-  firstOrCreate: (args: {
+  findOrCreate: (args: {
     nom: string;
     wikidataId: WikidataId;
   }) => Promise<IOrganisation>;
-  countDocuments: () => Promise<number>;
 }
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
-  countDocuments: () => Promise<number>;
   updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
@@ -131,8 +127,7 @@ export interface IPeople {
 }
 
 export interface PeopleModel extends Model<IPeople> {
-  firstOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
-  countDocuments: () => Promise<number>;
+  findOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
   deleteOne: (args) => Promise<void>;
   collection: { insertOne: (arg) => Promise<void> };
 }

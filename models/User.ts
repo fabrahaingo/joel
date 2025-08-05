@@ -5,6 +5,7 @@ import { ISession, IPeople, IUser, UserModel } from "../types.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { loadUser } from "../entities/Session.ts";
 import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
+import { getISOWeek } from "../utils/date.utils.ts";
 
 export const USER_SCHEMA_VERSION = 2;
 
@@ -139,34 +140,42 @@ UserSchema.method(
       needSaving = true;
     }
 
-    const currentDay = new Date();
+    const now = new Date();
+    const currentDay = new Date(now);
     currentDay.setHours(4, 0, 0, 0);
+
+    // For daily active users - check if last interaction was before today
     if (
       this.lastInteractionDay === undefined ||
-      this.lastInteractionDay.getTime() < currentDay.getTime()
+      this.lastInteractionDay.toDateString() !== currentDay.toDateString()
     ) {
       this.lastInteractionDay = currentDay;
       await umami.log({ event: "/daily-active-user" });
       needSaving = true;
     }
 
-    const startWeek = new Date(currentDay);
-    startWeek.setDate(startWeek.getDate() - startWeek.getDay() + 1);
+    // For weekly active users - check if last interaction was in a different ISO week
+    const thisWeek = getISOWeek(now);
+    const lastInteractionWeek = this.lastInteractionWeek
+      ? getISOWeek(this.lastInteractionWeek)
+      : undefined;
     if (
       this.lastInteractionWeek === undefined ||
-      this.lastInteractionWeek.getTime() < startWeek.getTime()
+      thisWeek !== lastInteractionWeek
     ) {
-      this.lastInteractionWeek = startWeek;
+      this.lastInteractionWeek = currentDay;
       await umami.log({ event: "/weekly-active-user" });
       needSaving = true;
     }
 
-    const startMonth = new Date(currentDay);
-    startMonth.setDate(1);
+    // For monthly active users - check if last interaction was in a different month
     if (
       this.lastInteractionMonth === undefined ||
-      this.lastInteractionMonth.getTime() < startMonth.getTime()
+      this.lastInteractionMonth.getMonth() !== now.getMonth() ||
+      this.lastInteractionMonth.getFullYear() !== now.getFullYear()
     ) {
+      const startMonth = new Date(currentDay);
+      startMonth.setDate(1);
       this.lastInteractionMonth = startMonth;
       await umami.log({ event: "/monthly-active-user" });
       needSaving = true;

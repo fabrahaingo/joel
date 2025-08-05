@@ -4,9 +4,13 @@ import { ISession } from "../types.ts";
 export const helpCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/help" });
   await session.sendTypingAction();
-  const helpText = HelpMessages.DEFAULT.replace(
+  let helpText = HelpMessages.DEFAULT.replace(
     "{chatId}",
     session.chatId.toString()
   );
+
+  if (session.messageApp === "Telegram")
+    helpText +=
+      "\n\nSi vous souhaitez supprimer votre compte: utilisez la commande /supprimerCompte";
   await session.sendMessage(helpText, session.mainMenuKeyboard);
 };
