@@ -20,7 +20,7 @@ import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { SignalCli } from "signal-sdk";
-import { escapeRegExp } from "../utils/text.utils.ts";
+import groupBy from "lodash/groupBy";
 
 const { ENABLED_APPS } = process.env;
 
@@ -431,15 +431,18 @@ export async function notifyOrganisationsUpdates(
 }
 
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
-  const updatedPeopleList: IPeople[] = await People.find({
-    $or: updatedRecords.map((p) => ({
-      prenom: {
-        $regex: new RegExp(`^${escapeRegExp(p.prenom)}$`),
-        $options: "i"
-      },
-      nom: { $regex: new RegExp(`^${escapeRegExp(p.nom)}$`), $options: "i" }
-    }))
-  }).lean();
+  const minimalInfoUpdated = uniqueMinimalNameInfo(updatedRecords);
+
+  const byPrenom = groupBy(minimalInfoUpdated, "prenom"); // { "Doe": [{…}, …], "Dupont": … }
+
+  const filters = Object.entries(byPrenom).map(([prenom, arr]) => ({
+    prenom, // equality ⇒ index-friendly
+    nom: { $in: arr.map((a) => a.nom) } // still index-friendly
+  }));
+
+  const updatedPeopleList: IPeople[] = await People.find({ $or: filters })
+    .collation({ locale: "fr", strength: 2 }) // case-insensitive, no regex
+    .lean();
 
   // Fetch all users following at least one of the updated People
   const updatedUsers: IUser[] = await User.find(

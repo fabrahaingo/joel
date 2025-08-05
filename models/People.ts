@@ -29,9 +29,9 @@ PeopleSchema.static(
   "findOrCreate",
   async function (peopleInfo: { nom: string; prenom: string }, lean = true) {
     const query = this.findOne({
-      nom: new RegExp(`^${escapeRegExp(peopleInfo.nom)}$`, "i"),
-      prenom: new RegExp(`^${escapeRegExp(peopleInfo.prenom)}$`, "i")
-    });
+      nom: peopleInfo.nom,
+      prenom: peopleInfo.prenom,
+    }).collation({ locale: "fr", strength: 2 })
     if (lean) query.lean();
 
     let people: IPeople | null = await query.exec();
