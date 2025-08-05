@@ -7,6 +7,8 @@
 <br />
 [![GitHub contributors](https://img.shields.io/github/contributors-anon/fabrahaingo/joel)](https://github.com/fabrahaingo/joel/graphs/contributors)
 [![GitHub last commit](https://img.shields.io/github/last-commit/fabrahaingo/joel)](https://github.com/fabrahaingo/joel/commits/main/)
+<br />
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
 <!-- PROJECT LOGO -->
@@ -144,3 +146,7 @@ Toute contribution sera **grandement appréciée** 🤗
 <a href="https://www.linkedin.com/in/philemon-perrot/">Philémon PERROT</a>
 
 <a href="https://dany.mestas.dev/">Dany MESTAS</a>
+
+## License
+
+Ce projet est sous licence MIT.
