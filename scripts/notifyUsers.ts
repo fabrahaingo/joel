@@ -20,6 +20,7 @@ import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { SignalCli } from "signal-sdk";
+import { escapeRegExp } from "../utils/text.utils.ts";
 
 const { ENABLED_APPS } = process.env;
 
@@ -432,8 +433,11 @@ export async function notifyOrganisationsUpdates(
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   const updatedPeopleList: IPeople[] = await People.find({
     $or: updatedRecords.map((p) => ({
-      prenom: { $regex: new RegExp(`^${p.prenom}$`), $options: "i" },
-      nom: { $regex: new RegExp(`^${p.nom}$`), $options: "i" }
+      prenom: {
+        $regex: new RegExp(`^${escapeRegExp(p.prenom)}$`),
+        $options: "i"
+      },
+      nom: { $regex: new RegExp(`^${escapeRegExp(p.nom)}$`), $options: "i" }
     }))
   }).lean();
 
