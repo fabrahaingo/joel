@@ -39,3 +39,9 @@ export function parseIntAnswers(
       return acc;
     }, []);
 }
+
+export function escapeRegExp(text: string): string {
+  // $& in the replacement expands to the whole match, so each metacharacter
+  // is prefixed with a backslash.
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
