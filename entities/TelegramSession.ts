@@ -1,10 +1,4 @@
-import {
-  ButtonElement,
-  ISession,
-  IUser,
-  KeyboardType,
-  MessageApp
-} from "../types.ts";
+import { ButtonElement, ISession, IUser, MessageApp } from "../types.ts";
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
@@ -13,13 +7,16 @@ import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 
+const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
+const TELEGRAM_COOL_DOWN_DELAY_SECONDS=1;
+
 const mainMenuKeyboardTelegram: ButtonElement[][] = [
   [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
   [
     { text: "🏛️️ Ajouter une organisation" },
     { text: "👨‍💼 Ajouter une fonction" }
   ],
-  [{ text: "❓ Aide / Contact" }]
+  [{ text: "❓ Aide & Contact" }]
 ];
 
 export const telegramMessageOption: TelegramBot.SendMessageOptions = {
@@ -62,40 +59,13 @@ export class TelegramSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendMessage(
-    msg: string,
-    keyboard?: { text: string }[][],
-    menuType?: KeyboardType
-  ) {
-    if (msg.length > 3000) {
-      await this.sendLongMessage(msg, keyboard);
-      return;
-    }
-
-    let options = telegramMessageOption;
-    if (keyboard != null) {
-      const keyboardFormatted = keyboard.map((row) =>
-        row.map(({ text }) => ({ text }))
-      );
-      options = {
-        ...telegramMessageOption,
-        reply_markup: {
-          ...telegramMessageOption.reply_markup,
-          keyboard: keyboardFormatted
-        }
-      };
-    }
-    await this.telegramBot.sendMessage(this.chatId, msg, options);
-  }
-
   async sendTypingAction() {
     await this.telegramBot.sendChatAction(this.chatId, "typing");
   }
 
-  async sendLongMessage(
+  async sendMessage(
     formattedData: string,
-    keyboard?: ButtonElement[][],
-    menuType?: KeyboardType
+    keyboard?: ButtonElement[][]
   ): Promise<void> {
     let optionsWithKeyboard = telegramMessageOption;
     if (keyboard != null) {
@@ -110,7 +80,7 @@ export class TelegramSession implements ISession {
         }
       };
     }
-    const mArr = splitText(formattedData, 3000);
+    const mArr = splitText(formattedData, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
     for (let i = 0; i < mArr.length; i++) {
       if (i == mArr.length - 1 && keyboard !== undefined) {
@@ -126,6 +96,10 @@ export class TelegramSession implements ISession {
           telegramMessageOption
         );
       }
+    // prevent hitting the Telegram API rate limit
+    await new Promise((resolve) => setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS*1000));
+
+      await umami.log({ event: "/message-sent-telegram" });
     }
   }
 }
@@ -164,7 +138,7 @@ interface TelegramAPIError {
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
 export async function sendTelegramMessage(chatId: number, message: string) {
-  const messagesArray = splitText(message, 3000);
+  const messagesArray = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
   if (BOT_TOKEN === undefined) {
     throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
@@ -183,27 +157,41 @@ export async function sendTelegramMessage(chatId: number, message: string) {
       .catch(async (err: unknown) => {
         if (isAxiosError(err)) {
           const error = err as AxiosError<TelegramAPIError>;
-          if (
-            error.response?.data.description !== undefined &&
-            error.response.data.description ===
+          if (error.response?.data.description !== undefined) {
+            if (
+              error.response.data.description ===
               "Forbidden: bot was blocked by the user"
-          ) {
-            await umami.log({ event: "/user-blocked-joel" });
-            const user: IUser | null = await User.findOne({
-              messageApp: "Telegram",
-              chatId: chatId as ChatId
-            });
-            if (user != null) {
-              user.status = "blocked";
-              await user.save();
+            ) {
+              await umami.log({ event: "/user-blocked-joel" });
+              const user: IUser | null = await User.findOne({
+                messageApp: "Telegram",
+                chatId: chatId as ChatId
+              });
+              if (user != null) {
+                user.status = "blocked";
+                await user.save();
+              }
+              return;
             }
-            return;
+            if (
+              error.response.data.description ===
+              "Forbidden: user is deactivated"
+            ) {
+              await umami.log({ event: "/user-deactivated" });
+              await User.deleteOne({
+                messageApp: "Telegram",
+                chatId: chatId as ChatId
+              });
+              return;
+            }
           }
         }
         console.log(err);
       });
 
-    // prevent hitting the Telegram API rate limit
-    await new Promise((resolve) => setTimeout(resolve, 100));
+      // prevent hitting the Telegram API rate limit
+      await new Promise((resolve) => setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS*1000));
+
+    await umami.log({ event: "/message-sent-telegram" });
   }
 }

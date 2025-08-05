@@ -1,7 +1,11 @@
 {
   "type": "module",
   "scripts": {
-    "start": "tsx app.ts",
+    "start": "tsx apps/telegramApp.ts",
+    "start-tg": "tsx apps/telegramApp.ts",
+    "start-wh": "tsx apps/whatsAppApp.ts",
+    "start-si": "tsx apps/signalApp.ts",
+    "start-all": "tsx apps/telegramApp.ts && tsx apps/whatsAppApp.ts & tsx apps/signalApp.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest --config=jest.config.js"
@@ -15,6 +19,7 @@
     "@babel/preset-env": "^7.28.0",
     "axios": "^1.11.0",
     "dotenv": "^17.2.1",
+    "emoji-regex": "^10.4.0",
     "express": "^5.1.0",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.0",

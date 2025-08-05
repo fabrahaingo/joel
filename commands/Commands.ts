@@ -8,6 +8,7 @@ import {
 import {
   followCommand,
   fullHistoryCommand,
+  fullHistoryCommandLong,
   manualFollowCommandLong,
   manualFollowCommandShort,
   searchCommand
@@ -42,11 +43,16 @@ export const commands: CommandType[] = [
     action: manualFollowCommandLong
   },
   {
-    regex: /SuivreN \s*(.*)/i,
+    regex: /SuivreN/i,
     action: manualFollowCommandShort
   },
   {
-    regex: /SuivreF \s*(.*)|Suivre une fonction/i,
+    regex:
+      /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Suivre une fonction|Fonctions|Fonction$/i,
+    action: followFunctionCommand
+  },
+  {
+    regex: /SuivreF \s*(.*)/i,
     action: followFunctionFromStrCommand
   },
   {
@@ -70,8 +76,8 @@ export const commands: CommandType[] = [
     action: helpCommand
   },
   {
-    regex: /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Fonctions|Fonction$/i,
-    action: followFunctionCommand
+    regex: /Historique complet de \s*(.*)/i,
+    action: fullHistoryCommandLong
   },
   {
     regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,

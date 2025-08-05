@@ -8,6 +8,7 @@ import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import umami from "./umami.ts";
 import {
   cleanJORFPublication,
+  JORFSearchPublication,
   JORFSearchResponseMeta
 } from "../entities/JORFSearchResponseMeta.ts";
 
@@ -27,7 +28,7 @@ export async function callJORFSearchPeople(
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/name/${
-            cleanPeopleName(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
+            cleanPeopleNameJORFURL(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
           }?format=JSON`
         )
       )
@@ -129,9 +130,11 @@ export async function callJORFSearchOrganisation(
   return [];
 }
 
+// not used for now
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function JORFSearchCallPublications(
   currentDay: string
-): Promise<JORFSearchItem[]> {
+): Promise<JORFSearchPublication[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-meta" });
     return await axios
@@ -173,18 +176,38 @@ export function cleanPeopleName(input: string): string {
   return out;
 }
 
+export function cleanPeopleNameJORFURL(input: string): string {
+  if (!input) return "";
+
+  // 1. Trim & lowercase
+  let out = input.trim().toLowerCase();
+
+  // 2. Strip common Western diacritics in one shot
+  out = out.replace(/[\u0300-\u036f]/g, ""); // remove combining marks
+
+  // 3. Capitalise first letter after start, space, hyphen or apostrophe
+  //    - keeps the delimiter (p1) and upper-cases the following char (p2)
+  out = out.replace(/(^|[\s\-'])\p{L}/gu, (m) => m.toUpperCase());
+
+  out = out.replace(/[()]/g, "");
+
+  return out;
+}
+
 interface NameInfo {
   nom: string;
   prenom: string;
 }
-export function uniqueMinimalNameInfo(records: NameInfo[]) {
-  return records.reduce((infoList: { nom: string; prenom: string }[], item) => {
-    if (
-      infoList.find((i) => i.nom === item.nom && i.prenom == item.prenom) !==
-      undefined
-    )
-      return infoList;
-    infoList.push({ nom: item.nom, prenom: item.prenom });
-    return infoList;
-  }, []);
+export function uniqueMinimalNameInfo(
+  records: NameInfo[]
+): { nom: string; prenom: string }[] {
+  const seen = new Set<string>(); // ← O(1) membership tests
+  return records
+    .filter(({ nom, prenom }) => {
+      const key = `${nom}|${prenom}`; // cheap composite key
+      if (seen.has(key)) return false; // already kept → skip
+      seen.add(key);
+      return true; // first time → keep
+    })
+    .map(({ nom, prenom }) => ({ nom, prenom })); // drop other fields
 }

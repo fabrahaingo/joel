@@ -9,6 +9,8 @@ import { ErrorMessages } from "./ErrorMessages.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
+const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
+
 export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
   signalCli: SignalCli;
@@ -50,10 +52,14 @@ export class SignalSession implements ISession {
   }
 
   async sendMessage(formattedData: string): Promise<void> {
-    const mArr = splitText(cleanMessageForSignal(formattedData), 3000);
+    const mArr = splitText(
+      cleanMessageForSignal(formattedData),
+      SIGNAL_MESSAGE_CHAR_LIMIT
+    );
 
     for (const elem of mArr) {
       await this.signalCli.sendMessage(this.chatId.toString(), elem);
+      await umami.log({ event: "/message-sent-signal" });
     }
   }
 }
@@ -95,11 +101,11 @@ function cleanMessageForSignal(msg: string): string {
 
     // 2. Strip all combining diacritical marks (U+0300–036F)
     const stripped = decomposed.replace(
-      /\s[\u0300-\u036f]|[\u0300-\u036f]/gu,
+      /\s[\u0300-\u036f]|[\u0300-\u036f]|🛡/gu,
       ""
     );
 
-    // 3. Map remaining special-case runes that don’t decompose nicely
+    // 3. Map remaining special-case runes that don't decompose nicely
     return stripped
       .replace(/ß/g, "ss")
       .replace(/Æ/g, "AE")
@@ -116,7 +122,7 @@ function cleanMessageForSignal(msg: string): string {
 
   const emoteFreeText = msg.replace(emojiRegex(), "");
 
-  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/g, "");
+  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/gu, "");
 
   const accentFreeText = deburr(formattingFreeText);
 
@@ -135,8 +141,14 @@ export async function sendSignalAppMessage(
   }
   try {
     const cleanMessage = cleanMessageForSignal(message);
-    const userPhoneIdInt = "+" + String(userPhoneId);
-    await signalCli.sendMessage(userPhoneIdInt, cleanMessage);
+    const userPhoneIdInt = userPhoneId.startsWith("+")
+      ? userPhoneId
+      : "+" + userPhoneId;
+    const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
+    for (const elem of mArr) {
+      await signalCli.sendMessage(userPhoneIdInt, elem);
+      await umami.log({ event: "/message-sent-signal" });
+    }
   } catch (error) {
     console.log(error);
   }

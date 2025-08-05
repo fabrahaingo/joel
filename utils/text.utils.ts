@@ -39,3 +39,32 @@ export function parseIntAnswers(
       return acc;
     }, []);
 }
+
+export function escapeRegExp(text: string): string {
+  // $& in the replacement expands to the whole match, so each metacharacter
+  // is prefixed with a backslash.
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function removeSpecialCharacters(text: string): string {
+  // $& in the replacement expands to the whole match, so each metacharacter
+  // is prefixed with a backslash.
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "");
+}
+
+// Function to convert an array to CSV
+export function convertToCSV(array: never[]) {
+  if (array.length < 1) {
+    return null;
+  }
+  // Extract the keys from the first element
+  const headers = Object.keys(array[0]).join(",");
+
+  // Convert each element to a CSV row
+  const rows = array
+    .map((element: never) => Object.values(element).join(","))
+    .join("\n");
+
+  // Combine headers and rows
+  return `${headers}\n${rows}`;
+}
