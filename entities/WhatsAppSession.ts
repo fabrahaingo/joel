@@ -110,11 +110,12 @@ export class WhatsAppSession implements ISession {
         throw new Error("Error sending WH message to user.");
       }
 
+      await umami.log({ event: "/message-sent-whatsapp" });
+
       // prevent hitting the WH API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
       );
-      await umami.log({ event: "/message-sent-whatsapp" });
     }
   }
 }
@@ -165,11 +166,12 @@ export async function sendWhatsAppMessage(
         console.log(resp.error);
         return false;
       }
+      await umami.log({ event: "/message-sent-whatsapp" });
+
       // prevent hitting the WH API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
       );
-      await umami.log({ event: "/message-sent-whatsapp" });
     }
   } catch (error) {
     console.log(error);
