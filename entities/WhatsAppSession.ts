@@ -81,7 +81,7 @@ export class WhatsAppSession implements ISession {
     let resp: ServerMessageResponse;
 
     for (let i = 0; i < mArr.length; i++) {
-      if (keyboard == null || i < mArr.length - 1) {
+      if (keyboard == null || i < mArr.length) {
         resp = await this.whatsAppAPI.sendMessage(
           this.botPhoneID,
           this.chatId.toString(),
