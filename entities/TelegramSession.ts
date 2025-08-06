@@ -139,57 +139,33 @@ interface TelegramAPIError {
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
-export async function sendTelegramMessage(chatId: number, message: string) {
+/*
+ Returns whether the message was successfully sent. Two error cases are handled:
+ 1. If the user blocked the bot, the user is marked as blocked in the database.
+ 2. If the user is deactivated, the user is deleted from the database.
+*/
+export async function sendTelegramMessage(
+  chatId: number,
+  message: string,
+  isRetry = false
+): Promise<boolean> {
   const messagesArray = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
   if (BOT_TOKEN === undefined) {
     throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
   }
 
-  for (const message of messagesArray) {
-    await axios
-      .post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+  try {
+    for (const message of messagesArray) {
+      await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         chat_id: chatId,
         text: message,
         parse_mode: "markdown",
         link_preview_options: {
           is_disabled: true
         }
-      })
-      .catch(async (err: unknown) => {
-        if (isAxiosError(err)) {
-          const error = err as AxiosError<TelegramAPIError>;
-          if (error.response?.data.description !== undefined) {
-            if (
-              error.response.data.description ===
-              "Forbidden: bot was blocked by the user"
-            ) {
-              await umami.log({ event: "/user-blocked-joel" });
-              const user: IUser | null = await User.findOne({
-                messageApp: "Telegram",
-                chatId: chatId as ChatId
-              });
-              if (user != null) {
-                user.status = "blocked";
-                await user.save();
-              }
-              return;
-            }
-            if (
-              error.response.data.description ===
-              "Forbidden: user is deactivated"
-            ) {
-              await umami.log({ event: "/user-deactivated" });
-              await User.deleteOne({
-                messageApp: "Telegram",
-                chatId: chatId as ChatId
-              });
-              return;
-            }
-          }
-        }
-        console.log(err);
       });
+    }
 
     // prevent hitting the Telegram API rate limit
     await new Promise((resolve) =>
@@ -197,5 +173,52 @@ export async function sendTelegramMessage(chatId: number, message: string) {
     );
 
     await umami.log({ event: "/message-sent-telegram" });
+  } catch (err) {
+    if (isAxiosError(err)) {
+      const error = err as AxiosError<TelegramAPIError>;
+      switch (error.response?.data.description) {
+        case "Forbidden: bot was blocked by the user":
+          await umami.log({ event: "/user-blocked-joel" });
+          await User.updateOne(
+            { messageApp: "Telegram", chatId: chatId as ChatId },
+            { status: "blocked" }
+          );
+          break;
+        case "Forbidden: user is deactivated":
+          await umami.log({ event: "/user-deactivated" });
+          await User.deleteOne({
+            messageApp: "Telegram",
+            chatId: chatId as ChatId
+          });
+          break;
+        case "Too many requests":
+          await umami.log({ event: "/telegram-too-many-requests" });
+          if (isRetry) {
+            await umami.log({
+              event: "/telegram-too-many-requests-retry-failed"
+            });
+            console.log(
+              "Telegram API returned Too many requests: retry was unsuccessful"
+            );
+          } else {
+            console.log(
+              "Telegram API returned Too many requests: sending message again with extended cooldown."
+            );
+            // wait 10 times the cooldown delay seconds before resuming
+            await new Promise((resolve) =>
+              setTimeout(resolve, 10 * TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
+            );
+            // retry sending full message, indicating this is a retry
+            return sendTelegramMessage(chatId, message, true);
+          }
+          break;
+        default:
+          console.log(err);
+          break;
+      }
+    }
+    return false;
   }
+
+  return true;
 }
