@@ -16,7 +16,7 @@ import { splitText } from "../utils/text.utils.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
-const WHATSAPP_MESSAGE_CHAR_LIMIT = 800;
+const WHATSAPP_MESSAGE_CHAR_LIMIT = 1023;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
@@ -81,7 +81,7 @@ export class WhatsAppSession implements ISession {
     let resp: ServerMessageResponse;
 
     for (let i = 0; i < mArr.length; i++) {
-      if (keyboard == null || i < mArr.length - 1) {
+      if (keyboard == null || i < mArr.length) {
         resp = await this.whatsAppAPI.sendMessage(
           this.botPhoneID,
           this.chatId.toString(),
@@ -105,7 +105,7 @@ export class WhatsAppSession implements ISession {
           actionList
         );
       }
-      if (resp.error) {
+      if (resp.error && !resp.error.message.includes("less than 1024")) {
         console.log(resp.error);
         throw new Error("Error sending WH message to user.");
       }
