@@ -104,6 +104,10 @@ export class WhatsAppSession implements ISession {
           this.chatId.toString(),
           actionList
         );
+        // prevent hitting the WH API rate limit
+        await new Promise((resolve) =>
+          setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
+        );
         await umami.log({ event: "/message-sent-whatsapp" });
       }
       if (resp.error) {
@@ -156,11 +160,11 @@ export async function sendWhatsAppMessage(
         String(userPhoneId),
         new Text(elem)
       );
-      // prevent hitting the Telegram API rate limit
+
+      // prevent hitting the WH API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
       );
-
       await umami.log({ event: "/message-sent-whatsapp" });
     }
   } catch (error) {
