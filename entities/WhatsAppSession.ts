@@ -16,7 +16,7 @@ import { splitText } from "../utils/text.utils.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
-const WHATSAPP_MESSAGE_CHAR_LIMIT = 4000;
+const WHATSAPP_MESSAGE_CHAR_LIMIT = 1023;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";

@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "start": "tsx apps/telegramApp.ts",
+    "start": "concurrently \"npm run start-tg\" \"npm run start-wh\"",
     "start-tg": "tsx apps/telegramApp.ts",
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
@@ -18,6 +18,7 @@
   "dependencies": {
     "@babel/preset-env": "^7.28.0",
     "axios": "^1.11.0",
+    "concurrently": "^9.2.0",
     "dotenv": "^17.2.1",
     "emoji-regex": "^10.4.0",
     "express": "^5.1.0",
