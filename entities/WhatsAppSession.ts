@@ -104,17 +104,18 @@ export class WhatsAppSession implements ISession {
           this.chatId.toString(),
           actionList
         );
-        if (resp.error) {
-          console.log(resp.error);
-          throw new Error("Error sending WH message to user.");
-        }
-
-        // prevent hitting the WH API rate limit
-        await new Promise((resolve) =>
-          setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
-        );
-        await umami.log({ event: "/message-sent-whatsapp" });
       }
+      if (resp.error) {
+        console.log(resp.error);
+        throw new Error("Error sending WH message to user.");
+      }
+
+      await umami.log({ event: "/message-sent-whatsapp" });
+
+      // prevent hitting the WH API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
     }
   }
 }
@@ -165,11 +166,12 @@ export async function sendWhatsAppMessage(
         console.log(resp.error);
         return false;
       }
+      await umami.log({ event: "/message-sent-whatsapp" });
+
       // prevent hitting the WH API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
       );
-      await umami.log({ event: "/message-sent-whatsapp" });
     }
   } catch (error) {
     console.log(error);

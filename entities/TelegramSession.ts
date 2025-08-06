@@ -96,12 +96,12 @@ export class TelegramSession implements ISession {
           telegramMessageOption
         );
       }
+      await umami.log({ event: "/message-sent-telegram" });
+
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
       );
-
-      await umami.log({ event: "/message-sent-telegram" });
     }
   }
 }
@@ -165,14 +165,13 @@ export async function sendTelegramMessage(
           is_disabled: true
         }
       });
+      await umami.log({ event: "/message-sent-telegram" });
+
+      // prevent hitting the Telegram API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
     }
-
-    // prevent hitting the Telegram API rate limit
-    await new Promise((resolve) =>
-      setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
-    );
-
-    await umami.log({ event: "/message-sent-telegram" });
   } catch (err) {
     if (isAxiosError(err)) {
       const error = err as AxiosError<TelegramAPIError>;
