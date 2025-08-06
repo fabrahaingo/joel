@@ -68,3 +68,28 @@ export function convertToCSV(array: never[]) {
   // Combine headers and rows
   return `${headers}\n${rows}`;
 }
+
+export function trimStrings<T>(value: T): T {
+  // Base cases
+  if (typeof value === "string") {
+    // value is a primitive string → trim it
+    return value.trim() as T;
+  }
+
+  if (Array.isArray(value)) {
+    // value is an array → process each element
+    return value.map(trimStrings) as unknown as T;
+  }
+
+  if (value !== null && typeof value === "object") {
+    // value is a plain object → iterate over its keys
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      result[k] = trimStrings(v);
+    }
+    return result as T;
+  }
+
+  // Any other primitive (number, boolean, null, undefined, symbol, bigint) – return as-is
+  return value;
+}

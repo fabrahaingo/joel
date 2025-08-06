@@ -1,5 +1,6 @@
 import { SourceName, TypeOrdre, WikidataId } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
+import { trimStrings } from "../utils/text.utils.ts";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
@@ -204,7 +205,7 @@ export function cleanJORFItems(
       (tab: Organisation[], org_raw) => {
         if (org_raw.nom === undefined) return tab;
         const org: Organisation = {
-          ...org_raw,
+          ...trimStrings(org_raw),
           nom: org_raw.nom.trim(),
           wikidata_id: org_raw.wikidata_id?.toUpperCase()
         };
@@ -244,7 +245,7 @@ export function cleanJORFItems(
     }
 
     const clean_item: JORFSearchItem = {
-      ...item_raw,
+      ...trimStrings(item_raw),
       prenom: item_raw.prenom.trim(),
       nom: item_raw.nom.trim(),
       organisations: clean_organisations
