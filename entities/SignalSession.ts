@@ -9,6 +9,7 @@ import emojiRegex from "emoji-regex";
 const SignalMessageApp: MessageApp = "Signal";
 
 const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
+const SIGNAL_COOL_DOWN_DELAY_SECONDS = 6;
 
 export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
@@ -141,6 +142,11 @@ export async function sendSignalAppMessage(
     const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
+
+      // prevent hitting the Telegram API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
       await umami.log({ event: "/message-sent-signal" });
     }
   } catch (error) {

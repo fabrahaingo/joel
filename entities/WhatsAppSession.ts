@@ -17,6 +17,7 @@ import { splitText } from "../utils/text.utils.ts";
 export const WHATSAPP_API_VERSION = "v23.0";
 
 const WHATSAPP_MESSAGE_CHAR_LIMIT = 4000;
+const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
@@ -155,6 +156,11 @@ export async function sendWhatsAppMessage(
         String(userPhoneId),
         new Text(elem)
       );
+      // prevent hitting the Telegram API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
+
       await umami.log({ event: "/message-sent-whatsapp" });
     }
   } catch (error) {
