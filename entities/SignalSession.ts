@@ -5,7 +5,6 @@ import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
 import emojiRegex from "emoji-regex";
-import { ErrorMessages } from "./ErrorMessages.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
@@ -129,16 +128,11 @@ function cleanMessageForSignal(msg: string): string {
   return accentFreeText;
 }
 
-const { WHATSAPP_PHONE_ID } = process.env;
-
 export async function sendSignalAppMessage(
   signalCli: SignalCli,
   userPhoneId: string,
   message: string
 ) {
-  if (WHATSAPP_PHONE_ID === undefined) {
-    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
-  }
   try {
     const cleanMessage = cleanMessageForSignal(message);
     const userPhoneIdInt = userPhoneId.startsWith("+")
