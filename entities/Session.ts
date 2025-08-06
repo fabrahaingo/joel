@@ -108,4 +108,5 @@ export async function sendMessage(
         message
       );
   }
+  return false;
 }
