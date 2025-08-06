@@ -336,12 +336,14 @@ export async function notifyFunctionTagsUpdates(
       newUserTagsUpdates[tagFollow.functionTag] = dateFilteredUserTagUpdates;
     }
 
-    await sendTagUpdates(user, newUserTagsUpdates);
+    const messageSent = await sendTagUpdates(user, newUserTagsUpdates);
 
-    await updateUserFollowedFunctions(
-      user,
-      Object.keys(newUserTagsUpdates) as FunctionTags[]
-    );
+    if (messageSent) {
+      await updateUserFollowedFunctions(
+        user,
+        Object.keys(newUserTagsUpdates) as FunctionTags[]
+      );
+    }
   }
 }
 
@@ -416,17 +418,18 @@ export async function notifyOrganisationsUpdates(
     );
 
     // send follow notification to the user
-    await sendOrganisationUpdate(
+    const messageSent = await sendOrganisationUpdate(
       user,
       orgsFollowedByUserAndUpdatedMap,
       orgsInDb
     );
-
-    // update each lastUpdate fields of the user followedPeople
-    await updateUserFollowedOrganisations(
-      user,
-      Object.keys(orgsFollowedByUserAndUpdatedMap)
-    );
+    if (messageSent) {
+      // update each lastUpdate fields of the user followedPeople
+      await updateUserFollowedOrganisations(
+        user,
+        Object.keys(orgsFollowedByUserAndUpdatedMap)
+      );
+    }
   }
 }
 
@@ -520,19 +523,22 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     );
 
     // send follow notification to the user
-    await sendPeopleUpdate(user, newRecordsFollowedByUser);
+    const messageSent = await sendPeopleUpdate(user, newRecordsFollowedByUser);
 
-    // Ids of updated peoples:
-    const updatedRecordsPeopleId: Types.ObjectId[] = updatedPeopleFollowedByUser
-      .filter((p) =>
-        newRecordsFollowedByUser.some(
-          (r) => r.nom === p.nom && r.prenom === p.prenom
-        )
-      )
-      .map((p) => p._id);
+    if (messageSent) {
+      // Ids of updated peoples:
+      const updatedRecordsPeopleId: Types.ObjectId[] =
+        updatedPeopleFollowedByUser
+          .filter((p) =>
+            newRecordsFollowedByUser.some(
+              (r) => r.nom === p.nom && r.prenom === p.prenom
+            )
+          )
+          .map((p) => p._id);
 
-    // update each lastUpdate fields of the user followedPeople
-    await updateUserFollowedPeople(user, updatedRecordsPeopleId);
+      // update each lastUpdate fields of the user followedPeople
+      await updateUserFollowedPeople(user, updatedRecordsPeopleId);
+    }
   }
 }
 
@@ -659,10 +665,8 @@ export async function notifyNameMentionUpdates(
 async function sendNameMentionUpdates(
   user: IUser,
   nameUpdates: { people: IPeople; updateItems: JORFSearchItem[] }[]
-) {
-  if (nameUpdates.length == 0) {
-    return;
-  }
+): Promise<boolean> {
+  if (nameUpdates.length == 0) return true; // no need to send notification if no name mention updates
 
   // Reverse array change order of records
   //updatedRecords.reverse();
@@ -685,20 +689,20 @@ async function sendNameMentionUpdates(
     if (i < nameUpdates.length - 1) notification_text += "\n\n";
   }
 
-  await sendMessage(user, notification_text, {
+  const messageSent = await sendMessage(user, notification_text, {
     signalCli: signalCli,
     whatsAppAPI: whatsAppAPI
   });
+  if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-name" });
+  return true;
 }
 
 async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
   const nbPersonUpdated = uniqueMinimalNameInfo(updatedRecords).length;
 
-  if (nbPersonUpdated == 0) {
-    return;
-  }
+  if (nbPersonUpdated == 0) return true; // no need to send notification if no name mention updates
 
   // Reverse array change order of records
   //updatedRecords.reverse();
@@ -716,21 +720,23 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
     }
   );
 
-  await sendMessage(user, notification_text, {
+  const messageSent = await sendMessage(user, notification_text, {
     signalCli: signalCli,
     whatsAppAPI: whatsAppAPI
   });
+  if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-people" });
+  return true;
 }
 
 async function sendOrganisationUpdate(
   user: IUser,
   orgMap: Record<WikidataId, JORFSearchItem[]>,
   orgsInDbIds: miniOrg[]
-) {
+): Promise<boolean> {
   const orgsUpdated = Object.keys(orgMap);
-  if (orgsUpdated.length == 0) return;
+  if (orgsUpdated.length == 0) return true;
 
   let notification_text =
     "📢 Nouvelles publications parmi les organisations que suivez :\n\n";
@@ -767,24 +773,24 @@ async function sendOrganisationUpdate(
     notification_text += "\n";
   }
 
-  await sendMessage(user, notification_text, {
+  const messageSent = await sendMessage(user, notification_text, {
     signalCli: signalCli,
     whatsAppAPI: whatsAppAPI
   });
+  if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-organisation" });
+  return true;
 }
 
 async function sendTagUpdates(
   user: IUser,
   tagMap: Partial<Record<FunctionTags, JORFSearchItem[]>>
-) {
+): Promise<boolean> {
   // only keep the tags followed by the user
   const tagList = Object.keys(tagMap) as FunctionTags[];
 
-  if (tagList.length == 0) {
-    return;
-  }
+  if (tagList.length == 0) return true;
 
   let notification_text =
     "📢 Nouvelles publications parmi les fonctions que suivez :\n\n";
@@ -820,12 +826,14 @@ async function sendTagUpdates(
     notification_text += "\n";
   }
 
-  await sendMessage(user, notification_text, {
+  const messageSent = await sendMessage(user, notification_text, {
     signalCli: signalCli,
     whatsAppAPI: whatsAppAPI
   });
+  if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-function" });
+  return true;
 }
 
 await (async () => {

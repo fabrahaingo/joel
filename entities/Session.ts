@@ -86,25 +86,26 @@ export async function sendMessage(
     signalCli?: SignalCli;
     whatsAppAPI?: WhatsAppAPI;
   }
-) {
+): Promise<boolean> {
   switch (user.messageApp) {
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");
-      await sendSignalAppMessage(
+      return await sendSignalAppMessage(
         options.signalCli,
         user.chatId.toString(),
         message
       );
-      return;
 
     case "Telegram":
-      await sendTelegramMessage(user.chatId, message);
-      return;
+      return await sendTelegramMessage(user.chatId, message);
 
     case "WhatsApp":
       if (options?.whatsAppAPI == null)
         throw new Error("WhatsAppAPI is required");
-      await sendWhatsAppMessage(options.whatsAppAPI, user.chatId, message);
-      return;
+      return await sendWhatsAppMessage(
+        options.whatsAppAPI,
+        user.chatId,
+        message
+      );
   }
 }
