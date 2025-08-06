@@ -150,15 +150,6 @@ export function buildOrganisationMapById(
   );
 }
 
-async function filterOutBlockedUsers(users: IUser[]): Promise<IUser[]> {
-  const blockedIds = new Set(
-    (await User.find({ status: "blocked" }, { _id: 1 }).lean()).map((b) =>
-      String(b._id)
-    )
-  );
-  return users.filter((u) => !blockedIds.has(String(u._id)));
-}
-
 // Update the timestamp of the last update date for a user-specific people follow
 async function updateUserFollowedPeople(
   user: IUser,
@@ -302,6 +293,7 @@ export async function notifyFunctionTagsUpdates(
           functionTag: { $in: updatedTagList }
         }
       },
+      status: "active",
       messageApp: { $in: enabledApps }
     },
     {
@@ -311,9 +303,7 @@ export async function notifyFunctionTagsUpdates(
       followedFunctions: { functionTag: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-  });
+  );
 
   for (const user of usersFollowingTags) {
     // send tag notification to the user
@@ -380,6 +370,7 @@ export async function notifyOrganisationsUpdates(
           }
         }
       },
+      status: "active",
       messageApp: { $in: enabledApps }
     },
     {
@@ -389,9 +380,7 @@ export async function notifyOrganisationsUpdates(
       followedOrganisations: { wikidataId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-  });
+  );
 
   for (const user of usersFollowingOrganisations) {
     if (user.followedOrganisations.length == 0) continue;
@@ -457,6 +446,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
           }
         }
       },
+      status: "active",
       messageApp: { $in: enabledApps }
     },
     {
@@ -466,9 +456,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: { peopleId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  ).then(async (res: IUser[]) => {
-    return await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-  });
+  );
 
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
@@ -547,7 +535,8 @@ export async function notifyNameMentionUpdates(
 ) {
   const userFollowingNames: IUser[] = await User.find(
     {
-      followedNames: { $exists: true, $not: { $size: 0 } },
+      "followedNames.0": { $exists: true },
+      status: "active",
       messageApp: { $in: enabledApps }
     },
     {
@@ -558,10 +547,7 @@ export async function notifyNameMentionUpdates(
       followedPeople: { peopleId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  ).then(async (res: IUser[]) => {
-    const usersNotBlocked = await filterOutBlockedUsers(res); // filter out users who blocked JOEL
-    return Promise.all(usersNotBlocked.map(async (u) => migrateUser(u)));
-  });
+  );
 
   const recordsNamesTab = updatedRecords.reduce(
     (
