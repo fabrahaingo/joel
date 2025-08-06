@@ -30,8 +30,8 @@ PeopleSchema.static(
   async function (peopleInfo: { nom: string; prenom: string }, lean = true) {
     const query = this.findOne({
       nom: peopleInfo.nom,
-      prenom: peopleInfo.prenom,
-    }).collation({ locale: "fr", strength: 2 })
+      prenom: peopleInfo.prenom
+    }).collation({ locale: "fr", strength: 2 });
     if (lean) query.lean();
 
     let people: IPeople | null = await query.exec();
