@@ -8,7 +8,7 @@ import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 
 const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
-const TELEGRAM_COOL_DOWN_DELAY_SECONDS=1;
+const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1;
 
 const mainMenuKeyboardTelegram: ButtonElement[][] = [
   [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
@@ -96,8 +96,10 @@ export class TelegramSession implements ISession {
           telegramMessageOption
         );
       }
-    // prevent hitting the Telegram API rate limit
-    await new Promise((resolve) => setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS*1000));
+      // prevent hitting the Telegram API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
 
       await umami.log({ event: "/message-sent-telegram" });
     }
@@ -189,8 +191,10 @@ export async function sendTelegramMessage(chatId: number, message: string) {
         console.log(err);
       });
 
-      // prevent hitting the Telegram API rate limit
-      await new Promise((resolve) => setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS*1000));
+    // prevent hitting the Telegram API rate limit
+    await new Promise((resolve) =>
+      setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
+    );
 
     await umami.log({ event: "/message-sent-telegram" });
   }
