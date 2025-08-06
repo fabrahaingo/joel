@@ -17,6 +17,7 @@ import { splitText } from "../utils/text.utils.ts";
 export const WHATSAPP_API_VERSION = "v23.0";
 
 const WHATSAPP_MESSAGE_CHAR_LIMIT = 4000;
+const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
@@ -103,6 +104,10 @@ export class WhatsAppSession implements ISession {
           this.chatId.toString(),
           actionList
         );
+        // prevent hitting the WH API rate limit
+        await new Promise((resolve) =>
+          setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
+        );
         await umami.log({ event: "/message-sent-whatsapp" });
       }
       if (resp.error) {
@@ -143,7 +148,7 @@ export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
   userPhoneId: number,
   message: string
-) {
+): Promise<boolean> {
   if (WHATSAPP_PHONE_ID === undefined) {
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
@@ -155,9 +160,16 @@ export async function sendWhatsAppMessage(
         String(userPhoneId),
         new Text(elem)
       );
+
+      // prevent hitting the WH API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
       await umami.log({ event: "/message-sent-whatsapp" });
     }
   } catch (error) {
     console.log(error);
+    return false;
   }
+  return true;
 }

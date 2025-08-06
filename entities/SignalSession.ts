@@ -5,11 +5,11 @@ import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
 import emojiRegex from "emoji-regex";
-import { ErrorMessages } from "./ErrorMessages.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
 const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
+const SIGNAL_COOL_DOWN_DELAY_SECONDS = 6;
 
 export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
@@ -59,6 +59,11 @@ export class SignalSession implements ISession {
 
     for (const elem of mArr) {
       await this.signalCli.sendMessage(this.chatId.toString(), elem);
+
+      // prevent hitting the Signal API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
       await umami.log({ event: "/message-sent-signal" });
     }
   }
@@ -129,16 +134,11 @@ function cleanMessageForSignal(msg: string): string {
   return accentFreeText;
 }
 
-const { WHATSAPP_PHONE_ID } = process.env;
-
 export async function sendSignalAppMessage(
   signalCli: SignalCli,
   userPhoneId: string,
   message: string
-) {
-  if (WHATSAPP_PHONE_ID === undefined) {
-    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
-  }
+): Promise<boolean> {
   try {
     const cleanMessage = cleanMessageForSignal(message);
     const userPhoneIdInt = userPhoneId.startsWith("+")
@@ -147,9 +147,16 @@ export async function sendSignalAppMessage(
     const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
+
+      // prevent hitting the Signal API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
       await umami.log({ event: "/message-sent-signal" });
     }
   } catch (error) {
     console.log(error);
+    return false;
   }
+  return true;
 }
