@@ -2,7 +2,6 @@ import { Schema as _Schema, model } from "mongoose";
 import { IPeople, PeopleModel } from "../types.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import umami from "../utils/umami.ts";
-import { escapeRegExp } from "../utils/text.utils.ts";
 const Schema = _Schema;
 
 export interface LegacyPeople_V1 {
@@ -30,8 +29,8 @@ PeopleSchema.static(
   async function (peopleInfo: { nom: string; prenom: string }, lean = true) {
     const query = this.findOne({
       nom: peopleInfo.nom,
-      prenom: peopleInfo.prenom,
-    }).collation({ locale: "fr", strength: 2 })
+      prenom: peopleInfo.prenom
+    }).collation({ locale: "fr", strength: 2 });
     if (lean) query.lean();
 
     let people: IPeople | null = await query.exec();
