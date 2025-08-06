@@ -80,42 +80,45 @@ export class WhatsAppSession implements ISession {
 
     let resp: ServerMessageResponse;
 
-    for (let i = 0; i < mArr.length; i++) {
-      if (keyboard == null || i < mArr.length) {
-        resp = await this.whatsAppAPI.sendMessage(
-          this.botPhoneID,
-          this.chatId.toString(),
-          new Text(mArr[i])
-        );
-      } else {
-        const keyboardFlat = keyboard.flat();
-
-        const buttons = keyboardFlat.map(
-          (u, idx) => new Button(`reply_${String(idx)}`, u.text)
-        );
-        const actionList: Interactive = new Interactive(
-          // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
-          new ActionButtons(...buttons),
-          new Body(formattedData)
-        );
-
-        resp = await this.whatsAppAPI.sendMessage(
-          this.botPhoneID,
-          this.chatId.toString(),
-          actionList
-        );
-      }
+    for (const elem of mArr) {
+      resp = await this.whatsAppAPI.sendMessage(
+        this.botPhoneID,
+        this.chatId.toString(),
+        new Text(elem)
+      );
       if (resp.error && !resp.error.message.includes("less than 1024")) {
         console.log(resp.error);
         throw new Error("Error sending WH message to user.");
       }
-
       await umami.log({ event: "/message-sent-whatsapp" });
-
       // prevent hitting the WH API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
       );
+    }
+    if (keyboard != null) {
+      const keyboardFlat = keyboard.flat();
+
+      const buttons = keyboardFlat.map(
+        (u, idx) => new Button(`reply_${String(idx)}`, u.text)
+      );
+      const actionList: Interactive = new Interactive(
+        // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
+        new ActionButtons(...buttons),
+        new Body(formattedData)
+      );
+
+      resp = await this.whatsAppAPI.sendMessage(
+        this.botPhoneID,
+        this.chatId.toString(),
+        actionList
+      );
+
+      await umami.log({ event: "/message-sent-whatsapp" });
+      if (resp.error && !resp.error.message.includes("less than 1024")) {
+        console.log(resp.error);
+        throw new Error("Error sending WH message to user.");
+      }
     }
   }
 }
