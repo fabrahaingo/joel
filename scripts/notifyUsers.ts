@@ -833,7 +833,7 @@ await (async () => {
   await mongodbConnect();
 
   // Number of days to go back: 0 means we just fetch today's info
-  const shiftDays = 1;
+  const shiftDays = 3;
 
   // the currentDate is today
   const currentDate = new Date();
