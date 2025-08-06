@@ -144,7 +144,7 @@ export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
   userPhoneId: number,
   message: string
-) {
+): Promise<boolean> {
   if (WHATSAPP_PHONE_ID === undefined) {
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
@@ -165,5 +165,7 @@ export async function sendWhatsAppMessage(
     }
   } catch (error) {
     console.log(error);
+    return false;
   }
+  return true;
 }

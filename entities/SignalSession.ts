@@ -133,7 +133,7 @@ export async function sendSignalAppMessage(
   signalCli: SignalCli,
   userPhoneId: string,
   message: string
-) {
+): Promise<boolean> {
   try {
     const cleanMessage = cleanMessageForSignal(message);
     const userPhoneIdInt = userPhoneId.startsWith("+")
@@ -151,5 +151,7 @@ export async function sendSignalAppMessage(
     }
   } catch (error) {
     console.log(error);
+    return false;
   }
+  return true;
 }
