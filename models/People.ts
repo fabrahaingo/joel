@@ -2,7 +2,6 @@ import { Schema as _Schema, model } from "mongoose";
 import { IPeople, PeopleModel } from "../types.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import umami from "../utils/umami.ts";
-import { escapeRegExp } from "../utils/text.utils.ts";
 const Schema = _Schema;
 
 export interface LegacyPeople_V1 {
