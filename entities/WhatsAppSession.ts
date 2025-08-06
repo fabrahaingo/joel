@@ -105,7 +105,7 @@ export class WhatsAppSession implements ISession {
           actionList
         );
       }
-      if (resp.error) {
+      if (resp.error && !resp.error.message.includes("less than 1024")) {
         console.log(resp.error);
         throw new Error("Error sending WH message to user.");
       }
