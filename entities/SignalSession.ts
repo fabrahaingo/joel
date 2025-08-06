@@ -60,11 +60,12 @@ export class SignalSession implements ISession {
     for (const elem of mArr) {
       await this.signalCli.sendMessage(this.chatId.toString(), elem);
 
+      await umami.log({ event: "/message-sent-signal" });
+
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
       );
-      await umami.log({ event: "/message-sent-signal" });
     }
   }
 }
@@ -148,11 +149,12 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
+      await umami.log({ event: "/message-sent-signal" });
+
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
       );
-      await umami.log({ event: "/message-sent-signal" });
     }
   } catch (error) {
     console.log(error);
