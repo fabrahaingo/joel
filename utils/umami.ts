@@ -40,6 +40,8 @@ export type UmamiEvent =
   | "/message-whatsapp"
   | "/message-sent-signal"
   | "/message-sent-telegram"
+  | "/telegram-too-many-requests"
+  | "/telegram-too-many-requests-retry-failed"
   | "/message-sent-whatsapp"
   | "/start"
   | "/default-message"
