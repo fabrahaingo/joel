@@ -1,5 +1,5 @@
 import { ButtonElement, ISession, IUser, MessageApp } from "../types.ts";
-import TelegramBot, { ChatId } from "node-telegram-bot-api";
+import TelegramBot from "node-telegram-bot-api";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
@@ -180,15 +180,15 @@ export async function sendTelegramMessage(
         case "Forbidden: bot was blocked by the user":
           await umami.log({ event: "/user-blocked-joel" });
           await User.updateOne(
-            { messageApp: "Telegram", chatId: chatId as ChatId },
-            { status: "blocked" }
+            { messageApp: "Telegram", chatId: chatId },
+            { $set: { status: "blocked" } }
           );
           break;
         case "Forbidden: user is deactivated":
           await umami.log({ event: "/user-deactivated" });
           await User.deleteOne({
             messageApp: "Telegram",
-            chatId: chatId as ChatId
+            chatId: chatId
           });
           break;
         case "Too many requests":
