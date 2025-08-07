@@ -45,6 +45,8 @@ OrganisationSchema.static(
   }
 );
 
+OrganisationSchema.index({ wikidataId: 1 });
+
 export default model<IOrganisation, OrganisationModel>(
   "Organisation",
   OrganisationSchema
