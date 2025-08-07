@@ -261,6 +261,7 @@ async function updateUserFollowedOrganisations(
 export async function notifyFunctionTagsUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
+  if (updatedRecords.length == 0) return;
   const updatedTagMap = buildTagMap(updatedRecords);
   const updatedTagList = Object.keys(updatedTagMap) as FunctionTags[];
 
@@ -284,6 +285,7 @@ export async function notifyFunctionTagsUpdates(
       schemaVersion: 1
     }
   );
+  if (usersFollowingTags.length == 0) return;
 
   for (const user of usersFollowingTags) {
     // send tag notification to the user
@@ -420,6 +422,8 @@ export async function notifyOrganisationsUpdates(
 }
 
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
+  if (updatedRecords.length == 0) return;
+
   const minimalInfoUpdated = uniqueMinimalNameInfo(updatedRecords);
 
   const byPrenom = groupBy(minimalInfoUpdated, "prenom"); // { "Doe": [{…}, …], "Dupont": … }
@@ -432,6 +436,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   const updatedPeopleList: IPeople[] = await People.find({ $or: filters })
     .collation({ locale: "fr", strength: 2 }) // case-insensitive, no regex
     .lean();
+  if (updatedPeopleList.length == 0) return;
 
   // Fetch all users following at least one of the updated People
   const updatedUsers: IUser[] = await User.find(
@@ -454,6 +459,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       schemaVersion: 1
     }
   );
+  if (updatedUsers.length == 0) return;
 
   for (const user of updatedUsers) {
     // Ids of all people followed by the user
@@ -545,6 +551,7 @@ export async function notifyNameMentionUpdates(
       schemaVersion: 1
     }
   );
+  if (userFollowingNames.length == 0) return;
 
   const recordsNamesTab = updatedRecords.reduce(
     (
@@ -842,17 +849,19 @@ await (async () => {
       JORFtoDate(i.source_date).getTime() - JORFtoDate(j.source_date).getTime()
   );
 
-  // Send notifications to users on followed people
-  await notifyPeopleUpdates(JORFAllRecordsFromDate);
+  if (JORFAllRecordsFromDate.length > 0) {
+    // Send notifications to users on followed people
+    await notifyPeopleUpdates(JORFAllRecordsFromDate);
 
-  // Send notifications to users on followed names
-  await notifyNameMentionUpdates(JORFAllRecordsFromDate);
+    // Send notifications to users on followed names
+    await notifyNameMentionUpdates(JORFAllRecordsFromDate);
 
-  // Send notifications to users on followed functions
-  await notifyFunctionTagsUpdates(JORFAllRecordsFromDate);
+    // Send notifications to users on followed functions
+    await notifyFunctionTagsUpdates(JORFAllRecordsFromDate);
 
-  // Send notifications to users on followed organisations
-  await notifyOrganisationsUpdates(JORFAllRecordsFromDate);
+    // Send notifications to users on followed organisations
+    await notifyOrganisationsUpdates(JORFAllRecordsFromDate);
+  }
 
   await umami.log({ event: "/notification-process-completed" });
 
