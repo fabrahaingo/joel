@@ -15,7 +15,7 @@ import {
   uniqueMinimalNameInfo
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
-import { migrateUser, sendMessage } from "../entities/Session.ts";
+import { sendMessage } from "../entities/Session.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
