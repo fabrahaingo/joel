@@ -92,40 +92,26 @@ async function getJORFRecordsFromDate(
     );
 }
 
-function extractTaggedItems(
-  JORF_items: JORFSearchItem[],
-  tagName: FunctionTags,
-  tagValue?: string
-) {
-  if (tagValue === undefined) {
-    return JORF_items.filter(
-      (item) => Object.prototype.hasOwnProperty.call(item, tagName) // Check if item has tag as a field
-    );
-  } else {
-    return JORF_items.filter(
-      (item) =>
-        Object.prototype.hasOwnProperty.call(item, tagName) && // Check if item has tag as a field
-        item[tagName as keyof JORFSearchItem] === tagValue // Check if the tag has the required value
-    );
-  }
-}
-
 export function buildTagMap(
-  updatedRecords: JORFSearchItem[],
-  tagList: FunctionTags[]
-) {
-  return tagList.reduce(
-    (tagMap: Partial<Record<FunctionTags, JORFSearchItem[]>>, tag) => {
-      // extracts the relevant tags from the daily updates
-      const taggedItems = extractTaggedItems(updatedRecords, tag);
-      if (taggedItems.length === 0) return tagMap; // If no tagged record: we drop the tag
-
-      // format: {tag: [contacts], tag2: [contacts]}
-      tagMap[tag] = taggedItems;
-      return tagMap;
-    },
-    {}
+  updatedRecords: JORFSearchItem[]
+): Partial<Record<FunctionTags, JORFSearchItem[]>> {
+  // constant-time membership test
+  const tagSet = new Set<FunctionTags>(
+    Object.values(FunctionTags) as FunctionTags[]
   );
+
+  const tagMap: Partial<Record<FunctionTags, JORFSearchItem[]>> = {};
+
+  for (const item of updatedRecords) {
+    // iterate through the fields actually present on *this* record
+    for (const key of Object.keys(item) as (keyof JORFSearchItem)[]) {
+      if (!tagSet.has(key as FunctionTags)) continue; // not a tag we care about
+      if (item[key] === undefined) continue; // defensive, should not happen
+
+      (tagMap[key as FunctionTags] ??= []).push(item); // bucketise
+    }
+  }
+  return tagMap;
 }
 
 export function buildOrganisationMapById(
