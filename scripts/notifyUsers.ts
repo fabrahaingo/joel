@@ -7,7 +7,7 @@ import People from "../models/People.ts";
 import User from "../models/User.ts";
 import { Types } from "mongoose";
 import umami from "../utils/umami.ts";
-import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.ts";
+import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   callJORFSearchDay,
@@ -60,28 +60,36 @@ if (enabledApps.includes("Signal")) {
 async function getJORFRecordsFromDate(
   startDate: Date
 ): Promise<JORFSearchItem[]> {
-  const todayDate = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  startDate.setHours(0, 0, 0, 0);
 
-  // In place operations
-  startDate.setHours(5, 0, 0, 0);
-  todayDate.setHours(0, 0, 0, 0);
+  // Build the list of days to fetch (inclusive)
+  const dayCount = (today.getTime() - startDate.getTime()) / 86_400_000 + 1; // 1 day = 86 400 000 ms
+  const days: Date[] = Array.from({ length: dayCount }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    return d;
+  });
 
-  const targetDateStr = dateTOJORFFormat(startDate);
+  // Fetch them concurrently (limit to e.g. 8 at a time to stay polite)
+  const limit = 8;
+  const chunks: Date[][] = [];
+  for (let i = 0; i < days.length; i += limit)
+    chunks.push(days.slice(i, i + limit));
 
-  // From today, until the start
-  // Order is important to keep record sorted and remove later ones as duplicates
-  let updatedPeople: JORFSearchItem[] = [];
-
-  const currentDate = new Date(todayDate);
-  let running = true;
-  while (running) {
-    const JORFPeople: JORFSearchItem[] = await callJORFSearchDay(currentDate);
-
-    updatedPeople = updatedPeople.concat(JORFPeople);
-    running = dateTOJORFFormat(currentDate) !== targetDateStr;
-    currentDate.setDate(currentDate.getDate() - 1);
+  const results: JORFSearchItem[][] = [];
+  for (const sub of chunks) {
+    results.push(...(await Promise.all(sub.map(callJORFSearchDay))));
   }
-  return updatedPeople;
+
+  return results
+    .flat()
+    .sort(
+      (a, b) =>
+        JORFtoDate(a.source_date).getTime() -
+        JORFtoDate(b.source_date).getTime()
+    );
 }
 
 function extractTaggedItems(
