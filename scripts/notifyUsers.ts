@@ -115,28 +115,17 @@ export function buildTagMap(
 }
 
 export function buildOrganisationMapById(
-  updatedRecords: JORFSearchItem[],
-  orgsInDbId: WikidataId[]
-): Partial<Record<WikidataId, JORFSearchItem[]>> {
-  // Pre‑compute for constant‑time membership tests
-  const orgIdSet = new Set<WikidataId>(orgsInDbId);
-
+  updatedRecords: JORFSearchItem[]
+): Record<WikidataId, JORFSearchItem[]> {
   return updatedRecords.reduce<Record<WikidataId, JORFSearchItem[]>>(
-    (orgMap, item) => {
-      // De‑duplicate wikidata ids that appear more than once **inside the same record**
-      const seen = new Set<WikidataId>();
+    (orgMap, record) => {
+      const seen = new Set<WikidataId>(); // dedupe ids inside this record
 
-      for (const { wikidata_id } of item.organisations) {
-        if (
-          wikidata_id === undefined || // skip if no id
-          !orgIdSet.has(wikidata_id) || // skip if org not in DB
-          seen.has(wikidata_id) // skip if we handled it already for this item
-        ) {
-          continue;
-        }
+      for (const { wikidata_id } of record.organisations) {
+        if (!wikidata_id || seen.has(wikidata_id)) continue; // skip undefined / duplicate
 
-        seen.add(wikidata_id); // remember we handled it
-        (orgMap[wikidata_id] ??= []).push(item); // push + init on first use
+        seen.add(wikidata_id);
+        (orgMap[wikidata_id] ??= []).push(record);
       }
       return orgMap;
     },
@@ -272,10 +261,7 @@ async function updateUserFollowedOrganisations(
 export async function notifyFunctionTagsUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
-  const updatedTagMap = buildTagMap(
-    updatedRecords,
-    Object.values(FunctionTags) as FunctionTags[]
-  );
+  const updatedTagMap = buildTagMap(updatedRecords);
   const updatedTagList = Object.keys(updatedTagMap) as FunctionTags[];
 
   const usersFollowingTags: IUser[] = await User.find(
@@ -339,19 +325,19 @@ interface miniOrg {
 // There is currently no way to check if a user has been notified of a tag update
 // Resuming an update thus require to force-notify users for all tags updates over the period.
 export async function notifyOrganisationsUpdates(
-  updatedRecords: JORFSearchItem[]
+  allUpdatedRecords: JORFSearchItem[]
 ) {
-  const orgsInDb: miniOrg[] = await Organisation.find({})
-    .lean()
-    .then((orgs) =>
-      orgs.map((o) => ({ nom: o.nom, wikidataId: o.wikidataId }))
-    );
-  const orgsInDbIds: WikidataId[] = orgsInDb.map((o) => o.wikidataId);
-
-  const updatedOrganisationMapById = buildOrganisationMapById(
-    updatedRecords,
-    orgsInDbIds
+  const updatedOrgsWikidataIdSet = new Set<WikidataId>(
+    allUpdatedRecords
+      .flatMap((r) => r.organisations) // all organisations of all records
+      .map((o) => o.wikidata_id) // keep only the id
+      .filter((id): id is WikidataId => !!id) // drop undefined / empty
   );
+  if (updatedOrgsWikidataIdSet.size == 0) return;
+
+  const updatedOrgsInDb: miniOrg[] = await Organisation.find({
+    wikidataId: { $in: [...updatedOrgsWikidataIdSet] }
+  });
 
   const usersFollowingOrganisations: IUser[] = await User.find(
     {
@@ -360,7 +346,7 @@ export async function notifyOrganisationsUpdates(
         $not: { $size: 0 },
         $elemMatch: {
           wikidataId: {
-            $in: Object.keys(updatedOrganisationMapById)
+            $in: updatedOrgsInDb.map((o) => o.wikidataId)
           }
         }
       },
@@ -374,6 +360,23 @@ export async function notifyOrganisationsUpdates(
       followedOrganisations: { wikidataId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
+  );
+
+  if (usersFollowingOrganisations.length == 0) return;
+
+  const orgNameById = new Map<WikidataId, string>(
+    updatedOrgsInDb.map((o) => [o.wikidataId, o.nom])
+  );
+
+  const updatedRecordsWithOrgsInDb = allUpdatedRecords.filter((r) =>
+    r.organisations.some(
+      ({ wikidata_id }) => !!wikidata_id && orgNameById.has(wikidata_id)
+    )
+  );
+  if (updatedRecordsWithOrgsInDb.length == 0) return;
+
+  const updatedOrganisationMapById = buildOrganisationMapById(
+    updatedRecordsWithOrgsInDb
   );
 
   for (const user of usersFollowingOrganisations) {
@@ -404,7 +407,7 @@ export async function notifyOrganisationsUpdates(
     const messageSent = await sendOrganisationUpdate(
       user,
       orgsFollowedByUserAndUpdatedMap,
-      orgsInDb
+      orgNameById
     );
     if (messageSent) {
       // update each lastUpdate fields of the user followedPeople
@@ -713,7 +716,7 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
 async function sendOrganisationUpdate(
   user: IUser,
   orgMap: Record<WikidataId, JORFSearchItem[]>,
-  orgsInDbIds: miniOrg[]
+  orgNameById: Map<WikidataId, string>
 ): Promise<boolean> {
   const orgsUpdated = Object.keys(orgMap);
   if (orgsUpdated.length == 0) return true;
@@ -722,7 +725,7 @@ async function sendOrganisationUpdate(
     "📢 Nouvelles publications parmi les organisations que suivez :\n\n";
 
   for (const orgId of orgsUpdated) {
-    const orgName = orgsInDbIds.find((o) => o.wikidataId === orgId)?.nom;
+    const orgName = orgNameById.get(orgId);
     if (orgName === undefined) {
       console.log(
         "Unable to find the name of the organisation with wikidataId " + orgId
