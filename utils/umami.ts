@@ -45,6 +45,7 @@ export type UmamiEvent =
   | "/message-sent-whatsapp"
   | "/start"
   | "/default-message"
+  | "/main-menu-message"
   | "/help"
   | "/stats"
   | "/list"

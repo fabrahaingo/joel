@@ -1,4 +1,4 @@
-import { ButtonElement, ISession, IUser, MessageApp } from "../types.ts";
+import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
 import TelegramBot from "node-telegram-bot-api";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
@@ -12,7 +12,7 @@ const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same
 
 export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
 
-const mainMenuKeyboardTelegram: ButtonElement[][] = [
+const mainMenuKeyboardTelegram: Keyboard = [
   [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
   [
     { text: "🏛️️ Ajouter une organisation" },
@@ -40,7 +40,7 @@ export class TelegramSession implements ISession {
   chatId: number;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: ButtonElement[][];
+  mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 
@@ -65,10 +65,7 @@ export class TelegramSession implements ISession {
     await this.telegramBot.sendChatAction(this.chatId, "typing");
   }
 
-  async sendMessage(
-    formattedData: string,
-    keyboard?: ButtonElement[][]
-  ): Promise<void> {
+  async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
     let optionsWithKeyboard = telegramMessageOption;
     if (keyboard != null) {
       const keyboardFormatted = keyboard.map((row) =>

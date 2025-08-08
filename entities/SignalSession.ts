@@ -1,4 +1,4 @@
-import { ButtonElement, ISession, IUser, MessageApp } from "../types.ts";
+import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
@@ -21,7 +21,7 @@ export class SignalSession implements ISession {
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: ButtonElement[][];
+  mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 
