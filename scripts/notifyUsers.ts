@@ -25,14 +25,16 @@ import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { SignalCli } from "signal-sdk";
+import {
+  NotificationTask,
+  dispatchTasksToMessageApps
+} from "../utils/notificationDispatch.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 3;
 
 const { ENABLED_APPS } = process.env;
-
 if (ENABLED_APPS === undefined) throw new Error("ENABLED_APPS env var not set");
-
 const enabledApps = JSON.parse(ENABLED_APPS) as MessageApp[];
 
 let whatsAppAPI: WhatsAppAPI | undefined = undefined;
@@ -153,13 +155,7 @@ export async function notifyFunctionTagsUpdates(
 
   const now = new Date();
 
-  const userUpdateTasks: {
-    userId: Types.ObjectId;
-    messageApp: MessageApp;
-    chatId: IUser["chatId"];
-    tagUpdateRecordsMap: Map<FunctionTags, JORFSearchItem[]>;
-    recordCount: number;
-  }[] = [];
+  const userUpdateTasks: NotificationTask<FunctionTags>[] = [];
 
   for (const user of usersFollowingTags) {
     const newUserTagsUpdates = new Map<FunctionTags, JORFSearchItem[]>();
@@ -191,37 +187,40 @@ export async function notifyFunctionTagsUpdates(
       userId: user._id,
       messageApp: user.messageApp,
       chatId: user.chatId,
-      tagUpdateRecordsMap: newUserTagsUpdates,
+      updatedRecordsMap: newUserTagsUpdates,
       recordCount: totalUserRecordsCount
     });
   }
 
-  for (const task of userUpdateTasks) {
-    const messageSent = await sendTagUpdates(
-      task.messageApp,
-      task.chatId,
-      task.tagUpdateRecordsMap
-    );
-
-    if (messageSent) {
-      await User.updateOne(
-        {
-          _id: task.userId,
-          "followedFunctions.functionTag": {
-            $in: [...task.tagUpdateRecordsMap.keys()]
-          } // to avoid duplicate key error
-        },
-        { $set: { "followedFunctions.$[elem].lastUpdate": now } },
-        {
-          arrayFilters: [
-            {
-              "elem.functionTag": { $in: [...task.tagUpdateRecordsMap.keys()] }
-            }
-          ]
-        }
+  await dispatchTasksToMessageApps<FunctionTags>(
+    userUpdateTasks,
+    async (task) => {
+      const messageSent = await sendTagUpdates(
+        task.messageApp,
+        task.chatId,
+        task.updatedRecordsMap
       );
+
+      if (messageSent) {
+        await User.updateOne(
+          {
+            _id: task.userId,
+            "followedFunctions.functionTag": {
+              $in: [...task.updatedRecordsMap.keys()]
+            } // to avoid duplicate key error
+          },
+          { $set: { "followedFunctions.$[elem].lastUpdate": now } },
+          {
+            arrayFilters: [
+              {
+                "elem.functionTag": { $in: [...task.updatedRecordsMap.keys()] }
+              }
+            ]
+          }
+        );
+      }
     }
-  }
+  );
 }
 
 // There is currently no way to check if a user has been notified of a tag update
@@ -294,15 +293,9 @@ export async function notifyOrganisationsUpdates(
     });
   });
 
-  const userUpdateTasks: {
-    userId: Types.ObjectId;
-    messageApp: MessageApp;
-    chatId: IUser["chatId"];
-    organisationsUpdateRecordsMap: Map<WikidataId, JORFSearchItem[]>;
-    recordCount: number;
-  }[] = [];
-
   const now = new Date();
+
+  const userUpdateTasks: NotificationTask<WikidataId>[] = [];
 
   for (const user of usersFollowingOrganisations) {
     const newUserOrganisationsUpdates = new Map<WikidataId, JORFSearchItem[]>();
@@ -336,41 +329,44 @@ export async function notifyOrganisationsUpdates(
       userId: user._id,
       messageApp: user.messageApp,
       chatId: user.chatId,
-      organisationsUpdateRecordsMap: newUserOrganisationsUpdates,
+      updatedRecordsMap: newUserOrganisationsUpdates,
       recordCount: totalUserRecordsCount
     });
   }
 
-  for (const task of userUpdateTasks) {
-    // send follow notification to the user
-    const messageSent = await sendOrganisationUpdate(
-      task.messageApp,
-      task.chatId,
-      task.organisationsUpdateRecordsMap,
-      orgNameById
-    );
-
-    if (messageSent) {
-      await User.updateOne(
-        {
-          _id: task.userId,
-          "followedOrganisations.wikidataId": {
-            $in: [...task.organisationsUpdateRecordsMap.keys()]
-          } // to avoid duplicate key error
-        },
-        { $set: { "followedOrganisations.$[elem].lastUpdate": now } },
-        {
-          arrayFilters: [
-            {
-              "elem.wikidataId": {
-                $in: [...task.organisationsUpdateRecordsMap.keys()]
-              }
-            }
-          ]
-        }
+  await dispatchTasksToMessageApps<WikidataId>(
+    userUpdateTasks,
+    async (task) => {
+      // send follow notification to the user
+      const messageSent = await sendOrganisationUpdate(
+        task.messageApp,
+        task.chatId,
+        task.updatedRecordsMap,
+        orgNameById
       );
+
+      if (messageSent) {
+        await User.updateOne(
+          {
+            _id: task.userId,
+            "followedOrganisations.wikidataId": {
+              $in: [...task.updatedRecordsMap.keys()]
+            } // to avoid duplicate key error
+          },
+          { $set: { "followedOrganisations.$[elem].lastUpdate": now } },
+          {
+            arrayFilters: [
+              {
+                "elem.wikidataId": {
+                  $in: [...task.updatedRecordsMap.keys()]
+                }
+              }
+            ]
+          }
+        );
+      }
     }
-  }
+  );
 }
 
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
@@ -458,13 +454,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     }
   });
 
-  const userUpdateTasks: {
-    userId: Types.ObjectId;
-    messageApp: MessageApp;
-    chatId: IUser["chatId"];
-    peopleUpdateRecordsMap: Map<string, JORFSearchItem[]>;
-    recordCount: number;
-  }[] = [];
+  const userUpdateTasks: NotificationTask<string>[] = [];
 
   const now = new Date();
 
@@ -505,17 +495,17 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       userId: user._id,
       messageApp: user.messageApp,
       chatId: user.chatId,
-      peopleUpdateRecordsMap: newUserPeopleUpdates,
+      updatedRecordsMap: newUserPeopleUpdates,
       recordCount: totalUserRecordsCount
     });
   }
 
-  for (const task of userUpdateTasks) {
+  await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
     // send follow notification to the user
     const messageSent = await sendPeopleUpdate(
       task.messageApp,
       task.chatId,
-      task.peopleUpdateRecordsMap
+      task.updatedRecordsMap
     );
 
     if (messageSent) {
@@ -548,8 +538,9 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         }
       );
     }
-  }
+  });
 }
+
 export async function notifyNameMentionUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
@@ -594,96 +585,133 @@ export async function notifyNameMentionUpdates(
 
   const now = new Date();
 
+  const userUpdateTasks: NotificationTask<string>[] = [];
+
+  const peopleIdByFollowedNameMap = new Map<string, Types.ObjectId>();
+
   for (const user of userFollowingNames) {
-    const nameUpdates: {
-      followedName: string;
-      people: IPeople;
-      nameJORFRecords: JORFSearchItem[];
-    }[] = [];
+    const newUserTagsUpdates = new Map<string, JORFSearchItem[]>();
 
     for (const followedName of user.followedNames) {
       const cleanFollowedName = cleanPeopleName(followedName);
       const mentions =
-        nameMaps.nomPrenomMap.get(cleanFollowedName) ??
-        nameMaps.prenomNomMap.get(cleanFollowedName);
-
+        nameMaps.prenomNomMap.get(cleanFollowedName) ??
+        nameMaps.nomPrenomMap.get(cleanFollowedName);
       if (mentions === undefined || mentions.length == 0) continue;
 
       const people = await People.findOrCreate({
         nom: mentions[0].nom,
         prenom: mentions[0].prenom
       });
-
-      nameUpdates.push({
-        followedName,
-        people,
-        nameJORFRecords: mentions
-      });
+      peopleIdByFollowedNameMap.set(followedName, people._id);
+      newUserTagsUpdates.set(followedName, mentions);
     }
 
+    // Calculate the total number of JORFSearchItem in the map
+    let totalUserRecordsCount = 0;
+    newUserTagsUpdates.forEach((items) => {
+      totalUserRecordsCount += items.length;
+    });
+
+    userUpdateTasks.push({
+      userId: user._id,
+      messageApp: user.messageApp,
+      chatId: user.chatId,
+      updatedRecordsMap: newUserTagsUpdates,
+      recordCount: totalUserRecordsCount
+    });
+  }
+
+  await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
     await sendNameMentionUpdates(
-      user.messageApp,
-      user.chatId,
-      nameUpdates.map((i) => ({
-        people: i.people,
-        updateItems: i.nameJORFRecords
-      }))
+      task.messageApp,
+      task.chatId,
+      task.updatedRecordsMap
     );
 
-    const newFollows = nameUpdates
-      .map((i) => i.people._id)
-      .filter((id) => !user.followedPeople.some((i) => i.peopleId.equals(id)));
+    const user = userFollowingNames.find(
+      (u) => u._id.toString() === task.userId.toString()
+    );
+    if (user === undefined) return; // this should not happen
+
+    const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
+      f.peopleId.toString()
+    );
+
+    const newFollowsIdUnique = [...task.updatedRecordsMap.keys()].reduce(
+      (tab: Types.ObjectId[], idStr) => {
+        const id = peopleIdByFollowedNameMap.get(idStr);
+        if (
+          id !== undefined &&
+          !peopleIdFollowedByUserStr.includes(id.toString())
+        )
+          tab.push(id);
+        return tab;
+      },
+      []
+    );
 
     await User.updateOne(
       { _id: user._id },
       {
         $pull: {
           followedNames: {
-            $in: nameUpdates.map((update) => update.followedName)
+            $in: [...task.updatedRecordsMap.keys()]
           }
         },
         $push: {
           followedPeople: {
             // add the newFollows to the user followedPeople
-            $each: newFollows.map((f) => ({
-              peopleId: f._id,
+            $each: newFollowsIdUnique.map((id) => ({
+              peopleId: id,
               lastUpdate: now
             }))
           }
         }
       }
     );
-  }
+  });
 }
 
 async function sendNameMentionUpdates(
   messageApp: MessageApp,
   chatId: IUser["chatId"],
-  nameUpdates: { people: IPeople; updateItems: JORFSearchItem[] }[]
+  updatedRecordMap: Map<string, JORFSearchItem[]>
 ): Promise<boolean> {
-  if (nameUpdates.length == 0) return true; // no need to send notification if no name mention updates
+  if (updatedRecordMap.size == 0) return true; // no need to send notification if no name mention updates
 
   // Reverse array change order of records
   //updatedRecords.reverse();
 
-  const pluralHandler = nameUpdates.length > 1 ? "s" : "";
+  const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
 
   const markdownEnabled = messageApp === "Telegram";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
 
-  for (let i = 0; i < nameUpdates.length; i++) {
-    notification_text += formatSearchResult(
-      nameUpdates[i].updateItems,
-      markdownEnabled,
-      {
-        isConfirmation: false,
-        isListing: true,
-        displayName: "first"
-      }
-    );
-    notification_text += `Vous suivez maintenant *${nameUpdates[i].people.prenom} ${nameUpdates[i].people.nom}* ✅`;
-    if (i < nameUpdates.length - 1) notification_text += "\n\n";
+  const keys = Array.from(updatedRecordMap.keys());
+  const lastKey = keys[keys.length - 1];
+
+  for (const peopleId of updatedRecordMap.keys()) {
+    const nameUpdates = updatedRecordMap.get(peopleId);
+    if (nameUpdates === undefined || nameUpdates.length == 0) {
+      console.log("FollowedName notification update sent with no records");
+      continue;
+    }
+    // Reverse array change order of records
+    // peopleRecords.reverse();
+
+    const pluralHandler = nameUpdates.length > 1 ? "s" : "";
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${nameUpdates[0].prenom} ${nameUpdates[0].nom}*\n\n`;
+
+    notification_text += formatSearchResult(nameUpdates, markdownEnabled, {
+      isConfirmation: false,
+      isListing: true,
+      displayName: "first"
+    });
+    notification_text += `Vous suivez maintenant *${nameUpdates[0].prenom} ${nameUpdates[0].nom}* ✅`;
+
+    if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
 
   const messageSent = await sendMessage(messageApp, chatId, notification_text, {
