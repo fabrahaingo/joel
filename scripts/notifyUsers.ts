@@ -553,7 +553,7 @@ export async function notifyNameMentionUpdates(
       schemaVersion: 1
     }
   ).lean();
-  //if (userFollowingNames.length == 0) return;
+  if (userFollowingNames.length == 0) return;
 
   const nameMaps = updatedRecords.reduce(
     (acc, item: JORFSearchItem) => {
