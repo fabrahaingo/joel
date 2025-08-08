@@ -29,7 +29,7 @@ export const deleteProfileCommand = async (
 
     const question = await tgBot.sendMessage(
       session.chatId,
-      `*Vous êtes sur le point de supprimer votre compte JOEL*, comprenant l'ensemble de vos contacts, fonctions et organisations suivis.\n
+      `*Vous êtes sur le point de supprimer votre profil JOÉL*, comprenant l'ensemble de vos contacts, fonctions et organisations suivis.\n
 ⚠️ *Attention, ces données ne sont pas récupérables par la suite* ⚠️
 Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce message`,
       {
@@ -50,8 +50,7 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
               _id: session.user._id
             });
             await session.sendMessage(
-              `🗑 Votre profil a bien été supprimé ! 👋
-  ⚠️ Un profil vierge sera créé lors de votre prochaine interaction avec JOEL ⚠️`,
+              `🗑 Votre profil a bien été supprimé ! 👋\nUn profil vierge sera créé lors de l'ajout du prochain suivi ⚠️`,
               session.mainMenuKeyboard
             );
             await session.log({ event: "/user-deletion-self" });
