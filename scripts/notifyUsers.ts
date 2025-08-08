@@ -870,11 +870,6 @@ await (async () => {
   startDate.setHours(0, 0, 0, 0);
   // Fetch all records from the start date
   const JORFAllRecordsFromDate = await getJORFRecordsFromDate(startDate);
-  // Sort records by date
-  JORFAllRecordsFromDate.sort(
-    (i, j) =>
-      JORFtoDate(i.source_date).getTime() - JORFtoDate(j.source_date).getTime()
-  );
 
   if (JORFAllRecordsFromDate.length > 0) {
     // Send notifications to users on followed people
