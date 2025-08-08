@@ -193,21 +193,3 @@ export function cleanPeopleNameJORFURL(input: string): string {
 
   return out;
 }
-
-interface NameInfo {
-  nom: string;
-  prenom: string;
-}
-export function uniqueMinimalNameInfo(
-  records: NameInfo[]
-): { nom: string; prenom: string }[] {
-  const seen = new Set<string>(); // ← O(1) membership tests
-  return records
-    .filter(({ nom, prenom }) => {
-      const key = `${nom}|${prenom}`; // cheap composite key
-      if (seen.has(key)) return false; // already kept → skip
-      seen.add(key);
-      return true; // first time → keep
-    })
-    .map(({ nom, prenom }) => ({ nom, prenom })); // drop other fields
-}
