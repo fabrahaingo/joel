@@ -550,49 +550,32 @@ export async function notifyNameMentionUpdates(
       followedPeople: { peopleId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  );
-  if (userFollowingNames.length == 0) return;
+  ).lean();
+  //if (userFollowingNames.length == 0) return;
 
-  const recordsNamesTab = updatedRecords.reduce(
-    (
-      tab: {
-        nomPrenomClean: string;
-        prenomNomClean: string;
-        nom: string;
-        prenom: string;
-        peopleItems: JORFSearchItem[];
-      }[],
-      item
-    ) => {
-      if (tab.some((p) => p.nom === item.nom && p.prenom === item.prenom))
-        return tab;
-      const peopleItems = updatedRecords.filter(
-        (p) => p.nom === item.nom && p.prenom === item.prenom
-      );
-      tab.push({
-        nomPrenomClean: cleanPeopleName(
-          `${item.nom} ${item.prenom}`
-        ).toUpperCase(),
-        prenomNomClean: cleanPeopleName(
-          `${item.prenom} ${item.nom}`
-        ).toUpperCase(),
-        nom: item.nom,
-        prenom: item.prenom,
-        peopleItems
-      });
-      return tab;
+  const nameMaps = updatedRecords.reduce(
+    (acc, item: JORFSearchItem) => {
+      const nomPrenom = cleanPeopleName(`${item.nom} ${item.prenom}`);
+      const prenomNom = cleanPeopleName(`${item.prenom} ${item.nom}`);
+
+      const nomPrenomList = acc.nomPrenomMap.get(nomPrenom) ?? []; // existing array or a new one
+      const prenomNomList = acc.prenomNomMap.get(prenomNom) ?? []; // existing array or a new one
+
+      nomPrenomList.push(item);
+      prenomNomList.push(item);
+
+      acc.nomPrenomMap.set(nomPrenom, nomPrenomList); // update the map
+      acc.prenomNomMap.set(prenomNom, prenomNomList); // update the map
+
+      return acc;
     },
-    []
+    {
+      nomPrenomMap: new Map<string, JORFSearchItem[]>(),
+      prenomNomMap: new Map<string, JORFSearchItem[]>()
+    }
   );
 
-  const isPersonAlreadyFollowed = (
-    person: IPeople,
-    followedPeople: { peopleId: Types.ObjectId; lastUpdate: Date }[]
-  ) => {
-    return followedPeople.some((followedPerson) => {
-      return followedPerson.peopleId.toString() === person._id.toString();
-    });
-  };
+  const now = new Date();
 
   for (const user of userFollowingNames) {
     const nameUpdates: {
@@ -602,42 +585,23 @@ export async function notifyNameMentionUpdates(
     }[] = [];
 
     for (const followedName of user.followedNames) {
-      const followedNameCleaned = cleanPeopleName(followedName).toUpperCase();
+      const cleanFollowedName = cleanPeopleName(followedName);
+      const mentions =
+        nameMaps.nomPrenomMap.get(cleanFollowedName) ??
+        nameMaps.prenomNomMap.get(cleanFollowedName);
 
-      const mention = recordsNamesTab.find(
-        (i) =>
-          i.nomPrenomClean === followedNameCleaned ||
-          i.prenomNomClean === followedNameCleaned
-      );
-      if (mention === undefined) continue;
-
-      user.followedNames = user.followedNames.filter((p) => p !== followedName);
-
-      if (
-        nameUpdates.some(
-          (p) =>
-            p.people.nom == mention.nom && p.people.prenom == mention.prenom
-        )
-      )
-        continue;
+      if (mentions === undefined || mentions.length == 0) continue;
 
       const people = await People.findOrCreate({
-        nom: mention.nom,
-        prenom: mention.prenom
+        nom: mentions[0].nom,
+        prenom: mentions[0].prenom
       });
 
       nameUpdates.push({
         followedName,
         people,
-        nameJORFRecords: mention.peopleItems
+        nameJORFRecords: mentions
       });
-
-      if (!isPersonAlreadyFollowed(people, user.followedPeople)) {
-        user.followedPeople.push({
-          peopleId: people._id,
-          lastUpdate: new Date(Date.now())
-        });
-      }
     }
 
     await sendNameMentionUpdates(
@@ -648,7 +612,29 @@ export async function notifyNameMentionUpdates(
       }))
     );
 
-    await user.save();
+    const newFollows = nameUpdates
+      .map((i) => i.people._id)
+      .filter((id) => !user.followedPeople.some((i) => i.peopleId.equals(id)));
+
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $pull: {
+          followedNames: {
+            $in: nameUpdates.map((update) => update.followedName)
+          }
+        },
+        $push: {
+          followedPeople: {
+            // add the newFollows to the user followedPeople
+            $each: newFollows.map((f) => ({
+              peopleId: f._id,
+              lastUpdate: now
+            }))
+          }
+        }
+      }
+    );
   }
 }
 
