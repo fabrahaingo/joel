@@ -607,7 +607,8 @@ export async function notifyNameMentionUpdates(
     }
 
     await sendNameMentionUpdates(
-      user,
+      user.messageApp,
+      user.chatId,
       nameUpdates.map((i) => ({
         people: i.people,
         updateItems: i.nameJORFRecords
@@ -641,7 +642,8 @@ export async function notifyNameMentionUpdates(
 }
 
 async function sendNameMentionUpdates(
-  user: IUser,
+  messageApp: MessageApp,
+  chatId: IUser["chatId"],
   nameUpdates: { people: IPeople; updateItems: JORFSearchItem[] }[]
 ): Promise<boolean> {
   if (nameUpdates.length == 0) return true; // no need to send notification if no name mention updates
@@ -651,12 +653,14 @@ async function sendNameMentionUpdates(
 
   const pluralHandler = nameUpdates.length > 1 ? "s" : "";
 
+  const markdownEnabled = messageApp === "Telegram";
+
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
 
   for (let i = 0; i < nameUpdates.length; i++) {
     notification_text += formatSearchResult(
       nameUpdates[i].updateItems,
-      user.messageApp === "Telegram",
+      markdownEnabled,
       {
         isConfirmation: false,
         isListing: true,
@@ -667,7 +671,7 @@ async function sendNameMentionUpdates(
     if (i < nameUpdates.length - 1) notification_text += "\n\n";
   }
 
-  const messageSent = await sendMessage(user, notification_text, {
+  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
     signalCli: signalCli,
     whatsAppAPI: whatsAppAPI
   });
@@ -677,28 +681,47 @@ async function sendNameMentionUpdates(
   return true;
 }
 
-async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
-  const nbPersonUpdated = uniqueMinimalNameInfo(updatedRecords).length;
-
-  if (nbPersonUpdated == 0) return true; // no need to send notification if no name mention updates
+async function sendPeopleUpdate(
+  messageApp: MessageApp,
+  chatId: IUser["chatId"],
+  updatedRecordMap: Map<string, JORFSearchItem[]>
+) {
+  if (updatedRecordMap.size == 0) return true; // no need to send notification if no name mention updates
 
   // Reverse array change order of records
   //updatedRecords.reverse();
 
-  const pluralHandler = updatedRecords.length > 1 ? "s" : "";
+  const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
+
+  const markdownEnabled = messageApp === "Telegram";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les personnes que vous suivez :\n\n`;
-  notification_text += formatSearchResult(
-    updatedRecords,
-    user.messageApp === "Telegram",
-    {
+
+  const keys = Array.from(updatedRecordMap.keys());
+  const lastKey = keys[keys.length - 1];
+
+  for (const peopleId of updatedRecordMap.keys()) {
+    const peopleRecords = updatedRecordMap.get(peopleId);
+    if (peopleRecords === undefined || peopleRecords.length == 0) {
+      console.log("People notification update sent with no records");
+      continue;
+    }
+    // Reverse array change order of records
+    // peopleRecords.reverse();
+
+    const pluralHandler = peopleRecords.length > 1 ? "s" : "";
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${peopleRecords[0].prenom} ${peopleRecords[0].nom}*\n\n`;
+
+    notification_text += formatSearchResult(peopleRecords, markdownEnabled, {
       isConfirmation: false,
       isListing: true,
-      displayName: "all"
-    }
-  );
+      displayName: "first"
+    });
 
-  const messageSent = await sendMessage(user, notification_text, {
+    if (peopleId !== lastKey) notification_text += "====================\n\n";
+  }
+
+  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
     signalCli: signalCli,
     whatsAppAPI: whatsAppAPI
   });
@@ -709,17 +732,22 @@ async function sendPeopleUpdate(user: IUser, updatedRecords: JORFSearchItem[]) {
 }
 
 async function sendOrganisationUpdate(
-  user: IUser,
-  orgMap: Record<WikidataId, JORFSearchItem[]>,
+  messageApp: MessageApp,
+  chatId: IUser["chatId"],
+  organisationsUpdateRecordsMap: Map<WikidataId, JORFSearchItem[]>,
   orgNameById: Map<WikidataId, string>
 ): Promise<boolean> {
-  const orgsUpdated = Object.keys(orgMap);
-  if (orgsUpdated.length == 0) return true;
+  if (organisationsUpdateRecordsMap.size == 0) return true;
 
   let notification_text =
     "📢 Nouvelles publications parmi les organisations que suivez :\n\n";
 
-  for (const orgId of orgsUpdated) {
+  const markdownEnabled = messageApp === "Telegram";
+
+  const keys = Array.from(organisationsUpdateRecordsMap.keys());
+  const lastKey = keys[keys.length - 1];
+
+  for (const orgId of organisationsUpdateRecordsMap.keys()) {
     const orgName = orgNameById.get(orgId);
     if (orgName === undefined) {
       console.log(
@@ -727,31 +755,28 @@ async function sendOrganisationUpdate(
       );
       continue;
     }
+    const orgRecords = organisationsUpdateRecordsMap.get(orgId);
+    if (orgRecords === undefined || orgRecords.length == 0) {
+      console.log("Organisation notification update sent with no records");
+      continue;
+    }
 
-    const orgRecords = orgMap[orgId];
     // Reverse array change order of records
-    // updatedRecords.reverse();
+    // orgRecords.reverse();
 
     const pluralHandler = orgRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${orgName}*\n\n`;
 
-    notification_text += formatSearchResult(
-      orgRecords,
-      user.messageApp === "Telegram",
-      {
-        isConfirmation: false,
-        isListing: true,
-        displayName: "all"
-      }
-    );
+    notification_text += formatSearchResult(orgRecords, markdownEnabled, {
+      isConfirmation: false,
+      isListing: true,
+      displayName: "all"
+    });
 
-    if (orgsUpdated.indexOf(orgId) + 1 !== orgsUpdated.length)
-      notification_text += "====================\n\n";
-
-    notification_text += "\n";
+    if (orgId !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(user, notification_text, {
+  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
     signalCli: signalCli,
     whatsAppAPI: whatsAppAPI
   });
@@ -761,50 +786,52 @@ async function sendOrganisationUpdate(
   return true;
 }
 
+// We preload the tag keys and values to reduce search time
+const tagValues = Object.values(FunctionTags);
+const tagKeys = Object.keys(FunctionTags);
+
 async function sendTagUpdates(
-  user: IUser,
-  tagMap: Partial<Record<FunctionTags, JORFSearchItem[]>>
+  messageApp: MessageApp,
+  chatId: IUser["chatId"],
+  tagMap: Map<FunctionTags, JORFSearchItem[]>
 ): Promise<boolean> {
   // only keep the tags followed by the user
-  const tagList = Object.keys(tagMap) as FunctionTags[];
+  const tagList = [...tagMap.keys()];
 
   if (tagList.length == 0) return true;
 
   let notification_text =
     "📢 Nouvelles publications parmi les fonctions que suivez :\n\n";
 
-  // We preload the tag keys and values to reduce search time
-  const tagValues = Object.values(FunctionTags);
-  const tagKeys = Object.keys(FunctionTags);
+  const markdownEnabled = messageApp === "Telegram";
 
-  for (const tagValue of tagList) {
-    const tagKey = tagKeys[tagValues.indexOf(tagValue)];
+  const keys = Array.from(tagMap.keys());
+  const lastKey = keys[keys.length - 1];
 
-    const tagRecords: JORFSearchItem[] = tagMap[tagValue] ?? [];
-    if (tagRecords.length == 0) continue;
+  for (const tag of tagMap.keys()) {
+    const tagRecords = tagMap.get(tag);
+    if (tagRecords === undefined || tagRecords.length == 0) {
+      console.log("Tag notification update sent with no records");
+      continue;
+    }
+    const tagKey = tagKeys[tagValues.indexOf(tag)];
+
     // Reverse array change order of records
     // updatedRecords.reverse();
 
     const pluralHandler = tagRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${tagKey}*\n\n`;
 
-    notification_text += formatSearchResult(
-      tagRecords,
-      user.messageApp === "Telegram",
-      {
-        isConfirmation: false,
-        isListing: true,
-        displayName: "all"
-      }
-    );
+    notification_text += formatSearchResult(tagRecords, markdownEnabled, {
+      isConfirmation: false,
+      isListing: true,
+      displayName: "all"
+    });
 
-    if (tagList.indexOf(tagValue) + 1 !== tagList.length)
-      notification_text += "====================\n\n";
-
-    notification_text += "\n";
+    if (tag !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(user, notification_text, {
+  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
     signalCli: signalCli,
     whatsAppAPI: whatsAppAPI
   });
