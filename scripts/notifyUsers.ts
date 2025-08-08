@@ -26,7 +26,6 @@ import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { SignalCli } from "signal-sdk";
-import groupBy from "lodash/groupBy";
 
 const { ENABLED_APPS } = process.env;
 
@@ -388,14 +387,24 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
 
   const minimalInfoUpdated = uniqueMinimalNameInfo(updatedRecords);
 
-  const byPrenom = groupBy(minimalInfoUpdated, "prenom"); // { "Doe": [{…}, …], "Dupont": … }
+  // Significantly optimize mongoose request by grouping filters by prenom
+  const byPrenom = minimalInfoUpdated.reduce(
+    (acc: Record<string, { nom: string; prenom: string }[]>, person) => {
+      acc[person.prenom] = (acc[person.prenom] ??= []).concat([person]); // Push the object to the array corresponding to its prenom
+      return acc;
+    },
+    {}
+  );
 
-  const filters = Object.entries(byPrenom).map(([prenom, arr]) => ({
-    prenom, // equality ⇒ index-friendly
-    nom: { $in: arr.map((a) => a.nom) } // still index-friendly
+  // Create an array of filter objects
+  const filtersbyPrenom = Object.entries(byPrenom).map(([prenom, arr]) => ({
+    prenom, // This field is used for equality checks, which is index-friendly
+    nom: { $in: arr.map((a) => a.nom) } // This field is used to match any of the "nom" values, which is also index-friendly
   }));
 
-  const updatedPeopleList: IPeople[] = await People.find({ $or: filters })
+  const updatedPeopleList: IPeople[] = await People.find({
+    $or: filtersbyPrenom
+  })
     .collation({ locale: "fr", strength: 2 }) // case-insensitive, no regex
     .lean();
   if (updatedPeopleList.length == 0) return;
