@@ -96,51 +96,6 @@ async function getJORFRecordsFromDate(
     );
 }
 
-// Update the timestamp of the last update date for a user-specific people follow
-async function updateUserFollowedPeople(
-  user: IUser,
-  updatedPeopleIds: Types.ObjectId[]
-) {
-  if (updatedPeopleIds.length == 0) {
-    return;
-  }
-
-  const currentDate = new Date();
-
-  user.followedPeople = user.followedPeople.reduce(
-    (
-      followedList: IUser["followedPeople"],
-      followed: { peopleId: Types.ObjectId; lastUpdate: Date }
-    ) => {
-      if (
-        followedList.some(
-          (f) => f.peopleId.toString() === followed.peopleId.toString()
-        )
-      )
-        return followedList; // If the user follows twice the same person, we drop the second record
-
-      // if updated people: we update the timestamp
-      if (
-        updatedPeopleIds.some(
-          (p) => p._id.toString() === followed.peopleId.toString()
-        )
-      ) {
-        followedList.push({
-          peopleId: followed.peopleId,
-          lastUpdate: currentDate
-        });
-      } else {
-        followedList.push(followed); // otherwise, we don't change the item
-      }
-      return followedList;
-    },
-    []
-  );
-
-  // save user
-  await user.save();
-}
-
 // There is currently no way to check if a user has been notified of a tag update
 // Resuming an update thus require to force-notify users for all tags updates over the period.
 export async function notifyFunctionTagsUpdates(
@@ -384,10 +339,13 @@ export async function notifyOrganisationsUpdates(
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   if (updatedRecords.length == 0) return;
 
-  const minimalInfoUpdated = uniqueMinimalNameInfo(updatedRecords);
+  const peopleSet = new Set<{ prenom: string; nom: string }>();
+  updatedRecords.forEach((person) => {
+    peopleSet.add({ nom: person.nom, prenom: person.prenom });
+  });
 
   // Significantly optimize mongoose request by grouping filters by prenom
-  const byPrenom = minimalInfoUpdated.reduce(
+  const byPrenom = [...peopleSet].reduce(
     (acc: Record<string, { nom: string; prenom: string }[]>, person) => {
       acc[person.prenom] = (acc[person.prenom] ??= []).concat([person]); // Push the object to the array corresponding to its prenom
       return acc;
@@ -409,7 +367,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   if (updatedPeopleList.length == 0) return;
 
   // Fetch all users following at least one of the updated People
-  const updatedUsers: IUser[] = await User.find(
+  const usersFollowingPeople: IUser[] = await User.find(
     {
       followedPeople: {
         $elemMatch: {
@@ -428,81 +386,108 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       followedPeople: { peopleId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  );
-  if (updatedUsers.length == 0) return;
+  ).lean();
+  if (usersFollowingPeople.length == 0) return;
 
-  for (const user of updatedUsers) {
-    // Ids of all people followed by the user
-    const peopleIdStrsFollowedByUser = user.followedPeople.map((j) =>
-      j.peopleId.toString()
+  const cleanPeopleInfo = updatedPeopleList.map((p) => ({
+    prenom: cleanPeopleName(p.prenom),
+    nom: cleanPeopleName(p.nom)
+  }));
+
+  // Initialize an empty org map to store the categorized records
+  const updatedPeoplebyIdMap = new Map<Types.ObjectId, JORFSearchItem[]>();
+
+  // Build the tag map from the updated records
+  updatedRecords.forEach((item) => {
+    const peopleIdx = cleanPeopleInfo.findIndex(
+      (p) =>
+        p.nom === cleanPeopleName(item.nom) &&
+        p.prenom === cleanPeopleName(item.prenom)
     );
-    const updatedPeopleFollowedByUser = updatedPeopleList.filter((i) =>
-      peopleIdStrsFollowedByUser.includes(i._id.toString())
-    );
-    const updatedPeopleInfoFollowedByUser = uniqueMinimalNameInfo(
-      updatedPeopleFollowedByUser
-    );
+    if (peopleIdx != -1) {
+      // this should always happen
+      updatedPeoplebyIdMap.set(
+        updatedPeopleList[peopleIdx]._id,
+        (
+          updatedPeoplebyIdMap.get(updatedPeopleList[peopleIdx]._id) ?? []
+        ).concat([item])
+      );
+    }
+  });
 
-    // Records which are associated with followed People, and which are new for the respective People follow
-    const newRecordsFollowedByUser = updatedRecords.reduce(
-      (recordList: JORFSearchItem[], record) => {
-        // remove records not associated with followed people
-        // this is the first main filter
-        if (
-          !updatedPeopleInfoFollowedByUser.some(
-            (p) =>
-              p.nom.toUpperCase() === record.nom.toUpperCase() &&
-              p.prenom.toUpperCase() === record.prenom.toUpperCase()
-          )
-        )
-          return recordList;
+  const userUpdateTasks: {
+    userId: Types.ObjectId;
+    messageApp: MessageApp;
+    chatId: IUser["chatId"];
+    peopleUpdateRecordsMap: Map<Types.ObjectId, JORFSearchItem[]>;
+    recordCount: number;
+  }[] = [];
 
-        const updatedPeople: IPeople | undefined =
-          updatedPeopleFollowedByUser.find(
-            (i) => i.nom === record.nom && i.prenom === record.prenom
-          );
-        if (updatedPeople == null) return recordList; // this should not happen
+  const now = new Date();
 
-        // Find the follow data associated with these people record
-        const followData = user.followedPeople.find(
-          (i) => i.peopleId.toString() === updatedPeople._id.toString()
+  for (const user of usersFollowingPeople) {
+    const newUserPeopleUpdates = new Map<Types.ObjectId, JORFSearchItem[]>();
+
+    user.followedPeople
+      .filter((peopleFollow) => updatedPeoplebyIdMap.has(peopleFollow.peopleId))
+      .forEach((peopleFollow) => {
+        const dateFilteredUserOrgUpdates: JORFSearchItem[] = (
+          updatedPeoplebyIdMap.get(peopleFollow.peopleId) ?? []
+        ).filter(
+          (record: JORFSearchItem) =>
+            JORFtoDate(record.source_date).getTime() >
+            peopleFollow.lastUpdate.getTime()
         );
-        if (followData === undefined) return recordList; // this should not happen
+        if (dateFilteredUserOrgUpdates.length > 0)
+          newUserPeopleUpdates.set(
+            peopleFollow.peopleId,
+            dateFilteredUserOrgUpdates
+          );
+      });
 
-        // Check that the update is newer than the lastUpdate
-        if (
-          JORFtoDate(record.source_date).getTime() <
-          followData.lastUpdate.getTime()
-        )
-          return recordList;
+    // Calculate the total number of JORFSearchItem in the map
+    let totalUserRecordsCount = 0;
+    newUserPeopleUpdates.forEach((items) => {
+      totalUserRecordsCount += items.length;
+    });
 
-        // Record up to this point associated with a followed People and newer than the last update
-        recordList.push(record);
-        return recordList;
-      },
-      []
-    );
+    userUpdateTasks.push({
+      userId: user._id,
+      messageApp: user.messageApp,
+      chatId: user.chatId,
+      peopleUpdateRecordsMap: newUserPeopleUpdates,
+      recordCount: totalUserRecordsCount
+    });
+  }
 
+  for (const task of userUpdateTasks) {
     // send follow notification to the user
-    const messageSent = await sendPeopleUpdate(user, newRecordsFollowedByUser);
+    const messageSent = await sendPeopleUpdate(
+      task.messageApp,
+      task.chatId,
+      task.peopleUpdateRecordsMap
+    );
 
     if (messageSent) {
-      // Ids of updated peoples:
-      const updatedRecordsPeopleId: Types.ObjectId[] =
-        updatedPeopleFollowedByUser
-          .filter((p) =>
-            newRecordsFollowedByUser.some(
-              (r) => r.nom === p.nom && r.prenom === p.prenom
-            )
-          )
-          .map((p) => p._id);
-
-      // update each lastUpdate fields of the user followedPeople
-      await updateUserFollowedPeople(user, updatedRecordsPeopleId);
+      await User.updateOne(
+        {
+          _id: task.userId,
+          "followedPeople.peopleId": {
+            $in: [...task.peopleUpdateRecordsMap.keys()]
+          } // to avoid duplicate key error
+        },
+        { $set: { "followedPeople.$[elem].lastUpdate": now } },
+        {
+          arrayFilters: [
+            {
+              "elem.peopleId": { $in: [...task.peopleUpdateRecordsMap.keys()] }
+            }
+          ]
+        }
+      );
     }
   }
 }
-
 export async function notifyNameMentionUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
