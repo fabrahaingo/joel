@@ -60,7 +60,7 @@ await (async () => {
 
         for (const command of commands) {
           if (command.regex.test(msgText)) {
-            await command.action(signalSession, msgText);
+            await command.action(signalSession, msgText.trim());
             return;
           }
         }

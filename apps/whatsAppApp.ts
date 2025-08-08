@@ -108,7 +108,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     for (const command of commands) {
       if (command.regex.test(msgText)) {
-        await command.action(WHSession, msgText);
+        await command.action(WHSession, msgText.trim());
         return;
       }
     }

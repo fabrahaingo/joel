@@ -39,7 +39,7 @@ await (async () => {
             await tgSession.user.updateInteractionMetrics();
 
           // Process user message
-          await command.action(tgSession, tgMsg.text);
+          await command.action(tgSession, tgMsg.text?.trim());
         } catch (error) {
           console.error("Error processing command:", error);
         }
