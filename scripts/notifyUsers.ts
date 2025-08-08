@@ -17,8 +17,7 @@ import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   callJORFSearchDay,
-  cleanPeopleName,
-  uniqueMinimalNameInfo
+  cleanPeopleName
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
 import { sendMessage } from "../entities/Session.ts";
