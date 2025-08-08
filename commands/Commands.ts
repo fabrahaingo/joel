@@ -15,7 +15,7 @@ import {
 } from "./search.ts";
 import { enaCommand, promosCommand } from "./ena.ts";
 import { statsCommand } from "./stats.ts";
-import { defaultCommand, showCommands } from "./default.ts";
+import { mainMenuCommand } from "./default.ts";
 import { startCommand } from "./start.ts";
 import { deleteProfileCommand } from "./deleteProfile.ts";
 import { helpCommand } from "./help.ts";
@@ -27,15 +27,15 @@ import { listCommand, unfollowFromStr, unfollowTelegram } from "./list.ts";
 
 export const commands: CommandType[] = [
   {
-    regex: /\/start$|🏠 Menu principal/i,
+    regex: /\/start$|Bonjour/i,
     action: startCommand
   },
   {
-    regex: /🔎 Commandes$/i,
-    action: showCommands
+    regex: /🏠 Menu principal|🔎 Commandes/i,
+    action: (session, msg) => mainMenuCommand(session, msg, false)
   },
   {
-    regex: /Rechercher$|🔎 Rechercher$|🔎 Nouvelle recherche$/i,
+    regex: /Rechercher$|Recherche$|🔎 Rechercher$|🔎 Nouvelle recherche$/i,
     action: searchCommand
   },
   {

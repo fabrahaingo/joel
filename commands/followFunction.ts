@@ -6,7 +6,6 @@ import {
   TelegramSession
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
-import { defaultCommand } from "./default.ts";
 import { ISession } from "../types";
 
 const functionTagValues = Object.values(FunctionTags);
@@ -146,7 +145,7 @@ export const followFunctionFromStrCommand = async (
 ): Promise<void> => {
   try {
     if (msg == undefined) {
-      await defaultCommand(session);
+      await followFunctionCommand(session);
       return;
     }
 
