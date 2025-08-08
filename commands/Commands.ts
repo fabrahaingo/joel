@@ -88,7 +88,7 @@ export const commands: CommandType[] = [
     action: fullHistoryCommandLong
   },
   {
-    regex: /Rechercher \s*(.*)|Historique \s*(.*)/i,
+    regex: /Rechercher \s*(.*)|Recherche \s*(.*)|Historique \s*(.*)/i,
     action: fullHistoryCommand
   },
   {
