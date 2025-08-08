@@ -104,7 +104,6 @@ export interface OrganisationModel extends Model<IOrganisation> {
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
-  updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
   collection: {

@@ -92,47 +92,6 @@ async function getJORFRecordsFromDate(
     );
 }
 
-export function buildTagMap(
-  updatedRecords: JORFSearchItem[]
-): Partial<Record<FunctionTags, JORFSearchItem[]>> {
-  // constant-time membership test
-  const tagSet = new Set<FunctionTags>(
-    Object.values(FunctionTags) as FunctionTags[]
-  );
-
-  const tagMap: Partial<Record<FunctionTags, JORFSearchItem[]>> = {};
-
-  for (const item of updatedRecords) {
-    // iterate through the fields actually present on *this* record
-    for (const key of Object.keys(item) as (keyof JORFSearchItem)[]) {
-      if (!tagSet.has(key as FunctionTags)) continue; // not a tag we care about
-      if (item[key] === undefined) continue; // defensive, should not happen
-
-      (tagMap[key as FunctionTags] ??= []).push(item); // bucketise
-    }
-  }
-  return tagMap;
-}
-
-export function buildOrganisationMapById(
-  updatedRecords: JORFSearchItem[]
-): Record<WikidataId, JORFSearchItem[]> {
-  return updatedRecords.reduce<Record<WikidataId, JORFSearchItem[]>>(
-    (orgMap, record) => {
-      const seen = new Set<WikidataId>(); // dedupe ids inside this record
-
-      for (const { wikidata_id } of record.organisations) {
-        if (!wikidata_id || seen.has(wikidata_id)) continue; // skip undefined / duplicate
-
-        seen.add(wikidata_id);
-        (orgMap[wikidata_id] ??= []).push(record);
-      }
-      return orgMap;
-    },
-    {}
-  );
-}
-
 // Update the timestamp of the last update date for a user-specific people follow
 async function updateUserFollowedPeople(
   user: IUser,
@@ -164,47 +123,6 @@ async function updateUserFollowedPeople(
       ) {
         followedList.push({
           peopleId: followed.peopleId,
-          lastUpdate: currentDate
-        });
-      } else {
-        followedList.push(followed); // otherwise, we don't change the item
-      }
-      return followedList;
-    },
-    []
-  );
-
-  // save user
-  await user.save();
-}
-
-// Update the timestamp of the last update date for a user-specific people follow
-async function updateUserFollowedFunctions(
-  user: IUser,
-  updatedFunctionTags: FunctionTags[]
-) {
-  if (updatedFunctionTags.length == 0) {
-    return;
-  }
-
-  const currentDate = new Date();
-
-  user.followedFunctions = user.followedFunctions.reduce(
-    (
-      followedList: IUser["followedFunctions"],
-      followed: { functionTag: FunctionTags; lastUpdate: Date }
-    ) => {
-      if (followedList.some((f) => f.functionTag === followed.functionTag))
-        return followedList; // If the user follows twice the same tag, we drop the second record
-
-      // if updated people: we update the timestamp
-      if (
-        updatedFunctionTags.some(
-          (functionTag) => functionTag === followed.functionTag
-        )
-      ) {
-        followedList.push({
-          functionTag: followed.functionTag,
           lastUpdate: currentDate
         });
       } else {
@@ -262,8 +180,29 @@ export async function notifyFunctionTagsUpdates(
   updatedRecords: JORFSearchItem[]
 ) {
   if (updatedRecords.length == 0) return;
-  const updatedTagMap = buildTagMap(updatedRecords);
-  const updatedTagList = Object.keys(updatedTagMap) as FunctionTags[];
+
+  const functionTagValues: string[] = Object.values(FunctionTags);
+
+  // Initialize an empty tag map to store the categorized records
+  const updatedTagMap = new Map<FunctionTags, JORFSearchItem[]>();
+
+  // Build the tag map from the updated records
+  updatedRecords.forEach((item) => {
+    // Iterate through each key in the current record
+    (Object.keys(item) as (keyof JORFSearchItem)[]).forEach((key) => {
+      // Check if the key is a valid function tag
+      if (functionTagValues.includes(key)) {
+        const keyFctTag = key as FunctionTags;
+
+        // Update the tag map
+        const currentItems = updatedTagMap.get(keyFctTag) || [];
+        updatedTagMap.set(keyFctTag, [...currentItems, item]);
+      }
+    });
+  });
+
+  // Create a set of unique tag keys
+  const updatedTagSet = new Set<FunctionTags>(updatedTagMap.keys());
 
   const usersFollowingTags: IUser[] = await User.find(
     {
@@ -271,7 +210,7 @@ export async function notifyFunctionTagsUpdates(
         $exists: true,
         $not: { $size: 0 },
         $elemMatch: {
-          functionTag: { $in: updatedTagList }
+          functionTag: { $in: [...updatedTagSet] }
         }
       },
       status: "active",
@@ -284,36 +223,43 @@ export async function notifyFunctionTagsUpdates(
       followedFunctions: { functionTag: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  );
+  ).lean();
   if (usersFollowingTags.length == 0) return;
+
+  const now = new Date();
 
   for (const user of usersFollowingTags) {
     // send tag notification to the user
 
-    const newUserTagsUpdates: Partial<Record<FunctionTags, JORFSearchItem[]>> =
-      {};
+    const newUserTagsUpdates = new Map<FunctionTags, JORFSearchItem[]>();
 
-    for (const tagFollow of user.followedFunctions) {
-      if ((updatedTagMap[tagFollow.functionTag]?.length ?? 0) == 0) continue;
-
-      const dateFilteredUserTagUpdates: JORFSearchItem[] =
-        updatedTagMap[tagFollow.functionTag]?.filter(
+    user.followedFunctions
+      .filter((tagFollow) => updatedTagMap.has(tagFollow.functionTag))
+      .forEach((tagFollow) => {
+        const dateFilteredUserTagUpdates: JORFSearchItem[] = (
+          updatedTagMap.get(tagFollow.functionTag) ?? []
+        ).filter(
           (record: JORFSearchItem) =>
             JORFtoDate(record.source_date).getTime() >
             tagFollow.lastUpdate.getTime()
-        ) ?? [];
-
-      if (dateFilteredUserTagUpdates.length == 0) continue;
-
-      newUserTagsUpdates[tagFollow.functionTag] = dateFilteredUserTagUpdates;
-    }
+        );
+        if (dateFilteredUserTagUpdates.length > 0)
+          newUserTagsUpdates.set(
+            tagFollow.functionTag,
+            dateFilteredUserTagUpdates
+          );
+      });
 
     const messageSent = await sendTagUpdates(user, newUserTagsUpdates);
 
     if (messageSent) {
-      await updateUserFollowedFunctions(
-        user,
-        Object.keys(newUserTagsUpdates) as FunctionTags[]
+      await User.updateOne(
+        {
+          _id: user._id,
+          "followedFunctions.functionTag": { $in: [...updatedTagSet] } // to avoid duplicate key error
+        },
+        { $set: { "followedFunctions.$[elem].lastUpdate": now } },
+        { arrayFilters: [{ "elem.functionTag": { $in: [...updatedTagSet] } }] }
       );
     }
   }
