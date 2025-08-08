@@ -150,9 +150,15 @@ export async function notifyFunctionTagsUpdates(
 
   const now = new Date();
 
-  for (const user of usersFollowingTags) {
-    // send tag notification to the user
+  const userUpdateTasks: {
+    userId: Types.ObjectId;
+    messageApp: MessageApp;
+    chatId: IUser["chatId"];
+    tagUpdateRecordsMap: Map<FunctionTags, JORFSearchItem[]>;
+    recordCount: number;
+  }[] = [];
 
+  for (const user of usersFollowingTags) {
     const newUserTagsUpdates = new Map<FunctionTags, JORFSearchItem[]>();
 
     user.followedFunctions
@@ -172,16 +178,44 @@ export async function notifyFunctionTagsUpdates(
           );
       });
 
-    const messageSent = await sendTagUpdates(user, newUserTagsUpdates);
+    // Calculate the total number of JORFSearchItem in the map
+    let totalUserRecordsCount = 0;
+    newUserTagsUpdates.forEach((items) => {
+      totalUserRecordsCount += items.length;
+    });
+
+    userUpdateTasks.push({
+      userId: user._id,
+      messageApp: user.messageApp,
+      chatId: user.chatId,
+      tagUpdateRecordsMap: newUserTagsUpdates,
+      recordCount: totalUserRecordsCount
+    });
+  }
+
+  for (const task of userUpdateTasks) {
+    const messageSent = await sendTagUpdates(
+      task.messageApp,
+      task.chatId,
+      task.tagUpdateRecordsMap
+    );
 
     if (messageSent) {
       await User.updateOne(
         {
-          _id: user._id,
-          "followedFunctions.functionTag": { $in: [...updatedTagSet] } // to avoid duplicate key error
+          _id: task.userId,
+          "followedFunctions.functionTag": {
+            $in: [...task.tagUpdateRecordsMap.keys()]
+          } // to avoid duplicate key error
         },
         { $set: { "followedFunctions.$[elem].lastUpdate": now } },
-        { arrayFilters: [{ "elem.functionTag": { $in: [...updatedTagSet] } }] }
+        {
+          arrayFilters: [
+            {
+              "elem.functionTag": { $in: [...task.tagUpdateRecordsMap.keys()] }
+            }
+          ]
+        }
       );
     }
   }
@@ -290,9 +324,9 @@ export async function notifyOrganisationsUpdates(
       });
 
     // Calculate the total number of JORFSearchItem in the map
-    let totalUsersRecordsCount = 0;
+    let totalUserRecordsCount = 0;
     newUserOrganisationsUpdates.forEach((items) => {
-      totalUsersRecordsCount += items.length;
+      totalUserRecordsCount += items.length;
     });
 
     userUpdateTasks.push({
@@ -300,7 +334,7 @@ export async function notifyOrganisationsUpdates(
       messageApp: user.messageApp,
       chatId: user.chatId,
       organisationsUpdateRecordsMap: newUserOrganisationsUpdates,
-      recordCount: totalUsersRecordsCount
+      recordCount: totalUserRecordsCount
     });
   }
 
