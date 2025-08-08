@@ -47,6 +47,14 @@ export const commands: CommandType[] = [
     action: manualFollowCommandShort
   },
   {
+    regex: /Suivre N/i,
+    action: (session, msg) =>
+      manualFollowCommandShort(
+        session,
+        "SuivreN " + (msg?.split(" ").slice(2).join(" ") ?? "")
+      )
+  },
+  {
     regex:
       /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Suivre une fonction|Fonctions|Fonction$/i,
     action: followFunctionCommand
