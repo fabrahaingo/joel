@@ -433,7 +433,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   }));
 
   // Initialize an empty org map to store the categorized records
-  const updatedPeoplebyIdMap = new Map<Types.ObjectId, JORFSearchItem[]>();
+  const updatedPeoplebyIdMap = new Map<string, JORFSearchItem[]>();
 
   // Build the tag map from the updated records
   updatedRecords.forEach((item) => {
@@ -445,9 +445,11 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     if (peopleIdx != -1) {
       // this should always happen
       updatedPeoplebyIdMap.set(
-        updatedPeopleList[peopleIdx]._id,
+        updatedPeopleList[peopleIdx]._id.toString(),
         (
-          updatedPeoplebyIdMap.get(updatedPeopleList[peopleIdx]._id) ?? []
+          updatedPeoplebyIdMap.get(
+            updatedPeopleList[peopleIdx]._id.toString()
+          ) ?? []
         ).concat([item])
       );
     }
@@ -457,20 +459,27 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     userId: Types.ObjectId;
     messageApp: MessageApp;
     chatId: IUser["chatId"];
-    peopleUpdateRecordsMap: Map<Types.ObjectId, JORFSearchItem[]>;
+    peopleUpdateRecordsMap: Map<string, JORFSearchItem[]>;
     recordCount: number;
   }[] = [];
 
   const now = new Date();
 
+  const peopleIdMapByStr = new Map<string, Types.ObjectId>();
+  updatedPeopleList.forEach((p) => {
+    peopleIdMapByStr.set(p._id.toString(), p._id);
+  });
+
   for (const user of usersFollowingPeople) {
-    const newUserPeopleUpdates = new Map<Types.ObjectId, JORFSearchItem[]>();
+    const newUserPeopleUpdates = new Map<string, JORFSearchItem[]>();
 
     user.followedPeople
-      .filter((peopleFollow) => updatedPeoplebyIdMap.has(peopleFollow.peopleId))
+      .filter((peopleFollow) =>
+        peopleIdMapByStr.has(peopleFollow.peopleId.toString())
+      )
       .forEach((peopleFollow) => {
         const dateFilteredUserOrgUpdates: JORFSearchItem[] = (
-          updatedPeoplebyIdMap.get(peopleFollow.peopleId) ?? []
+          updatedPeoplebyIdMap.get(peopleFollow.peopleId.toString()) ?? []
         ).filter(
           (record: JORFSearchItem) =>
             JORFtoDate(record.source_date).getTime() >
@@ -478,7 +487,7 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
         );
         if (dateFilteredUserOrgUpdates.length > 0)
           newUserPeopleUpdates.set(
-            peopleFollow.peopleId,
+            peopleFollow.peopleId.toString(),
             dateFilteredUserOrgUpdates
           );
       });
