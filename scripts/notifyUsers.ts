@@ -373,19 +373,23 @@ export async function notifyOrganisationsUpdates(
 export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
   if (updatedRecords.length == 0) return;
 
-  const peopleSet = new Set<{ prenom: string; nom: string }>();
+  const peopleJSONSet = new Set<string>();
   updatedRecords.forEach((person) => {
-    peopleSet.add({ nom: person.nom, prenom: person.prenom });
+    peopleJSONSet.add(
+      JSON.stringify({ nom: person.nom, prenom: person.prenom })
+    );
   });
 
   // Significantly optimize mongoose request by grouping filters by prenom
-  const byPrenom = [...peopleSet].reduce(
-    (acc: Record<string, { nom: string; prenom: string }[]>, person) => {
-      acc[person.prenom] = (acc[person.prenom] ??= []).concat([person]); // Push the object to the array corresponding to its prenom
-      return acc;
-    },
-    {}
-  );
+  const byPrenom = [...peopleJSONSet]
+    .map((i) => JSON.parse(i) as { nom: string; prenom: string })
+    .reduce(
+      (acc: Record<string, { nom: string; prenom: string }[]>, person) => {
+        acc[person.prenom] = (acc[person.prenom] ??= []).concat([person]); // Push the object to the array corresponding to its prenom
+        return acc;
+      },
+      {}
+    );
 
   // Create an array of filter objects
   const filtersbyPrenom = Object.entries(byPrenom).map(([prenom, arr]) => ({
