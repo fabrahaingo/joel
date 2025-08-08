@@ -116,7 +116,7 @@ export const searchOrganisationFromStr = async (
     const orgResults = await searchOrganisationWikidataId(orgName ?? "");
 
     if (orgResults.length == 0) {
-      const text = `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`;
+      const text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
       if (session.messageApp === "Telegram")
         await session.sendMessage(text, [
           [{ text: `🏛️️ Ajouter une organisation` }],
@@ -233,6 +233,10 @@ export const followOrganisationsFromWikidataIdStr = async (
   triggerUmami = true
 ) => {
   try {
+    if (msg === undefined || msg.trim().split(" ").length < 2) {
+      await searchOrganisationFromStr(session, msg);
+      return;
+    }
     if (triggerUmami) await session.log({ event: "/follow-organisation" });
     await session.sendTypingAction();
 
@@ -297,7 +301,7 @@ export const followOrganisationsFromWikidataIdStr = async (
         await session.sendMessage(
           `Le${pluralHandler} id${pluralHandler} fournis ${
             selectedWikiDataIds.length > 1 ? "n'est" : "ne sont"
-          } sont pas reconnu${pluralHandler}.\n👎 Veuillez essayer de nouveau la commande.`,
+          } sont pas reconnu${pluralHandler}. 👎\n Veuillez essayer de nouveau la commande.`,
           [
             [{ text: `🏛️️ Ajouter une organisation` }],
             [{ text: "🏠 Menu principal" }]
@@ -307,7 +311,7 @@ export const followOrganisationsFromWikidataIdStr = async (
         await session.sendMessage(
           `Le${pluralHandler} id${pluralHandler} fournis ${
             selectedWikiDataIds.length > 1 ? "n'est" : "ne sont"
-          } sont pas reconnu${pluralHandler}.\n👎 Veuillez essayer de nouveau la commande.`,
+          } sont pas reconnu${pluralHandler}. 👎\n Veuillez essayer de nouveau la commande.`,
           session.mainMenuKeyboard
         );
       return;

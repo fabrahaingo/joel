@@ -1,4 +1,5 @@
 import { ISession } from "../types.ts";
+import { BotMessages } from "../entities/BotMessages.ts";
 
 export const startCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/start" });
@@ -8,10 +9,33 @@ export const startCommand = async (session: ISession): Promise<void> => {
     const botName = process.env.BOT_NAME;
     const botChannel = process.env.BOT_CHANNEL;
 
-    const text = `\n\u{1F41D} ${botName ?? "undefined"} vous permet de *consulter et suivre les évolutions de postes* de vos collègues et connaissances au sein de l'administration française.
-		\nPour rester au courant des *nouveautés*, des *corrections* de bugs ainsi que des *améliorations* de JOEL, rejoignez notre channel officiel [@${botChannel ?? "MISSING BOTNAME"}](https://t.me/${botChannel ?? "MISSING BOTCHANNEL"})`;
+    const mardownLink = session.messageApp === "Telegram";
 
-    await session.sendMessage(text, session.mainMenuKeyboard);
+    let message = BotMessages.START.replace(
+      "{botName}",
+      botName ?? "undefined"
+    );
+
+    if (mardownLink) {
+      message = message.replace(
+        "{LINK_PRIVACY_POLICY}",
+        `[Politique de confidentialité](${BotMessages.URL_PRIVACY_POLICY})`
+      );
+      message = message.replace(
+        "{LINK_GCU}",
+        `[Conditions générales d'utilisation](${BotMessages.URL_GCU})`
+      );
+    } else {
+      message = message.replace(
+        "{LINK_PRIVACY_POLICY}",
+        `Politique de confidentialité:\n${BotMessages.URL_PRIVACY_POLICY}`
+      );
+      message = message.replace(
+        "{LINK_GCU}",
+        `Conditions générales d'utilisation:\n${BotMessages.URL_GCU}`
+      );
+    }
+    await session.sendMessage(message, session.mainMenuKeyboard);
   } catch (error) {
     console.log(error);
   }

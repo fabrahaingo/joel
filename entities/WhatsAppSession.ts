@@ -1,4 +1,4 @@
-import { ButtonElement, ISession, IUser, MessageApp } from "../types.ts";
+import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
@@ -23,7 +23,7 @@ export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second gl
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
-const mainMenuKeyboardWH: ButtonElement[][] = [
+const mainMenuKeyboardWH: Keyboard = [
   [
     { text: "🔎 Commandes" }
     // { text: "🔎 Rechercher" },
@@ -42,7 +42,7 @@ export class WhatsAppSession implements ISession {
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: ButtonElement[][];
+  mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 

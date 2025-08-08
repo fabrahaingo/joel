@@ -24,17 +24,6 @@ const isPersonAlreadyFollowed = (
   });
 };
 
-export const fullHistoryCommandLong = async (
-  session: ISession,
-  msg?: string
-): Promise<void> => {
-  if (!msg) return;
-  await fullHistoryCommand(
-    session,
-    "Historique " + msg.split(" ").slice(3).join(" ")
-  );
-};
-
 export const searchCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/search" });
 
@@ -69,7 +58,7 @@ export const searchCommand = async (session: ISession): Promise<void> => {
       void (async () => {
         if (tgMsg.text == undefined || tgMsg.text.length == 0) {
           await session.sendMessage(
-            `Votre réponse n'a pas été reconnue 👎.\n Veuillez essayer de nouveau la commande.`,
+            `Votre réponse n'a pas été reconnue. 👎\n\nVeuillez essayer de nouveau la commande.`,
             [
               [{ text: "🔎 Nouvelle recherche" }],
               [{ text: "🏠 Menu principal" }]
