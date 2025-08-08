@@ -9,7 +9,8 @@ import axios, { AxiosError, isAxiosError } from "axios";
 
 const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
 const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
-const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
+
+export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
 
 const mainMenuKeyboardTelegram: ButtonElement[][] = [
   [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],

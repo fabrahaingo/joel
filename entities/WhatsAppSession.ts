@@ -18,7 +18,8 @@ export const WHATSAPP_API_VERSION = "v23.0";
 
 const WHATSAPP_MESSAGE_CHAR_LIMIT = 1023;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every seconds for the same user
-const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
+
+export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
