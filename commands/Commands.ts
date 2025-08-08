@@ -100,7 +100,7 @@ export const commands: CommandType[] = [
     action: enaCommand
   },
   {
-    regex: /\/stats/i,
+    regex: /\/stats|stats/i,
     action: statsCommand
   },
   {
