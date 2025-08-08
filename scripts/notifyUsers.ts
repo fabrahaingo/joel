@@ -2,7 +2,13 @@ import "dotenv/config";
 import { mongodbConnect } from "../db.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
-import { IPeople, IUser, MessageApp, WikidataId } from "../types.ts";
+import {
+  IOrganisation,
+  IPeople,
+  IUser,
+  MessageApp,
+  WikidataId
+} from "../types.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import { Types } from "mongoose";
@@ -137,43 +143,6 @@ async function updateUserFollowedPeople(
   await user.save();
 }
 
-// Update the timestamp of the last update date for a user-specific organisation follow
-async function updateUserFollowedOrganisations(
-  user: IUser,
-  updatedOrgIds: WikidataId[]
-) {
-  if (updatedOrgIds.length == 0 || user.followedOrganisations.length == 0) {
-    return;
-  }
-
-  const currentDate = new Date();
-
-  user.followedOrganisations = user.followedOrganisations.reduce(
-    (
-      followedList: { wikidataId: WikidataId; lastUpdate: Date }[],
-      followed
-    ) => {
-      if (followedList.some((f) => f.wikidataId === followed.wikidataId))
-        return followedList; // If the user follows twice the same organisation, we drop the second record
-
-      // if updated people: we update the timestamp
-      if (updatedOrgIds.includes(followed.wikidataId)) {
-        followedList.push({
-          wikidataId: followed.wikidataId,
-          lastUpdate: currentDate
-        });
-      } else {
-        followedList.push(followed); // otherwise, we don't change the item
-      }
-      return followedList;
-    },
-    []
-  );
-
-  // save user
-  await user.save();
-}
-
 // There is currently no way to check if a user has been notified of a tag update
 // Resuming an update thus require to force-notify users for all tags updates over the period.
 export async function notifyFunctionTagsUpdates(
@@ -265,11 +234,6 @@ export async function notifyFunctionTagsUpdates(
   }
 }
 
-interface miniOrg {
-  nom: string;
-  wikidataId: string;
-}
-
 // There is currently no way to check if a user has been notified of a tag update
 // Resuming an update thus require to force-notify users for all tags updates over the period.
 export async function notifyOrganisationsUpdates(
@@ -283,9 +247,10 @@ export async function notifyOrganisationsUpdates(
   );
   if (updatedOrgsWikidataIdSet.size == 0) return;
 
-  const updatedOrgsInDb: miniOrg[] = await Organisation.find({
+  const updatedOrgsInDb: IOrganisation[] = await Organisation.find({
     wikidataId: { $in: [...updatedOrgsWikidataIdSet] }
-  });
+  }).lean();
+  if (updatedOrgsInDb.length == 0) return;
 
   const usersFollowingOrganisations: IUser[] = await User.find(
     {
@@ -308,8 +273,7 @@ export async function notifyOrganisationsUpdates(
       followedOrganisations: { wikidataId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
-  );
-
+  ).lean();
   if (usersFollowingOrganisations.length == 0) return;
 
   const orgNameById = new Map<WikidataId, string>(
@@ -323,45 +287,97 @@ export async function notifyOrganisationsUpdates(
   );
   if (updatedRecordsWithOrgsInDb.length == 0) return;
 
-  const updatedOrganisationMapById = buildOrganisationMapById(
-    updatedRecordsWithOrgsInDb
-  );
+  // Initialize an empty org map to store the categorized records
+  const updatedOrganisationsbyIdMap = new Map<WikidataId, JORFSearchItem[]>();
+
+  // Build the tag map from the updated records
+  updatedRecordsWithOrgsInDb.forEach((item) => {
+    // Iterate through each key in the current record
+    item.organisations.forEach(({ wikidata_id }) => {
+      if (wikidata_id != undefined) {
+        // this should not happen
+        updatedOrganisationsbyIdMap.set(
+          wikidata_id,
+          (updatedOrganisationsbyIdMap.get(wikidata_id) ?? []).concat([item])
+        );
+      }
+    });
+  });
+
+  const userUpdateTasks: {
+    userId: Types.ObjectId;
+    messageApp: MessageApp;
+    chatId: IUser["chatId"];
+    organisationsUpdateRecordsMap: Map<WikidataId, JORFSearchItem[]>;
+    recordCount: number;
+  }[] = [];
+
+  const now = new Date();
 
   for (const user of usersFollowingOrganisations) {
-    if (user.followedOrganisations.length == 0) continue;
+    const newUserOrganisationsUpdates = new Map<WikidataId, JORFSearchItem[]>();
 
-    // Records which are associated with followed Organisations, and which are new for the respective People follow
-    const orgsFollowedByUserAndUpdatedMap = user.followedOrganisations.reduce(
-      (orgTabList: Record<WikidataId, JORFSearchItem[]>, followData) => {
-        const orgUpdates =
-          updatedOrganisationMapById[followData.wikidataId] ?? [];
-        if (orgUpdates.length == 0) return orgTabList;
-
-        const newRecordsFollowedB = orgUpdates.filter(
-          (record) =>
+    user.followedOrganisations
+      .filter((orgFollow) =>
+        updatedOrganisationsbyIdMap.has(orgFollow.wikidataId)
+      )
+      .forEach((orgFollow) => {
+        const dateFilteredUserOrgUpdates: JORFSearchItem[] = (
+          updatedOrganisationsbyIdMap.get(orgFollow.wikidataId) ?? []
+        ).filter(
+          (record: JORFSearchItem) =>
             JORFtoDate(record.source_date).getTime() >
-            followData.lastUpdate.getTime()
+            orgFollow.lastUpdate.getTime()
         );
+        if (dateFilteredUserOrgUpdates.length > 0)
+          newUserOrganisationsUpdates.set(
+            orgFollow.wikidataId,
+            dateFilteredUserOrgUpdates
+          );
+      });
 
-        if (newRecordsFollowedB.length > 0)
-          orgTabList[followData.wikidataId] = newRecordsFollowedB;
+    // Calculate the total number of JORFSearchItem in the map
+    let totalUsersRecordsCount = 0;
+    newUserOrganisationsUpdates.forEach((items) => {
+      totalUsersRecordsCount += items.length;
+    });
 
-        return orgTabList;
-      },
-      {}
-    );
+    userUpdateTasks.push({
+      userId: user._id,
+      messageApp: user.messageApp,
+      chatId: user.chatId,
+      organisationsUpdateRecordsMap: newUserOrganisationsUpdates,
+      recordCount: totalUsersRecordsCount
+    });
+  }
 
+  for (const task of userUpdateTasks) {
     // send follow notification to the user
     const messageSent = await sendOrganisationUpdate(
-      user,
-      orgsFollowedByUserAndUpdatedMap,
+      task.messageApp,
+      task.chatId,
+      task.organisationsUpdateRecordsMap,
       orgNameById
     );
+
     if (messageSent) {
-      // update each lastUpdate fields of the user followedPeople
-      await updateUserFollowedOrganisations(
-        user,
-        Object.keys(orgsFollowedByUserAndUpdatedMap)
+      await User.updateOne(
+        {
+          _id: task.userId,
+          "followedOrganisations.wikidataId": {
+            $in: [...task.organisationsUpdateRecordsMap.keys()]
+          } // to avoid duplicate key error
+        },
+        { $set: { "followedOrganisations.$[elem].lastUpdate": now } },
+        {
+          arrayFilters: [
+            {
+              "elem.wikidataId": {
+                $in: [...task.organisationsUpdateRecordsMap.keys()]
+              }
+            }
+          ]
+        }
       );
     }
   }
