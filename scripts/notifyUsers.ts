@@ -516,18 +516,30 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
     );
 
     if (messageSent) {
+      const updatedRecordsPeopleId = [...task.updatedRecordsMap.keys()]
+        .map((idStr) => peopleIdMapByStr.get(idStr))
+        .reduce((tab: Types.ObjectId[], id) => {
+          if (id === undefined) {
+            console.log(
+              "Cannot fetch people id from string during the update of user people follows"
+            );
+            return tab;
+          }
+          return tab.concat(id);
+        }, []);
+
       await User.updateOne(
         {
           _id: task.userId,
           "followedPeople.peopleId": {
-            $in: [...task.peopleUpdateRecordsMap.keys()]
+            $in: updatedRecordsPeopleId
           } // to avoid duplicate key error
         },
         { $set: { "followedPeople.$[elem].lastUpdate": now } },
         {
           arrayFilters: [
             {
-              "elem.peopleId": { $in: [...task.peopleUpdateRecordsMap.keys()] }
+              "elem.peopleId": { $in: updatedRecordsPeopleId }
             }
           ]
         }
