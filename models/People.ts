@@ -47,4 +47,6 @@ PeopleSchema.static(
   }
 );
 
+PeopleSchema.index({ prenom: 1, nom: 1 });
+
 export default model<IPeople, PeopleModel>("People", PeopleSchema);
