@@ -117,7 +117,7 @@ export async function notifyFunctionTagsUpdates(
         const keyFctTag = key as FunctionTags;
 
         // Update the tag map
-        const currentItems = updatedTagMap.get(keyFctTag) || [];
+        const currentItems = updatedTagMap.get(keyFctTag) ?? [];
         updatedTagMap.set(keyFctTag, [...currentItems, item]);
       }
     });
