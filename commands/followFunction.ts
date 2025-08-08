@@ -64,8 +64,7 @@ export const followFunctionCommand = async (
           void (async () => {
             if (tgMsg.text == undefined || tgMsg.text.length == 0) {
               await tgSession.sendMessage(
-                `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}.
-            👎 Veuillez essayer de nouveau la commande.`,
+                `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}. 👎 Veuillez essayer de nouveau la commande.`,
                 [
                   [{ text: "Suivre une fonction" }],
                   [{ text: "🏠 Menu principal" }]
@@ -144,7 +143,7 @@ export const followFunctionFromStrCommand = async (
   msg?: string
 ): Promise<void> => {
   try {
-    if (msg == undefined) {
+    if (msg == undefined || msg.trim().split(" ").length < 2) {
       await followFunctionCommand(session);
       return;
     }

@@ -8,7 +8,6 @@ import {
 import {
   followCommand,
   fullHistoryCommand,
-  fullHistoryCommandLong,
   manualFollowCommandLong,
   manualFollowCommandShort,
   searchCommand
@@ -27,27 +26,27 @@ import { listCommand, unfollowFromStr, unfollowTelegram } from "./list.ts";
 
 export const commands: CommandType[] = [
   {
-    regex: /\/start$|Bonjour/i,
+    regex: /^\/start$|^Bonjour/i,
     action: startCommand
   },
   {
-    regex: /🏠 Menu principal|🔎 Commandes/i,
+    regex: /^🏠 Menu principal|^🔎 Commandes/i,
     action: (session, msg) => mainMenuCommand(session, msg, false)
   },
   {
-    regex: /Rechercher$|Recherche$|🔎 Rechercher$|🔎 Nouvelle recherche$/i,
+    regex: /^Rechercher$|^Recherche$|^🔎 Rechercher$|^🔎 Nouvelle recherche$/i,
     action: searchCommand
   },
   {
-    regex: /🕵️ Forcer le suivi de \s*(.*)/i,
+    regex: /^🕵️ Forcer le suivi de \s*(.*)/i,
     action: manualFollowCommandLong
   },
   {
-    regex: /SuivreN/i,
+    regex: /^SuivreN|^SuiviN/i,
     action: manualFollowCommandShort
   },
   {
-    regex: /Suivre N/i,
+    regex: /^Suivre N|^Suivi N/i,
     action: (session, msg) =>
       manualFollowCommandShort(
         session,
@@ -56,72 +55,103 @@ export const commands: CommandType[] = [
   },
   {
     regex:
-      /👨‍💼 Ajouter une fonction|👨‍💼 Ajout Fonction|Suivre une fonction|Fonctions|Fonction$/i,
+      /^👨‍💼 Ajouter une fonction|^👨‍💼 Ajout Fonction|^Suivre une fonction|^Fonction$/i,
     action: followFunctionCommand
   },
   {
-    regex: /SuivreF \s*(.*)/i,
+    regex: /^SuivreF|^SuiviF/i,
     action: followFunctionFromStrCommand
   },
   {
-    regex: /Suivre \s*(.*)/i,
+    regex: /^Suivre F|^Suivi F/i,
+    action: (session, msg) =>
+      followFunctionFromStrCommand(
+        session,
+        "SuivreF " + (msg?.split(" ").slice(2).join(" ") ?? "")
+      )
+  },
+  {
+    regex: /^SuivreO|^SuiviO/i,
+    action: followOrganisationsFromWikidataIdStr
+  },
+  {
+    regex: /^Suivre O|^Suivi O/i,
+    action: (session, msg) =>
+      followOrganisationsFromWikidataIdStr(
+        session,
+        "SuivreO " + (msg?.split(" ").slice(2).join(" ") ?? "")
+      )
+  },
+  {
+    regex: /^Rechercher O|^Recherche O/i,
+    action: (session, msg) =>
+      searchOrganisationFromStr(
+        session,
+        "RechercherO " + (msg?.split(" ").slice(2).join(" ") ?? "")
+      )
+  },
+  {
+    regex: /^RechercherO|^RechercheO/i,
+    action: searchOrganisationFromStr
+  },
+  {
+    regex: /^Suivre|^Suivi/i,
     action: followCommand
   },
   {
-    regex: /✋ Retirer un suivi$/i,
+    regex: /^✋ Retirer un suivi$/i,
     action: unfollowTelegram
   },
   {
-    regex: /Retirer \s*(.*)/i,
+    regex: /^Retirer \s*(.*)/i,
     action: unfollowFromStr
   },
   {
-    regex: /🧐 Lister mes suivis$|🧐 Mes suivis$|Suivis$/i,
+    regex: /^🧐 Lister mes suivis$|^🧐 Mes suivis$|^Suivis$/i,
     action: listCommand
   },
   {
-    regex: /❓ Aide|❓ Aide & Contact/i,
+    regex: /^❓ Aide|^❓ Aide & Contact/i,
     action: helpCommand
   },
   {
-    regex: /Historique complet de \s*(.*)/i,
-    action: fullHistoryCommandLong
+    regex: /^Historique complet de \s*(.*)/i,
+    action: (session, msg) =>
+      fullHistoryCommand(
+        session,
+        "Historique " + (msg?.split(" ").slice(3).join(" ") ?? "")
+      )
   },
   {
-    regex: /Rechercher \s*(.*)|Recherche \s*(.*)|Historique \s*(.*)/i,
+    regex: /^Rechercher \s*(.*)|^Recherche \s*(.*)|^Historique \s*(.*)/i,
     action: fullHistoryCommand
   },
   {
-    regex: /\/promos|Liste des promos ENA\/INSP/i,
+    regex: /^\/promos|^Liste des promos ENA\/INSP/i,
     action: promosCommand
   },
   {
-    regex: /\/secret|\/ENA|\/INSP|Rechercher une promo ENA\/INSP/i,
+    regex: /^\/secret|^\/ENA|^\/INSP|^Rechercher une promo ENA\/INSP/i,
     action: enaCommand
   },
   {
-    regex: /\/stats|stats/i,
+    regex: /^\/stats|^stats/i,
     action: statsCommand
   },
   {
     regex:
-      /🏛️️ Ajouter une organisation|\/followOrganisation|\/followOrganization|🏛️️ Ajout Organisation/i,
+      /^🏛️️ Ajouter une organisation|^\/followOrganisation|^\/followOrganization|^🏛️️ Ajout Organisation/i,
     action: followOrganisationTelegram
   },
   {
-    regex: /RechercherO \s*(.*)/i,
-    action: searchOrganisationFromStr
-  },
-  {
-    regex: /SuivreO \s*(.*)/i,
-    action: followOrganisationsFromWikidataIdStr
-  },
-  {
-    regex: /\/supprimerCompte/i,
+    regex: /^\/supprimerCompte/i,
     action: deleteProfileCommand
   },
   {
     regex: /.*/,
-    action: defaultCommand
+    action: (session, msg) => {
+      if (session.isReply) return Promise.resolve();
+      return mainMenuCommand(session, msg, true);
+    }
   }
 ];
