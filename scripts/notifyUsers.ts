@@ -26,6 +26,9 @@ import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { SignalCli } from "signal-sdk";
 
+// Number of days to go back: 0 means we just fetch today's info
+const SHIFT_DAYS = 3;
+
 const { ENABLED_APPS } = process.env;
 
 if (ENABLED_APPS === undefined) throw new Error("ENABLED_APPS env var not set");
@@ -857,15 +860,12 @@ await (async () => {
   // Connect to DB
   await mongodbConnect();
 
-  // Number of days to go back: 0 means we just fetch today's info
-  const shiftDays = 3;
-
   // the currentDate is today
   const currentDate = new Date();
   const startDate = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth(),
-    currentDate.getDate() - shiftDays
+    currentDate.getDate() - SHIFT_DAYS
   );
   startDate.setHours(0, 0, 0, 0);
   // Fetch all records from the start date
