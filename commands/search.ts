@@ -184,7 +184,8 @@ async function searchPersonHistory(
       ];
     } else {
       temp_keyboard = [
-        [{ text: "🏠 Menu principal" }, { text: "🔎 Nouvelle recherche" }]
+        [{ text: "🔎 Nouvelle recherche" }],
+        [{ text: "🏠 Menu principal" }]
       ];
       if (historyType === "latest" && nbRecords > 2) {
         text += `${String(nbRecords - 2)} autres mentions au JORF non affichées.\n\n`;
