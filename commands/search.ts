@@ -66,7 +66,11 @@ export const searchCommand = async (session: ISession): Promise<void> => {
           );
           return;
         }
-        await searchPersonHistory(session, tgMsg.text, "latest");
+        await searchPersonHistory(
+          session,
+          "Historique " + tgMsg.text,
+          "latest"
+        );
       })();
     }
   );
@@ -88,22 +92,27 @@ export const fullHistoryCommand = async (
   if (personName.length == 0) {
     await session.sendMessage(
       "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-      [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
+      session.messageApp == "Telegram"
+        ? [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
+        : session.mainMenuKeyboard
     );
     return;
   }
-  await searchPersonHistory(session, personName, "full");
+  await searchPersonHistory(session, "Historique " + personName, "full");
 };
 
-async function searchPersonHistory(
+export async function searchPersonHistory(
   session: ISession,
-  personName: string,
-  historyType: "full" | "latest",
+  message?: string,
+  historyType: "full" | "latest" = "latest",
   noSearch = false
 ) {
   try {
-    let JORFRes_data: JORFSearchItem[] = [];
+    if (message == undefined || message.split(" ").length < 2) return;
 
+    const personName = message.split(" ").slice(1).join(" ");
+
+    let JORFRes_data: JORFSearchItem[] = [];
     if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
     const nbRecords = JORFRes_data.length;
 
@@ -111,10 +120,15 @@ async function searchPersonHistory(
       const personNameSplit = personName.split(" ");
       if (personNameSplit.length < 2) {
         // Minimum is two words: Prénom + Nom
-        await session.sendMessage("Votre saisie est incorrecte.", [
-          [{ text: "🔎 Nouvelle recherche" }],
-          [{ text: "🏠 Menu principal" }]
-        ]);
+        await session.sendMessage(
+          "Votre saisie est incorrecte.",
+          session.messageApp == "Telegram"
+            ? [
+                [{ text: "🔎 Nouvelle recherche" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
+            : session.mainMenuKeyboard
+        );
         return;
       }
 
@@ -247,7 +261,12 @@ export const followCommand = async (
     const JORFRes = await callJORFSearchPeople(personName);
     if (JORFRes.length == 0) {
       // redirect to manual follow
-      await searchPersonHistory(session, personName, "latest", true);
+      await searchPersonHistory(
+        session,
+        "Historique " + personName,
+        "latest",
+        true
+      );
       return;
     }
 

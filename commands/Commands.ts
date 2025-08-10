@@ -10,7 +10,8 @@ import {
   fullHistoryCommand,
   manualFollowCommandLong,
   manualFollowCommandShort,
-  searchCommand
+  searchCommand,
+  searchPersonHistory
 } from "./search.ts";
 import { enaCommand, promosCommand } from "./ena.ts";
 import { statsCommand } from "./stats.ts";
@@ -123,8 +124,20 @@ export const commands: CommandType[] = [
       )
   },
   {
-    regex: /^Rechercher \s*(.*)|^Recherche \s*(.*)|^Historique \s*(.*)/i,
+    regex: /^Historique de \s*(.*)/i,
+    action: (session, msg) =>
+      fullHistoryCommand(
+        session,
+        "Historique " + (msg?.split(" ").slice(2).join(" ") ?? "")
+      )
+  },
+  {
+    regex: /Historique \s*(.*)/i,
     action: fullHistoryCommand
+  },
+  {
+    regex: /^Rechercher \s*(.*)|^Recherche /i,
+    action: (session, msg) => searchPersonHistory(session, msg, "latest")
   },
   {
     regex: /^\/promos|^Liste des promos ENA\/INSP/i,
