@@ -130,6 +130,27 @@ export async function callJORFSearchOrganisation(
   return [];
 }
 
+export async function callJORFSearchReference(
+  reference: string
+): Promise<JORFSearchItem[]> {
+  try {
+    await umami.log({ event: "/jorfsearch-request-reference" });
+    return await axios
+      .get<JORFSearchResponse>(
+        encodeURI(
+          `https://jorfsearch.steinertriples.ch/doc/${reference.toUpperCase()}?format=JSON`
+        )
+      )
+      .then((res) => {
+        if (res.data === null || typeof res.data === "string") return [];
+        return cleanJORFItems(res.data);
+      });
+  } catch (error) {
+    console.log(error);
+  }
+  return [];
+}
+
 // not used for now
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function JORFSearchCallPublications(
