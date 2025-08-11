@@ -19,7 +19,6 @@ const {
   WHATSAPP_USER_TOKEN,
   WHATSAPP_APP_SECRET,
   WHATSAPP_VERIFY_TOKEN,
-  //WHATSAPP_GRAPH_API_TOKEN,
   WHATSAPP_APP_PORT,
   WHATSAPP_PHONE_ID,
   NGROK_AUTH_TOKEN,
@@ -30,7 +29,6 @@ export function getWhatsAppAPI(): WhatsAppAPI {
   if (
     WHATSAPP_USER_TOKEN === undefined ||
     WHATSAPP_APP_SECRET === undefined ||
-    //WHATSAPP_GRAPH_API_TOKEN === undefined ||
     WHATSAPP_PHONE_ID === undefined
   ) {
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
