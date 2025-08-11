@@ -123,7 +123,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   if (phoneID !== WHATSAPP_PHONE_ID) {
     if (msgText != null)
       console.log(
-        `Message received from non-production number ${phoneID} : ${msgText}`
+        `WhatsApp: Message received from non-production number ${phoneID} : ${msgText}`
       );
     return;
   }
