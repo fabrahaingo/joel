@@ -8,9 +8,9 @@ import {
 import {
   followCommand,
   fullHistoryCommand,
-  manualFollowCommandLong,
-  manualFollowCommandShort,
-  searchCommand
+  manualFollowCommand,
+  searchCommand,
+  searchPersonHistory
 } from "./search.ts";
 import { enaCommand, promosCommand } from "./ena.ts";
 import { statsCommand } from "./stats.ts";
@@ -26,7 +26,7 @@ import { listCommand, unfollowFromStr, unfollowTelegram } from "./list.ts";
 
 export const commands: CommandType[] = [
   {
-    regex: /^\/start$|^Bonjour/i,
+    regex: /^\/start$|^Bonjour /i,
     action: startCommand
   },
   {
@@ -39,18 +39,22 @@ export const commands: CommandType[] = [
   },
   {
     regex: /^🕵️ Forcer le suivi de \s*(.*)/i,
-    action: manualFollowCommandLong
+    action: (session, msg) =>
+      manualFollowCommand(
+        session,
+        "SuivreN " + msg.split(" ").slice(5).join(" ")
+      )
   },
   {
     regex: /^SuivreN|^SuiviN/i,
-    action: manualFollowCommandShort
+    action: manualFollowCommand
   },
   {
     regex: /^Suivre N|^Suivi N/i,
     action: (session, msg) =>
-      manualFollowCommandShort(
+      manualFollowCommand(
         session,
-        "SuivreN " + (msg?.split(" ").slice(2).join(" ") ?? "")
+        "SuivreN " + msg.split(" ").slice(2).join(" ")
       )
   },
   {
@@ -59,15 +63,15 @@ export const commands: CommandType[] = [
     action: followFunctionCommand
   },
   {
-    regex: /^SuivreF|^SuiviF/i,
+    regex: /^SuivreF|^SuiviF|^RechercherF|^RechercheF/i,
     action: followFunctionFromStrCommand
   },
   {
-    regex: /^Suivre F|^Suivi F/i,
+    regex: /^Suivre F|^Suivi F|^Rechercher F|^Recherche F/i,
     action: (session, msg) =>
       followFunctionFromStrCommand(
         session,
-        "SuivreF " + (msg?.split(" ").slice(2).join(" ") ?? "")
+        "SuivreF " + msg.split(" ").slice(2).join(" ")
       )
   },
   {
@@ -79,7 +83,7 @@ export const commands: CommandType[] = [
     action: (session, msg) =>
       followOrganisationsFromWikidataIdStr(
         session,
-        "SuivreO " + (msg?.split(" ").slice(2).join(" ") ?? "")
+        "SuivreO " + msg.split(" ").slice(2).join(" ")
       )
   },
   {
@@ -87,7 +91,7 @@ export const commands: CommandType[] = [
     action: (session, msg) =>
       searchOrganisationFromStr(
         session,
-        "RechercherO " + (msg?.split(" ").slice(2).join(" ") ?? "")
+        "RechercherO " + msg.split(" ").slice(2).join(" ")
       )
   },
   {
@@ -119,12 +123,24 @@ export const commands: CommandType[] = [
     action: (session, msg) =>
       fullHistoryCommand(
         session,
-        "Historique " + (msg?.split(" ").slice(3).join(" ") ?? "")
+        "Historique " + msg.split(" ").slice(3).join(" ")
       )
   },
   {
-    regex: /^Rechercher \s*(.*)|^Recherche \s*(.*)|^Historique \s*(.*)/i,
+    regex: /^Historique de \s*(.*)/i,
+    action: (session, msg) =>
+      fullHistoryCommand(
+        session,
+        "Historique " + msg.split(" ").slice(2).join(" ")
+      )
+  },
+  {
+    regex: /Historique \s*(.*)/i,
     action: fullHistoryCommand
+  },
+  {
+    regex: /^Rechercher \s*(.*)|^Recherche /i,
+    action: (session, msg) => searchPersonHistory(session, msg, "latest")
   },
   {
     regex: /^\/promos|^Liste des promos ENA\/INSP/i,

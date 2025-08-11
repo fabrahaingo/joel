@@ -3,7 +3,7 @@ import ngrok from "ngrok";
 
 import express from "express";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
-import { PostData } from "whatsapp-api-js/types";
+import { PostData, ServerMessage } from "whatsapp-api-js/types";
 
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
@@ -19,7 +19,6 @@ const {
   WHATSAPP_USER_TOKEN,
   WHATSAPP_APP_SECRET,
   WHATSAPP_VERIFY_TOKEN,
-  //WHATSAPP_GRAPH_API_TOKEN,
   WHATSAPP_APP_PORT,
   WHATSAPP_PHONE_ID,
   NGROK_AUTH_TOKEN,
@@ -30,7 +29,6 @@ export function getWhatsAppAPI(): WhatsAppAPI {
   if (
     WHATSAPP_USER_TOKEN === undefined ||
     WHATSAPP_APP_SECRET === undefined ||
-    //WHATSAPP_GRAPH_API_TOKEN === undefined ||
     WHATSAPP_PHONE_ID === undefined
   ) {
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
@@ -78,10 +76,60 @@ app.get("/webhook", (req, res) => {
   }
 });
 
+/**
+ * Pick a printable fragment from any WhatsApp inbound message.
+ * Returns `null` when there is nothing reasonably textual.
+ */
+export function textFromMessage(msg: ServerMessage): string | null {
+  switch (msg.type) {
+    //  Plain text
+    case "text":
+      return msg.text.body;
+
+    // Quick-reply buttons
+    case "button":
+      return msg.button.text;
+
+    //  Interactive replies (List, Reply-button, Flow)  */
+    case "interactive":
+      switch (msg.interactive.type) {
+        case "list_reply":
+          return msg.interactive.list_reply.title;
+        case "button_reply":
+          return msg.interactive.button_reply.title;
+        /*
+        case "nfm_reply": // Flow submission
+          return (
+            msg.interactive.nfm_reply.body ??
+            msg.interactive.nfm_reply.response_json ??
+            null
+          );
+          */
+      }
+      return null;
+
+    /*  Catch-all for anything the API marks
+           as unsupported or future types  */
+    default:
+      return null;
+  }
+}
+
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
+  // Ignore echoes of messages the bot just sent
+  if (from === WHATSAPP_PHONE_ID) return;
   if (message.type !== "text" && message.type !== "interactive") return;
 
-  if (phoneID !== WHATSAPP_PHONE_ID) throw new Error("Invalid bot phone ID");
+  const msgText = textFromMessage(message);
+
+  if (phoneID !== WHATSAPP_PHONE_ID) {
+    if (msgText != null)
+      console.log(
+        `WhatsApp: Message received from non-production number ${phoneID} : ${msgText}`
+      );
+    return;
+  }
+  if (msgText == null) return;
 
   try {
     await umami.log({ event: "/message-whatsapp" });
@@ -92,19 +140,6 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
     await WHSession.loadUser();
 
     if (WHSession.user != null) await WHSession.user.updateInteractionMetrics();
-
-    let msgText: string;
-
-    if (message.type === "text") msgText = message.text.body;
-    else {
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (message.interactive.list_reply !== undefined)
-        msgText = message.interactive.list_reply.title;
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      else if (message.interactive.button_reply !== undefined)
-        msgText = message.interactive.button_reply.title;
-      else return;
-    }
 
     for (const command of commands) {
       if (command.regex.test(msgText)) {

@@ -82,13 +82,32 @@ export class WhatsAppSession implements ISession {
 
     let resp: ServerMessageResponse;
 
-    for (const elem of mArr) {
-      resp = await this.whatsAppAPI.sendMessage(
-        this.botPhoneID,
-        this.chatId.toString(),
-        new Text(elem)
-      );
-      if (resp.error && !resp.error.message.includes("less than 1024")) {
+    for (let i = 0; i < mArr.length; i++) {
+      if (i == mArr.length - 1 && keyboard != null) {
+        const keyboardFlat = keyboard.flat();
+
+        const buttons = keyboardFlat.map(
+          (u, idx) => new Button(`reply_${String(idx)}`, u.text)
+        );
+        const actionList: Interactive = new Interactive(
+          // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
+          new ActionButtons(...buttons),
+          new Body(mArr[i])
+        );
+
+        resp = await this.whatsAppAPI.sendMessage(
+          this.botPhoneID,
+          this.chatId.toString(),
+          actionList
+        );
+      } else {
+        resp = await this.whatsAppAPI.sendMessage(
+          this.botPhoneID,
+          this.chatId.toString(),
+          new Text(mArr[i])
+        );
+      }
+      if (resp.error) {
         console.log(resp.error);
         throw new Error("Error sending WH message to user.");
       }
@@ -99,28 +118,6 @@ export class WhatsAppSession implements ISession {
       );
     }
     if (keyboard != null) {
-      const keyboardFlat = keyboard.flat();
-
-      const buttons = keyboardFlat.map(
-        (u, idx) => new Button(`reply_${String(idx)}`, u.text)
-      );
-      const actionList: Interactive = new Interactive(
-        // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
-        new ActionButtons(...buttons),
-        new Body(formattedData)
-      );
-
-      resp = await this.whatsAppAPI.sendMessage(
-        this.botPhoneID,
-        this.chatId.toString(),
-        actionList
-      );
-
-      await umami.log({ event: "/message-sent-whatsapp" });
-      if (resp.error && !resp.error.message.includes("less than 1024")) {
-        console.log(resp.error);
-        throw new Error("Error sending WH message to user.");
-      }
     }
   }
 }
