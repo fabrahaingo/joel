@@ -83,7 +83,7 @@ export function formatSearchResult(
         if (result.length === 1)
           message += `Voici la dernière information que nous avons sur ${prenomNomLink}.\n\n`;
         else
-          message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}.\n\n`;
+          message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}\n`;
       } else if (!options?.isListing) {
         message += `Voici la liste des postes connus pour ${prenomNomLink}\n\n`;
       } else if (options.displayName === "first") {

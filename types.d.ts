@@ -5,7 +5,7 @@ import { FindCursor } from "mongodb";
 
 export interface CommandType {
   regex: RegExp;
-  action: (session: ISession, msg?: string) => Promise<void>;
+  action: (session: ISession, msg: string) => Promise<void>;
 }
 
 export type MessageApp = "Telegram" | "WhatsApp" | "Signal";
