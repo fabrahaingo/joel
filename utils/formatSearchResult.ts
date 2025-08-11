@@ -44,8 +44,10 @@ function addPoste(elem: JORFSearchItem, message: string) {
     else if (elem.ambassadeur_thematique)
       message += `🏛️ Ambassadeur thématique\n`;
     else message += `🏛️ Ambassadeur\n`;
-  } else if (elem.organisations[0]?.nom) {
-    message += `*👉 ${elem.organisations[0].nom}*\n`;
+  } else if (elem.organisations.length > 0) {
+    elem.organisations.forEach((o) => {
+      message += `*👉 ${o.nom}*\n`;
+    });
   } else if (elem.ministre) {
     message += `*👉 ${elem.ministre}*\n`;
   } else if (elem.inspecteur_general) {
