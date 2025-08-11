@@ -116,6 +116,8 @@ export function textFromMessage(msg: ServerMessage): string | null {
 }
 
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
+  // Ignore echoes of messages the bot just sent
+  if (from === WHATSAPP_PHONE_ID) return;
   if (message.type !== "text" && message.type !== "interactive") return;
 
   const msgText = textFromMessage(message);
