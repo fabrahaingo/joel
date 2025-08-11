@@ -105,13 +105,13 @@ Exemples:
 
 export const searchOrganisationFromStr = async (
   session: ISession,
-  msg?: string,
+  msg: string,
   triggerUmami = true
 ) => {
   try {
     if (triggerUmami) await session.log({ event: "/follow-organisation" });
 
-    const orgName = msg?.split(" ").splice(1).join(" ");
+    const orgName = msg.split(" ").splice(1).join(" ");
 
     const orgResults = await searchOrganisationWikidataId(orgName ?? "");
 
@@ -229,7 +229,7 @@ export const searchOrganisationFromStr = async (
 
 export const followOrganisationsFromWikidataIdStr = async (
   session: ISession,
-  msg?: string,
+  msg: string,
   triggerUmami = true
 ) => {
   try {
