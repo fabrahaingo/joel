@@ -105,15 +105,15 @@ Exemples:
 
 export const searchOrganisationFromStr = async (
   session: ISession,
-  msg?: string,
+  msg: string,
   triggerUmami = true
 ) => {
   try {
     if (triggerUmami) await session.log({ event: "/follow-organisation" });
 
-    const orgName = msg?.split(" ").splice(1).join(" ");
+    const orgName = msg.split(" ").splice(1).join(" ");
 
-    const orgResults = await searchOrganisationWikidataId(orgName ?? "");
+    const orgResults = await searchOrganisationWikidataId(orgName);
 
     if (orgResults.length == 0) {
       const text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
@@ -229,22 +229,21 @@ export const searchOrganisationFromStr = async (
 
 export const followOrganisationsFromWikidataIdStr = async (
   session: ISession,
-  msg?: string,
+  msg: string,
   triggerUmami = true
 ) => {
   try {
-    if (msg === undefined || msg.trim().split(" ").length < 2) {
+    if (msg.trim().split(" ").length < 2) {
       await searchOrganisationFromStr(session, msg);
       return;
     }
     if (triggerUmami) await session.log({ event: "/follow-organisation" });
     await session.sendTypingAction();
 
-    const selectedWikiDataIds =
-      msg
-        ?.split(" ")
-        .splice(1)
-        .map((s) => s.toUpperCase()) ?? [];
+    const selectedWikiDataIds = msg
+      .split(" ")
+      .splice(1)
+      .map((s) => s.toUpperCase());
 
     if (selectedWikiDataIds.length == 0) {
       const text = `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`;

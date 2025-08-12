@@ -140,10 +140,10 @@ const followFunctionsCommand = async (
 
 export const followFunctionFromStrCommand = async (
   session: ISession,
-  msg?: string
+  msg: string
 ): Promise<void> => {
   try {
-    if (msg == undefined || msg.trim().split(" ").length < 2) {
+    if (msg.trim().split(" ").length < 2) {
       await followFunctionCommand(session);
       return;
     }

@@ -1,21 +1,27 @@
 import { ISession, Keyboard } from "../types.ts";
 
-export const mainMenuCommand = async (
-  session: ISession,
-  msg?: string,
-  isErrorMessage = false
-): Promise<void> => {
+export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
+    if (session.isReply) return;
+    await session.log({ event: "/default-message" });
+    await session.sendMessage(
+      "Je n'ai pas compris votre message 🥺",
+      session.mainMenuKeyboard
+    );
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const mainMenuCommand = async (session: ISession): Promise<void> => {
+  try {
+    await session.log({ event: "/main-menu-message" });
     let message = "";
-    if (isErrorMessage) {
-      await session.log({ event: "/default-message" });
-      message += "Je n'ai pas compris votre message 🥺\n\n";
-    } else await session.log({ event: "/main-menu-message" });
 
     let keyboard: Keyboard = [];
-    message +=
-      "Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
     if (session.messageApp === "Telegram") {
+      message +=
+        "Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
       keyboard = session.mainMenuKeyboard;
     } else {
       message += "\n\n" + TEXT_COMMANDS_MENU;
