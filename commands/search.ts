@@ -209,9 +209,9 @@ export async function searchPersonHistory(
         [{ text: "🏠 Menu principal" }]
       ];
       if (historyType === "latest" && nbRecords > 2) {
-        text += `${String(nbRecords - 2)} autres mentions au JORF non affichées.\n\n`;
+        text += `\n${String(nbRecords - 2)} autres mentions au JORF non affichées.\n`;
         if (session.messageApp !== "Telegram")
-          text += `Pour voir l'historique complet, utilisez la commande: *Historique ${prenomNom}*.`;
+          text += `\nPour voir l'historique complet, utilisez la commande: *Historique ${prenomNom}*.\n`;
 
         temp_keyboard.unshift([
           {
@@ -230,9 +230,9 @@ export async function searchPersonHistory(
 
     if (!fromFollow) {
       if (isUserFollowingPerson) {
-        text += `\n\nVous suivez *${prenomNom}* ✅`;
+        text += `\nVous suivez *${prenomNom}* ✅`;
       } else {
-        text += `\n\nVous ne suivez pas *${prenomNom}* 🙅‍♂️\n\n`;
+        text += `\nVous ne suivez pas *${prenomNom}* 🙅‍♂️\n\n`;
         text += `Pour suivre, utilisez la commande:\n*Suivre ${prenomNom}*`;
       }
     }
