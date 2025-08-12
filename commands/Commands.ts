@@ -14,7 +14,7 @@ import {
 } from "./search.ts";
 import { enaCommand, promosCommand } from "./ena.ts";
 import { statsCommand } from "./stats.ts";
-import { mainMenuCommand } from "./default.ts";
+import { defaultCommand, mainMenuCommand } from "./default.ts";
 import { startCommand } from "./start.ts";
 import { deleteProfileCommand } from "./deleteProfile.ts";
 import { helpCommand } from "./help.ts";
@@ -31,7 +31,7 @@ export const commands: CommandType[] = [
   },
   {
     regex: /^🏠 Menu principal|^🔎 Commandes/i,
-    action: (session, msg) => mainMenuCommand(session, msg, false)
+    action: mainMenuCommand
   },
   {
     regex: /^Rechercher$|^Recherche$|^🔎 Rechercher$|^🔎 Nouvelle recherche$/i,
@@ -140,7 +140,7 @@ export const commands: CommandType[] = [
   },
   {
     regex: /^Rechercher \s*(.*)|^Recherche /i,
-    action: (session, msg) => searchPersonHistory(session, msg, "latest")
+    action: (session, msg) => searchPersonHistory(session, msg, "latest").then()
   },
   {
     regex: /^\/promos|^Liste des promos ENA\/INSP/i,
@@ -165,9 +165,6 @@ export const commands: CommandType[] = [
   },
   {
     regex: /.*/,
-    action: (session, msg) => {
-      if (session.isReply) return Promise.resolve();
-      return mainMenuCommand(session, msg, true);
-    }
+    action: defaultCommand
   }
 ];

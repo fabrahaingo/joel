@@ -1,27 +1,56 @@
 export function splitText(text: string, max: number): string[] {
+  if (!Number.isFinite(max) || max <= 0) return [text];
+
   const chunks: string[] = [];
-  let startIndex = 0;
+  const n = text.length;
+  let i = 0;
 
-  while (startIndex < text.length) {
-    let endIndex = startIndex + max;
+  while (i < n) {
+    // Skip leading newlines
+    while (i < n && (text[i] === "\n" || text[i] === "\r")) i++;
+    if (i >= n) break;
 
-    if (endIndex < text.length) {
-      // Check for markdown element or word boundary within the chunk
-      while (endIndex > startIndex && !text.charAt(endIndex).includes("\n")) {
-        endIndex--;
+    let end = Math.min(i + max, n);
+
+    if (end < n) {
+      // 1) Prefer a newline within [i, end)
+      const nl = Math.max(
+        text.lastIndexOf("\n", end - 1),
+        text.lastIndexOf("\r", end - 1)
+      );
+      if (nl >= i) {
+        end = nl;
+      } else {
+        // 2) Otherwise prefer last whitespace within [i, end)
+        let j = end;
+        while (j > i && !isSpace(text.charCodeAt(j - 1))) j--;
+        if (j > i) end = j;
       }
     }
 
-    const chunk = text.slice(startIndex, endIndex).trim();
-    chunks.push(chunk);
+    // 3) If we couldn't find a better break, hard-cut at max to ensure progress
+    if (end === i) end = Math.min(i + max, n);
 
-    startIndex = endIndex;
-    while (startIndex < text.length && text.charAt(startIndex).includes("\n")) {
-      startIndex++;
-    }
+    const chunk = trimEdgeNewlines(text.slice(i, end));
+    if (chunk.length) chunks.push(chunk);
+
+    i = end;
   }
 
   return chunks;
+
+  // Fast-ish check for common space chars
+  function isSpace(code: number): boolean {
+    return code === 32 || code === 9 || code === 160 || code === 0x202f; // ' ', '\t', NBSP, NNBSP
+  }
+  function trimEdgeNewlines(s: string): string {
+    let a = 0,
+      b = s.length;
+    while (a < b && (s.charCodeAt(a) === 10 || s.charCodeAt(a) === 13)) a++; // \n or \r
+    while (b > a && (s.charCodeAt(b - 1) === 10 || s.charCodeAt(b - 1) === 13))
+      b--;
+    return s.slice(a, b);
+  }
 }
 
 export function parseIntAnswers(

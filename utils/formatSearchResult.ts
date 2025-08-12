@@ -76,14 +76,14 @@ export function formatSearchResult(
 
     const prenomNomLink = markdownLink
       ? `[${prenomNom}](${url})`
-      : `*${prenomNom}*\n${url}\n`;
+      : `*${prenomNom}*\n${url}`;
 
     if (result.indexOf(elem) == 0) {
       if (options?.isConfirmation) {
         if (result.length === 1)
-          message += `Voici la dernière information que nous avons sur ${prenomNomLink}.\n\n`;
+          message += `Voici la dernière information que nous avons sur ${prenomNomLink}\n\n`;
         else
-          message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}\n`;
+          message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}\n\n`;
       } else if (!options?.isListing) {
         message += `Voici la liste des postes connus pour ${prenomNomLink}\n\n`;
       } else if (options.displayName === "first") {
@@ -91,7 +91,7 @@ export function formatSearchResult(
       }
     }
     if (options?.displayName === "all") {
-      message += `🕵️ ${prenomNomLink}\n`;
+      message += `🕵️ ${prenomNomLink}\n\n`;
     }
     message += textTypeOrdre(elem.type_ordre, elem.sexe ?? "M");
     message = addPoste(elem, message);
@@ -123,8 +123,6 @@ export function formatSearchResult(
       else
         message += `\nhttps://bodata.steinertriples.ch/${elem.source_id}/redirect\n`;
     }
-
-    message += "\n";
   }
   return message;
 }
