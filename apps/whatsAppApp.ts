@@ -210,9 +210,9 @@ await (async function () {
 
 function newestTimestampSec(data: PostData): number | null {
   let newest: number | null = null;
-  for (const e of data.entry ?? []) {
-    for (const c of e.changes ?? []) {
-      const v = c.value ?? {};
+  for (const e of data.entry) {
+    for (const c of e.changes) {
+      const v = c.value;
       const buckets = [v.messages, v.statuses, v.message_statuses];
       for (const arr of buckets) {
         if (!Array.isArray(arr)) continue;
