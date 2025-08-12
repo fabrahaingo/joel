@@ -309,4 +309,8 @@ UserSchema.method(
   }
 );
 
+UserSchema.index({ "followedPeople.peopleId": 1 });
+UserSchema.index({ "followedFunctions.functionTag": 1 });
+UserSchema.index({ "followedOrganisations.wikidataId": 1 });
+
 export default model<IUser, UserModel>("User", UserSchema);

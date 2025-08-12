@@ -1,21 +1,20 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
 import umami from "./utils/umami";
-import { ButtonElement } from "./utils/keyboards.ts";
 import { FindCursor } from "mongodb";
 
 export interface CommandType {
   regex: RegExp;
-  action: (session: ISession, msg?: string) => Promise<void>;
+  action: (session: ISession, msg: string) => Promise<void>;
 }
 
 export type MessageApp = "Telegram" | "WhatsApp" | "Signal";
 //| "Matrix";
 
-export interface ButtonElement {
+export type Keyboard = {
   text: string;
   desc?: string;
-}
+}[][];
 
 export interface ISession {
   messageApp: MessageApp;
@@ -23,13 +22,13 @@ export interface ISession {
   language_code: string;
   user: IUser | null | undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: ButtonElement[][];
+  mainMenuKeyboard: Keyboard;
 
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
   sendMessage: (
     msg: string,
-    keyboard?: ButtonElement[][],
+    keyboard?: Keyboard,
     menuType?: KeyboardType
   ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
@@ -104,7 +103,6 @@ export interface OrganisationModel extends Model<IOrganisation> {
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
-  updateOne: (arg1, arg2?) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
   collection: {

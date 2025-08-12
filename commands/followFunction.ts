@@ -6,7 +6,6 @@ import {
   TelegramSession
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
-import { defaultCommand } from "./default.ts";
 import { ISession } from "../types";
 
 const functionTagValues = Object.values(FunctionTags);
@@ -65,8 +64,7 @@ export const followFunctionCommand = async (
           void (async () => {
             if (tgMsg.text == undefined || tgMsg.text.length == 0) {
               await tgSession.sendMessage(
-                `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}.
-            👎 Veuillez essayer de nouveau la commande.`,
+                `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}. 👎 Veuillez essayer de nouveau la commande.`,
                 [
                   [{ text: "Suivre une fonction" }],
                   [{ text: "🏠 Menu principal" }]
@@ -142,11 +140,11 @@ const followFunctionsCommand = async (
 
 export const followFunctionFromStrCommand = async (
   session: ISession,
-  msg?: string
+  msg: string
 ): Promise<void> => {
   try {
-    if (msg == undefined) {
-      await defaultCommand(session);
+    if (msg.trim().split(" ").length < 2) {
+      await followFunctionCommand(session);
       return;
     }
 
