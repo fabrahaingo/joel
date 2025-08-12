@@ -15,6 +15,8 @@ import {
 } from "../entities/WhatsAppSession.ts";
 import { commands } from "../commands/Commands.ts";
 
+const MAX_AGE_SEC = 5 * 60;
+
 const {
   WHATSAPP_USER_TOKEN,
   WHATSAPP_APP_SECRET,
@@ -45,18 +47,35 @@ export function getWhatsAppAPI(): WhatsAppAPI {
 const whatsAppAPI = getWhatsAppAPI();
 
 const app = express();
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      (req as never).rawBody = buf;
+    }
+  })
+);
 
 app.post("/webhook", async (req, res) => {
-  //res.sendStatus(await Whatsapp.handle_post(req));
+  const postData = req.body as PostData;
+
+  // Refuse (ignore) events older than 5 minutes
+  const ts = newestTimestampSec(postData);
+  if (ts !== null) {
+    const now = Math.floor(Date.now() / 1000);
+    if (now - ts > MAX_AGE_SEC) {
+      // Acknowledge but skip processing so Meta doesn't retry
+      res.sendStatus(200);
+      await umami.log({ event: "/whatsapp-echo-refused" });
+      return;
+    }
+  }
+
   try {
     const signature = req.header("x-hub-signature-256");
     if (!signature) {
       res.sendStatus(401); // Unauthorized if signature is missing
       return;
     }
-
-    const postData = req.body as PostData;
 
     // Inverted compared to documentation
     await whatsAppAPI.post(postData, JSON.stringify(postData), signature);
@@ -188,3 +207,22 @@ await (async function () {
 
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
+
+function newestTimestampSec(data: PostData): number | null {
+  let newest: number | null = null;
+  for (const e of data.entry) {
+    for (const c of e.changes) {
+      const v = c.value;
+      const buckets = [v.messages, v.statuses, v.message_statuses];
+      for (const arr of buckets) {
+        if (!Array.isArray(arr)) continue;
+        for (const item of arr) {
+          const ts = Number(item?.timestamp);
+          if (Number.isFinite(ts))
+            newest = newest === null ? ts : Math.max(newest, ts);
+        }
+      }
+    }
+  }
+  return newest;
+}

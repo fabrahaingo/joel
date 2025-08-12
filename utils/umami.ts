@@ -42,6 +42,8 @@ export type UmamiEvent =
   | "/message-sent-telegram"
   | "/telegram-too-many-requests"
   | "/telegram-too-many-requests-retry-failed"
+  | "/whatsapp-too-many-requests"
+  | "/whatsapp-echo-refused"
   | "/message-sent-whatsapp"
   | "/start"
   | "/start-from-people"
