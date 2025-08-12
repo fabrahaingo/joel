@@ -13,7 +13,7 @@
   "license": "MIT",
   "engines": {
     "node": "v24.5.0",
-    "npm": "11.4.2"
+    "npm": "11.5.2"
   },
   "dependencies": {
     "@babel/preset-env": "^7.28.0",
@@ -29,7 +29,7 @@
     "nodemon": "^3.1.10",
     "p-limit": "^6.2.0",
     "signal-sdk": "^0.0.6",
-    "tsx": "^4.20.3",
+    "tsx": "^4.20.4",
     "whatsapp-api-js": "^6.0.1"
   },
   "devDependencies": {
@@ -47,6 +47,6 @@
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.1",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.39.0"
+    "typescript-eslint": "^8.39.1"
   }
 }
