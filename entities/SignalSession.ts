@@ -1,15 +1,17 @@
-import { ButtonElement, ISession, IUser, MessageApp } from "../types.ts";
+import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
 import emojiRegex from "emoji-regex";
-import { ErrorMessages } from "./ErrorMessages.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
 const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
+const SIGNAL_COOL_DOWN_DELAY_SECONDS = 6;
+
+export const SIGNAL_API_SENDING_CONCURRENCY = 1;
 
 export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
@@ -19,7 +21,7 @@ export class SignalSession implements ISession {
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: ButtonElement[][];
+  mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 
@@ -59,7 +61,13 @@ export class SignalSession implements ISession {
 
     for (const elem of mArr) {
       await this.signalCli.sendMessage(this.chatId.toString(), elem);
+
       await umami.log({ event: "/message-sent-signal" });
+
+      // prevent hitting the Signal API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
     }
   }
 }
@@ -129,16 +137,11 @@ function cleanMessageForSignal(msg: string): string {
   return accentFreeText;
 }
 
-const { WHATSAPP_PHONE_ID } = process.env;
-
 export async function sendSignalAppMessage(
   signalCli: SignalCli,
   userPhoneId: string,
   message: string
-) {
-  if (WHATSAPP_PHONE_ID === undefined) {
-    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
-  }
+): Promise<boolean> {
   try {
     const cleanMessage = cleanMessageForSignal(message);
     const userPhoneIdInt = userPhoneId.startsWith("+")
@@ -147,9 +150,17 @@ export async function sendSignalAppMessage(
     const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
+
       await umami.log({ event: "/message-sent-signal" });
+
+      // prevent hitting the Signal API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
     }
   } catch (error) {
     console.log(error);
+    return false;
   }
+  return true;
 }

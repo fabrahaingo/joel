@@ -80,31 +80,30 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
 }
 
 export async function sendMessage(
-  user: IUser,
+  messageApp: MessageApp,
+  chatId: number,
   message: string,
   options?: {
     signalCli?: SignalCli;
     whatsAppAPI?: WhatsAppAPI;
   }
-) {
-  switch (user.messageApp) {
+): Promise<boolean> {
+  switch (messageApp) {
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");
-      await sendSignalAppMessage(
+      return await sendSignalAppMessage(
         options.signalCli,
-        user.chatId.toString(),
+        chatId.toString(),
         message
       );
-      return;
 
     case "Telegram":
-      await sendTelegramMessage(user.chatId, message);
-      return;
+      return await sendTelegramMessage(chatId, message);
 
     case "WhatsApp":
       if (options?.whatsAppAPI == null)
         throw new Error("WhatsAppAPI is required");
-      await sendWhatsAppMessage(options.whatsAppAPI, user.chatId, message);
-      return;
+      return await sendWhatsAppMessage(options.whatsAppAPI, chatId, message);
   }
+  return false;
 }

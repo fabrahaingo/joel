@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "start": "tsx apps/telegramApp.ts",
+    "start": "concurrently \"npm run start-tg\" \"npm run start-wh\"",
     "start-tg": "tsx apps/telegramApp.ts",
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
@@ -13,21 +13,23 @@
   "license": "MIT",
   "engines": {
     "node": "v24.5.0",
-    "npm": "11.4.2"
+    "npm": "11.5.2"
   },
   "dependencies": {
     "@babel/preset-env": "^7.28.0",
     "axios": "^1.11.0",
+    "concurrently": "^9.2.0",
     "dotenv": "^17.2.1",
     "emoji-regex": "^10.4.0",
     "express": "^5.1.0",
     "mongodb": "^6.18.0",
-    "mongoose": "^8.17.0",
+    "mongoose": "^8.17.1",
     "ngrok": "^5.0.0-beta.2",
     "node-telegram-bot-api": "^0.66.0",
     "nodemon": "^3.1.10",
+    "p-limit": "^6.2.0",
     "signal-sdk": "^0.0.6",
-    "tsx": "^4.20.3",
+    "tsx": "^4.20.4",
     "whatsapp-api-js": "^6.0.1"
   },
   "devDependencies": {
@@ -36,15 +38,15 @@
     "@tsconfig/node24": "^24.0.1",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
-    "@types/node-telegram-bot-api": "^0.64.9",
-    "eslint": "^9.32.0",
+    "@types/node-telegram-bot-api": "^0.64.10",
+    "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.3",
+    "eslint-plugin-prettier": "^5.5.4",
     "jest": "^30.0.5",
-    "mongodb-memory-server": "^10.1.4",
+    "mongodb-memory-server": "^10.2.0",
     "prettier": "^3.6.2",
-    "ts-jest": "^29.4.0",
-    "typescript": "^5.8.3",
-    "typescript-eslint": "^8.38.0"
+    "ts-jest": "^29.4.1",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.1"
   }
 }

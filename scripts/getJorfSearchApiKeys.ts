@@ -3,6 +3,7 @@ import { JORFSearchResponse } from "../entities/JORFSearchResponse.ts";
 import * as fs from "node:fs";
 import { dateTOJORFFormat } from "../utils/date.utils.ts";
 import { convertToCSV } from "../utils/text.utils";
+import pLimit from "p-limit";
 
 function round(value: number, precision = 0): number {
   return parseFloat(value.toFixed(precision));
@@ -48,24 +49,34 @@ type OrganisationRaw = NonNullable<
   NonNullable<JORFSearchRawItem["organisations"]>[number]
 >;
 
+const CONCURRENCY = 10;
+
+const NB_DAYS = 30;
+
 async function main() {
-  const nbDays = 30;
   // Max 14000
 
-  const currentDay = new Date();
+  const today = new Date();
+  const dates = Array.from({ length: NB_DAYS }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    return dateTOJORFFormat(d);
+  });
 
-  let res_data: JORFSearchRawItemArray = [];
-  for (let i = 0; i < nbDays; i++) {
-    // currentDay minus i days
-    const day = new Date(currentDay);
-    day.setDate(day.getDate() - i);
+  const limit = pLimit(CONCURRENCY);
+  const out = new Array<JORFSearchRawItemArray>(NB_DAYS); // keep order
 
-    const res_day = await JORFSearchCallRaw(dateTOJORFFormat(day));
-    res_data = res_data.concat(res_day);
+  await Promise.all(
+    dates.map((d, idx) =>
+      limit(async () => {
+        out[idx] = await JORFSearchCallRaw(d);
+        console.log(`Day ${String(idx + 1)}/${String(NB_DAYS)} done`);
+      })
+    )
+  );
 
-    console.log(`Day ${String(i)} done. ${String(nbDays - i)} days left.`);
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
+  // flatten the 2-D array
+  const res_data = out.flat();
   const nbRecordsTotal = res_data.length;
 
   const items_keys_occurs = getOccurrenceCount(
