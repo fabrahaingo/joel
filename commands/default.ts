@@ -2,6 +2,7 @@ import { ISession, Keyboard } from "../types.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
+    if (session.isReply) return;
     await session.log({ event: "/default-message" });
     await session.sendMessage(
       "Je n'ai pas compris votre message 🥺",
