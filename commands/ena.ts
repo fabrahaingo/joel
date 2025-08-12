@@ -9,6 +9,7 @@ import TelegramBot from "node-telegram-bot-api";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import {
   callJORFSearchOrganisation,
+  callJORFSearchReference,
   callJORFSearchTag,
   cleanPeopleName
 } from "../utils/JORFSearch.utils.ts";
@@ -78,7 +79,7 @@ export const enaCommand = async (session: ISession): Promise<void> => {
     const tgBot = tgSession.telegramBot;
 
     const text = `Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n
-⚠️ Attention, un nombre important de suivis seront ajoutées en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n
+⚠️ Attention, un nombre important de suivis seront ajoutés en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n
 Formats acceptés:
 Georges-Clemenceau
 2017-2018\n
@@ -214,7 +215,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                   }
                 }
                 await session.sendMessage(
-                  `Votre réponse n'a pas été reconnue. 👎 Veuillez essayer de nouveau la commande.`,
+                  `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
                   [
                     [{ text: "Rechercher une promo ENA/INSP" }],
                     [{ text: "🏠 Menu principal" }]
@@ -259,6 +260,138 @@ export const promosCommand = async (session: ISession): Promise<void> => {
       "Utilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
     await session.sendMessage(text, session.mainMenuKeyboard);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const suivreFromJOReference = async (
+  session: ISession
+): Promise<void> => {
+  try {
+    await session.log({ event: "/follow-reference" });
+
+    const tgSession: TelegramSession | undefined = await extractTelegramSession(
+      session,
+      true
+    );
+    if (tgSession == null) return;
+    const tgBot = tgSession.telegramBot;
+
+    const text = `Entrez la référence JORF/BO et l'*intégralité de personnes mentionnées* sera ajoutée à la liste de vos contacts.\n
+⚠️ Attention, un nombre important de suivis seront ajoutés en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n
+Format: *JORFTEXT000052060473*`;
+    const question = await tgBot.sendMessage(session.chatId, text, {
+      parse_mode: "Markdown",
+      reply_markup: {
+        force_reply: true
+      }
+    });
+    tgBot.onReplyToMessage(
+      session.chatId,
+      question.message_id,
+      (tgMsg1: TelegramBot.Message) => {
+        void (async () => {
+          if (tgMsg1.text == undefined || tgMsg1.text.length == 0) {
+            await session.sendMessage(
+              `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
+              [
+                [{ text: "Suivre à partir d'une référence JORF/BO" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
+            );
+            return;
+          }
+
+          const ref = tgMsg1.text.trim().toUpperCase();
+
+          const JORFResult = await callJORFSearchReference(ref);
+
+          if (JORFResult.length == 0) {
+            const message = `La référence n'a pas été pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`;
+
+            await session.sendMessage(message, [
+              [{ text: "Suivre à partir d'une référence JORF/BO" }],
+              [{ text: "🏠 Menu principal" }]
+            ]);
+            return;
+          }
+
+          await session.sendMessage(
+            `Le texte *${ref}* mentionne *${String(JORFResult.length)} personnes*:`
+          );
+
+          // sort JORFSearchRes by the upper lastname: to account for French "particule"
+          JORFResult.sort((a, b) => {
+            if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
+            if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;
+            return 0;
+          });
+          // send all contacts
+          const contacts = JORFResult.map((contact) => {
+            return `${contact.nom} ${contact.prenom}`;
+          });
+          await session.sendMessage(contacts.join("\n"));
+          const followConfirmation = await tgBot.sendMessage(
+            session.chatId,
+            `Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *les retirer peut ensuite prendre du temps*`,
+            {
+              parse_mode: "Markdown",
+              reply_markup: {
+                force_reply: true
+              }
+            }
+          );
+          tgBot.onReplyToMessage(
+            session.chatId,
+            followConfirmation.message_id,
+            (tgMsg2: TelegramBot.Message) => {
+              void (async () => {
+                if (tgMsg2.text != undefined) {
+                  if (new RegExp(/oui/i).test(tgMsg2.text)) {
+                    await session.sendMessage(`Ajout en cours... ⏰`);
+                    await session.sendTypingAction();
+                    session.user ??= await User.findOrCreate(session);
+
+                    const peopleTab: IPeople[] = [];
+
+                    for (const contact of JORFResult) {
+                      const people = await People.findOrCreate({
+                        nom: contact.nom,
+                        prenom: contact.prenom
+                      });
+                      peopleTab.push(people);
+                    }
+                    await session.user.addFollowedPeopleBulk(peopleTab);
+                    await session.user.save();
+                    await session.sendMessage(
+                      `Les *${String(
+                        peopleTab.length
+                      )} personnes* ont été ajoutées à vos contacts.`,
+                      session.mainMenuKeyboard
+                    );
+                    return;
+                  } else if (new RegExp(/non/i).test(tgMsg2.text)) {
+                    await session.sendMessage(
+                      `Ok, aucun ajout n'a été effectué. 👌`,
+                      session.mainMenuKeyboard
+                    );
+                    return;
+                  }
+                }
+                await session.sendMessage(
+                  `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
+                  [
+                    [{ text: "Suivre à partir d'une référence JORF/BO" }],
+                    [{ text: "🏠 Menu principal" }]
+                  ]
+                );
+              })();
+            }
+          );
+        })();
+      }
+    );
   } catch (error) {
     console.log(error);
   }
