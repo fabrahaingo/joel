@@ -259,7 +259,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
 
 export const unfollowFromStr = async (
   session: ISession,
-  msg?: string,
+  msg: string,
   triggerUmami = true
 ) => {
   try {
@@ -281,7 +281,7 @@ export const unfollowFromStr = async (
       return;
     }
 
-    const selectionUnfollowText = msg?.split(" ").slice(1).join(" ");
+    const selectionUnfollowText = msg.split(" ").slice(1).join(" ");
 
     let answers = parseIntAnswers(selectionUnfollowText, followTotal);
 

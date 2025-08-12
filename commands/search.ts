@@ -66,7 +66,11 @@ export const searchCommand = async (session: ISession): Promise<void> => {
           );
           return;
         }
-        await searchPersonHistory(session, tgMsg.text, "latest");
+        await searchPersonHistory(
+          session,
+          "Historique " + tgMsg.text,
+          "latest"
+        );
       })();
     }
   );
@@ -88,22 +92,29 @@ export const fullHistoryCommand = async (
   if (personName.length == 0) {
     await session.sendMessage(
       "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-      [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
+      session.messageApp == "Telegram"
+        ? [[{ text: "🔎 Nouvelle recherche" }], [{ text: "🏠 Menu principal" }]]
+        : session.mainMenuKeyboard
     );
     return;
   }
-  await searchPersonHistory(session, personName, "full");
+  await searchPersonHistory(session, "Historique " + personName, "full");
 };
 
-async function searchPersonHistory(
+// returns whether the person exist
+export async function searchPersonHistory(
   session: ISession,
-  personName: string,
-  historyType: "full" | "latest",
-  noSearch = false
-) {
+  message: string,
+  historyType: "full" | "latest" = "latest",
+  noSearch = false,
+  fromFollow = false
+): Promise<boolean> {
   try {
-    let JORFRes_data: JORFSearchItem[] = [];
+    if (message.split(" ").length < 2) return false;
 
+    const personName = message.split(" ").slice(1).join(" ");
+
+    let JORFRes_data: JORFSearchItem[] = [];
     if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
     const nbRecords = JORFRes_data.length;
 
@@ -111,11 +122,16 @@ async function searchPersonHistory(
       const personNameSplit = personName.split(" ");
       if (personNameSplit.length < 2) {
         // Minimum is two words: Prénom + Nom
-        await session.sendMessage("Votre saisie est incorrecte.", [
-          [{ text: "🔎 Nouvelle recherche" }],
-          [{ text: "🏠 Menu principal" }]
-        ]);
-        return;
+        await session.sendMessage(
+          "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
+          session.messageApp == "Telegram"
+            ? [
+                [{ text: "🔎 Nouvelle recherche" }],
+                [{ text: "🏠 Menu principal" }]
+              ]
+            : session.mainMenuKeyboard
+        );
+        return false;
       }
 
       let text =
@@ -142,7 +158,7 @@ async function searchPersonHistory(
       if (session.messageApp === "Telegram")
         await session.sendMessage(text, tgKeyboard);
       else await session.sendMessage(text, session.mainMenuKeyboard);
-      return;
+      return false;
     }
 
     let text = "";
@@ -167,14 +183,19 @@ async function searchPersonHistory(
       isUserFollowingPerson = false;
     } else {
       const people: IPeople | null = await People.findOne({
-        nom: { $regex: `^${JORFRes_data[0].nom}$`, $options: "i" }, // regex makes the search case-insensitive
-        prenom: { $regex: `^${JORFRes_data[0].prenom}$`, $options: "i" }
-      });
+        nom: JORFRes_data[0].nom,
+        prenom: JORFRes_data[0].prenom
+      })
+        .collation({ locale: "fr", strength: 2 }) // case-insensitive, no regex
+        .lean();
+
       isUserFollowingPerson = !(
         people === null ||
         !isPersonAlreadyFollowed(people, session.user.followedPeople)
       );
     }
+
+    const prenomNom = `${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`;
 
     let temp_keyboard: { text: string }[][] | null;
     if (nbRecords <= 2 && isUserFollowingPerson) {
@@ -184,70 +205,83 @@ async function searchPersonHistory(
       ];
     } else {
       temp_keyboard = [
-        [{ text: "🏠 Menu principal" }, { text: "🔎 Nouvelle recherche" }]
+        [{ text: "🔎 Nouvelle recherche" }],
+        [{ text: "🏠 Menu principal" }]
       ];
       if (historyType === "latest" && nbRecords > 2) {
-        text += `${String(nbRecords - 2)} autres mentions au JORF non affichées.\n\n`;
+        text += `\n${String(nbRecords - 2)} autres mentions au JORF non affichées.\n`;
+        if (session.messageApp !== "Telegram")
+          text += `\nPour voir l'historique complet, utilisez la commande: *Historique ${prenomNom}*.\n`;
+
         temp_keyboard.unshift([
           {
-            text: `Historique complet de ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`
+            text: `Historique complet de ${prenomNom}`
           }
         ]);
       }
       if (!isUserFollowingPerson) {
         temp_keyboard.unshift([
           {
-            text: `Suivre ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`
+            text: `Suivre ${prenomNom}`
           }
         ]);
       }
     }
 
-    if (isUserFollowingPerson) {
-      text += `Vous suivez *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* ✅`;
-    } else {
-      text += `Vous ne suivez pas *${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}* 🙅‍♂️\n\n`;
-      text += `Pour suivre, utilisez la commande:\n*Suivre ${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}*`;
+    if (!fromFollow) {
+      if (isUserFollowingPerson) {
+        text += `\nVous suivez *${prenomNom}* ✅`;
+      } else {
+        text += `\nVous ne suivez pas *${prenomNom}* 🙅‍♂️\n\n`;
+        text += `Pour suivre, utilisez la commande:\n*Suivre ${prenomNom}*`;
+      }
     }
     if (session.messageApp === "Telegram") {
       await session.sendMessage(text, temp_keyboard);
     } else {
-      await session.sendMessage(text, session.mainMenuKeyboard);
+      if (fromFollow)
+        await session.sendMessage(text); // no keyboard, as the follow function will provide one
+      else await session.sendMessage(text, session.mainMenuKeyboard);
     }
+    return true;
   } catch (error) {
     console.log(error);
   }
+  return false;
 }
 
 export const followCommand = async (
   session: ISession,
-  msg?: string
+  msg: string
 ): Promise<void> => {
-  await session.log({ event: "/follow" });
-
-  const wrongParametersMsg =
-    "Saisie incorrecte. Veuillez réessayer:\nFormat : *Suivre Prénom Nom*";
-
-  if (msg == undefined || msg.length == 0) {
-    await session.sendMessage(wrongParametersMsg, session.mainMenuKeyboard);
-    return;
-  }
-
   try {
-    const personName = msg.split(" ").slice(1).join(" ");
+    await session.log({ event: "/follow" });
 
-    if (personName.length == 0) {
-      await session.sendMessage(wrongParametersMsg, session.mainMenuKeyboard);
+    const msgSplit = msg.split(" ");
+
+    if (msgSplit.length < 3) {
+      await session.sendMessage(
+        "Saisie incorrecte. Veuillez réessayer:\nFormat : *Suivre Prénom Nom*",
+        session.mainMenuKeyboard
+      );
       return;
     }
+
+    const personName = msgSplit.slice(1).join(" ");
 
     await session.sendTypingAction();
 
     const JORFRes = await callJORFSearchPeople(personName);
-    if (JORFRes.length == 0) {
+    if (JORFRes.length == 0 || session.messageApp !== "Telegram") {
       // redirect to manual follow
-      await searchPersonHistory(session, personName, "latest", true);
-      return;
+      const latestResult = await searchPersonHistory(
+        session,
+        "Historique " + personName,
+        "latest",
+        false,
+        true
+      );
+      if (!latestResult) return;
     }
 
     session.user ??= await User.findOrCreate(session);
@@ -279,15 +313,7 @@ export const followCommand = async (
     console.log(error);
   }
 };
-
-export const manualFollowCommandLong = async (
-  session: ISession,
-  msg?: string
-): Promise<void> => {
-  await manualFollowCommandShort(session, msg?.split(" ").slice(4).join(" "));
-};
-
-export const manualFollowCommandShort = async (
+export const manualFollowCommand = async (
   session: ISession,
   msg?: string
 ): Promise<void> => {

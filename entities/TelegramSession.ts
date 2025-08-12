@@ -146,19 +146,23 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 export async function sendTelegramMessage(
   chatId: number,
   message: string,
-  isRetry = false
+  retryNumber = 0
 ): Promise<boolean> {
-  const messagesArray = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
+  if (retryNumber > 5) {
+    await umami.log({ event: "/telegram-too-many-requests-aborted" });
+    return false;
+  }
+  const mArr = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
   if (BOT_TOKEN === undefined) {
     throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
   }
-
+  let i = 1;
   try {
-    for (const message of messagesArray) {
+    for (; i < mArr.length; i++) {
       await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         chat_id: chatId,
-        text: message,
+        text: mArr[i],
         parse_mode: "markdown",
         link_preview_options: {
           is_disabled: true
@@ -191,25 +195,15 @@ export async function sendTelegramMessage(
           break;
         case "Too many requests":
           await umami.log({ event: "/telegram-too-many-requests" });
-          if (isRetry) {
-            await umami.log({
-              event: "/telegram-too-many-requests-retry-failed"
-            });
-            console.log(
-              "Telegram API returned Too many requests: retry was unsuccessful"
-            );
-          } else {
-            console.log(
-              "Telegram API returned Too many requests: sending message again with extended cooldown."
-            );
-            // wait 10 times the cooldown delay seconds before resuming
-            await new Promise((resolve) =>
-              setTimeout(resolve, 10 * TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
-            );
-            // retry sending full message, indicating this is a retry
-            return sendTelegramMessage(chatId, message, true);
-          }
-          break;
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.pow(2, retryNumber) * 1000)
+          );
+          // retry sending the remainder of the message, indicating this is a retry
+          return sendTelegramMessage(
+            chatId,
+            mArr.slice(i).join("`n"),
+            retryNumber + 1
+          );
         default:
           console.log(err);
           break;
