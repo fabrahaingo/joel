@@ -157,7 +157,7 @@ export async function sendTelegramMessage(
   if (BOT_TOKEN === undefined) {
     throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
   }
-  let i = 1;
+  let i = 0;
   try {
     for (; i < mArr.length; i++) {
       await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {

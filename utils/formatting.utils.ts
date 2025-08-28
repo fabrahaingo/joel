@@ -12,13 +12,15 @@ export const textTypeOrdre = (
     case "nomination":
       return `📝 A été _nommé${agree(sex)}_ à:\n`;
     case "réintégration":
-      return `📝 A été _réintégré${agree(sex)}_ à:\n`;
+      return `📝 A été _réintégré${agree(sex)}_:\n`;
     case "cessation de fonction":
       return `📝 A _cessé ses fonctions_ à:\n`;
     case "affectation":
       return `📝 A été _affecté${agree(sex)}_ à:\n`;
     case "délégation de signature":
-      return `📝 A reçu une _délégation de signature_ à:\n`;
+      return `📝 A reçu${agree(sex)} une _délégation de signature_ à:\n`;
+    case "fin délégation signature":
+      return `📝 n'a plus la _délégation de signature_:\n`;
     case "promotion":
       return `📝 A été _promu${agree(sex)}_:\n`;
     case "admission":
@@ -51,7 +53,7 @@ export const textTypeOrdre = (
     case "recrutement":
       return `📝 A été _recruté${agree(sex)}_:\n`;
     case "disponibilité":
-      return `📝 A été mis${agree(sex)} en disponibilité_\n`;
+      return `📝 A été _mis${agree(sex)} en disponibilité_\n`;
     case "autorisation":
       return `📝 A été _autorisé${agree(sex)}_\n`;
     case "mise à disposition":
@@ -69,7 +71,7 @@ export const textTypeOrdre = (
     case "transfert":
       return `📝 A été _transféré${agree(sex)}_:\n`;
     case "conféré":
-      return `📝 S'est vu${agree(sex)} _conférer_:\n`;
+      return `📝 S'est vu${agree(sex)} _conféré${agree(sex)}_:\n`;
     case "citation":
       return `📝 A été _cité${agree(sex)}_:\n`;
     case "démission":
@@ -78,9 +80,10 @@ export const textTypeOrdre = (
       return `📝 S'est vu _attribué${agree(sex)}_:\n`;
     case "reprise de fonctions":
       return `📝 A _repris ses fonctions_:\n`;
-    //| "bourse"
-    //| "fin délégation signature"
-    //| "prime"
+    case "bourse":
+      return `📝 a reçu une _bourse_:\n`;
+    case "prime":
+      return `📝 a reçu une _prime_:\n`;
     default:
       return `📝 A été _${type_ordre}_ à:\n`;
   }

@@ -11,6 +11,7 @@ import {
   JORFSearchPublication,
   JORFSearchResponseMeta
 } from "../entities/JORFSearchResponseMeta.ts";
+import { FunctionTags } from "../entities/FunctionTags.ts";
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -25,13 +26,7 @@ export async function callJORFSearchPeople(
   try {
     await umami.log({ event: "/jorfsearch-request-people" });
     return await axios
-      .get<JORFSearchResponse>(
-        encodeURI(
-          `https://jorfsearch.steinertriples.ch/name/${
-            cleanPeopleNameJORFURL(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
-          }?format=JSON`
-        )
-      )
+      .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true))
       .then(async (res1: AxiosResponse<JORFSearchResponse>) => {
         if (res1.data === null) return []; // If an error occurred
         if (typeof res1.data !== "string") return res1.data; // If it worked
@@ -86,18 +81,14 @@ export async function callJORFSearchDay(day: Date): Promise<JORFSearchItem[]> {
 }
 
 export async function callJORFSearchTag(
-  tag: string,
+  tag: FunctionTags,
   tagValue?: string
 ): Promise<JORFSearchItem[]> {
   try {
     await umami.log({ event: "/jorfsearch-request-tag" });
     return await axios
       .get<JORFSearchResponse>(
-        encodeURI(
-          `https://jorfsearch.steinertriples.ch/tag/${tag}${
-            tagValue !== undefined ? `="${tagValue}"` : ``
-          }?format=JSON`
-        )
+        getJORFSearchLinkFunctionTag(tag, true, tagValue)
       )
       .then((res) => {
         if (res.data === null || typeof res.data === "string") return [];
@@ -206,11 +197,43 @@ export function cleanPeopleNameJORFURL(input: string): string {
   // 2. Strip common Western diacritics in one shot
   out = out.replace(/[\u0300-\u036f]/g, ""); // remove combining marks
 
-  // 3. Capitalise first letter after start, space, hyphen or apostrophe
+  // 3. Capitalise the first letter after start, space, hyphen or apostrophe
   //    - keeps the delimiter (p1) and upper-cases the following char (p2)
   out = out.replace(/(^|[\s\-'])\p{L}/gu, (m) => m.toUpperCase());
 
   out = out.replace(/[()]/g, "");
 
   return out;
+}
+
+export function getJORFSearchLinkPeople(
+  prenomNom: string,
+  json = false
+): string {
+  return encodeURI(
+    `https://jorfsearch.steinertriples.ch/name/${encodeURI(
+      cleanPeopleNameJORFURL(prenomNom)
+    )}${json ? "?format=JSON" : ""}`
+  );
+}
+
+export function getJORFSearchLinkFunctionTag(
+  fctTag: FunctionTags,
+  json = false,
+  tagValue: string | undefined = undefined
+): string {
+  return encodeURI(
+    `https://jorfsearch.steinertriples.ch/tag/${fctTag}${
+      tagValue !== undefined ? `="${tagValue}"` : ``
+    }${json ? "?format=JSON" : ""}`
+  );
+}
+
+export function getJORFSearchLinkOrganisation(
+  wikidataId: string,
+  json = false
+): string {
+  return encodeURI(
+    `https://jorfsearch.steinertriples.ch/${wikidataId}${json ? "?format=JSON" : ""}`
+  );
 }
