@@ -17,6 +17,7 @@ import {
   extractTelegramSession,
   TelegramSession
 } from "../entities/TelegramSession.ts";
+import { FunctionTags } from "../entities/FunctionTags.ts";
 
 const inspId = "Q109039648" as WikidataId;
 
@@ -54,7 +55,7 @@ async function getJORFPromoSearchResult(
 
   switch (promo.school) {
     case "ENA": // If ENA, we can use the associated tag with the year as value
-      return callJORFSearchTag("eleve_ena", promo.period);
+      return callJORFSearchTag("eleve_ena" as FunctionTags, promo.period);
 
     case "INSP": // If INSP, we can rely on the associated organisation
       return (

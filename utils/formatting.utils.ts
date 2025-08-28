@@ -51,7 +51,7 @@ export const textTypeOrdre = (
     case "recrutement":
       return `📝 A été _recruté${agree(sex)}_:\n`;
     case "disponibilité":
-      return `📝 A été mis${agree(sex)} en disponibilité_\n`;
+      return `📝 A été _mis${agree(sex)} en disponibilité_\n`;
     case "autorisation":
       return `📝 A été _autorisé${agree(sex)}_\n`;
     case "mise à disposition":

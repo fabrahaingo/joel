@@ -9,7 +9,7 @@ import {
   extractTelegramSession,
   TelegramSession
 } from "../entities/TelegramSession.ts";
-import { callJORFSearchOrganisation } from "../utils/JORFSearch.utils.ts";
+import { getJORFSearchLinkOrganisation } from "../utils/JORFSearch.utils.ts";
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
@@ -133,7 +133,7 @@ export const searchOrganisationFromStr = async (
     if (orgResults.length == 1) {
       session.user = await User.findOrCreate(session);
 
-      const orgUrl = `https://jorfsearch.steinertriples.ch/${encodeURI(orgResults[0].wikidataId)}`;
+      const orgUrl = getJORFSearchLinkOrganisation(orgResults[0].wikidataId);
 
       let text = `Une organisation correspond à votre recherche:\n\n*${orgResults[0].nom}* (${orgResults[0].wikidataId})`;
       if (session.messageApp === "Telegram")
@@ -164,7 +164,9 @@ export const searchOrganisationFromStr = async (
         "Voici les organisations correspondant à votre recherche :\n\n";
       for (let k = 0; k < orgResults.length; k++) {
         const organisation_k = orgResults[k];
-        const orgUrl_k = `https://jorfsearch.steinertriples.ch/${encodeURI(organisation_k.wikidataId)}`;
+        const orgUrl_k = getJORFSearchLinkOrganisation(
+          organisation_k.wikidataId
+        );
 
         text += `${String(
           k + 1
