@@ -116,13 +116,17 @@ export const searchOrganisationFromStr = async (
     const orgResults = await searchOrganisationWikidataId(orgName);
 
     if (orgResults.length == 0) {
-      const text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
-      if (session.messageApp === "Telegram")
+      let text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.`;
+      if (session.messageApp === "Telegram") {
+        text += `\n\nFormat:\n*Nom de l'organisation*\nou\n*WikidataId de l'organisation*`;
         await session.sendMessage(text, [
           [{ text: `🏛️️ Ajouter une organisation` }],
           [{ text: "🏠 Menu principal" }]
         ]);
-      else await session.sendMessage(text, session.mainMenuKeyboard);
+      } else {
+        text += `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
+        await session.sendMessage(text, session.mainMenuKeyboard);
+      }
       return;
     }
 
@@ -278,16 +282,11 @@ export const followOrganisationsFromWikidataIdStr = async (
       if (orgFromDb != undefined) {
         orgResults.push(orgFromDb);
       } else {
-        const orgRecordsFromJORF = await callJORFSearchOrganisation(id);
-        if (orgRecordsFromJORF.length > 0) {
-          if (orgRecordsFromJORF[0].organisations.length == 0) continue;
-          const org = orgRecordsFromJORF[0].organisations.find(
-            (o) => o.wikidata_id === id
-          );
-          if (org?.wikidata_id === undefined) continue;
+        const orgInfoFromJORF = await searchOrganisationWikidataId(id);
+        if (orgInfoFromJORF.length > 0) {
           const newOrg: IOrganisation = await Organisation.findOrCreate({
-            nom: org.nom,
-            wikidataId: org.wikidata_id
+            nom: orgInfoFromJORF[0].nom,
+            wikidataId: orgInfoFromJORF[0].wikidataId
           });
           orgResults.push(newOrg);
         }
@@ -295,24 +294,21 @@ export const followOrganisationsFromWikidataIdStr = async (
     }
 
     if (orgResults.length == 0) {
-      const pluralHandler = selectedWikiDataIds.length > 1 ? "s" : "";
-      if (session.messageApp === "Telegram")
-        await session.sendMessage(
-          `Le${pluralHandler} id${pluralHandler} fournis ${
-            selectedWikiDataIds.length > 1 ? "n'est" : "ne sont"
-          } sont pas reconnu${pluralHandler}. 👎\n Veuillez essayer de nouveau la commande.`,
-          [
-            [{ text: `🏛️️ Ajouter une organisation` }],
-            [{ text: "🏠 Menu principal" }]
-          ]
-        );
-      else
-        await session.sendMessage(
-          `Le${pluralHandler} id${pluralHandler} fournis ${
-            selectedWikiDataIds.length > 1 ? "n'est" : "ne sont"
-          } sont pas reconnu${pluralHandler}. 👎\n Veuillez essayer de nouveau la commande.`,
-          session.mainMenuKeyboard
-        );
+      let msg = "";
+      if (selectedWikiDataIds.length > 1)
+        msg += "Les ids fournis n'ont pas été reconnus. 👎";
+      else msg += "L'id fourni n'a pas été reconnu. 👎";
+      msg += "\nVeuillez essayer de nouveau la commande.";
+
+      await session.sendMessage(
+        msg,
+        session.messageApp === "Telegram"
+          ? [
+              [{ text: `🏛️️ Ajouter une organisation` }],
+              [{ text: "🏠 Menu principal" }]
+            ]
+          : session.mainMenuKeyboard
+      );
       return;
     }
 
