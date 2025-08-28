@@ -211,8 +211,8 @@ export function getJORFSearchLinkPeople(
   json = false
 ): string {
   return encodeURI(
-    `https://jorfsearch.steinertriples.ch/name/${encodeURI(
-      cleanPeopleNameJORFURL(prenomNom)
+    `https://jorfsearch.steinertriples.ch/name/${cleanPeopleNameJORFURL(
+      prenomNom
     )}${json ? "?format=JSON" : ""}`
   );
 }
