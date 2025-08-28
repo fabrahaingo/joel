@@ -31,7 +31,7 @@ import {
 } from "../utils/notificationDispatch.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
-const SHIFT_DAYS = 3;
+const SHIFT_DAYS = 30;
 
 const { ENABLED_APPS } = process.env;
 if (ENABLED_APPS === undefined) throw new Error("ENABLED_APPS env var not set");
