@@ -183,14 +183,17 @@ export async function notifyFunctionTagsUpdates(
       totalUserRecordsCount += items.length;
     });
 
-    userUpdateTasks.push({
-      userId: user._id,
-      messageApp: user.messageApp,
-      chatId: user.chatId,
-      updatedRecordsMap: newUserTagsUpdates,
-      recordCount: totalUserRecordsCount
-    });
+    if (totalUserRecordsCount > 0)
+      userUpdateTasks.push({
+        userId: user._id,
+        messageApp: user.messageApp,
+        chatId: user.chatId,
+        updatedRecordsMap: newUserTagsUpdates,
+        recordCount: totalUserRecordsCount
+      });
   }
+
+  if (userUpdateTasks.length == 0) return;
 
   await dispatchTasksToMessageApps<FunctionTags>(
     userUpdateTasks,
@@ -325,14 +328,17 @@ export async function notifyOrganisationsUpdates(
       totalUserRecordsCount += items.length;
     });
 
-    userUpdateTasks.push({
-      userId: user._id,
-      messageApp: user.messageApp,
-      chatId: user.chatId,
-      updatedRecordsMap: newUserOrganisationsUpdates,
-      recordCount: totalUserRecordsCount
-    });
+    if (totalUserRecordsCount > 0)
+      userUpdateTasks.push({
+        userId: user._id,
+        messageApp: user.messageApp,
+        chatId: user.chatId,
+        updatedRecordsMap: newUserOrganisationsUpdates,
+        recordCount: totalUserRecordsCount
+      });
   }
+
+  if (userUpdateTasks.length == 0) return;
 
   await dispatchTasksToMessageApps<WikidataId>(
     userUpdateTasks,
@@ -491,14 +497,17 @@ export async function notifyPeopleUpdates(updatedRecords: JORFSearchItem[]) {
       totalUserRecordsCount += items.length;
     });
 
-    userUpdateTasks.push({
-      userId: user._id,
-      messageApp: user.messageApp,
-      chatId: user.chatId,
-      updatedRecordsMap: newUserPeopleUpdates,
-      recordCount: totalUserRecordsCount
-    });
+    if (totalUserRecordsCount > 0)
+      userUpdateTasks.push({
+        userId: user._id,
+        messageApp: user.messageApp,
+        chatId: user.chatId,
+        updatedRecordsMap: newUserPeopleUpdates,
+        recordCount: totalUserRecordsCount
+      });
   }
+
+  if (userUpdateTasks.length == 0) return;
 
   await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
     // send follow notification to the user
@@ -613,14 +622,17 @@ export async function notifyNameMentionUpdates(
       totalUserRecordsCount += items.length;
     });
 
-    userUpdateTasks.push({
-      userId: user._id,
-      messageApp: user.messageApp,
-      chatId: user.chatId,
-      updatedRecordsMap: newUserTagsUpdates,
-      recordCount: totalUserRecordsCount
-    });
+    if (totalUserRecordsCount > 0)
+      userUpdateTasks.push({
+        userId: user._id,
+        messageApp: user.messageApp,
+        chatId: user.chatId,
+        updatedRecordsMap: newUserTagsUpdates,
+        recordCount: totalUserRecordsCount
+      });
   }
+
+  if (userUpdateTasks.length == 0) return;
 
   await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
     await sendNameMentionUpdates(
