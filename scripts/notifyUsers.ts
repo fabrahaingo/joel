@@ -17,7 +17,10 @@ import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   callJORFSearchDay,
-  cleanPeopleName
+  cleanPeopleName,
+  getJORFSearchLinkFunctionTag,
+  getJORFSearchLinkOrganisation,
+  getJORFSearchLinkPeople
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
 import { sendMessage } from "../entities/Session.ts";
@@ -713,15 +716,21 @@ async function sendNameMentionUpdates(
     // Reverse array change order of records
     // peopleRecords.reverse();
 
+    const prenomNom = nameUpdates[0].prenom + " " + nameUpdates[0].nom;
+
     const pluralHandler = nameUpdates.length > 1 ? "s" : "";
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${nameUpdates[0].prenom} ${nameUpdates[0].nom}*\n\n`;
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
+      markdownEnabled
+        ? `[${prenomNom}](${getJORFSearchLinkPeople(prenomNom)})`
+        : `*${prenomNom}*`
+    }\n\n`;
 
     notification_text += formatSearchResult(nameUpdates, markdownEnabled, {
       isConfirmation: false,
       isListing: true,
-      displayName: "first"
+      displayName: "no"
     });
-    notification_text += `Vous suivez maintenant *${nameUpdates[0].prenom} ${nameUpdates[0].nom}* ✅`;
+    notification_text += `Vous suivez maintenant *${prenomNom}* ✅`;
 
     if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
@@ -764,13 +773,19 @@ async function sendPeopleUpdate(
     // Reverse array change order of records
     // peopleRecords.reverse();
 
+    const prenomNom = peopleRecords[0].prenom + " " + peopleRecords[0].nom;
+
     const pluralHandler = peopleRecords.length > 1 ? "s" : "";
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${peopleRecords[0].prenom} ${peopleRecords[0].nom}*\n\n`;
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
+      markdownEnabled
+        ? `[${prenomNom}](${getJORFSearchLinkPeople(prenomNom)})`
+        : `*${prenomNom}*`
+    }\n\n`;
 
     notification_text += formatSearchResult(peopleRecords, markdownEnabled, {
       isConfirmation: false,
       isListing: true,
-      displayName: "first"
+      displayName: "no"
     });
 
     if (peopleId !== lastKey) notification_text += "====================\n\n";
@@ -820,7 +835,11 @@ async function sendOrganisationUpdate(
     // orgRecords.reverse();
 
     const pluralHandler = orgRecords.length > 1 ? "s" : "";
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour *${orgName}*\n\n`;
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
+      markdownEnabled
+        ? `[${orgName}](${getJORFSearchLinkOrganisation(orgId)})`
+        : `*${orgName}*`
+    }\n\n`;
 
     notification_text += formatSearchResult(orgRecords, markdownEnabled, {
       isConfirmation: false,
@@ -875,7 +894,11 @@ async function sendTagUpdates(
     // updatedRecords.reverse();
 
     const pluralHandler = tagRecords.length > 1 ? "s" : "";
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${tagKey}*\n\n`;
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${
+      markdownEnabled
+        ? `[${tagKey}](${getJORFSearchLinkFunctionTag(tag)})`
+        : `*${tagKey}*`
+    }*\n\n`;
 
     notification_text += formatSearchResult(tagRecords, markdownEnabled, {
       isConfirmation: false,

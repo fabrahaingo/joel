@@ -13,6 +13,11 @@ import TelegramBot from "node-telegram-bot-api";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import { Types } from "mongoose";
 import User from "../models/User.ts";
+import {
+  getJORFSearchLinkOrganisation,
+  getJORFSearchLinkFunctionTag,
+  getJORFSearchLinkPeople
+} from "../utils/JORFSearch.utils.ts";
 
 interface UserFollows {
   functions: FunctionTags[];
@@ -71,9 +76,7 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
       nomPrenom: `${p.nom} ${p.prenom}`,
       prenomNom: `${p.prenom} ${p.nom}`,
       peopleId: p._id,
-      JORFSearchLink: encodeURI(
-        `https://jorfsearch.steinertriples.ch/name/${p.prenom} ${p.nom}`
-      )
+      JORFSearchLink: getJORFSearchLinkPeople(p.prenom + " " + p.nom)
     })
   );
 
@@ -125,13 +128,9 @@ export const listCommand = async (session: ISession) => {
         text += `${String(i + 1)}. *${functionsKeys[i]}*`;
 
         if (session.messageApp === "Telegram")
-          text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
-            userFollows.functions[i]
-          )})`;
+          text += ` - [JORFSearch](${getJORFSearchLinkFunctionTag(userFollows.functions[i])})`;
         else
-          text += `\nhttps://jorfsearch.steinertriples.ch/tag/${encodeURI(
-            userFollows.functions[i]
-          )}`;
+          text += `\n${getJORFSearchLinkFunctionTag(userFollows.functions[i])}`;
 
         text += `\n\n`;
       }
@@ -144,11 +143,9 @@ export const listCommand = async (session: ISession) => {
         text += `${String(i + k + 1)}. *${userFollows.organisations[k].nom}*`;
 
         if (session.messageApp === "Telegram")
-          text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(
-            userFollows.organisations[k].wikidataId
-          )})`;
+          text += ` - [JORFSearch](${getJORFSearchLinkOrganisation(userFollows.organisations[k].wikidataId)})`;
         else
-          text += `\nhttps://jorfsearch.steinertriples.ch/${encodeURI(
+          text += `\n${getJORFSearchLinkOrganisation(
             userFollows.organisations[k].wikidataId
           )}`;
 

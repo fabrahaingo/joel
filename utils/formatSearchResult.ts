@@ -1,6 +1,7 @@
 import { textTypeOrdre } from "./formatting.utils.ts";
 import { dateToFrenchString } from "./date.utils.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { getJORFSearchLinkPeople } from "./JORFSearch.utils.ts";
 
 function addPoste(elem: JORFSearchItem, message: string) {
   if (elem.grade) {
@@ -44,12 +45,14 @@ function addPoste(elem: JORFSearchItem, message: string) {
     else if (elem.ambassadeur_thematique)
       message += `🏛️ Ambassadeur thématique\n`;
     else message += `🏛️ Ambassadeur\n`;
-  } else if (elem.organisations[0]?.nom) {
-    message += `*👉 ${elem.organisations[0].nom}*\n`;
+  } else if (elem.organisations.length > 0) {
+    elem.organisations.forEach((o) => {
+      message += `👉 *${o.nom}*\n`;
+    });
   } else if (elem.ministre) {
-    message += `*👉 ${elem.ministre}*\n`;
+    message += `👉 *${elem.ministre}*\n`;
   } else if (elem.inspecteur_general) {
-    message += `*👉 Inspecteur général ${elem.inspecteur_general}*\n`;
+    message += `👉 *Inspecteur général ${elem.inspecteur_general}*\n`;
   } else if (elem.autorite_delegation) {
     message += `👉 par le _${elem.autorite_delegation}_\n`;
   } else if (elem.corps) {
@@ -68,11 +71,11 @@ export function formatSearchResult(
   }
 ) {
   let message = "";
-  for (const elem of result) {
+
+  for (let i = 0; i < result.length; i++) {
+    const elem = result[i];
     const prenomNom = `${elem.prenom} ${elem.nom}`;
-    const url = `https://jorfsearch.steinertriples.ch/name/${encodeURI(
-      prenomNom
-    )}`;
+    const url = getJORFSearchLinkPeople(prenomNom);
 
     const prenomNomLink = markdownLink
       ? `[${prenomNom}](${url})`
@@ -123,6 +126,8 @@ export function formatSearchResult(
       else
         message += `\nhttps://bodata.steinertriples.ch/${elem.source_id}/redirect\n`;
     }
+
+    if (i < result.length - 1) message += "\n";
   }
   return message;
 }
