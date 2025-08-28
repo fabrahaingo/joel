@@ -282,16 +282,11 @@ export const followOrganisationsFromWikidataIdStr = async (
       if (orgFromDb != undefined) {
         orgResults.push(orgFromDb);
       } else {
-        const orgRecordsFromJORF = await callJORFSearchOrganisation(id);
-        if (orgRecordsFromJORF.length > 0) {
-          if (orgRecordsFromJORF[0].organisations.length == 0) continue;
-          const org = orgRecordsFromJORF[0].organisations.find(
-            (o) => o.wikidata_id === id
-          );
-          if (org?.wikidata_id === undefined) continue;
+        const orgInfoFromJORF = await searchOrganisationWikidataId(id);
+        if (orgInfoFromJORF.length > 0) {
           const newOrg: IOrganisation = await Organisation.findOrCreate({
-            nom: org.nom,
-            wikidataId: org.wikidata_id
+            nom: orgInfoFromJORF[0].nom,
+            wikidataId: orgInfoFromJORF[0].wikidataId
           });
           orgResults.push(newOrg);
         }
