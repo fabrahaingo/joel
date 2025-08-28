@@ -101,7 +101,7 @@ export const fullHistoryCommand = async (
   await searchPersonHistory(session, "Historique " + personName, "full");
 };
 
-// returns whether the person exist
+// returns whether the person exists
 export async function searchPersonHistory(
   session: ISession,
   message: string,
@@ -337,6 +337,11 @@ export const manualFollowCommand = async (
 
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
+
+  if ((await callJORFSearchPeople(prenomNom)).length > 0) {
+    await followCommand(session, "Suivre " + prenomNom);
+    return;
+  }
 
   if (session.user?.checkFollowedName(nomPrenom)) {
     await session.sendMessage(
