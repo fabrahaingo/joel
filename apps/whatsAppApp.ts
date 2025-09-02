@@ -73,7 +73,7 @@ app.post("/webhook", async (req, res) => {
   try {
     const signature = req.header("x-hub-signature-256");
     if (!signature) {
-      res.sendStatus(401); // Unauthorized if signature is missing
+      res.sendStatus(401); // Unauthorised if the signature is missing
       return;
     }
 
@@ -121,8 +121,7 @@ export function textFromMessage(msg: ServerMessage): string | null {
           return (
             msg.interactive.nfm_reply.body ??
             msg.interactive.nfm_reply.response_json ??
-            null
-          );
+            null);
           */
       }
       return null;
@@ -178,7 +177,7 @@ whatsAppAPI.on.sent = ({ phoneID, to }) => {
 };
 
 app.listen(WHATSAPP_APP_PORT, function () {
-  //console.log(`Example Whatsapp listening at ${String(WHATSAPP_APP_PORT)}`);
+  //console.log(`Example WhatsApp listening at ${String(WHATSAPP_APP_PORT)}`);
 });
 
 await (async function () {
@@ -186,7 +185,7 @@ await (async function () {
 
   console.log("WhatsApp: Initializing Ngrok tunnel...");
 
-  // Initialize ngrok using the auth token and hostname
+  // Initialise ngrok using the auth token and hostname
   const url = await ngrok.connect({
     proto: "http",
     // Your authtoken if you want your hostname to be the same everytime

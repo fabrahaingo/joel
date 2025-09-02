@@ -94,7 +94,7 @@ export function formatSearchResult(
       }
     }
     if (options?.displayName === "all") {
-      message += `🕵️ ${prenomNomLink}\n\n`;
+      message += `🕵️ ${prenomNomLink}\n`;
     }
     message += textTypeOrdre(elem.type_ordre, elem.sexe ?? "M");
     message = addPoste(elem, message);
