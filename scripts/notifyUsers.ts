@@ -728,7 +728,7 @@ async function sendNameMentionUpdates(
 
   const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
 
-  const markdownEnabled = messageApp === "Telegram";
+  const markdownLinkEnabled = messageApp !== "Telegram";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
 
@@ -748,12 +748,12 @@ async function sendNameMentionUpdates(
 
     const pluralHandler = nameUpdates.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
-      markdownEnabled
+      markdownLinkEnabled
         ? `[${prenomNom}](${getJORFSearchLinkPeople(prenomNom)})`
         : `*${prenomNom}*`
     }\n\n`;
 
-    notification_text += formatSearchResult(nameUpdates, markdownEnabled, {
+    notification_text += formatSearchResult(nameUpdates, markdownLinkEnabled, {
       isConfirmation: false,
       isListing: true,
       displayName: "no"
@@ -787,7 +787,7 @@ async function sendPeopleUpdate(
 
   const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
 
-  const markdownEnabled = messageApp === "Telegram";
+  const markdownLinkEnabled = messageApp !== "WhatsApp";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les personnes que vous suivez :\n\n`;
 
@@ -807,16 +807,20 @@ async function sendPeopleUpdate(
 
     const pluralHandler = peopleRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
-      markdownEnabled
+      markdownLinkEnabled
         ? `[${prenomNom}](${getJORFSearchLinkPeople(prenomNom)})`
         : `*${prenomNom}*`
     }\n\n`;
 
-    notification_text += formatSearchResult(peopleRecords, markdownEnabled, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "no"
-    });
+    notification_text += formatSearchResult(
+      peopleRecords,
+      markdownLinkEnabled,
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "no"
+      }
+    );
 
     if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
@@ -844,7 +848,7 @@ async function sendOrganisationUpdate(
   let notification_text =
     "📢 Nouvelles publications parmi les organisations que suivez :\n\n";
 
-  const markdownEnabled = messageApp === "Telegram";
+  const markdownLinkEnabled = messageApp !== "WhatsApp";
 
   const keys = Array.from(organisationsUpdateRecordsMap.keys());
   const lastKey = keys[keys.length - 1];
@@ -868,12 +872,12 @@ async function sendOrganisationUpdate(
 
     const pluralHandler = orgRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
-      markdownEnabled
+      markdownLinkEnabled
         ? `[${orgName}](${getJORFSearchLinkOrganisation(orgId)})`
         : `*${orgName}*`
     }\n\n`;
 
-    notification_text += formatSearchResult(orgRecords, markdownEnabled, {
+    notification_text += formatSearchResult(orgRecords, markdownLinkEnabled, {
       isConfirmation: false,
       isListing: true,
       displayName: "all"
@@ -911,7 +915,7 @@ async function sendTagUpdates(
   let notification_text =
     "📢 Nouvelles publications parmi les fonctions que suivez :\n\n";
 
-  const markdownEnabled = messageApp === "Telegram";
+  const markdownLinkEnabled = messageApp !== "WhatsApp";
 
   const keys = Array.from(tagMap.keys());
   const lastKey = keys[keys.length - 1];
@@ -929,12 +933,12 @@ async function sendTagUpdates(
 
     const pluralHandler = tagRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${
-      markdownEnabled
+      markdownLinkEnabled
         ? `[${tagKey}](${getJORFSearchLinkFunctionTag(tag)})`
         : `*${tagKey}*`
     }*\n\n`;
 
-    notification_text += formatSearchResult(tagRecords, markdownEnabled, {
+    notification_text += formatSearchResult(tagRecords, markdownLinkEnabled, {
       isConfirmation: false,
       isListing: true,
       displayName: "all"
