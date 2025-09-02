@@ -38,6 +38,10 @@ export const commands: CommandType[] = [
     action: searchCommand
   },
   {
+    regex: /^🧐 Lister mes suivis$|^🧐 Mes suivis$|^Suivis$|^Suivi$/i,
+    action: listCommand
+  },
+  {
     regex: /^🕵️ Forcer le suivi de \s*(.*)/i,
     action: (session, msg) =>
       manualFollowCommand(
@@ -114,10 +118,6 @@ export const commands: CommandType[] = [
   {
     regex: /^Retirer \s*(.*)/i,
     action: unfollowFromStr
-  },
-  {
-    regex: /^🧐 Lister mes suivis$|^🧐 Mes suivis$|^Suivis$/i,
-    action: listCommand
   },
   {
     regex: /^❓ Aide|^❓ Aide & Contact/i,
