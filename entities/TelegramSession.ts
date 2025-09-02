@@ -1,5 +1,5 @@
 import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
-import TelegramBot from "node-telegram-bot-api";
+import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
@@ -37,16 +37,18 @@ export class TelegramSession implements ISession {
   messageApp = TelegramMessageApp;
   telegramBot: TelegramBot;
   language_code: string;
-  chatId: number;
+  chatId: string;
+  chatIdTg: ChatId;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
   mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 
-  constructor(telegramBot: TelegramBot, chatId: number, language_code: string) {
+  constructor(telegramBot: TelegramBot, chatId: string, language_code: string) {
     this.telegramBot = telegramBot;
     this.chatId = chatId;
+    this.chatIdTg = parseInt(chatId) as ChatId;
     this.language_code = language_code;
     this.mainMenuKeyboard = mainMenuKeyboardTelegram;
   }
@@ -62,7 +64,7 @@ export class TelegramSession implements ISession {
   }
 
   async sendTypingAction() {
-    await this.telegramBot.sendChatAction(this.chatId, "typing");
+    await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
   async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
@@ -84,13 +86,13 @@ export class TelegramSession implements ISession {
     for (let i = 0; i < mArr.length; i++) {
       if (i == mArr.length - 1 && keyboard !== undefined) {
         await this.telegramBot.sendMessage(
-          this.chatId,
+          this.chatIdTg,
           mArr[i],
           optionsWithKeyboard
         );
       } else {
         await this.telegramBot.sendMessage(
-          this.chatId,
+          this.chatIdTg,
           mArr[i],
           telegramMessageOption
         );
@@ -144,7 +146,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
  2. If the user is deactivated, the user is deleted from the database.
 */
 export async function sendTelegramMessage(
-  chatId: number,
+  chatId: string,
   message: string,
   retryNumber = 0
 ): Promise<boolean> {
@@ -153,6 +155,7 @@ export async function sendTelegramMessage(
     return false;
   }
   const mArr = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
+  const chatIdTg = parseInt(chatId);
 
   if (BOT_TOKEN === undefined) {
     throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
@@ -161,7 +164,7 @@ export async function sendTelegramMessage(
   try {
     for (; i < mArr.length; i++) {
       await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-        chat_id: chatId,
+        chat_id: chatIdTg,
         text: mArr[i],
         parse_mode: "markdown",
         link_preview_options: {

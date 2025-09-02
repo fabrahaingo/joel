@@ -38,7 +38,7 @@ export class WhatsAppSession implements ISession {
   messageApp = WhatsAppMessageApp;
   whatsAppAPI: WhatsAppAPI;
   language_code: string;
-  chatId: number;
+  chatId: string;
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
@@ -54,7 +54,7 @@ export class WhatsAppSession implements ISession {
   ) {
     this.whatsAppAPI = whatsAppAPI;
     this.botPhoneID = botPhoneID;
-    this.chatId = parseInt(userPhoneId);
+    this.chatId = userPhoneId;
     this.language_code = language_code;
     this.mainMenuKeyboard = mainMenuKeyboardWH;
   }
@@ -97,13 +97,13 @@ export class WhatsAppSession implements ISession {
 
         resp = await this.whatsAppAPI.sendMessage(
           this.botPhoneID,
-          this.chatId.toString(),
+          this.chatId,
           actionList
         );
       } else {
         resp = await this.whatsAppAPI.sendMessage(
           this.botPhoneID,
-          this.chatId.toString(),
+          this.chatId,
           new Text(mArr[i])
         );
       }

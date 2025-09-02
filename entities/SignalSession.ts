@@ -17,7 +17,7 @@ export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
   signalCli: SignalCli;
   language_code: string;
-  chatId: number;
+  chatId: string;
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
