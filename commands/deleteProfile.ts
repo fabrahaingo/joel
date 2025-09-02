@@ -13,7 +13,7 @@ export const deleteProfileCommand = async (
   try {
     if (session.user == null) {
       await session.sendMessage(
-        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`,
+        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`,
         session.mainMenuKeyboard
       );
       return;
