@@ -1,7 +1,7 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import { USER_SCHEMA_VERSION } from "../models/User.ts";
 import User from "../models/User.ts";
-import { IRawUser, LegacyRawUser_V1 } from "../models/LegacyUser.ts";
+import { IRawUser, LegacyRawUser_V2 } from "../models/LegacyUser.ts";
 import { sendTelegramMessage } from "./TelegramSession.ts";
 import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
@@ -13,72 +13,46 @@ import { sendMatrixMessage } from "./MatrixSession.ts";
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
 
-  return User.findOne({
+  const user: IUser | null = await User.findOne({
     messageApp: session.messageApp,
     chatId: session.chatId
   });
 
-  /*
-  // Legacy for Telegram users stored with a number chatId and without messageApp
-  // migrate the user schema if necessary
   if (user == null) {
-    const rawLegacyUser = await User.collection.findOne({
-      chatId: session.chatId
+    const legacyUser = await User.collection.findOne({
+      messageApp: session.messageApp,
+      chatId: parseInt(session.chatId)
     });
-    if (rawLegacyUser !== null) {
-      await migrateUser(rawLegacyUser);
+    if (legacyUser !== null) {
+      await migrateUser(legacyUser);
       // now return the migrated user
-      user = await User.findOne({
+      return User.findOne({
         messageApp: session.messageApp,
         chatId: session.chatId
       });
     }
   }
-   */
+  return null;
 }
 
-export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
-  if (rawUser.schemaVersion === USER_SCHEMA_VERSION) return rawUser as IUser;
+export async function migrateUser(rawUser: IRawUser): Promise<void> {
+  if (rawUser.schemaVersion === USER_SCHEMA_VERSION) return;
 
-  if (rawUser.schemaVersion == null || rawUser.schemaVersion === 1) {
-    const telegramMessageApp: MessageApp = "Telegram"; // To ensure typing
-
-    const legacyUser = rawUser as LegacyRawUser_V1;
-
-    await User.deleteOne({ chatId: rawUser.chatId });
-
-    let newFollowedFunctions: IUser["followedFunctions"] = [];
-    if (legacyUser.followedFunctions != null) {
-      const yesterday: Date = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      newFollowedFunctions = legacyUser.followedFunctions.map((tag) => ({
-        functionTag: tag,
-        lastUpdate: yesterday
-      }));
-    }
-
-    const user: IUser = new User({
-      chatId: legacyUser.chatId,
-      messageApp: telegramMessageApp,
-      language_code: legacyUser.language_code ?? "fr",
-      status: legacyUser.status ?? "active",
-      followedPeople: legacyUser.followedPeople ?? [],
-      followedFunctions: newFollowedFunctions,
-      followedOrganisations: [],
-      followedMeta: [],
-      followedNames: [],
-      schemaVersion: 2
-    });
+  if (rawUser.schemaVersion < 3) {
+    const legacyUser = rawUser as LegacyRawUser_V2;
 
     try {
-      await user.save();
+      const resp = await User.updateOne(
+        { chatId: legacyUser.chatId },
+        { $set: { schemaVersion: 3, chatId: legacyUser.chatId.toString() } }
+      );
     } catch (err) {
       console.error("Migration failed:", err);
     }
-    return user;
   } else {
     throw new Error("Unknown schema version");
   }
+  return;
 }
 
 export async function sendMessage(

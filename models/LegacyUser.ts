@@ -1,20 +1,39 @@
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { Document, Types } from "mongoose";
-import { IUser } from "../types.ts";
+import { IUser, MessageApp, WikidataId } from "../types.ts";
 
-export type IRawUser = LegacyRawUser_V1 | IUser;
+export type IRawUser = LegacyRawUser_V2 | IUser;
 
-export interface LegacyRawUser_V1 extends Document {
-  _id: number | string | Types.ObjectId;
+export interface LegacyRawUser_V2 extends Document {
+  _id: Types.ObjectId;
+  messageApp: MessageApp;
   chatId: number;
-  language_code?: string;
-  status?: string;
-  followedPeople?: {
+  language_code: string;
+  status: "active" | "blocked";
+  followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
   }[];
-  followedFunctions?: FunctionTags[];
-  schemaVersion?: number;
+  followedNames: string[];
+  followedOrganisations: {
+    wikidataId: WikidataId;
+    lastUpdate: Date;
+  }[];
+  followedFunctions: {
+    functionTag: FunctionTags;
+    lastUpdate: Date;
+  }[];
+  followedMeta: {
+    metaType: string;
+    lastUpdate: Date;
+  }[];
 
-  save: () => Promise<never>;
+  lastInteractionDay?: Date;
+  lastInteractionWeek?: Date;
+  lastInteractionMonth?: Date;
+
+  createdAt: Date;
+  updatedAt: Date;
+
+  schemaVersion: number;
 }
