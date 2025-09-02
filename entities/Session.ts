@@ -19,10 +19,10 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
   });
 
   if (user == null) {
-    const legacyUser = await User.collection.findOne({
+    const legacyUser = (await User.collection.findOne({
       messageApp: session.messageApp,
       chatId: parseInt(session.chatId)
-    });
+    })) as IRawUser | null;
     if (legacyUser !== null) {
       await migrateUser(legacyUser);
       // now return the migrated user
@@ -42,8 +42,8 @@ export async function migrateUser(rawUser: IRawUser): Promise<void> {
     const legacyUser = rawUser as LegacyRawUser_V2;
 
     try {
-      const resp = await User.updateOne(
-        { chatId: legacyUser.chatId },
+      const resp = await User.collection.updateOne(
+        { messageApp: legacyUser.messageApp, chatId: legacyUser.chatId },
         { $set: { schemaVersion: 3, chatId: legacyUser.chatId.toString() } }
       );
     } catch (err) {

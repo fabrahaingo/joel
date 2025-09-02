@@ -104,11 +104,6 @@ export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
-  collection: {
-    insertOne(arg): Promise<void>;
-    find(arg): FindCursor<IUser>; //  ← cursor, not IUser[]
-    findOne(arg): Promise<IUser | null>;
-  };
 }
 
 export interface IPeople {
