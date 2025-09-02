@@ -35,17 +35,19 @@ export default {
 };
 
 export type UmamiEvent =
+  | "/message-matrix"
   | "/message-signal"
   | "/message-telegram"
   | "/message-whatsapp"
+  | "/message-sent-matrix"
   | "/message-sent-signal"
   | "/message-sent-telegram"
+  | "/message-sent-whatsapp"
   | "/telegram-too-many-requests"
   | "/telegram-too-many-requests-aborted"
   | "/whatsapp-too-many-requests"
   | "/whatsapp-echo-refused"
   | "/whatsapp-too-many-requests-aborted"
-  | "/message-sent-whatsapp"
   | "/start"
   | "/start-from-people"
   | "/start-from-organisation"
