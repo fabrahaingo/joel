@@ -42,7 +42,7 @@ export async function migrateUser(rawUser: IRawUser): Promise<void> {
     const legacyUser = rawUser as LegacyRawUser_V2;
 
     try {
-      const resp = await User.collection.updateOne(
+      await User.collection.updateOne(
         { messageApp: legacyUser.messageApp, chatId: legacyUser.chatId },
         { $set: { schemaVersion: 3, chatId: legacyUser.chatId.toString() } }
       );

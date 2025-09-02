@@ -1,7 +1,6 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
 import umami from "./utils/umami";
-import { FindCursor } from "mongodb";
 
 export interface CommandType {
   regex: RegExp;
