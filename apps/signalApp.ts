@@ -42,7 +42,7 @@ await (async () => {
     // Listen for incoming messages
     signalCli.on("message", (message: ISignalMessage) => {
       void (async () => {
-        const msgText = message.envelope.dataMessage?.message;
+        const msgText = message.envelope.dataMessage?.message?.trim();
         if (msgText === undefined) return;
 
         await umami.log({ event: "/message-signal" });
@@ -60,7 +60,7 @@ await (async () => {
 
         for (const command of commands) {
           if (command.regex.test(msgText)) {
-            await command.action(signalSession, msgText.trim());
+            await command.action(signalSession, msgText);
             return;
           }
         }

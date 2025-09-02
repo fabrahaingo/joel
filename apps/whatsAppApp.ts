@@ -139,7 +139,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   if (from === WHATSAPP_PHONE_ID) return;
   if (message.type !== "text" && message.type !== "interactive") return;
 
-  const msgText = textFromMessage(message);
+  const msgText = textFromMessage(message)?.trim();
 
   if (phoneID !== WHATSAPP_PHONE_ID) {
     if (msgText != null)
@@ -162,7 +162,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     for (const command of commands) {
       if (command.regex.test(msgText)) {
-        await command.action(WHSession, msgText.trim());
+        await command.action(WHSession, msgText);
         return;
       }
     }

@@ -27,6 +27,7 @@ await (async () => {
           const tgUser: TelegramBot.User | undefined = tgMsg.from;
           if (tgUser === undefined || tgUser.is_bot) return; // Ignore bots
           if (tgMsg.text == undefined) return; // Ignore media messages without text
+          const msgText = tgMsg.text.trim();
 
           const tgSession = new TelegramSession(
             bot,
@@ -40,7 +41,7 @@ await (async () => {
             await tgSession.user.updateInteractionMetrics();
 
           // Process user message
-          await command.action(tgSession, tgMsg.text.trim());
+          await command.action(tgSession, msgText);
         } catch (error) {
           console.error("Error processing command:", error);
         }
