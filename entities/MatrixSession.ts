@@ -2,7 +2,11 @@ import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
-import { splitText } from "../utils/text.utils.ts";
+import {
+  markdown2html,
+  markdown2plainText,
+  splitText
+} from "../utils/text.utils.ts";
 import { MatrixClient } from "matrix-bot-sdk";
 
 const MATRIX_MESSAGE_CHAR_LIMIT = 3000;
@@ -62,16 +66,78 @@ export class MatrixSession implements ISession {
 
   async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
     const mArr = splitText(formattedData, MATRIX_MESSAGE_CHAR_LIMIT);
-    for (const elem of mArr) {
-      await this.matrixClient.sendMessage(this.roomId, {
+    for (let i = 0; i < mArr.length; i++) {
+      const promptId = await this.matrixClient.sendMessage(this.roomId, {
         msgtype: "m.text",
-        body: elem
-        //format: "org.matrix.custom.html",
-        //formatted_body: 'See the <a href="https://example.com">docs</a> and <b>bold</b>.',
+        body: markdown2plainText(mArr[i]),
+        format: "org.matrix.custom.html",
+        formatted_body: markdown2html(mArr[i])
       });
+      if (i == mArr.length - 1 && keyboard != null) {
+        for (const key of keyboard.flat().map((b) => b.text)) {
+          await this.matrixClient.sendEvent(this.roomId, "m.reaction", {
+            "m.relates_to": {
+              rel_type: "m.annotation",
+              event_id: promptId,
+              key // emoji or arbitrary string
+            }
+          });
+        }
+      }
       await umami.log({ event: "/message-sent-matrix" });
+      // prevent hitting the WH API rate limit
+      await new Promise(
+        (
+          resolve // We wait 1 second between messages to avoid dense bursts
+        ) => setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
     }
   }
+}
+
+export async function sendMatrixMessage(
+  matrixClient: MatrixClient,
+  chatId: string,
+  message: string
+): Promise<boolean> {
+  const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
+  try {
+    const roomId = await findUserDMRoomId(matrixClient, chatId);
+    if (!roomId) {
+      console.log("Could not find DM room for user " + chatId);
+      return false;
+    }
+    for (const elem of mArr) {
+      await matrixClient.sendMessage(roomId, {
+        msgtype: "m.text",
+        body: markdown2plainText(elem),
+        format: "org.matrix.custom.html",
+        formatted_body: markdown2html(elem)
+      });
+
+      await umami.log({ event: "/message-sent-matrix" });
+
+      // prevent hitting the Signal API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
+    }
+  } catch (error) {
+    console.log(error);
+    return false;
+  }
+  return true;
+}
+
+async function findUserDMRoomId(
+  client: MatrixClient,
+  userId: string
+): Promise<string | null> {
+  const data = (await client
+    .getAccountData("m.direct")
+    .catch(() => ({}))) as any;
+  const rooms = Array.isArray(data?.[userId]) ? (data[userId] as string[]) : [];
+  return rooms.length ? rooms[0] : null; // or validate with is1to1()
 }
 
 export async function extractMatrixSession(

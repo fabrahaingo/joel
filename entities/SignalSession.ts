@@ -2,9 +2,8 @@ import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
-import { splitText } from "../utils/text.utils.ts";
+import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
-import emojiRegex from "emoji-regex";
 
 const SignalMessageApp: MessageApp = "Signal";
 
@@ -33,7 +32,7 @@ export class SignalSession implements ISession {
   ) {
     this.signalCli = signalCli;
     this.botPhoneID = botPhoneID;
-    this.chatId = parseInt(userPhoneId);
+    this.chatId = userPhoneId;
     this.language_code = language_code;
     this.mainMenuKeyboard = [];
   }
@@ -55,12 +54,12 @@ export class SignalSession implements ISession {
 
   async sendMessage(formattedData: string): Promise<void> {
     const mArr = splitText(
-      cleanMessageForSignal(formattedData),
+      markdown2plainText(formattedData),
       SIGNAL_MESSAGE_CHAR_LIMIT
     );
 
     for (const elem of mArr) {
-      await this.signalCli.sendMessage(this.chatId.toString(), elem);
+      await this.signalCli.sendMessage(this.chatId, elem);
 
       await umami.log({ event: "/message-sent-signal" });
 
@@ -96,54 +95,13 @@ export async function extractSignalAppSession(
   return session;
 }
 
-function cleanMessageForSignal(msg: string): string {
-  // text-utils.ts
-  /**
-   * Remove every accent/diacritic and return plain ASCII letters.
-   * @example
-   *   deburr("À bientôt, garçon! — Ça va?")  // "A bientot, garcon! — Ca va?"
-   */
-  function deburr(input: string): string {
-    // 1. Use canonical decomposition (NFD) so "é" → "e\u0301"
-    const decomposed = input.normalize("NFD");
-
-    // 2. Strip all combining diacritical marks (U+0300–036F)
-    const stripped = decomposed.replace(
-      /\s[\u0300-\u036f]|[\u0300-\u036f]|🛡/gu,
-      ""
-    );
-
-    // 3. Map remaining special-case runes that don't decompose nicely
-    return stripped
-      .replace(/ß/g, "ss")
-      .replace(/Æ/g, "AE")
-      .replace(/æ/g, "ae")
-      .replace(/Ø/g, "O")
-      .replace(/ø/g, "o")
-      .replace(/Ð/g, "D")
-      .replace(/ð/g, "d")
-      .replace(/Þ/g, "Th")
-      .replace(/þ/g, "th")
-      .replace(/Œ/g, "OE")
-      .replace(/œ/g, "oe");
-  }
-
-  const emoteFreeText = msg.replace(emojiRegex(), "");
-
-  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/gu, "");
-
-  const accentFreeText = deburr(formattingFreeText);
-
-  return accentFreeText;
-}
-
 export async function sendSignalAppMessage(
   signalCli: SignalCli,
   userPhoneId: string,
   message: string
 ): Promise<boolean> {
   try {
-    const cleanMessage = cleanMessageForSignal(message);
+    const cleanMessage = markdown2plainText(message);
     const userPhoneIdInt = userPhoneId.startsWith("+")
       ? userPhoneId
       : "+" + userPhoneId;

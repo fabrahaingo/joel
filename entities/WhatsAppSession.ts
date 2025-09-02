@@ -158,7 +158,7 @@ const { WHATSAPP_PHONE_ID } = process.env;
 
 export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
-  userPhoneId: number,
+  userPhoneId: string,
   message: string,
   retryNumber = 0
 ): Promise<boolean> {
@@ -176,7 +176,7 @@ export async function sendWhatsAppMessage(
     for (let i = 0; i < mArr.length; i++) {
       const resp = await whatsAppAPI.sendMessage(
         WHATSAPP_PHONE_ID,
-        userPhoneId.toString(),
+        userPhoneId,
         new Text(mArr[i])
       );
       if (resp.error) {

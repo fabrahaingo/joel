@@ -32,6 +32,11 @@ import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
+import {
+  MatrixClient,
+  RustSdkCryptoStorageProvider,
+  SimpleFsStorageProvider
+} from "matrix-bot-sdk";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 30;
@@ -39,6 +44,23 @@ const SHIFT_DAYS = 30;
 const { ENABLED_APPS } = process.env;
 if (ENABLED_APPS === undefined) throw new Error("ENABLED_APPS env var not set");
 const enabledApps = JSON.parse(ENABLED_APPS) as MessageApp[];
+
+let matrixClient: MatrixClient | undefined = undefined;
+if (enabledApps.includes("Matrix")) {
+  const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
+  if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined)
+    throw new Error("MATRIX env is not set");
+
+  const storageProvider = new SimpleFsStorageProvider("matrix-bot.json");
+  const cryptoProvider = new RustSdkCryptoStorageProvider("matrix-crypto");
+
+  matrixClient = new MatrixClient(
+    "https://" + MATRIX_HOME_URL,
+    MATRIX_BOT_TOKEN,
+    storageProvider,
+    cryptoProvider
+  );
+}
 
 let whatsAppAPI: WhatsAppAPI | undefined = undefined;
 if (enabledApps.includes("WhatsApp")) {
@@ -68,6 +90,12 @@ if (enabledApps.includes("Signal")) {
   signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
   await signalCli.connect();
 }
+
+const messageAppsOptions = {
+  matrixClient,
+  SignalCli: signalCli,
+  WhatsAppAPI: whatsAppAPI
+};
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -735,10 +763,12 @@ async function sendNameMentionUpdates(
     if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
-    signalCli: signalCli,
-    whatsAppAPI: whatsAppAPI
-  });
+  const messageSent = await sendMessage(
+    messageApp,
+    chatId,
+    notification_text,
+    messageAppsOptions
+  );
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-name" });
@@ -791,10 +821,12 @@ async function sendPeopleUpdate(
     if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
-    signalCli: signalCli,
-    whatsAppAPI: whatsAppAPI
-  });
+  const messageSent = await sendMessage(
+    messageApp,
+    chatId,
+    notification_text,
+    messageAppsOptions
+  );
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-people" });
@@ -850,10 +882,12 @@ async function sendOrganisationUpdate(
     if (orgId !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
-    signalCli: signalCli,
-    whatsAppAPI: whatsAppAPI
-  });
+  const messageSent = await sendMessage(
+    messageApp,
+    chatId,
+    notification_text,
+    messageAppsOptions
+  );
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-organisation" });
@@ -909,10 +943,12 @@ async function sendTagUpdates(
     if (tag !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
-    signalCli: signalCli,
-    whatsAppAPI: whatsAppAPI
-  });
+  const messageSent = await sendMessage(
+    messageApp,
+    chatId,
+    notification_text,
+    messageAppsOptions
+  );
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-function" });

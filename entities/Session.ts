@@ -7,6 +7,8 @@ import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { sendSignalAppMessage } from "./SignalSession.ts";
 import { SignalCli } from "signal-sdk";
+import { MatrixClient } from "matrix-bot-sdk";
+import { sendMatrixMessage } from "./MatrixSession.ts";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
@@ -81,21 +83,23 @@ export async function migrateUser(rawUser: IRawUser): Promise<IUser> {
 
 export async function sendMessage(
   messageApp: MessageApp,
-  chatId: number,
+  chatId: string,
   message: string,
   options?: {
+    matrixClient?: MatrixClient;
     signalCli?: SignalCli;
     whatsAppAPI?: WhatsAppAPI;
   }
 ): Promise<boolean> {
   switch (messageApp) {
+    case "Matrix":
+      if (options?.matrixClient == null)
+        throw new Error("matrixClient is required");
+      return await sendMatrixMessage(options.matrixClient, chatId, message);
+
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");
-      return await sendSignalAppMessage(
-        options.signalCli,
-        chatId.toString(),
-        message
-      );
+      return await sendSignalAppMessage(options.signalCli, chatId, message);
 
     case "Telegram":
       return await sendTelegramMessage(chatId, message);
