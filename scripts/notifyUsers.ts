@@ -932,11 +932,11 @@ async function sendTagUpdates(
     // updatedRecords.reverse();
 
     const pluralHandler = tagRecords.length > 1 ? "s" : "";
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction ${
       markdownLinkEnabled
         ? `[${tagKey}](${getJORFSearchLinkFunctionTag(tag)})`
         : `*${tagKey}*`
-    }*\n\n`;
+    }\n\n`;
 
     notification_text += formatSearchResult(tagRecords, markdownLinkEnabled, {
       isConfirmation: false,
