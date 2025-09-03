@@ -98,21 +98,28 @@ export class MatrixSession implements ISession {
 export async function sendMatrixMessage(
   matrixClient: MatrixClient,
   chatId: string,
-  message: string
+  message: string,
+  roomId?: string,
+  retryNumber = 0
 ): Promise<boolean> {
+  if (retryNumber > 5) {
+    await umami.log({ event: "/matrix-too-many-requests-aborted" });
+    return false;
+  } // give up after 5 retries
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
+  let i = 0;
   try {
-    const roomId = await findUserDMRoomId(matrixClient, chatId);
+    roomId ??= await findUserDMRoomId(matrixClient, chatId);
     if (!roomId) {
       console.log("Could not find DM room for user " + chatId);
       return false;
     }
-    for (const elem of mArr) {
+    for (; i < mArr.length; i++) {
       await matrixClient.sendMessage(roomId, {
         msgtype: "m.text",
-        body: markdown2plainText(elem),
+        body: markdown2plainText(mArr[i]),
         format: "org.matrix.custom.html",
-        formatted_body: markdown2html(elem)
+        formatted_body: markdown2html(mArr[i])
       });
 
       await umami.log({ event: "/message-sent-matrix" });
@@ -123,7 +130,35 @@ export async function sendMatrixMessage(
       );
     }
   } catch (error) {
-    console.log(error);
+    const mError = error as MatrixError;
+    switch (mError.errcode) {
+      case "M_LIMIT_EXCEEDED": {
+        await umami.log({ event: "/matrix-too-many-requests" });
+        const retryAfterms = mError.retryAfterMs ?? 1000;
+        await new Promise((resolve) =>
+          setTimeout(
+            resolve,
+            Math.pow((2 * retryAfterms) / 1000, retryNumber) * 1000
+          )
+        );
+        return sendMatrixMessage(
+          matrixClient,
+          chatId,
+          mArr.slice(i).join("\n"),
+          roomId,
+          retryNumber + 1
+        );
+      }
+      case "M_FORBIDDEN":
+        await umami.log({ event: "/user-blocked-joel" });
+        await User.updateOne(
+          { messageApp: "Matrix", chatId: chatId },
+          { $set: { status: "blocked" } }
+        );
+        break;
+      default:
+        console.log(error);
+    }
     return false;
   }
   return true;
@@ -132,12 +167,12 @@ export async function sendMatrixMessage(
 async function findUserDMRoomId(
   client: MatrixClient,
   userId: string
-): Promise<string | null> {
+): Promise<string | undefined> {
   const data = (await client
     .getAccountData("m.direct")
     .catch(() => ({}))) as any;
   const rooms = Array.isArray(data?.[userId]) ? (data[userId] as string[]) : [];
-  return rooms.length ? rooms[0] : null; // or validate with is1to1()
+  return rooms.length ? rooms[0] : undefined; // or validate with is1to1()
 }
 
 export async function extractMatrixSession(
