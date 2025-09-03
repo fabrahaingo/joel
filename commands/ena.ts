@@ -279,7 +279,7 @@ export const suivreFromJOReference = async (
     if (tgSession == null) return;
     const tgBot = tgSession.telegramBot;
 
-    const text = `Entrez la référence JORF/BO et l'*intégralité de personnes mentionnées* sera ajoutée à la liste de vos contacts.\n
+    const text = `Entrez la référence JORF/BO et l'*intégralité des personnes mentionnées* sera ajoutée à la liste de vos contacts.\n
 ⚠️ Attention, un nombre important de suivis seront ajoutés en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n
 Format: *JORFTEXT000052060473*`;
     const question = await tgBot.sendMessage(session.chatId, text, {
