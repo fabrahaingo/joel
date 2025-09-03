@@ -7,12 +7,12 @@ import {
   markdown2plainText,
   splitText
 } from "../utils/text.utils.ts";
-import { MatrixClient } from "matrix-bot-sdk";
+import { MatrixClient, MatrixError } from "matrix-bot-sdk";
 
-const MATRIX_MESSAGE_CHAR_LIMIT = 3000;
-const MATRIX_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
+const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
+const MATRIX_COOL_DOWN_DELAY_SECONDS = 0.5;
 
-export const MATRIX_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
+export const MATRIX_API_SENDING_CONCURRENCY = 1;
 
 const mainMenuKeyboardMatrix: Keyboard = [
   [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
