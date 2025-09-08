@@ -165,7 +165,7 @@ export async function searchPersonHistory(
     if (historyType === "latest") {
       text += formatSearchResult(
         JORFRes_data.slice(0, 2),
-        session.messageApp === "Telegram",
+        session.messageApp !== "WhatsApp",
         {
           isConfirmation: true
         }
@@ -173,7 +173,7 @@ export async function searchPersonHistory(
     } else {
       text += formatSearchResult(
         JORFRes_data,
-        session.messageApp === "Telegram"
+        session.messageApp !== "WhatsApp"
       );
     }
 
@@ -233,10 +233,11 @@ export async function searchPersonHistory(
         text += `\nVous suivez *${prenomNom}* ✅`;
       } else {
         text += `\nVous ne suivez pas *${prenomNom}* 🙅‍♂️\n\n`;
-        text += `Pour suivre, utilisez la commande:\n*Suivre ${prenomNom}*`;
+        if (session.messageApp === "WhatsApp")
+          text += `Pour suivre, utilisez la commande:\n*Suivre ${prenomNom}*`;
       }
     }
-    if (session.messageApp === "Telegram") {
+    if (session.messageApp !== "WhatsApp") {
       await session.sendMessage(text, temp_keyboard);
     } else {
       if (fromFollow)

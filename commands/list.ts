@@ -160,7 +160,7 @@ export const listCommand = async (session: ISession) => {
         const followedName = userFollows.peopleAndNames[j];
         text += `${String(i + k + j + 1)}. *${followedName.nomPrenom}*`;
         if (followedName.JORFSearchLink !== undefined) {
-          if (session.messageApp === "Telegram")
+          if (session.messageApp !== "WhatsApp")
             text += ` - [JORFSearch](${followedName.JORFSearchLink})`;
           else text += `\n${followedName.JORFSearchLink}`;
           text += `\n`;
