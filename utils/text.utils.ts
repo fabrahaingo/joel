@@ -197,5 +197,7 @@ export function markdown2html(input: string): string {
 
   out = out.replace(/_([^_\s][^_]*?)_/g, (_m, t: string) => `<em>${t}</em>`);
 
+  out = out.replace(/\n/g, `<br />`);
+
   return out;
 }
