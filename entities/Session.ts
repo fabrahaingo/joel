@@ -32,7 +32,7 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
       });
     }
   }
-  return null;
+  return user;
 }
 
 export async function migrateUser(rawUser: IRawUser): Promise<void> {
