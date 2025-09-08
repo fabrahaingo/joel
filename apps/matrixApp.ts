@@ -29,11 +29,11 @@ const matrixClient = new MatrixClient(
 AutojoinRoomsMixin.setupOnClient(matrixClient);
 
 // Before we start the bot, register our command handler
-matrixClient.on("room.message", handleCommand);
+matrixClient.on("room.event", handleCommand);
 
 matrixClient.on("room.join", (roomId: string, event: any) => {
   // The client has been invited to `roomId`
-  // if only an other person in the room: send welcome message
+  // if only an other person in the room: send a welcome message
 });
 
 await (async function () {
@@ -47,9 +47,17 @@ await (async function () {
 // This is the command handler we registered a few lines up
 function handleCommand(roomId: string, event: any) {
   void (async () => {
-    // Don't handle unhelpful events (ones that aren't text messages, are redacted, or sent by us)
-    if (event.content.msgtype !== "m.text") return;
-    const msgText = event.content.body.trim() as string;
+    let msgText: string;
+    switch (event.type) {
+      case "m.room.message":
+        msgText = event.content.body;
+        break;
+      case "m.reaction":
+        msgText = event.content["m.relates_to"].key;
+        break;
+    }
+    if (msgText == null) return;
+    msgText = msgText.trim();
 
     // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
     if (/^@_?server:/.test(event.sender)) {
