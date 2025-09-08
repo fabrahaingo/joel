@@ -10,7 +10,7 @@ import {
 import { MatrixClient, MatrixError } from "matrix-bot-sdk";
 
 const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
-const MATRIX_COOL_DOWN_DELAY_SECONDS = 0.5;
+const MATRIX_COOL_DOWN_DELAY_SECONDS = 1;
 
 export const MATRIX_API_SENDING_CONCURRENCY = 1;
 
@@ -64,34 +64,75 @@ export class MatrixSession implements ISession {
     //await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
+  async sendReactions(
+    reactions: string[],
+    event_id: string,
+    idx = 0,
+    retryNumber = 0
+  ): Promise<boolean> {
+    if (retryNumber > 5) return false;
+
+    let i = idx;
+    try {
+      for (; i < reactions.length; i++) {
+        const content = {
+          "m.relates_to": {
+            rel_type: "m.annotation",
+            event_id,
+            key: reactions[i]
+          }
+        };
+        await this.matrixClient.sendEvent(this.roomId, "m.reaction", content);
+      }
+    } catch (error) {
+      const mError = error as MatrixError;
+      switch (mError.errcode) {
+        case "M_LIMIT_EXCEEDED": {
+          await umami.log({ event: "/matrix-too-many-requests" });
+          const retryAfterMs =
+            mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs * 1000)
+          );
+          return await this.sendReactions(
+            reactions,
+            event_id,
+            idx,
+            retryNumber + 1
+          );
+        }
+        default:
+          console.log(error);
+      }
+      return false;
+    }
+    return true;
+  }
+
   async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
     const mArr = splitText(formattedData, MATRIX_MESSAGE_CHAR_LIMIT);
-    for (let i = 0; i < mArr.length; i++) {
-      const promptId = await this.matrixClient.sendMessage(this.roomId, {
+    if (mArr.length === 0) return;
+
+    let promptId = "";
+    for (const elem of mArr) {
+      promptId = await this.matrixClient.sendMessage(this.roomId, {
         msgtype: "m.text",
-        body: markdown2plainText(mArr[i]),
+        body: markdown2plainText(elem),
         format: "org.matrix.custom.html",
-        formatted_body: markdown2html(mArr[i])
+        formatted_body: markdown2html(elem)
       });
-      if (i == mArr.length - 1 && keyboard != null) {
-        for (const key of keyboard.flat().map((b) => b.text)) {
-          await this.matrixClient.sendEvent(this.roomId, "m.reaction", {
-            "m.relates_to": {
-              rel_type: "m.annotation",
-              event_id: promptId,
-              key // emoji or arbitrary string
-            }
-          });
-        }
-      }
       await umami.log({ event: "/message-sent-matrix" });
-      // prevent hitting the WH API rate limit
       await new Promise(
         (
           resolve // We wait 1 second between messages to avoid dense bursts
         ) => setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
+    if (keyboard != null)
+      await this.sendReactions(
+        keyboard.flat().map((k) => k.text),
+        promptId
+      );
   }
 }
 
@@ -134,12 +175,10 @@ export async function sendMatrixMessage(
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
         await umami.log({ event: "/matrix-too-many-requests" });
-        const retryAfterms = mError.retryAfterMs ?? 1000;
+        const retryAfterMs =
+          mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
         await new Promise((resolve) =>
-          setTimeout(
-            resolve,
-            Math.pow((2 * retryAfterms) / 1000, retryNumber) * 1000
-          )
+          setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs * 1000)
         );
         return sendMatrixMessage(
           matrixClient,
