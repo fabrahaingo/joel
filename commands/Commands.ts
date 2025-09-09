@@ -51,7 +51,7 @@ export const commands: CommandType[] = [
   },
   {
     regex:
-      /^SuivreR|^SuiviR|^Suivre R|^Suivi R|^Suivre à partir d'une référence JORF\/BO/i,
+      /^SuivreR|^SuiviR|^Suivre R |^Suivi R |^Suivre à partir d'une référence JORF\/BO/i,
     action: suivreFromJOReference
   },
   {
@@ -59,7 +59,7 @@ export const commands: CommandType[] = [
     action: manualFollowCommand
   },
   {
-    regex: /^Suivre N|^Suivi N/i,
+    regex: /^Suivre N |^Suivi N /i,
     action: (session, msg) =>
       manualFollowCommand(
         session,
@@ -76,7 +76,7 @@ export const commands: CommandType[] = [
     action: followFunctionFromStrCommand
   },
   {
-    regex: /^Suivre F|^Suivi F|^Rechercher F|^Recherche F/i,
+    regex: /^Suivre F |^Suivi F |^Rechercher F |^Recherche F /i,
     action: (session, msg) =>
       followFunctionFromStrCommand(
         session,
@@ -88,7 +88,7 @@ export const commands: CommandType[] = [
     action: followOrganisationsFromWikidataIdStr
   },
   {
-    regex: /^Suivre O|^Suivi O/i,
+    regex: /^Suivre O |^Suivi O /i,
     action: (session, msg) =>
       followOrganisationsFromWikidataIdStr(
         session,
@@ -96,7 +96,7 @@ export const commands: CommandType[] = [
       )
   },
   {
-    regex: /^Rechercher O|^Recherche O/i,
+    regex: /^Rechercher O |^Recherche O /i,
     action: (session, msg) =>
       searchOrganisationFromStr(
         session,
