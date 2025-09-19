@@ -23,14 +23,19 @@ import {
 } from "./followFunction.ts";
 import { listCommand, unfollowFromStr } from "./list.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import {
+  clearFollowUp,
+  handleFollowUpMessage
+} from "../entities/FollowUpManager.ts";
 
 export async function processMessage(
   session: ISession,
   msg: string
 ): Promise<void> {
-  if (session.isReply) return;
   // remove all spaces and replace them with a single space
   const cleanMsg = msg.trim().replace(/ +/g, " ");
+
+  if (session.isReply) return;
 
   // Look through all keyboard keys to find a match
   for (const keyboardKey of Object.values(KEYBOARD_KEYS)) {
@@ -39,6 +44,7 @@ export async function processMessage(
     // Check for an exact match
     if (buttonText === cleanMsg) {
       // We found a matching keyboard button, execute its action
+      clearFollowUp(session);
       await keyboardKey.action(session, cleanMsg);
       return;
     }
@@ -46,10 +52,15 @@ export async function processMessage(
 
   for (const command of commands) {
     if (command.regex.test(cleanMsg)) {
+      clearFollowUp(session);
       await command.action(session, cleanMsg);
       return;
     }
   }
+
+  if (await handleFollowUpMessage(session, cleanMsg)) return;
+
+  await defaultCommand(session);
 }
 
 export const commands: CommandType[] = [
@@ -168,7 +179,7 @@ export const commands: CommandType[] = [
     action: promosCommand
   },
   {
-    regex: /^\/secret|^\/ENA|^\/INSP/i,
+    regex: /^\/secret$|^\/ENA$|^\/INSP$|^ENA$|^INSP$/i,
     action: enaCommand
   },
   {
@@ -183,9 +194,5 @@ export const commands: CommandType[] = [
   {
     regex: /^\/supprimerCompte/i,
     action: deleteProfileCommand
-  },
-  {
-    regex: /.*/,
-    action: defaultCommand
   }
 ];

@@ -1,16 +1,12 @@
 import umami from "../utils/umami.ts";
-import TelegramBot from "node-telegram-bot-api";
 import Organisation from "../models/Organisation.ts";
 import User from "../models/User.ts";
 import { IOrganisation, ISession, IUser, WikidataId } from "../types.ts";
 import axios from "axios";
 import { parseIntAnswers } from "../utils/text.utils.ts";
-import {
-  extractTelegramSession,
-  TelegramSession
-} from "../entities/TelegramSession.ts";
 import { getJORFSearchLinkOrganisation } from "../utils/JORFSearch.utils.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
@@ -61,44 +57,308 @@ async function searchOrganisationWikidataId(
   }
 }
 
+const ORGANISATION_SEARCH_PROMPT =
+  "Entrez le nom ou l'identifiant Wikidata de l'organisation que vous souhaitez suivre:\n" +
+  "Exemples:\n*Conseil d'État* ou *Q769657*\n*Conseil constitutionnel* ou *Q1127218*";
+
+const ORGANISATION_SEARCH_KEYBOARD: Keyboard = [
+  [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key],
+  [KEYBOARD_KEYS.MAIN_MENU.key]
+];
+
+const ORGANISATION_SELECTION_PROMPT =
+  "Entrez le(s) nombre(s) correspondant au(x) organisation(s) à suivre.\nExemple: 1 4 7";
+
+const ORGANISATION_SELECTION_KEYBOARD: Keyboard = [
+  [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key],
+  [KEYBOARD_KEYS.MAIN_MENU.key]
+];
+
+const ORGANISATION_CONFIRM_KEYBOARD: Keyboard = [
+  [{ text: "Oui" }, { text: "Non" }],
+  [KEYBOARD_KEYS.MAIN_MENU.key]
+];
+
+async function askOrganisationSelectionQuestion(
+  session: ISession,
+  context: OrganisationSelectionContext
+): Promise<void> {
+  await askFollowUpQuestion(
+    session,
+    ORGANISATION_SELECTION_PROMPT,
+    handleOrganisationSelection,
+    {
+      context,
+      keyboard:
+        session.messageApp === "WhatsApp"
+          ? undefined
+          : ORGANISATION_SELECTION_KEYBOARD
+    }
+  );
+}
+
+async function askOrganisationConfirmationQuestion(
+  session: ISession,
+  context: OrganisationConfirmationContext
+): Promise<void> {
+  await askFollowUpQuestion(
+    session,
+    "Voulez-vous ajouter cette organisation à vos suivis ? (répondez *oui* ou *non*)",
+    handleOrganisationConfirmation,
+    {
+      context,
+      keyboard:
+        session.messageApp === "WhatsApp"
+          ? undefined
+          : ORGANISATION_CONFIRM_KEYBOARD
+    }
+  );
+}
+
+interface OrganisationSelectionContext {
+  organisations: { nom: string; wikidataId: WikidataId }[];
+}
+
+interface OrganisationConfirmationContext {
+  organisation: { nom: string; wikidataId: WikidataId };
+}
+
+async function askOrganisationSearch(session: ISession): Promise<void> {
+  await askFollowUpQuestion(
+    session,
+    ORGANISATION_SEARCH_PROMPT,
+    handleOrganisationSearchAnswer,
+    {
+      keyboard:
+        session.messageApp === "WhatsApp"
+          ? undefined
+          : ORGANISATION_SEARCH_KEYBOARD
+    }
+  );
+}
+
+async function handleOrganisationSearchAnswer(
+  session: ISession,
+  answer: string
+): Promise<boolean> {
+  const trimmedAnswer = answer.trim();
+
+  if (trimmedAnswer.length === 0) {
+    await session.sendMessage(
+      `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
+      session.messageApp === "WhatsApp" ? undefined : ORGANISATION_SEARCH_KEYBOARD
+    );
+    await askOrganisationSearch(session);
+    return true;
+  }
+
+  if (trimmedAnswer.startsWith("/")) {
+    return false;
+  }
+
+  await session.sendTypingAction();
+  await processOrganisationSearch(session, trimmedAnswer, false);
+  return true;
+}
+
+async function processOrganisationSearch(
+  session: ISession,
+  orgName: string,
+  triggerUmami = true
+): Promise<void> {
+  if (triggerUmami) await session.log({ event: "/follow-organisation" });
+
+  const orgResults = await searchOrganisationWikidataId(orgName);
+
+  const keyboard =
+    session.messageApp === "WhatsApp"
+      ? undefined
+      : ORGANISATION_SEARCH_KEYBOARD;
+
+  if (orgResults.length == 0) {
+    let text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.`;
+    if (session.messageApp === "WhatsApp") {
+      text += `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
+    } else {
+      text += `\n\nFormat:\n*Nom de l'organisation*\nou\n*WikidataId de l'organisation*`;
+    }
+    await session.sendMessage(text, keyboard);
+    await askOrganisationSearch(session);
+    return;
+  }
+
+  session.user = await User.findOrCreate(session);
+
+  if (orgResults.length === 1) {
+    await handleSingleOrganisationResult(session, orgResults[0]);
+    return;
+  }
+
+  await handleMultipleOrganisationResults(session, orgResults);
+}
+
+async function handleSingleOrganisationResult(
+  session: ISession,
+  organisation: { nom: string; wikidataId: WikidataId }
+): Promise<void> {
+  const orgUrl = getJORFSearchLinkOrganisation(organisation.wikidataId);
+
+  let text = `Une organisation correspond à votre recherche:\n\n*${organisation.nom}* (${organisation.wikidataId})`;
+  if (session.messageApp === "WhatsApp") {
+    text += `\n${orgUrl}`;
+  } else {
+    text += ` - [JORFSearch](${orgUrl})`;
+  }
+
+  if (session.user && isOrganisationAlreadyFollowed(session.user, organisation.wikidataId)) {
+    text += `\nVous suivez déjà *${organisation.nom}* ✅`;
+    await session.sendMessage(
+      text,
+      session.messageApp === "WhatsApp" ? undefined : ORGANISATION_SEARCH_KEYBOARD
+    );
+    await askOrganisationSearch(session);
+    return;
+  }
+
+  text += `\nSouhaitez-vous suivre cette organisation ?`;
+
+  await session.sendMessage(text);
+  await askOrganisationConfirmationQuestion(session, { organisation });
+}
+
+async function handleMultipleOrganisationResults(
+  session: ISession,
+  orgResults: { nom: string; wikidataId: WikidataId }[]
+): Promise<void> {
+  let text = "Voici les organisations correspondant à votre recherche :\n\n";
+  for (let k = 0; k < orgResults.length; k++) {
+    const organisation_k = orgResults[k];
+    const orgUrl_k = getJORFSearchLinkOrganisation(organisation_k.wikidataId);
+
+    text += `${String(k + 1)}. *${organisation_k.nom}* (${organisation_k.wikidataId})`;
+
+    if (session.messageApp === "WhatsApp") {
+      text += `\n${orgUrl_k}`;
+    } else {
+      text += ` - [JORFSearch](${orgUrl_k})`;
+    }
+
+    if (
+      session.user != undefined &&
+      isOrganisationAlreadyFollowed(session.user, organisation_k.wikidataId)
+    )
+      text += ` - Suivi ✅`;
+
+    text += "\n\n";
+  }
+
+  if (orgResults.length >= 10)
+    text += "Des résultats ont pu être omis en raison de la taille de la liste.\n\n";
+
+  await session.sendMessage(text);
+  await askOrganisationSelectionQuestion(session, {
+    organisations: orgResults
+  });
+}
+
+async function handleOrganisationSelection(
+  session: ISession,
+  answer: string,
+  context: OrganisationSelectionContext
+): Promise<boolean> {
+  const trimmedAnswer = answer.trim();
+
+  if (trimmedAnswer.length === 0) {
+    await session.sendMessage(
+      `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
+      session.messageApp === "WhatsApp"
+        ? undefined
+        : ORGANISATION_SELECTION_KEYBOARD
+    );
+    await askOrganisationSelectionQuestion(session, context);
+    return true;
+  }
+
+  if (trimmedAnswer.startsWith("/")) {
+    return false;
+  }
+
+  const answers = parseIntAnswers(trimmedAnswer, context.organisations.length);
+
+  if (answers.length === 0) {
+    await session.sendMessage(
+      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(context.organisations.length)}. 👎`,
+      session.messageApp === "WhatsApp"
+        ? undefined
+        : ORGANISATION_SELECTION_KEYBOARD
+    );
+    await askOrganisationSelectionQuestion(session, context);
+    return true;
+  }
+
+  const selectedIds = answers.map(
+    (idx) => context.organisations[idx - 1].wikidataId
+  );
+
+  await followOrganisationsFromWikidataIdStr(
+    session,
+    `SuivreO ${selectedIds.join(" ")}`,
+    false
+  );
+  return true;
+}
+
+async function handleOrganisationConfirmation(
+  session: ISession,
+  answer: string,
+  context: OrganisationConfirmationContext
+): Promise<boolean> {
+  const trimmedAnswer = answer.trim();
+
+  if (trimmedAnswer.length === 0) {
+    await session.sendMessage(
+      `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
+      session.messageApp === "WhatsApp"
+        ? undefined
+        : ORGANISATION_CONFIRM_KEYBOARD
+    );
+    await askOrganisationConfirmationQuestion(session, context);
+    return true;
+  }
+
+  if (trimmedAnswer.startsWith("/")) {
+    return false;
+  }
+
+  if (/oui/i.test(trimmedAnswer)) {
+    await followOrganisationsFromWikidataIdStr(
+      session,
+      `SuivreO ${context.organisation.wikidataId}`,
+      false
+    );
+    return true;
+  }
+
+  if (/non/i.test(trimmedAnswer)) {
+    await session.sendMessage(`Ok, aucun ajout n'a été effectué. 👌`);
+    await askOrganisationSearch(session);
+    return true;
+  }
+
+  await session.sendMessage(
+    `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
+    session.messageApp === "WhatsApp"
+      ? undefined
+      : ORGANISATION_CONFIRM_KEYBOARD
+  );
+  await askOrganisationConfirmationQuestion(session, context);
+  return true;
+}
+
 export const followOrganisationTelegram = async (session: ISession) => {
   try {
     await session.log({ event: "/follow-organisation" });
-    const tgSession: TelegramSession | undefined = await extractTelegramSession(
-      session,
-      true
-    );
-    if (tgSession == null) return;
-
-    const tgBot = tgSession.telegramBot;
-
-    await session.sendTypingAction();
-    const question: TelegramBot.Message = await tgBot.sendMessage(
-      tgSession.chatIdTg,
-      `Entrez le *nom* ou l'*identifiant* [Wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
-Exemples:
-*Conseil d'État* ou *Q769657*
-*Conseil constitutionnel* ou *Q1127218*`,
-      {
-        parse_mode: "Markdown",
-        reply_markup: {
-          force_reply: true
-        }
-      }
-    );
-    tgBot.onReplyToMessage(
-      tgSession.chatIdTg,
-      question.message_id,
-      (tgMsg1: TelegramBot.Message) => {
-        void (async () => {
-          await searchOrganisationFromStr(
-            session,
-            "SuivreO " + (tgMsg1.text ?? ""),
-            false
-          );
-        })();
-      }
-    );
+    await askOrganisationSearch(session);
   } catch (error) {
     console.log(error);
   }
@@ -110,123 +370,8 @@ export const searchOrganisationFromStr = async (
   triggerUmami = true
 ) => {
   try {
-    if (triggerUmami) await session.log({ event: "/follow-organisation" });
-
     const orgName = msg.split(" ").splice(1).join(" ");
-
-    const orgResults = await searchOrganisationWikidataId(orgName);
-
-    const tempKeyboard: Keyboard = [
-      [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key],
-      [KEYBOARD_KEYS.MAIN_MENU.key]
-    ];
-
-    if (orgResults.length == 0) {
-      let text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.`;
-      if (session.messageApp === "Telegram") {
-        text += `\n\nFormat:\n*Nom de l'organisation*\nou\n*WikidataId de l'organisation*`;
-        await session.sendMessage(text, tempKeyboard);
-      } else {
-        text += `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
-        await session.sendMessage(text);
-      }
-      return;
-    }
-
-    if (orgResults.length == 1) {
-      session.user = await User.findOrCreate(session);
-
-      const orgUrl = getJORFSearchLinkOrganisation(orgResults[0].wikidataId);
-
-      let text = `Une organisation correspond à votre recherche:\n\n*${orgResults[0].nom}* (${orgResults[0].wikidataId})`;
-      if (session.messageApp === "Telegram")
-        text += ` - [JORFSearch](${orgUrl})\n`;
-      else text += `\n${orgUrl}\n`;
-
-      if (
-        isOrganisationAlreadyFollowed(session.user, orgResults[0].wikidataId)
-      ) {
-        text += `\nVous suivez déjà *${orgResults[0].nom} * ✅`;
-        if (session.messageApp === "Telegram")
-          await session.sendMessage(text, tempKeyboard);
-        else await session.sendMessage(text);
-        return;
-      } else {
-        text += `\nPour être notifié de toutes les nominations en rapport avec cette organisation ?\nUtilisez le bouton ci-dessous ou la commande: *SuivreO ${orgResults[0].wikidataId}*`;
-        await session.sendMessage(text, [
-          [{ text: `SuivreO ${orgResults[0].wikidataId}` }],
-          [KEYBOARD_KEYS.MAIN_MENU.key]
-        ]);
-      }
-      // More than one org results
-    } else {
-      let text =
-        "Voici les organisations correspondant à votre recherche :\n\n";
-      for (let k = 0; k < orgResults.length; k++) {
-        const organisation_k = orgResults[k];
-        const orgUrl_k = getJORFSearchLinkOrganisation(
-          organisation_k.wikidataId
-        );
-
-        text += `${String(
-          k + 1
-        )}. *${organisation_k.nom}* (${organisation_k.wikidataId})`;
-
-        if (session.messageApp === "Telegram")
-          text += `- [JORFSearch](${orgUrl_k})`;
-
-        if (
-          session.user != undefined &&
-          isOrganisationAlreadyFollowed(session.user, organisation_k.wikidataId)
-        )
-          text += ` - Suivi ✅`;
-        if (session.messageApp !== "Telegram") text += `\n${orgUrl_k}`;
-
-        text += "\n\n";
-      }
-
-      if (orgResults.length >= 10)
-        text +=
-          "Des résultats ont pu être omis en raison de la taille de la liste.\n\n";
-      await session.sendMessage(text);
-
-      if (session.messageApp === "Telegram") {
-        const tgSession: TelegramSession | undefined =
-          await extractTelegramSession(session, false);
-        if (tgSession == null) return;
-        const tgBot = tgSession.telegramBot;
-
-        const question = await tgBot.sendMessage(
-          tgSession.chatIdTg,
-          "Entrez le(s) nombre(s) correspondant au(x) organisation(s) à suivre.\nExemple: 1 4 7",
-          {
-            reply_markup: {
-              force_reply: true
-            }
-          }
-        );
-
-        tgBot.onReplyToMessage(
-          tgSession.chatIdTg,
-          question.message_id,
-          (tgMsg3: TelegramBot.Message) => {
-            void (async () => {
-              const answers = parseIntAnswers(tgMsg3.text, orgResults.length);
-              await followOrganisationsFromWikidataIdStr(
-                session,
-                `SuivreO ${answers.map((k) => orgResults[k - 1].wikidataId).join(" ")}`,
-                false
-              );
-              return;
-            })();
-          }
-        );
-      } else {
-        await session.sendMessage(
-          `Pour suivre une ou plusieurs organisation utilisez la commande avec le(s) WikiDataId correspondant: *SuivreO ${orgResults[0].wikidataId} ${orgResults[1].wikidataId}*`
-        );
-      }
-    }
+    await processOrganisationSearch(session, orgName, triggerUmami);
   } catch (error) {
     console.log(error);
   }

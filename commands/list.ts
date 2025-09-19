@@ -5,11 +5,6 @@ import {
 } from "../entities/FunctionTags.ts";
 import { IOrganisation, IPeople, ISession, IUser } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
-import {
-  extractTelegramSession,
-  TelegramSession
-} from "../entities/TelegramSession.ts";
-import TelegramBot from "node-telegram-bot-api";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import { Types } from "mongoose";
 import User from "../models/User.ts";
@@ -18,7 +13,8 @@ import {
   getJORFSearchLinkFunctionTag,
   getJORFSearchLinkPeople
 } from "../utils/JORFSearch.utils.ts";
-import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 
 interface UserFollows {
   functions: FunctionTags[];
@@ -181,12 +177,65 @@ export const listCommand = async (session: ISession) => {
   }
 };
 
+const UNFOLLOW_PROMPT_TEXT =
+  "Entrez le(s) nombre(s) correspondant au(x) contact(s) à supprimer.\n" +
+  "Exemple: 1 4 7\n" +
+  "Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis";
+
+const UNFOLLOW_KEYBOARD: Keyboard = [
+  [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
+  [KEYBOARD_KEYS.MAIN_MENU.key]
+];
+
+async function askUnfollowQuestion(session: ISession): Promise<void> {
+  await askFollowUpQuestion(session, UNFOLLOW_PROMPT_TEXT, handleUnfollowAnswer, {
+    keyboard: session.messageApp === "WhatsApp" ? undefined : UNFOLLOW_KEYBOARD
+  });
+}
+
+async function handleUnfollowAnswer(
+  session: ISession,
+  answer: string
+): Promise<boolean> {
+  const trimmedAnswer = answer.trim();
+
+  if (trimmedAnswer.length === 0) {
+    await session.sendMessage(
+      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options. 👎`,
+      session.messageApp === "WhatsApp" ? undefined : UNFOLLOW_KEYBOARD
+    );
+    await askUnfollowQuestion(session);
+    return true;
+  }
+
+  if (trimmedAnswer === "/list") {
+    await listCommand(session);
+    await askUnfollowQuestion(session);
+    return true;
+  }
+
+  if (trimmedAnswer.startsWith("/")) {
+    return false;
+  }
+
+  const success = await unfollowFromStr(
+    session,
+    `Retirer ${trimmedAnswer}`,
+    false
+  );
+
+  if (!success) {
+    await askUnfollowQuestion(session);
+  }
+
+  return true;
+}
+
 export const unfollowTelegram = async (session: ISession) => {
   await session.log({ event: "/unfollow" });
   try {
     await session.sendTypingAction();
 
-    // We only want to create a user upon use of the follow function
     if (session.user == null) {
       await session.sendMessage(noDataText);
       return;
@@ -203,45 +252,7 @@ export const unfollowTelegram = async (session: ISession) => {
       return;
     }
 
-    const tgSession: TelegramSession | undefined = await extractTelegramSession(
-      session,
-      true
-    );
-    if (tgSession == null) return;
-
-    const tgBot = tgSession.telegramBot;
-
-    const question = await tgBot.sendMessage(
-      tgSession.chatIdTg,
-      `Entrez le(s) nombre(s) correspondant au(x) contact(s) à supprimer.\nExemple: 1 4 7\n
-Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
-      {
-        reply_markup: {
-          force_reply: true
-        }
-      }
-    );
-
-    tgBot.onReplyToMessage(
-      tgSession.chatIdTg,
-      question.message_id,
-      (tgMsg: TelegramBot.Message) => {
-        void (async () => {
-          if (session.user == undefined) return;
-
-          if (tgMsg.text == "/list") {
-            await listCommand(session);
-            return;
-          }
-
-          await unfollowFromStr(
-            session,
-            "Retirer " + (tgMsg.text ?? ""),
-            false
-          );
-        })();
-      }
-    );
+    await askUnfollowQuestion(session);
   } catch (error) {
     console.log(error);
   }
@@ -251,13 +262,13 @@ export const unfollowFromStr = async (
   session: ISession,
   msg: string,
   triggerUmami = true
-) => {
+): Promise<boolean> => {
   try {
     if (triggerUmami) await session.log({ event: "/unfollow" });
 
     if (session.user == null) {
       await session.sendMessage(noDataText);
-      return;
+      return false;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
 
@@ -268,7 +279,7 @@ export const unfollowFromStr = async (
       userFollows.meta.length;
     if (followTotal == 0) {
       await session.sendMessage(noDataText);
-      return;
+      return false;
     }
 
     const selectionUnfollowText = msg.split(" ").slice(1).join(" ");
@@ -283,7 +294,7 @@ export const unfollowFromStr = async (
           [KEYBOARD_KEYS.MAIN_MENU.key]
         ]);
       else await session.sendMessage(text);
-      return;
+      return false;
     }
 
     // Shift all answers by 1 to get array-wise indexes
@@ -453,7 +464,9 @@ export const unfollowFromStr = async (
     }
 
     await session.sendMessage(text);
+    return true;
   } catch (error) {
     console.log(error);
   }
+  return false;
 };

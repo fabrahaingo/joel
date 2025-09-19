@@ -1,15 +1,4 @@
-import { mainMenuCommand } from "../commands/default.ts";
-import { listCommand, unfollowTelegram } from "../commands/list.ts";
-import { searchCommand } from "../commands/search.ts";
-import { helpCommand } from "../commands/help.ts";
 import { ISession } from "../types";
-import {
-  enaCommand,
-  promosCommand,
-  suivreFromJOReference
-} from "../commands/ena.ts";
-import { followFunctionCommand } from "../commands/followFunction.ts";
-import { followOrganisationTelegram } from "../commands/followOrganisation.ts";
 
 export interface KeyboardKey {
   text: string;
@@ -24,37 +13,92 @@ export const KEYBOARD_KEYS: Record<
     action: (session: ISession, msg?: string) => Promise<void>;
   }
 > = {
-  MAIN_MENU: { key: { text: "🏠 Menu principal" }, action: mainMenuCommand },
-  COMMAND_LIST: { key: { text: "🔎 Commandes" }, action: mainMenuCommand },
-  PEOPLE_SEARCH: { key: { text: "🔎 Rechercher" }, action: searchCommand },
+  MAIN_MENU: {
+    key: { text: "🏠 Menu principal" },
+    action: async (session: ISession, _msg?: string) => {
+      const { mainMenuCommand } = await import("../commands/default.ts");
+      await mainMenuCommand(session);
+    }
+  },
+  COMMAND_LIST: {
+    key: { text: "🔎 Commandes" },
+    action: async (session: ISession, _msg?: string) => {
+      const { mainMenuCommand } = await import("../commands/default.ts");
+      await mainMenuCommand(session);
+    }
+  },
+  PEOPLE_SEARCH: {
+    key: { text: "🔎 Rechercher" },
+    action: async (session: ISession, _msg?: string) => {
+      const { searchCommand } = await import("../commands/search.ts");
+      await searchCommand(session);
+    }
+  },
   PEOPLE_SEARCH_NEW: {
     key: { text: "🔎 Nouvelle recherche" },
-    action: searchCommand
+    action: async (session: ISession, _msg?: string) => {
+      const { searchCommand } = await import("../commands/search.ts");
+      await searchCommand(session);
+    }
   },
   ENA_INSP_PROMO_SEARCH: {
-    key: { text: "Rechercher une promo ENA/INSP" },
-    action: enaCommand
+    key: { text: "Ajouter promo INSP" },
+    action: async (session: ISession, _msg?: string) => {
+      const { enaCommand } = await import("../commands/ena.ts");
+      await enaCommand(session);
+    }
   },
   ENA_INSP_PROMO_LIST: {
-    key: { text: "Liste des promos ENA/INSP" },
-    action: promosCommand
+    key: { text: "Liste promos INSP" },
+    action: async (session: ISession, _msg?: string) => {
+      const { promosCommand } = await import("../commands/ena.ts");
+      await promosCommand(session);
+    }
   },
   FUNCTION_FOLLOW: {
     key: { text: "👨‍💼 Ajout fonction" },
-    action: followFunctionCommand
+    action: async (session: ISession, _msg?: string) => {
+      const { followFunctionCommand } = await import(
+        "../commands/followFunction.ts"
+      );
+      await followFunctionCommand(session);
+    }
   },
   ORGANISATION_FOLLOW: {
     key: { text: "🏛️️ Ajouter une organisation" },
-    action: followOrganisationTelegram
+    action: async (session: ISession, _msg?: string) => {
+      const { followOrganisationTelegram } = await import(
+        "../commands/followOrganisation.ts"
+      );
+      await followOrganisationTelegram(session);
+    }
   },
   REFERENCE_FOLLOW: {
     key: { text: "Suivre à partir d'une référence JORF/BO" },
-    action: suivreFromJOReference
+    action: async (session: ISession, _msg?: string) => {
+      const { suivreFromJOReference } = await import("../commands/ena.ts");
+      await suivreFromJOReference(session);
+    }
   },
-  FOLLOWS_LIST: { key: { text: "🧐 Mes suivis" }, action: listCommand },
+  FOLLOWS_LIST: {
+    key: { text: "🧐 Mes suivis" },
+    action: async (session: ISession, _msg?: string) => {
+      const { listCommand } = await import("../commands/list.ts");
+      await listCommand(session);
+    }
+  },
   FOLLOWS_REMOVE: {
     key: { text: "👨✋ Retirer un suivi" },
-    action: unfollowTelegram
+    action: async (session: ISession, _msg?: string) => {
+      const { unfollowTelegram } = await import("../commands/list.ts");
+      await unfollowTelegram(session);
+    }
   },
-  HELP: { key: { text: "❓ Aide" }, action: helpCommand }
+  HELP: {
+    key: { text: "❓ Aide" },
+    action: async (session: ISession, _msg?: string) => {
+      const { helpCommand } = await import("../commands/help.ts");
+      await helpCommand(session);
+    }
+  }
 };
