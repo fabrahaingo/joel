@@ -74,7 +74,7 @@ export const followOrganisationTelegram = async (session: ISession) => {
 
     await session.sendTypingAction();
     const question: TelegramBot.Message = await tgBot.sendMessage(
-      session.chatId,
+      tgSession.chatIdTg,
       `Entrez le *nom* ou l'*identifiant* [Wikidata](https://www.wikidata.org/wiki/Wikidata:Main_Page) de l'organisation que vous souhaitez suivre:
 Exemples:
 *Conseil d'État* ou *Q769657*
@@ -197,7 +197,7 @@ export const searchOrganisationFromStr = async (
         const tgBot = tgSession.telegramBot;
 
         const question = await tgBot.sendMessage(
-          session.chatId,
+          tgSession.chatIdTg,
           "Entrez le(s) nombre(s) correspondant au(x) organisation(s) à suivre.\nExemple: 1 4 7",
           {
             reply_markup: {

@@ -52,7 +52,7 @@ export const followFunctionCommand = async (
       if (tgSession == null) return;
       const tgBot = tgSession.telegramBot;
 
-      const question = await tgBot.sendMessage(tgSession.chatId, text, {
+      const question = await tgBot.sendMessage(tgSession.chatIdTg, text, {
         reply_markup: {
           force_reply: true
         }

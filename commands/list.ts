@@ -212,7 +212,7 @@ export const unfollowTelegram = async (session: ISession) => {
     const tgBot = tgSession.telegramBot;
 
     const question = await tgBot.sendMessage(
-      session.chatId,
+      tgSession.chatIdTg,
       `Entrez le(s) nombre(s) correspondant au(x) contact(s) à supprimer.\nExemple: 1 4 7\n
 Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
       {

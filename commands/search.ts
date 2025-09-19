@@ -43,7 +43,7 @@ export const searchCommand = async (session: ISession): Promise<void> => {
 
   await session.sendTypingAction();
   const question = await tgBot.sendMessage(
-    session.chatId,
+    tgSession.chatIdTg,
     "Entrez le prénom et nom de la personne que vous souhaitez rechercher:",
     {
       reply_markup: {

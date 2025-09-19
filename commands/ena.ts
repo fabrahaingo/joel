@@ -86,7 +86,7 @@ Formats acceptés:
 Georges-Clemenceau
 2017-2018\n
 Utilisez la command /promos pour consulter la liste des promotions INSP et ENA disponibles.`;
-    const question = await tgBot.sendMessage(session.chatId, text, {
+    const question = await tgBot.sendMessage(tgSession.chatIdTg, text, {
       parse_mode: "Markdown",
       reply_markup: {
         force_reply: true
@@ -168,7 +168,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
           });
           await session.sendMessage(contacts.join("\n"));
           const followConfirmation = await tgBot.sendMessage(
-            session.chatId,
+            tgSession.chatIdTg,
             `Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *les retirer peut ensuite prendre du temps*`,
             {
               parse_mode: "Markdown",
@@ -276,7 +276,7 @@ export const suivreFromJOReference = async (
     const text = `Entrez la référence JORF/BO et l'*intégralité des personnes mentionnées* sera ajoutée à la liste de vos contacts.\n
 ⚠️ Attention, un nombre important de suivis seront ajoutés en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n
 Format: *JORFTEXT000052060473*`;
-    const question = await tgBot.sendMessage(session.chatId, text, {
+    const question = await tgBot.sendMessage(tgSession.chatIdTg, text, {
       parse_mode: "Markdown",
       reply_markup: {
         force_reply: true
@@ -326,7 +326,7 @@ Format: *JORFTEXT000052060473*`;
           });
           await session.sendMessage(contacts.join("\n"));
           const followConfirmation = await tgBot.sendMessage(
-            session.chatId,
+            tgSession.chatIdTg,
             `Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\n\n⚠️ Attention : *les retirer peut ensuite prendre du temps*`,
             {
               parse_mode: "Markdown",

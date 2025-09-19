@@ -27,7 +27,7 @@ export const deleteProfileCommand = async (
     const tgBot = tgSession.telegramBot;
 
     const question = await tgBot.sendMessage(
-      session.chatId,
+      tgSession.chatIdTg,
       `*Vous êtes sur le point de supprimer votre profil JOÉL*, comprenant l'ensemble de vos contacts, fonctions et organisations suivis.\n
 ⚠️ *Attention, ces données ne sont pas récupérables par la suite* ⚠️
 Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce message`,
