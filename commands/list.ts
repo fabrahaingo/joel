@@ -223,7 +223,7 @@ Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
     );
 
     tgBot.onReplyToMessage(
-      session.chatId,
+      tgSession.chatIdTg,
       question.message_id,
       (tgMsg: TelegramBot.Message) => {
         void (async () => {

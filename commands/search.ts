@@ -52,7 +52,7 @@ export const searchCommand = async (session: ISession): Promise<void> => {
     }
   );
   tgBot.onReplyToMessage(
-    session.chatId,
+    tgSession.chatIdTg,
     question.message_id,
     (tgMsg: TelegramBot.Message) => {
       void (async () => {

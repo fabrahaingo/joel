@@ -93,7 +93,7 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
       }
     });
     tgBot.onReplyToMessage(
-      session.chatId,
+      tgSession.chatIdTg,
       question.message_id,
       (tgMsg1: TelegramBot.Message) => {
         void (async () => {
@@ -178,7 +178,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             }
           );
           tgBot.onReplyToMessage(
-            session.chatId,
+            tgSession.chatIdTg,
             followConfirmation.message_id,
             (tgMsg2: TelegramBot.Message) => {
               void (async () => {
@@ -283,7 +283,7 @@ Format: *JORFTEXT000052060473*`;
       }
     });
     tgBot.onReplyToMessage(
-      session.chatId,
+      tgSession.chatIdTg,
       question.message_id,
       (tgMsg1: TelegramBot.Message) => {
         void (async () => {
@@ -336,7 +336,7 @@ Format: *JORFTEXT000052060473*`;
             }
           );
           tgBot.onReplyToMessage(
-            session.chatId,
+            tgSession.chatIdTg,
             followConfirmation.message_id,
             (tgMsg2: TelegramBot.Message) => {
               void (async () => {

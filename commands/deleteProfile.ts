@@ -39,7 +39,7 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
       }
     );
     tgBot.onReplyToMessage(
-      session.chatId,
+      tgSession.chatIdTg,
       question.message_id,
       (tgMsg: TelegramBot.Message) => {
         void (async () => {

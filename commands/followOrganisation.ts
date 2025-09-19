@@ -87,7 +87,7 @@ Exemples:
       }
     );
     tgBot.onReplyToMessage(
-      session.chatId,
+      tgSession.chatIdTg,
       question.message_id,
       (tgMsg1: TelegramBot.Message) => {
         void (async () => {
@@ -207,7 +207,7 @@ export const searchOrganisationFromStr = async (
         );
 
         tgBot.onReplyToMessage(
-          session.chatId,
+          tgSession.chatIdTg,
           question.message_id,
           (tgMsg3: TelegramBot.Message) => {
             void (async () => {
