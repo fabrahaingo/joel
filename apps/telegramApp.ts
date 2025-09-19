@@ -21,12 +21,14 @@ await (async () => {
   commands.forEach((command) => {
     bot.onText(command.regex, (tgMsg: TelegramBot.Message) => {
       void (async () => {
-        await umami.log({ event: "/message-telegram" });
         try {
           // Check if the user is known
           const tgUser: TelegramBot.User | undefined = tgMsg.from;
           if (tgUser === undefined || tgUser.is_bot) return; // Ignore bots
           if (tgMsg.text == undefined) return; // Ignore media messages without text
+
+          await umami.log({ event: "/message-telegram" });
+
           const msgText = tgMsg.text;
 
           const tgSession = new TelegramSession(
@@ -42,7 +44,7 @@ await (async () => {
 
           await processMessage(tgSession, msgText);
         } catch (error) {
-          console.error("Error processing command:", error);
+          console.error("Telegram: Error processing command:", error);
         }
       })();
     });
