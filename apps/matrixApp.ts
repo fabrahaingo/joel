@@ -44,16 +44,28 @@ await (async function () {
   });
 })();
 
+interface MatrixRoomEvent {
+  type: string;
+  sender: string;
+  event_id: string;
+  content: {
+    body?: string;
+    "m.relates_to"?: {
+      key: string;
+    };
+  };
+}
+
 // This is the command handler we registered a few lines up
-function handleCommand(roomId: string, event: any) {
+function handleCommand(roomId: string, event: MatrixRoomEvent) {
   void (async () => {
-    let msgText: string;
+    let msgText: string | undefined;
     switch (event.type) {
       case "m.room.message":
         msgText = event.content.body;
         break;
       case "m.reaction":
-        msgText = event.content["m.relates_to"].key;
+        msgText = event.content["m.relates_to"]?.key;
         break;
     }
     if (msgText == null) return;

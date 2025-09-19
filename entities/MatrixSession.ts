@@ -203,14 +203,16 @@ export async function sendMatrixMessage(
   return true;
 }
 
+type DirectRoomData = Record<string, string[]>;
+
 async function findUserDMRoomId(
   client: MatrixClient,
   userId: string
 ): Promise<string | undefined> {
   const data = (await client
     .getAccountData("m.direct")
-    .catch(() => ({}))) as any;
-  const rooms = Array.isArray(data?.[userId]) ? (data[userId] as string[]) : [];
+    .catch(() => ({}) as DirectRoomData)) as DirectRoomData;
+  const rooms = Array.isArray(data[userId]) ? data[userId] : [];
   return rooms.length ? rooms[0] : undefined; // or validate with is1to1()
 }
 

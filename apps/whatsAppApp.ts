@@ -46,11 +46,16 @@ export function getWhatsAppAPI(): WhatsAppAPI {
 
 const whatsAppAPI = getWhatsAppAPI();
 
+// Define a custom interface to add rawBody property
+interface ExtendedRequest extends express.Request {
+  rawBody?: Buffer;
+}
+
 const app = express();
 app.use(
   express.json({
     verify: (req, _res, buf) => {
-      (req as never).rawBody = buf;
+      (req as ExtendedRequest).rawBody = buf;
     }
   })
 );
@@ -202,16 +207,24 @@ await (async function () {
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
 
+// Define an interface for the potential message-containing object
+interface WhatsAppValueObject {
+  messages?: { timestamp?: string }[];
+  statuses?: { timestamp?: string }[];
+  message_statuses?: { timestamp?: string }[];
+  [key: string]: unknown;
+}
+
 function newestTimestampSec(data: PostData): number | null {
   let newest: number | null = null;
   for (const e of data.entry) {
     for (const c of e.changes) {
-      const v = c.value;
+      const v = c.value as WhatsAppValueObject;
       const buckets = [v.messages, v.statuses, v.message_statuses];
       for (const arr of buckets) {
         if (!Array.isArray(arr)) continue;
         for (const item of arr) {
-          const ts = Number(item?.timestamp);
+          const ts = Number(item.timestamp);
           if (Number.isFinite(ts))
             newest = newest === null ? ts : Math.max(newest, ts);
         }
