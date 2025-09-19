@@ -82,8 +82,10 @@ app.post("/webhook", async (req, res) => {
       return;
     }
 
-    // Inverted compared to documentation
-    await whatsAppAPI.post(postData, JSON.stringify(postData), signature);
+    const rawPayload = (
+      (req as ExtendedRequest).rawBody ?? Buffer.from(JSON.stringify(postData))
+    ).toString("utf8");
+    await whatsAppAPI.post(postData, rawPayload, signature);
 
     res.sendStatus(200);
   } catch (error) {
