@@ -4,9 +4,9 @@ import { processMessage } from "./Commands.ts";
 
 export const startCommand = async (
   session: ISession,
-  message: string
+  userMessage: string
 ): Promise<void> => {
-  const messageSplit = message.split(/!|\/start/i);
+  const messageSplit = userMessage.split(/!|\/start/i);
 
   try {
     await session.sendTypingAction();
@@ -21,35 +21,25 @@ export const startCommand = async (
       botName ?? "undefined"
     );
 
-    if (mardownLink) {
-      message = message.replace(
-        "{LINK_PRIVACY_POLICY}",
-        `[Politique de confidentialité](${BotMessages.URL_PRIVACY_POLICY})`
-      );
-      message = message.replace(
-        "{LINK_GCU}",
-        `[Conditions générales d'utilisation](${BotMessages.URL_GCU})`
-      );
-    } else {
-      message = message.replace(
-        "{LINK_PRIVACY_POLICY}",
-        `Politique de confidentialité:\n${BotMessages.URL_PRIVACY_POLICY}`
-      );
-      message = message.replace(
-        "{LINK_GCU}",
-        `Conditions générales d'utilisation:\n${BotMessages.URL_GCU}`
-      );
-    }
-    await session.sendMessage(message, session.mainMenuKeyboard);
+    message = message.replace(
+      "{LINK_PRIVACY_POLICY}",
+      `[Politique de confidentialité](${BotMessages.URL_PRIVACY_POLICY})`
+    );
+    message = message.replace(
+      "{LINK_GCU}",
+      `[Conditions générales d'utilisation](${BotMessages.URL_GCU})`
+    );
+    await session.sendMessage(message);
 
-    if (messageSplit.length > 1) {
+    // if "Bonjour JOEL ! Suivre ..." or "/start Suivre ..."
+    if (messageSplit.length > 1 && messageSplit[1] !== "") {
       const commandMsg = messageSplit[1].trim();
       if (commandMsg.toLowerCase().startsWith("suivreo"))
         await session.log({ event: "/start-from-organisation" });
       else if (commandMsg.toLowerCase().startsWith("suivref"))
         await session.log({ event: "/start-from-tag" });
       else if (
-        commandMsg.toLowerCase().startsWith("sui") ||
+        commandMsg.toLowerCase().startsWith("suiv") ||
         commandMsg.toLowerCase().startsWith("recherche")
       )
         await session.log({ event: "/start-from-people" });

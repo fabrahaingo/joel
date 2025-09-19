@@ -1,4 +1,4 @@
-import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
+import { ISession, IUser, MessageApp } from "../types.ts";
 import TelegramBot, { ChatId } from "node-telegram-bot-api";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
@@ -6,6 +6,7 @@ import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
+import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 
 const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
 const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
@@ -13,15 +14,12 @@ const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same
 export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
 
 const mainMenuKeyboardTelegram: Keyboard = [
-  [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
-  [
-    { text: "🏛️️ Ajouter une organisation" },
-    { text: "👨‍💼 Ajouter une fonction" }
-  ],
-  [{ text: "❓ Aide & Contact" }]
+  [KEYBOARD_KEYS.PEOPLE_SEARCH.key, KEYBOARD_KEYS.FOLLOWS_LIST.key],
+  [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key, KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
+  [KEYBOARD_KEYS.HELP.key]
 ];
 
-export const telegramMessageOption: TelegramBot.SendMessageOptions = {
+export const telegramMessageOptions: TelegramBot.SendMessageOptions = {
   parse_mode: "Markdown",
   disable_web_page_preview: true,
   reply_markup: {
@@ -68,19 +66,22 @@ export class TelegramSession implements ISession {
   }
 
   async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
-    let optionsWithKeyboard = telegramMessageOption;
-    if (keyboard != null) {
-      const keyboardFormatted = keyboard.map((row) =>
-        row.map(({ text }) => ({ text }))
-      );
-      optionsWithKeyboard = {
-        ...telegramMessageOption,
-        reply_markup: {
-          ...telegramMessageOption.reply_markup,
-          keyboard: keyboardFormatted
-        }
-      };
-    }
+    keyboard ??= this.mainMenuKeyboard;
+
+    const keyboardFormatted = keyboard?.map((row) =>
+      row.map(({ text }) => ({ text }))
+    );
+    const tgMessageOptions =
+      keyboardFormatted === undefined
+        ? telegramMessageOptions
+        : {
+            ...telegramMessageOptions,
+            reply_markup: {
+              ...telegramMessageOptions.reply_markup,
+              keyboard: keyboardFormatted
+            }
+          };
+
     const mArr = splitText(formattedData, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
     for (let i = 0; i < mArr.length; i++) {
@@ -88,13 +89,13 @@ export class TelegramSession implements ISession {
         await this.telegramBot.sendMessage(
           this.chatIdTg,
           mArr[i],
-          optionsWithKeyboard
+          tgMessageOptions
         );
       } else {
         await this.telegramBot.sendMessage(
           this.chatIdTg,
           mArr[i],
-          telegramMessageOption
+          telegramMessageOptions
         );
       }
       await umami.log({ event: "/message-sent-telegram" });
@@ -115,8 +116,7 @@ export async function extractTelegramSession(
     console.log("Session is not a TelegramSession");
     if (userFacingError) {
       await session.sendMessage(
-        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`,
-        session.mainMenuKeyboard
+        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
       );
     }
     return undefined;

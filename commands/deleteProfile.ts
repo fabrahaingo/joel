@@ -13,8 +13,7 @@ export const deleteProfileCommand = async (
   try {
     if (session.user == null) {
       await session.sendMessage(
-        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`,
-        session.mainMenuKeyboard
+        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`
       );
       return;
     }
@@ -50,15 +49,11 @@ Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce me
               _id: session.user._id
             });
             await session.sendMessage(
-              `🗑 Votre profil a bien été supprimé ! 👋\nUn profil vierge sera créé lors de l'ajout du prochain suivi ⚠️`,
-              session.mainMenuKeyboard
+              `🗑 Votre profil a bien été supprimé ! 👋\nUn profil vierge sera créé lors de l'ajout du prochain suivi ⚠️`
             );
             await session.log({ event: "/user-deletion-self" });
           } else {
-            await session.sendMessage(
-              "Suppression annulée.",
-              session.mainMenuKeyboard
-            );
+            await session.sendMessage("Suppression annulée.");
           }
         })();
       }

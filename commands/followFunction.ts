@@ -7,6 +7,7 @@ import {
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import { ISession } from "../types";
+import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 
 const functionTagValues = Object.values(FunctionTags);
 const functionTagKeys = Object.keys(FunctionTags);
@@ -66,8 +67,8 @@ export const followFunctionCommand = async (
               await tgSession.sendMessage(
                 `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}. 👎 Veuillez essayer de nouveau la commande.`,
                 [
-                  [{ text: "Suivre une fonction" }],
-                  [{ text: "🏠 Menu principal" }]
+                  [KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
+                  [KEYBOARD_KEYS.MAIN_MENU.key]
                 ]
               );
               return;
@@ -132,7 +133,7 @@ const followFunctionsCommand = async (
         .join("\n")}`;
     }
 
-    await session.sendMessage(text, session.mainMenuKeyboard);
+    await session.sendMessage(text);
   } catch (error) {
     console.log(error);
   }
@@ -184,14 +185,12 @@ export const followFunctionFromStrCommand = async (
       []
     );
 
-    const keyboard =
-      session.messageApp === "Telegram"
-        ? [[{ text: "Suivre une fonction" }], [{ text: "🏠 Menu principal" }]]
-        : session.mainMenuKeyboard;
     if (selectedFunctions.length == 0) {
       await session.sendMessage(
         "La fonction demandée n'est pas reconnue.",
-        keyboard
+        session.messageApp !== "WhatsApp"
+          ? [[KEYBOARD_KEYS.FUNCTION_FOLLOW.key], [KEYBOARD_KEYS.MAIN_MENU.key]]
+          : undefined
       );
       return;
     }

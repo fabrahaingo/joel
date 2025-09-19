@@ -10,6 +10,7 @@ import {
   TelegramSession
 } from "../entities/TelegramSession.ts";
 import { getJORFSearchLinkOrganisation } from "../utils/JORFSearch.utils.ts";
+import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 
 const isOrganisationAlreadyFollowed = (
   user: IUser,
@@ -115,17 +116,19 @@ export const searchOrganisationFromStr = async (
 
     const orgResults = await searchOrganisationWikidataId(orgName);
 
+    const tempKeyboard: Keyboard = [
+      [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key],
+      [KEYBOARD_KEYS.MAIN_MENU.key]
+    ];
+
     if (orgResults.length == 0) {
       let text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.`;
       if (session.messageApp === "Telegram") {
         text += `\n\nFormat:\n*Nom de l'organisation*\nou\n*WikidataId de l'organisation*`;
-        await session.sendMessage(text, [
-          [{ text: `🏛️️ Ajouter une organisation` }],
-          [{ text: "🏠 Menu principal" }]
-        ]);
+        await session.sendMessage(text, tempKeyboard);
       } else {
         text += `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
-        await session.sendMessage(text, session.mainMenuKeyboard);
+        await session.sendMessage(text);
       }
       return;
     }
@@ -145,17 +148,14 @@ export const searchOrganisationFromStr = async (
       ) {
         text += `\nVous suivez déjà *${orgResults[0].nom} * ✅`;
         if (session.messageApp === "Telegram")
-          await session.sendMessage(text, [
-            [{ text: `🏛️️ Ajouter une organisation` }],
-            [{ text: "🏠 Menu principal" }]
-          ]);
-        else await session.sendMessage(text, session.mainMenuKeyboard);
+          await session.sendMessage(text, tempKeyboard);
+        else await session.sendMessage(text);
         return;
       } else {
         text += `\nPour être notifié de toutes les nominations en rapport avec cette organisation ?\nUtilisez le bouton ci-dessous ou la commande: *SuivreO ${orgResults[0].wikidataId}*`;
         await session.sendMessage(text, [
           [{ text: `SuivreO ${orgResults[0].wikidataId}` }],
-          [{ text: "🏠 Menu principal" }]
+          [KEYBOARD_KEYS.MAIN_MENU.key]
         ]);
       }
       // More than one org results
@@ -223,8 +223,7 @@ export const searchOrganisationFromStr = async (
         );
       } else {
         await session.sendMessage(
-          `Pour suivre une ou plusieurs organisation utilisez la commande avec le(s) WikiDataId correspondant: *SuivreO ${orgResults[0].wikidataId} ${orgResults[1].wikidataId}*`,
-          session.mainMenuKeyboard
+          `Pour suivre une ou plusieurs organisation utilisez la commande avec le(s) WikiDataId correspondant: *SuivreO ${orgResults[0].wikidataId} ${orgResults[1].wikidataId}*`
         );
       }
     }
@@ -251,14 +250,17 @@ export const followOrganisationsFromWikidataIdStr = async (
       .splice(1)
       .map((s) => s.toUpperCase());
 
+    const tempKeyboard: Keyboard = [
+      [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key],
+      [KEYBOARD_KEYS.MAIN_MENU.key]
+    ];
+
     if (selectedWikiDataIds.length == 0) {
       const text = `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`;
-      if (session.messageApp === "Telegram")
-        await session.sendMessage(text, [
-          [{ text: `🏛️️ Ajouter une organisation` }],
-          [{ text: "🏠 Menu principal" }]
-        ]);
-      else await session.sendMessage(text, session.mainMenuKeyboard);
+      await session.sendMessage(
+        text,
+        session.messageApp !== "WhatsApp" ? tempKeyboard : undefined
+      );
       return;
     }
 
@@ -304,12 +306,7 @@ export const followOrganisationsFromWikidataIdStr = async (
 
       await session.sendMessage(
         msg,
-        session.messageApp === "Telegram"
-          ? [
-              [{ text: `🏛️️ Ajouter une organisation` }],
-              [{ text: "🏠 Menu principal" }]
-            ]
-          : session.mainMenuKeyboard
+        session.messageApp !== "WhatsApp" ? tempKeyboard : undefined
       );
       return;
     }
@@ -337,11 +334,8 @@ export const followOrganisationsFromWikidataIdStr = async (
         .join("\n")}`;
 
     if (session.messageApp === "Telegram")
-      await session.sendMessage(text, [
-        [{ text: `🏛️️ Ajouter une organisation` }],
-        [{ text: "🏠 Menu principal" }]
-      ]);
-    else await session.sendMessage(text, session.mainMenuKeyboard);
+      await session.sendMessage(text, tempKeyboard);
+    else await session.sendMessage(text);
   } catch (error) {
     console.log(error);
   }

@@ -18,6 +18,7 @@ import {
   getJORFSearchLinkFunctionTag,
   getJORFSearchLinkPeople
 } from "../utils/JORFSearch.utils.ts";
+import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 
 interface UserFollows {
   functions: FunctionTags[];
@@ -103,7 +104,7 @@ export const listCommand = async (session: ISession) => {
 
     // We only want to create a user upon use of the follow function
     if (session.user == null) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
@@ -114,7 +115,7 @@ export const listCommand = async (session: ISession) => {
       userFollows.peopleAndNames.length +
       userFollows.meta.length;
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
 
@@ -131,8 +132,8 @@ export const listCommand = async (session: ISession) => {
           text += ` - [JORFSearch](${getJORFSearchLinkFunctionTag(userFollows.functions[i])})`;
         else
           text += `\n${getJORFSearchLinkFunctionTag(userFollows.functions[i])}`;
-
-        text += `\n\n`;
+        text += `\n`;
+        if (userFollows.functions.length < 10) text += `\n`;
       }
     }
 
@@ -149,7 +150,8 @@ export const listCommand = async (session: ISession) => {
             userFollows.organisations[k].wikidataId
           )}`;
 
-        text += `\n\n`;
+        text += `\n`;
+        if (userFollows.organisations.length < 10) text += `\n`;
       }
     }
 
@@ -167,21 +169,24 @@ export const listCommand = async (session: ISession) => {
         } else {
           text += ` - Suivi manuel\n`;
         }
-        if (userFollows.peopleAndNames[j + 1]) {
+        if (
+          userFollows.peopleAndNames[j + 1] &&
+          userFollows.peopleAndNames.length < 10
+        ) {
           text += `\n`;
         }
       }
     }
 
-    if (session.messageApp === "Telegram")
+    if (session.messageApp === "Signal")
       await session.sendMessage(text, [
-        [{ text: "✋ Retirer un suivi" }],
-        [{ text: "🏠 Menu principal" }]
+        [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
+        [KEYBOARD_KEYS.MAIN_MENU.key]
       ]);
     else {
       text +=
         "\nPour retirer un suivi, précisez le(s) nombre(s) à supprimer: *Retirer 1 4 7*";
-      await session.sendMessage(text, session.mainMenuKeyboard);
+      await session.sendMessage(text);
     }
   } catch (error) {
     console.log(error);
@@ -195,7 +200,7 @@ export const unfollowTelegram = async (session: ISession) => {
 
     // We only want to create a user upon use of the follow function
     if (session.user == null) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
@@ -206,7 +211,7 @@ export const unfollowTelegram = async (session: ISession) => {
       userFollows.peopleAndNames.length +
       userFollows.meta.length;
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
 
@@ -263,7 +268,7 @@ export const unfollowFromStr = async (
     if (triggerUmami) await session.log({ event: "/unfollow" });
 
     if (session.user == null) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
@@ -274,7 +279,7 @@ export const unfollowFromStr = async (
       userFollows.peopleAndNames.length +
       userFollows.meta.length;
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
 
@@ -286,10 +291,10 @@ export const unfollowFromStr = async (
       const text = `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.`;
       if (session.messageApp === "Telegram")
         await session.sendMessage(text, [
-          [{ text: "✋ Retirer un suivi" }],
-          [{ text: "🏠 Menu principal" }]
+          [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
+          [KEYBOARD_KEYS.MAIN_MENU.key]
         ]);
-      else await session.sendMessage(text, session.mainMenuKeyboard);
+      else await session.sendMessage(text);
       return;
     }
 
@@ -459,7 +464,7 @@ export const unfollowFromStr = async (
       await session.log({ event: "/user-deletion-no-follow" });
     }
 
-    await session.sendMessage(text, session.mainMenuKeyboard);
+    await session.sendMessage(text);
   } catch (error) {
     console.log(error);
   }

@@ -31,10 +31,12 @@ AutojoinRoomsMixin.setupOnClient(matrixClient);
 // Before we start the bot, register our command handler
 matrixClient.on("room.event", handleCommand);
 
-matrixClient.on("room.join", (roomId: string, event: any) => {
+/*
+matrixClient.on("room.join", (_roomId: string, _event: unknown) => {
   // The client has been invited to `roomId`
   // if only an other person in the room: send a welcome message
 });
+ */
 
 await (async function () {
   await mongodbConnect();

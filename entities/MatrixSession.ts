@@ -1,4 +1,4 @@
-import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
+import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
@@ -8,20 +8,14 @@ import {
   splitText
 } from "../utils/text.utils.ts";
 import { MatrixClient, MatrixError } from "matrix-bot-sdk";
+import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 
 const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
 const MATRIX_COOL_DOWN_DELAY_SECONDS = 1;
 
 export const MATRIX_API_SENDING_CONCURRENCY = 1;
 
-const mainMenuKeyboardMatrix: Keyboard = [
-  [{ text: "🔎 Rechercher" }, { text: "🧐 Lister mes suivis" }],
-  [
-    { text: "🏛️️ Ajouter une organisation" },
-    { text: "👨‍💼 Ajouter une fonction" }
-  ],
-  [{ text: "❓ Aide & Contact" }]
-];
+const mainMenuKeyboardMatrix: Keyboard = [[KEYBOARD_KEYS.COMMAND_LIST.key]];
 
 const MatrixMessageApp: MessageApp = "Matrix";
 
@@ -110,6 +104,8 @@ export class MatrixSession implements ISession {
   }
 
   async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
+    keyboard ??= this.mainMenuKeyboard;
+
     const mArr = splitText(formattedData, MATRIX_MESSAGE_CHAR_LIMIT);
     if (mArr.length === 0) return;
 
@@ -224,8 +220,7 @@ export async function extractMatrixSession(
     console.log("Session is not a MatrixSession");
     if (userFacingError) {
       await session.sendMessage(
-        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`,
-        session.mainMenuKeyboard
+        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
       );
     }
     return undefined;

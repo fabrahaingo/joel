@@ -18,6 +18,7 @@ import {
   TelegramSession
 } from "../entities/TelegramSession.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
+import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 
 const inspId = "Q109039648" as WikidataId;
 
@@ -100,8 +101,8 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
               [
-                [{ text: "Rechercher une promo ENA/INSP" }],
-                [{ text: "🏠 Menu principal" }]
+                [KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH.key],
+                [KEYBOARD_KEYS.MAIN_MENU.key]
               ]
             );
             return;
@@ -115,6 +116,12 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
 
           const promoInfo = findENAINSPPromo(tgMsg1.text);
 
+          const temp_keyboard: Keyboard = [
+            [KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH.key],
+            [KEYBOARD_KEYS.ENA_INSP_PROMO_LIST.key],
+            [KEYBOARD_KEYS.MAIN_MENU.key]
+          ];
+
           if (promoInfo && !promoInfo.onJORF) {
             const promoStr = promoInfo.name
               ? `${promoInfo.name} (${promoInfo.period})`
@@ -123,11 +130,7 @@ Utilisez la command /promos pour consulter la liste des promotions INSP et ENA d
             await session.sendMessage(
               `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.\n
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
-              [
-                [{ text: "Rechercher une promo ENA/INSP" }],
-                [{ text: "Liste des promos ENA/INSP" }],
-                [{ text: "🏠 Menu principal" }]
-              ]
+              temp_keyboard
             );
             return;
           }
@@ -140,11 +143,7 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
             await session.sendMessage(
               `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.\n\n
 Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.`,
-              [
-                [{ text: "Rechercher une promo ENA/INSP" }],
-                [{ text: "Liste des promos ENA/INSP" }],
-                [{ text: "🏠 Menu principal" }]
-              ]
+              temp_keyboard
             );
             return;
           }
@@ -203,24 +202,19 @@ Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA 
                     await session.sendMessage(
                       `Les *${String(
                         peopleTab.length
-                      )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`,
-                      session.mainMenuKeyboard
+                      )} personnes* de la promo *${promoStr}* ont été ajoutées à vos contacts.`
                     );
                     return;
                   } else if (new RegExp(/non/i).test(tgMsg2.text)) {
                     await session.sendMessage(
-                      `Ok, aucun ajout n'a été effectué. 👌`,
-                      session.mainMenuKeyboard
+                      `Ok, aucun ajout n'a été effectué. 👌`
                     );
                     return;
                   }
                 }
                 await session.sendMessage(
                   `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-                  [
-                    [{ text: "Rechercher une promo ENA/INSP" }],
-                    [{ text: "🏠 Menu principal" }]
-                  ]
+                  temp_keyboard
                 );
               })();
             }
@@ -260,7 +254,7 @@ export const promosCommand = async (session: ISession): Promise<void> => {
     text +=
       "Utilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
-    await session.sendMessage(text, session.mainMenuKeyboard);
+    await session.sendMessage(text);
   } catch (error) {
     console.log(error);
   }
@@ -293,13 +287,14 @@ Format: *JORFTEXT000052060473*`;
       question.message_id,
       (tgMsg1: TelegramBot.Message) => {
         void (async () => {
+          const temp_keyboard: Keyboard = [
+            [KEYBOARD_KEYS.REFERENCE_FOLLOW.key],
+            [KEYBOARD_KEYS.MAIN_MENU.key]
+          ];
           if (tgMsg1.text == undefined || tgMsg1.text.length == 0) {
             await session.sendMessage(
               `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
-              [
-                [{ text: "Suivre à partir d'une référence JORF/BO" }],
-                [{ text: "🏠 Menu principal" }]
-              ]
+              temp_keyboard
             );
             return;
           }
@@ -311,10 +306,7 @@ Format: *JORFTEXT000052060473*`;
           if (JORFResult.length == 0) {
             const message = `La référence n'a pas été pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`;
 
-            await session.sendMessage(message, [
-              [{ text: "Suivre à partir d'une référence JORF/BO" }],
-              [{ text: "🏠 Menu principal" }]
-            ]);
+            await session.sendMessage(message, [temp_keyboard]);
             return;
           }
 
@@ -368,24 +360,19 @@ Format: *JORFTEXT000052060473*`;
                     await session.sendMessage(
                       `Les *${String(
                         peopleTab.length
-                      )} personnes* ont été ajoutées à vos contacts.`,
-                      session.mainMenuKeyboard
+                      )} personnes* ont été ajoutées à vos contacts.`
                     );
                     return;
                   } else if (new RegExp(/non/i).test(tgMsg2.text)) {
                     await session.sendMessage(
-                      `Ok, aucun ajout n'a été effectué. 👌`,
-                      session.mainMenuKeyboard
+                      `Ok, aucun ajout n'a été effectué. 👌`
                     );
                     return;
                   }
                 }
                 await session.sendMessage(
                   `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-                  [
-                    [{ text: "Suivre à partir d'une référence JORF/BO" }],
-                    [{ text: "🏠 Menu principal" }]
-                  ]
+                  temp_keyboard
                 );
               })();
             }

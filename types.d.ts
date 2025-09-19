@@ -1,5 +1,6 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
+import { Keyboard } from "./Keyboard.ts";
 import umami from "./utils/umami";
 
 export interface CommandType {
@@ -8,11 +9,6 @@ export interface CommandType {
 }
 
 export type MessageApp = "Telegram" | "WhatsApp" | "Signal" | "Matrix";
-
-export type Keyboard = {
-  text: string;
-  desc?: string;
-}[][];
 
 export interface ISession {
   messageApp: MessageApp;
@@ -24,11 +20,7 @@ export interface ISession {
 
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
-  sendMessage: (
-    msg: string,
-    keyboard?: Keyboard,
-    menuType?: KeyboardType
-  ) => Promise<void>;
+  sendMessage: (msg: string, keyboard?: Keyboard) => Promise<void>;
   sendTypingAction: () => Promise<void>;
   log: typeof umami.log;
 }

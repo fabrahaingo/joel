@@ -9,5 +9,5 @@ export const helpCommand = async (session: ISession): Promise<void> => {
   if (session.messageApp === "Telegram")
     helpText +=
       "\n\nSi vous souhaitez supprimer votre compte: utilisez la commande /supprimerCompte";
-  await session.sendMessage(helpText, session.mainMenuKeyboard);
+  await session.sendMessage(helpText);
 };

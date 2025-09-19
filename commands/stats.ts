@@ -34,7 +34,7 @@ export const statsCommand = async (session: ISession): Promise<void> => {
 
     msg += `JOEL sait combien vous êtes à l'utiliser mais il ne sait pas qui vous êtes... et il ne cherchera jamais à le savoir! 🛡`;
 
-    await session.sendMessage(msg, session.mainMenuKeyboard);
+    await session.sendMessage(msg);
   } catch (error) {
     console.log(error);
   }

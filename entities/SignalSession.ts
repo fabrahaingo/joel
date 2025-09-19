@@ -1,9 +1,10 @@
-import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
+import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
+import { Keyboard } from "./Keyboard.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
@@ -34,7 +35,7 @@ export class SignalSession implements ISession {
     this.botPhoneID = botPhoneID;
     this.chatId = userPhoneId;
     this.language_code = language_code;
-    this.mainMenuKeyboard = [];
+    this.mainMenuKeyboard = undefined;
   }
 
   // try to fetch user from db
@@ -79,8 +80,7 @@ export async function extractSignalAppSession(
     console.log("Session is not a SignalSession");
     if (userFacingError) {
       await session.sendMessage(
-        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`,
-        session.mainMenuKeyboard
+        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
       );
     }
     return undefined;

@@ -1,4 +1,4 @@
-import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
+import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
@@ -12,8 +12,8 @@ import {
   Interactive,
   Text
 } from "whatsapp-api-js/messages";
-import { splitText } from "../utils/text.utils.ts";
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
+import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
@@ -24,16 +24,7 @@ export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second gl
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
-const mainMenuKeyboardWH: Keyboard = [
-  [
-    { text: "🔎 Commandes" }
-    // { text: "🔎 Rechercher" },
-    // { text: "👨‍💼 Ajout Fonction" },
-    //{ text: "🏛️️ Ajout Organisation" },
-    //{ text: "🧐 Mes suivis" },
-    //{ text: "❓ Aide & Contact" }
-  ]
-];
+const mainMenuKeyboardWH: Keyboard = [[KEYBOARD_KEYS.COMMAND_LIST.key]];
 
 export class WhatsAppSession implements ISession {
   messageApp = WhatsAppMessageApp;
@@ -79,6 +70,8 @@ export class WhatsAppSession implements ISession {
     formattedData: string,
     keyboard?: { text: string }[][]
   ): Promise<void> {
+    keyboard ??= this.mainMenuKeyboard;
+
     const mArr = splitText(
       markdown2WHMarkdown(formattedData),
       WHATSAPP_MESSAGE_CHAR_LIMIT
@@ -142,8 +135,7 @@ export async function extractWhatsAppSession(
     console.log("Session is not a WhatsAppSession");
     if (userFacingError) {
       await session.sendMessage(
-        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`,
-        session.mainMenuKeyboard
+        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
       );
     }
     return undefined;

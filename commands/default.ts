@@ -1,13 +1,11 @@
-import { ISession, Keyboard } from "../types.ts";
+import { ISession } from "../types.ts";
+import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
     if (session.isReply) return;
     await session.log({ event: "/default-message" });
-    await session.sendMessage(
-      "Je n'ai pas compris votre message 🥺",
-      session.mainMenuKeyboard
-    );
+    await session.sendMessage("Je n'ai pas compris votre message 🥺");
   } catch (error) {
     console.log(error);
   }
@@ -18,17 +16,16 @@ export const mainMenuCommand = async (session: ISession): Promise<void> => {
     await session.log({ event: "/main-menu-message" });
     let message = "";
 
-    let keyboard: Keyboard = [];
+    let keyboard: Keyboard;
     if (session.messageApp === "Telegram") {
       message +=
         "Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
-      keyboard = session.mainMenuKeyboard;
     } else {
       message += "\n\n" + TEXT_COMMANDS_MENU;
       keyboard = [
-        [{ text: "🧐 Mes suivis" }],
-        [{ text: "👨‍💼 Ajout Fonction" }],
-        [{ text: "❓ Aide & Contact" }]
+        [KEYBOARD_KEYS.FOLLOWS_LIST.key],
+        [KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
+        [KEYBOARD_KEYS.HELP.key]
       ];
     }
     await session.sendMessage(message, keyboard);
