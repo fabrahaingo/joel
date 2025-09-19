@@ -13,6 +13,7 @@ import {
   Text
 } from "whatsapp-api-js/messages";
 import { splitText } from "../utils/text.utils.ts";
+import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
@@ -78,7 +79,10 @@ export class WhatsAppSession implements ISession {
     formattedData: string,
     keyboard?: { text: string }[][]
   ): Promise<void> {
-    const mArr = splitText(formattedData, WHATSAPP_MESSAGE_CHAR_LIMIT);
+    const mArr = splitText(
+      markdown2WHMarkdown(formattedData),
+      WHATSAPP_MESSAGE_CHAR_LIMIT
+    );
 
     let resp: ServerMessageResponse;
 
@@ -172,7 +176,10 @@ export async function sendWhatsAppMessage(
   }
 
   try {
-    const mArr = splitText(message, WHATSAPP_MESSAGE_CHAR_LIMIT);
+    const mArr = splitText(
+      markdown2WHMarkdown(message),
+      WHATSAPP_MESSAGE_CHAR_LIMIT
+    );
     for (let i = 0; i < mArr.length; i++) {
       const resp = await whatsAppAPI.sendMessage(
         WHATSAPP_PHONE_ID,
