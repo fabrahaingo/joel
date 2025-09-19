@@ -78,10 +78,7 @@ const PROMO_SEARCH_KEYBOARD: Keyboard = [
 ];
 
 const PROMO_CONFIRM_KEYBOARD: Keyboard = [
-  [
-    { text: "Oui" },
-    { text: "Non" }
-  ],
+  [{ text: "Oui" }, { text: "Non" }],
   [KEYBOARD_KEYS.MAIN_MENU.key]
 ];
 
@@ -179,14 +176,19 @@ async function handlePromoAnswer(
     await session.sendMessage(contacts.join("\n"));
   }
 
-  await askFollowUpQuestion(session, PROMO_CONFIRM_TEXT, handlePromoConfirmation, {
-    context: {
-      promoInfo,
-      promoJORFList,
-      promoLabel: promoStr
-    },
-    keyboard: PROMO_CONFIRM_KEYBOARD
-  });
+  await askFollowUpQuestion(
+    session,
+    PROMO_CONFIRM_TEXT,
+    handlePromoConfirmation,
+    {
+      context: {
+        promoInfo,
+        promoJORFList,
+        promoLabel: promoStr
+      },
+      keyboard: PROMO_CONFIRM_KEYBOARD
+    }
+  );
   return true;
 }
 
@@ -202,10 +204,15 @@ async function handlePromoConfirmation(
       `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
       PROMO_SEARCH_KEYBOARD
     );
-    await askFollowUpQuestion(session, PROMO_CONFIRM_TEXT, handlePromoConfirmation, {
-      context,
-      keyboard: PROMO_CONFIRM_KEYBOARD
-    });
+    await askFollowUpQuestion(
+      session,
+      PROMO_CONFIRM_TEXT,
+      handlePromoConfirmation,
+      {
+        context,
+        keyboard: PROMO_CONFIRM_KEYBOARD
+      }
+    );
     return true;
   }
 
@@ -244,10 +251,15 @@ async function handlePromoConfirmation(
     `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
     PROMO_SEARCH_KEYBOARD
   );
-  await askFollowUpQuestion(session, PROMO_CONFIRM_TEXT, handlePromoConfirmation, {
-    context,
-    keyboard: PROMO_CONFIRM_KEYBOARD
-  });
+  await askFollowUpQuestion(
+    session,
+    PROMO_CONFIRM_TEXT,
+    handlePromoConfirmation,
+    {
+      context,
+      keyboard: PROMO_CONFIRM_KEYBOARD
+    }
+  );
   return true;
 }
 
