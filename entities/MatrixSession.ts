@@ -86,7 +86,7 @@ export class MatrixSession implements ISession {
           const retryAfterMs =
             mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
           await new Promise((resolve) =>
-            setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs * 1000)
+            setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
           );
           return await this.sendReactions(
             reactions,
@@ -174,7 +174,7 @@ export async function sendMatrixMessage(
         const retryAfterMs =
           mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
         await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs * 1000)
+          setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
         );
         return sendMatrixMessage(
           matrixClient,
