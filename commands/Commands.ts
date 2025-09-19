@@ -23,14 +23,20 @@ import {
 } from "./followFunction.ts";
 import { listCommand, unfollowFromStr } from "./list.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { handleFollowUpMessage } from "../entities/FollowUpManager.ts";
 
 export async function processMessage(
   session: ISession,
   msg: string
 ): Promise<void> {
-  if (session.isReply) return;
   // remove all spaces and replace them with a single space
   const cleanMsg = msg.trim().replace(/ +/g, " ");
+
+  if (await handleFollowUpMessage(session, cleanMsg)) {
+    return;
+  }
+
+  if (session.isReply) return;
 
   // Look through all keyboard keys to find a match
   for (const keyboardKey of Object.values(KEYBOARD_KEYS)) {
