@@ -148,6 +148,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 export async function sendTelegramMessage(
   chatId: string,
   message: string,
+  keyboard?: Keyboard,
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
@@ -163,14 +164,25 @@ export async function sendTelegramMessage(
   let i = 0;
   try {
     for (; i < mArr.length; i++) {
-      await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      const payload: Record<string, unknown> = {
         chat_id: chatIdTg,
         text: mArr[i],
         parse_mode: "markdown",
         link_preview_options: {
           is_disabled: true
         }
-      });
+      };
+      if (i == mArr.length - 1 && keyboard !== undefined) {
+        payload.reply_markup = {
+          selective: true,
+          resize_keyboard: true,
+          keyboard: keyboard
+        };
+      }
+      await axios.post(
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+        payload
+      );
       await umami.log({ event: "/message-sent-telegram" });
 
       // prevent hitting the Telegram API rate limit
@@ -205,6 +217,7 @@ export async function sendTelegramMessage(
           return sendTelegramMessage(
             chatId,
             mArr.slice(i).join("\n"),
+            keyboard,
             retryNumber + 1
           );
         default:

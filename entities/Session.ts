@@ -9,6 +9,7 @@ import { sendSignalAppMessage } from "./SignalSession.ts";
 import { SignalCli } from "signal-sdk";
 import { MatrixClient } from "matrix-bot-sdk";
 import { sendMatrixMessage } from "./MatrixSession.ts";
+import { Keyboard } from "./Keyboard.ts";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
@@ -63,25 +64,36 @@ export async function sendMessage(
     matrixClient?: MatrixClient;
     signalCli?: SignalCli;
     whatsAppAPI?: WhatsAppAPI;
-  }
+  },
+  keyboard?: Keyboard
 ): Promise<boolean> {
   switch (messageApp) {
     case "Matrix":
       if (options?.matrixClient == null)
         throw new Error("matrixClient is required");
-      return await sendMatrixMessage(options.matrixClient, chatId, message);
+      return await sendMatrixMessage(
+        options.matrixClient,
+        chatId,
+        message,
+        keyboard
+      );
 
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");
       return await sendSignalAppMessage(options.signalCli, chatId, message);
 
     case "Telegram":
-      return await sendTelegramMessage(chatId, message);
+      return await sendTelegramMessage(chatId, message, keyboard);
 
     case "WhatsApp":
       if (options?.whatsAppAPI == null)
         throw new Error("WhatsAppAPI is required");
-      return await sendWhatsAppMessage(options.whatsAppAPI, chatId, message);
+      return await sendWhatsAppMessage(
+        options.whatsAppAPI,
+        chatId,
+        message,
+        keyboard
+      );
   }
   return false;
 }

@@ -58,77 +58,14 @@ export class MatrixSession implements ISession {
     //await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
-  async sendReactions(
-    reactions: string[],
-    event_id: string,
-    idx = 0,
-    retryNumber = 0
-  ): Promise<boolean> {
-    if (retryNumber > 5) return false;
-
-    let i = idx;
-    try {
-      for (; i < reactions.length; i++) {
-        const content = {
-          "m.relates_to": {
-            rel_type: "m.annotation",
-            event_id,
-            key: reactions[i]
-          }
-        };
-        await this.matrixClient.sendEvent(this.roomId, "m.reaction", content);
-      }
-    } catch (error) {
-      const mError = error as MatrixError;
-      switch (mError.errcode) {
-        case "M_LIMIT_EXCEEDED": {
-          await umami.log({ event: "/matrix-too-many-requests" });
-          const retryAfterMs =
-            mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
-          await new Promise((resolve) =>
-            setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
-          );
-          return await this.sendReactions(
-            reactions,
-            event_id,
-            idx,
-            retryNumber + 1
-          );
-        }
-        default:
-          console.log(error);
-      }
-      return false;
-    }
-    return true;
-  }
-
   async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
-    keyboard ??= this.mainMenuKeyboard;
-
-    const mArr = splitText(formattedData, MATRIX_MESSAGE_CHAR_LIMIT);
-    if (mArr.length === 0) return;
-
-    let promptId = "";
-    for (const elem of mArr) {
-      promptId = await this.matrixClient.sendMessage(this.roomId, {
-        msgtype: "m.text",
-        body: markdown2plainText(elem),
-        format: "org.matrix.custom.html",
-        formatted_body: markdown2html(elem)
-      });
-      await umami.log({ event: "/message-sent-matrix" });
-      await new Promise(
-        (
-          resolve // We wait 1 second between messages to avoid dense bursts
-        ) => setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_SECONDS * 1000)
-      );
-    }
-    if (keyboard != null)
-      await this.sendReactions(
-        keyboard.flat().map((k) => k.text),
-        promptId
-      );
+    await sendMatrixMessage(
+      this.matrixClient,
+      this.chatId,
+      formattedData,
+      keyboard,
+      this.roomId
+    );
   }
 }
 
@@ -136,6 +73,7 @@ export async function sendMatrixMessage(
   matrixClient: MatrixClient,
   chatId: string,
   message: string,
+  keyboard?: Keyboard,
   roomId?: string,
   retryNumber = 0
 ): Promise<boolean> {
@@ -143,6 +81,8 @@ export async function sendMatrixMessage(
     await umami.log({ event: "/matrix-too-many-requests-aborted" });
     return false;
   } // give up after 5 retries
+  keyboard ??= mainMenuKeyboardMatrix;
+
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
   try {
@@ -151,8 +91,9 @@ export async function sendMatrixMessage(
       console.log("Could not find DM room for user " + chatId);
       return false;
     }
+    let promptId = "";
     for (; i < mArr.length; i++) {
-      await matrixClient.sendMessage(roomId, {
+      promptId = await matrixClient.sendMessage(roomId, {
         msgtype: "m.text",
         body: markdown2plainText(mArr[i]),
         format: "org.matrix.custom.html",
@@ -166,6 +107,14 @@ export async function sendMatrixMessage(
         setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
+    if (keyboard != null)
+      await sendMatrixReactions(
+        matrixClient,
+        chatId,
+        roomId,
+        keyboard.flat().map((k) => k.text),
+        promptId
+      );
   } catch (error) {
     const mError = error as MatrixError;
     switch (mError.errcode) {
@@ -180,6 +129,7 @@ export async function sendMatrixMessage(
           matrixClient,
           chatId,
           mArr.slice(i).join("\n"),
+          keyboard,
           roomId,
           retryNumber + 1
         );
@@ -191,6 +141,63 @@ export async function sendMatrixMessage(
           { $set: { status: "blocked" } }
         );
         break;
+      default:
+        console.log(error);
+    }
+    return false;
+  }
+  return true;
+}
+
+async function sendMatrixReactions(
+  matrixClient: MatrixClient,
+  chatId: string,
+  roomId?: string,
+  reactions: string[],
+  event_id: string,
+  idx = 0,
+  retryNumber = 0
+): Promise<boolean> {
+  if (retryNumber > 5) return false;
+
+  let i = idx;
+  try {
+    roomId ??= await findUserDMRoomId(matrixClient, chatId);
+    if (!roomId) {
+      console.log("Could not find DM room for user " + chatId);
+      return false;
+    }
+
+    for (; i < reactions.length; i++) {
+      const content = {
+        "m.relates_to": {
+          rel_type: "m.annotation",
+          event_id,
+          key: reactions[i]
+        }
+      };
+      await matrixClient.sendEvent(roomId, "m.reaction", content);
+    }
+  } catch (error) {
+    const mError = error as MatrixError;
+    switch (mError.errcode) {
+      case "M_LIMIT_EXCEEDED": {
+        await umami.log({ event: "/matrix-too-many-requests" });
+        const retryAfterMs =
+          mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
+        );
+        return await sendMatrixReactions(
+          matrixClient,
+          chatId,
+          roomId,
+          reactions,
+          event_id,
+          idx,
+          retryNumber + 1
+        );
+      }
       default:
         console.log(error);
     }

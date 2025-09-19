@@ -66,64 +66,13 @@ export class WhatsAppSession implements ISession {
     // TODO: check implementation in WH
   }
 
-  async sendMessage(
-    formattedData: string,
-    keyboard?: { text: string }[][]
-  ): Promise<void> {
-    keyboard ??= this.mainMenuKeyboard;
-
-    const mArr = splitText(
-      markdown2WHMarkdown(formattedData),
-      WHATSAPP_MESSAGE_CHAR_LIMIT
+  async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
+    await sendWhatsAppMessage(
+      this.whatsAppAPI,
+      this.chatId,
+      formattedData,
+      keyboard
     );
-
-    let resp: ServerMessageResponse;
-
-    for (let i = 0; i < mArr.length; i++) {
-      if (i == mArr.length - 1 && keyboard != null) {
-        const keyboardFlat = keyboard.flat();
-
-        const buttons = keyboardFlat.map(
-          (u, idx) => new Button(`reply_${String(idx)}`, u.text)
-        );
-        const actionList: Interactive = new Interactive(
-          // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
-          new ActionButtons(...buttons),
-          new Body(mArr[i])
-        );
-
-        resp = await this.whatsAppAPI.sendMessage(
-          this.botPhoneID,
-          this.chatId,
-          actionList
-        );
-      } else {
-        resp = await this.whatsAppAPI.sendMessage(
-          this.botPhoneID,
-          this.chatId,
-          new Text(mArr[i])
-        );
-      }
-      if (resp.error) {
-        console.log(resp.error);
-        throw new Error("Error sending WH message to user.");
-      }
-      await umami.log({ event: "/message-sent-whatsapp" });
-      // prevent hitting the WH API rate limit
-      await new Promise(
-        (
-          resolve // We wait 1 second between messages to avoid dense bursts
-        ) => setTimeout(resolve, 1000)
-      );
-    }
-    if (mArr.length > 20)
-      // If a very long message, we wait the equivalent of (6s-1s)/message
-      await new Promise((resolve) =>
-        setTimeout(
-          resolve,
-          mArr.length * (WHATSAPP_COOL_DOWN_DELAY_SECONDS - 1) * 1000
-        )
-      );
   }
 }
 
@@ -156,6 +105,7 @@ export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
   userPhoneId: string,
   message: string,
+  keyboard?: Keyboard,
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
@@ -167,17 +117,37 @@ export async function sendWhatsAppMessage(
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
 
+  keyboard ??= mainMenuKeyboardWH;
+
+  let resp: ServerMessageResponse;
   try {
     const mArr = splitText(
       markdown2WHMarkdown(message),
       WHATSAPP_MESSAGE_CHAR_LIMIT
     );
     for (let i = 0; i < mArr.length; i++) {
-      const resp = await whatsAppAPI.sendMessage(
-        WHATSAPP_PHONE_ID,
-        userPhoneId,
-        new Text(mArr[i])
-      );
+      if (i == mArr.length - 1 && keyboard != null) {
+        const keyboardFlat = keyboard.flat();
+        const buttons = keyboardFlat.map(
+          (u, idx) => new Button(`reply_${String(idx)}`, u.text)
+        );
+        const actionList: Interactive = new Interactive(
+          // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
+          new ActionButtons(...buttons),
+          new Body(mArr[i])
+        );
+        resp = await whatsAppAPI.sendMessage(
+          WHATSAPP_PHONE_ID,
+          userPhoneId,
+          actionList
+        );
+      } else {
+        resp = await whatsAppAPI.sendMessage(
+          WHATSAPP_PHONE_ID,
+          userPhoneId,
+          new Text(mArr[i])
+        );
+      }
       if (resp.error) {
         switch (resp.error.code) {
           // If rate limit exceeded, retry after 4^(numberRetry) seconds
@@ -194,6 +164,7 @@ export async function sendWhatsAppMessage(
               whatsAppAPI,
               userPhoneId,
               mArr.slice(i).join("\n"),
+              keyboard,
               retryNumber + 1
             );
 
@@ -224,6 +195,14 @@ export async function sendWhatsAppMessage(
         setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
+    if (mArr.length > 20)
+      // If a very long message, we wait the equivalent of (6s-1s)/message
+      await new Promise((resolve) =>
+        setTimeout(
+          resolve,
+          mArr.length * (WHATSAPP_COOL_DOWN_DELAY_SECONDS - 1) * 1000
+        )
+      );
   } catch (error) {
     console.log(error);
     return false;

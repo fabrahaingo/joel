@@ -54,21 +54,7 @@ export class SignalSession implements ISession {
   }
 
   async sendMessage(formattedData: string): Promise<void> {
-    const mArr = splitText(
-      markdown2plainText(formattedData),
-      SIGNAL_MESSAGE_CHAR_LIMIT
-    );
-
-    for (const elem of mArr) {
-      await this.signalCli.sendMessage(this.chatId, elem);
-
-      await umami.log({ event: "/message-sent-signal" });
-
-      // prevent hitting the Signal API rate limit
-      await new Promise((resolve) =>
-        setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
-      );
-    }
+    await sendSignalAppMessage(this.signalCli, this.chatId, formattedData);
   }
 }
 
