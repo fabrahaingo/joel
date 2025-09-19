@@ -1,5 +1,4 @@
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
-import TelegramBot from "node-telegram-bot-api";
 import {
   callJORFSearchPeople,
   cleanPeopleName
@@ -8,13 +7,10 @@ import { IPeople, ISession } from "../types.ts";
 import { Types } from "mongoose";
 import User from "../models/User.ts";
 import People from "../models/People.ts";
-import {
-  extractTelegramSession,
-  TelegramSession
-} from "../entities/TelegramSession.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { removeSpecialCharacters } from "../utils/text.utils.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -25,55 +21,56 @@ const isPersonAlreadyFollowed = (
   });
 };
 
-export const searchCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/search" });
+const SEARCH_PROMPT_TEXT =
+  "Entrez le prénom et nom de la personne que vous souhaitez rechercher:";
 
-  const tgSession: TelegramSession | undefined = await extractTelegramSession(
-    session,
-    false
-  );
-  if (tgSession == null) {
+const SEARCH_PROMPT_KEYBOARD: Keyboard = [
+  [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
+  [KEYBOARD_KEYS.MAIN_MENU.key]
+];
+
+async function askSearchQuestion(session: ISession): Promise<void> {
+  await askFollowUpQuestion(session, SEARCH_PROMPT_TEXT, handleSearchAnswer, {
+    keyboard: session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
+  });
+}
+
+async function handleSearchAnswer(
+  session: ISession,
+  answer: string
+): Promise<boolean> {
+  const trimmedAnswer = answer.trim();
+
+  if (trimmedAnswer.length === 0) {
     await session.sendMessage(
-      'Utilisez la fonction recherche à l\'aide de la commande suivante:\nEx: "Rechercher Emmanuel Macron"'
+      `Votre réponse n'a pas été reconnue. 👎\n\nVeuillez essayer de nouveau la commande.`,
+      session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
     );
-    return;
+    await askSearchQuestion(session);
+    return true;
   }
 
-  const tgBot = tgSession.telegramBot;
+  if (trimmedAnswer.startsWith("/")) {
+    return false;
+  }
 
   await session.sendTypingAction();
-  const question = await tgBot.sendMessage(
-    tgSession.chatIdTg,
-    "Entrez le prénom et nom de la personne que vous souhaitez rechercher:",
-    {
-      reply_markup: {
-        force_reply: true
-      }
-    }
+  const searchSucceeded = await searchPersonHistory(
+    session,
+    "Historique " + trimmedAnswer,
+    "latest"
   );
-  tgBot.onReplyToMessage(
-    tgSession.chatIdTg,
-    question.message_id,
-    (tgMsg: TelegramBot.Message) => {
-      void (async () => {
-        if (tgMsg.text == undefined || tgMsg.text.length == 0) {
-          await session.sendMessage(
-            `Votre réponse n'a pas été reconnue. 👎\n\nVeuillez essayer de nouveau la commande.`,
-            [
-              [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
-              [KEYBOARD_KEYS.MAIN_MENU.key]
-            ]
-          );
-          return;
-        }
-        await searchPersonHistory(
-          session,
-          "Historique " + tgMsg.text,
-          "latest"
-        );
-      })();
-    }
-  );
+
+  if (!searchSucceeded) {
+    await askSearchQuestion(session);
+  }
+
+  return true;
+}
+
+export const searchCommand = async (session: ISession): Promise<void> => {
+  await session.log({ event: "/search" });
+  await askSearchQuestion(session);
 };
 
 export const fullHistoryCommand = async (
