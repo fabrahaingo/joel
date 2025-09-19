@@ -42,23 +42,29 @@ await (async () => {
     // Listen for incoming messages
     signalCli.on("message", (message: ISignalMessage) => {
       void (async () => {
-        const msgText = message.envelope.dataMessage?.message;
-        if (msgText === undefined) return;
+        try {
+          if (message.envelope.sourceNumber === SIGNAL_PHONE_NUMBER) return;
 
-        await umami.log({ event: "/message-signal" });
+          const msgText = message.envelope.dataMessage?.message;
+          if (msgText === undefined) return;
 
-        const signalSession = new SignalSession(
-          signalCli,
-          SIGNAL_PHONE_NUMBER,
-          message.envelope.sourceNumber,
-          "fr"
-        );
-        await signalSession.loadUser();
+          await umami.log({ event: "/message-signal" });
 
-        if (signalSession.user != null)
-          await signalSession.user.updateInteractionMetrics();
+          const signalSession = new SignalSession(
+            signalCli,
+            SIGNAL_PHONE_NUMBER,
+            message.envelope.sourceNumber,
+            "fr"
+          );
+          await signalSession.loadUser();
 
-        await processMessage(signalSession, msgText);
+          if (signalSession.user != null)
+            await signalSession.user.updateInteractionMetrics();
+
+          await processMessage(signalSession, msgText);
+        } catch (error) {
+          console.error("Signal: Error processing command:", error);
+        }
       })();
     });
 
