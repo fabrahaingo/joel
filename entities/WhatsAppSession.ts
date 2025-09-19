@@ -119,6 +119,22 @@ export async function sendWhatsAppMessage(
 
   keyboard ??= mainMenuKeyboardWH;
 
+  const keyboardFlat = keyboard?.flat();
+  if (keyboardFlat != null) {
+    if (keyboardFlat.length > 3) {
+      console.log(
+        `WhatsApp keyboard length is ${String(keyboardFlat.length)}>3`
+      );
+      return false;
+    }
+    for (const key of keyboardFlat) {
+      if (key.text.length > 20) {
+        console.log(`WhatsApp keyboard text too long, aborting: ${key.text}`);
+        return false;
+      }
+    }
+  }
+
   let resp: ServerMessageResponse;
   try {
     const mArr = splitText(
@@ -126,8 +142,7 @@ export async function sendWhatsAppMessage(
       WHATSAPP_MESSAGE_CHAR_LIMIT
     );
     for (let i = 0; i < mArr.length; i++) {
-      if (i == mArr.length - 1 && keyboard != null) {
-        const keyboardFlat = keyboard.flat();
+      if (i == mArr.length - 1 && keyboardFlat != null) {
         const buttons = keyboardFlat.map(
           (u, idx) => new Button(`reply_${String(idx)}`, u.text)
         );
