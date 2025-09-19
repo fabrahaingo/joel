@@ -35,15 +35,9 @@ interface UserFollows {
 const noDataText = `Vous ne suivez aucun contact, fonction, ni organisation pour le moment.`;
 
 async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
-  const followedFunctions = user.followedFunctions.sort((a, b) => {
-    if (a < b) {
-      return -1;
-    }
-    if (a > b) {
-      return 1;
-    }
-    return 0;
-  });
+  const followedFunctions = user.followedFunctions.sort((a, b) =>
+    a.functionTag.localeCompare(b.functionTag)
+  );
 
   let followedOrganisations: IOrganisation[] = [];
   if (user.followedOrganisations.length > 0)
