@@ -188,7 +188,9 @@ UserSchema.method(
 UserSchema.method(
   "checkFollowedPeople",
   function checkFollowedPeople(this: IUser, people: IPeople): boolean {
-    return this.followedPeople.some((person) => person.peopleId === people._id);
+    return this.followedPeople.some(
+      (person) => person.peopleId.toString() === people._id.toString()
+    );
   }
 );
 
@@ -225,7 +227,7 @@ UserSchema.method(
   async function removeFollowedPeople(this: IUser, peopleToUnfollow: IPeople) {
     if (!this.checkFollowedPeople(peopleToUnfollow)) return false;
     this.followedPeople = this.followedPeople.filter((elem) => {
-      return !(elem.peopleId.toString === peopleToUnfollow._id.toString);
+      return !(elem.peopleId.toString() === peopleToUnfollow._id.toString());
     });
     await this.save();
     return true;
@@ -288,7 +290,7 @@ UserSchema.method(
   async function removeFollowedName(this: IUser, name: string) {
     if (!this.checkFollowedName(name)) return false;
     this.followedNames = this.followedNames.filter((elem) => {
-      return elem !== name.toUpperCase();
+      return elem.toUpperCase() !== name.toUpperCase();
     });
     await this.save();
     return true;
