@@ -204,7 +204,7 @@ export async function sendTelegramMessage(
           // retry sending the remainder of the message, indicating this is a retry
           return sendTelegramMessage(
             chatId,
-            mArr.slice(i).join("`n"),
+            mArr.slice(i).join("\n"),
             retryNumber + 1
           );
         default:
