@@ -42,14 +42,14 @@ export const KEYBOARD_KEYS: Record<
     }
   },
   ENA_INSP_PROMO_SEARCH: {
-    key: { text: "Rechercher une promo ENA/INSP" },
+    key: { text: "Ajouter promo INSP" },
     action: async (session: ISession, _msg?: string) => {
       const { enaCommand } = await import("../commands/ena.ts");
       await enaCommand(session);
     }
   },
   ENA_INSP_PROMO_LIST: {
-    key: { text: "Liste des promos ENA/INSP" },
+    key: { text: "Liste promos INSP" },
     action: async (session: ISession, _msg?: string) => {
       const { promosCommand } = await import("../commands/ena.ts");
       await promosCommand(session);
