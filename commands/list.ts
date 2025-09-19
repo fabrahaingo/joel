@@ -47,11 +47,9 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
       }))
     }).lean();
 
-  followedOrganisations.sort((a, b) => {
-    if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
-    if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;
-    return 0;
-  });
+  followedOrganisations.sort((a, b) =>
+    a.nom.toUpperCase().localeCompare(b.nom.toUpperCase())
+  );
 
   let followedPeoples: IPeople[] = [];
   if (user.followedPeople.length > 0)
@@ -76,11 +74,9 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
   );
 
   // Sort the array by alphabetic order of lastnames
-  followedPeopleTab.sort((a, b) => {
-    if (a.nomPrenom.toUpperCase() < b.nomPrenom.toUpperCase()) return -1;
-    if (a.nomPrenom.toUpperCase() > b.nomPrenom.toUpperCase()) return 1;
-    return 0;
-  });
+  followedPeopleTab.sort((a, b) =>
+    a.nomPrenom.toUpperCase().localeCompare(b.nomPrenom.toUpperCase())
+  );
 
   return {
     functions: followedFunctions.map((f) => f.functionTag),
