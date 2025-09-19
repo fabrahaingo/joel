@@ -1,6 +1,6 @@
 import { ISession } from "../types.ts";
 import { BotMessages } from "../entities/BotMessages.ts";
-import { commands } from "./Commands.ts";
+import { processMessage } from "./Commands.ts";
 
 export const startCommand = async (
   session: ISession,
@@ -54,15 +54,7 @@ export const startCommand = async (
       )
         await session.log({ event: "/start-from-people" });
 
-      for (const command of commands) {
-        if (command.regex.test(commandMsg)) {
-          // we delegate the command to the right function
-          await command.action(session, commandMsg);
-          return;
-        }
-      }
-
-      // if "Bonjour JOEL ! Suivre ..." or "/start Suivre ..."
+      await processMessage(session, commandMsg);
     } else {
       //  start classique
       await session.log({ event: "/start" });

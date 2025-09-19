@@ -13,7 +13,7 @@ import {
   WHATSAPP_API_VERSION,
   WhatsAppSession
 } from "../entities/WhatsAppSession.ts";
-import { commands } from "../commands/Commands.ts";
+import { processMessage } from "../commands/Commands.ts";
 
 const MAX_AGE_SEC = 5 * 60;
 
@@ -138,7 +138,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   if (from === WHATSAPP_PHONE_ID) return;
   if (message.type !== "text" && message.type !== "interactive") return;
 
-  const msgText = textFromMessage(message)?.trim();
+  const msgText = textFromMessage(message);
 
   if (phoneID !== WHATSAPP_PHONE_ID) {
     if (msgText != null)
@@ -159,12 +159,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     if (WHSession.user != null) await WHSession.user.updateInteractionMetrics();
 
-    for (const command of commands) {
-      if (command.regex.test(msgText)) {
-        await command.action(WHSession, msgText);
-        return;
-      }
-    }
+    await processMessage(WHSession, msgText);
   } catch (error) {
     console.log(error);
   }

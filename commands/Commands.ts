@@ -1,4 +1,4 @@
-import { CommandType } from "../types.ts";
+import { CommandType, ISession } from "../types.ts";
 
 import {
   followOrganisationTelegram,
@@ -23,6 +23,21 @@ import {
   followFunctionFromStrCommand
 } from "./followFunction.ts";
 import { listCommand, unfollowFromStr, unfollowTelegram } from "./list.ts";
+
+export async function processMessage(
+  session: ISession,
+  msg: string
+): Promise<void> {
+  // remove all spaces and replace them with a single space
+  const cleanMsg = msg.trim().replace(/ +/g, " ");
+
+  for (const command of commands) {
+    if (command.regex.test(cleanMsg)) {
+      await command.action(session, cleanMsg);
+      return;
+    }
+  }
+}
 
 export const commands: CommandType[] = [
   {

@@ -6,7 +6,7 @@ import {
   AutojoinRoomsMixin
 } from "matrix-bot-sdk";
 import { MatrixSession } from "../entities/MatrixSession.ts";
-import { commands } from "../commands/Commands.ts";
+import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
 
@@ -57,7 +57,6 @@ function handleCommand(roomId: string, event: any) {
         break;
     }
     if (msgText == null) return;
-    msgText = msgText.trim();
 
     // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
     if (/^@_?server:/.test(event.sender)) {
@@ -85,12 +84,7 @@ function handleCommand(roomId: string, event: any) {
       if (matrixSession.user != null)
         await matrixSession.user.updateInteractionMetrics();
 
-      for (const command of commands) {
-        if (command.regex.test(msgText)) {
-          await command.action(matrixSession, msgText);
-          return;
-        }
-      }
+      await processMessage(matrixSession, msgText);
     } catch (error) {
       console.log(error);
     }

@@ -3,7 +3,7 @@ import "dotenv/config";
 import { SignalCli } from "signal-sdk";
 import { mongodbConnect } from "../db.ts";
 import { SignalSession } from "../entities/SignalSession.ts";
-import { commands } from "../commands/Commands.ts";
+import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 
 const { SIGNAL_PHONE_NUMBER, TEST_TARGET_PHONE_NUMBER, SIGNAL_BAT_PATH } =
@@ -42,7 +42,7 @@ await (async () => {
     // Listen for incoming messages
     signalCli.on("message", (message: ISignalMessage) => {
       void (async () => {
-        const msgText = message.envelope.dataMessage?.message?.trim();
+        const msgText = message.envelope.dataMessage?.message;
         if (msgText === undefined) return;
 
         await umami.log({ event: "/message-signal" });
@@ -58,12 +58,7 @@ await (async () => {
         if (signalSession.user != null)
           await signalSession.user.updateInteractionMetrics();
 
-        for (const command of commands) {
-          if (command.regex.test(msgText)) {
-            await command.action(signalSession, msgText);
-            return;
-          }
-        }
+        await processMessage(signalSession, msgText);
       })();
     });
 

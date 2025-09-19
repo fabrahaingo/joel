@@ -2,7 +2,7 @@ import "dotenv/config";
 import TelegramBot from "node-telegram-bot-api";
 import { mongodbConnect } from "../db.ts";
 import { TelegramSession } from "../entities/TelegramSession.ts";
-import { commands } from "../commands/Commands.ts";
+import { commands, processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
@@ -27,7 +27,7 @@ await (async () => {
           const tgUser: TelegramBot.User | undefined = tgMsg.from;
           if (tgUser === undefined || tgUser.is_bot) return; // Ignore bots
           if (tgMsg.text == undefined) return; // Ignore media messages without text
-          const msgText = tgMsg.text.trim();
+          const msgText = tgMsg.text;
 
           const tgSession = new TelegramSession(
             bot,
@@ -40,8 +40,7 @@ await (async () => {
           if (tgSession.user != null)
             await tgSession.user.updateInteractionMetrics();
 
-          // Process user message
-          await command.action(tgSession, msgText);
+          await processMessage(tgSession, msgText);
         } catch (error) {
           console.error("Error processing command:", error);
         }
