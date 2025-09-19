@@ -12,9 +12,6 @@ export const startCommand = async (
     await session.sendTypingAction();
 
     const botName = process.env.BOT_NAME;
-    const botChannel = process.env.BOT_CHANNEL;
-
-    const mardownLink = session.messageApp === "Telegram";
 
     let message = BotMessages.START.replace(
       "{botName}",
