@@ -7,7 +7,7 @@ import {
 } from "../entities/TelegramSession.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import { ISession } from "../types";
-import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 
 const functionTagValues = Object.values(FunctionTags);
 const functionTagKeys = Object.keys(FunctionTags);
