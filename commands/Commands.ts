@@ -35,16 +35,15 @@ export async function processMessage(
   // remove all spaces and replace them with a single space
   const cleanMsg = msg.trim().replace(/ +/g, " ");
 
-  if (session.isReply) return;
+  if (await handleFollowUpMessage(session, cleanMsg)) return;
+  clearFollowUp(session);
 
   // Look through all keyboard keys to find a match
   for (const keyboardKey of Object.values(KEYBOARD_KEYS)) {
+    if (keyboardKey.action === undefined) continue;
     const buttonText = keyboardKey.key.text;
 
-    // Check for an exact match
     if (buttonText === cleanMsg) {
-      // We found a matching keyboard button, execute its action
-      clearFollowUp(session);
       await keyboardKey.action(session, cleanMsg);
       return;
     }
@@ -52,13 +51,10 @@ export async function processMessage(
 
   for (const command of commands) {
     if (command.regex.test(cleanMsg)) {
-      clearFollowUp(session);
       await command.action(session, cleanMsg);
       return;
     }
   }
-
-  if (await handleFollowUpMessage(session, cleanMsg)) return;
 
   await defaultCommand(session);
 }

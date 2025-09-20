@@ -35,6 +35,7 @@ export async function handleFollowUpMessage(
 
   // Remove existing follow-up before invoking handler to allow chaining.
   followUps.delete(key);
+  clearFollowUp(session);
 
   return await record.handler(session, message, record.context);
 }
@@ -62,7 +63,7 @@ export async function askFollowUpQuestion<Context = unknown>(
   });
 
   try {
-    await session.sendMessage(question, options.keyboard);
+    if (question === "") await session.sendMessage(question, options.keyboard);
   } catch (error) {
     followUps.delete(key);
     throw error;
