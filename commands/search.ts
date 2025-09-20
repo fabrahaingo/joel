@@ -90,9 +90,7 @@ export const fullHistoryCommand = async (
   if (personName.length == 0) {
     await session.sendMessage(
       "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-      session.messageApp !== "WhatsApp"
-        ? [[KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key], [KEYBOARD_KEYS.MAIN_MENU.key]]
-        : undefined
+      SEARCH_PROMPT_KEYBOARD
     );
     return;
   }
@@ -141,7 +139,12 @@ export async function searchPersonHistory(
         tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key]);
       }
 
-      await session.sendMessage(text, tempKeyboard);
+      await askFollowUpQuestion(session, text, handleSearchFollowUp, {
+        context: {
+          prenomNom
+        },
+        keyboard: tempKeyboard
+      });
       return false;
     }
 
@@ -184,10 +187,10 @@ export async function searchPersonHistory(
     if (nbRecords > 2 || !isUserFollowingPerson) {
       if (historyType === "latest" && nbRecords > 2) {
         text += `\n${String(nbRecords - 2)} autres mentions au JORF non affichées.\n`;
-        if (session.messageApp !== "Telegram")
+        if (session.messageApp === "Signal")
           text += `\nPour voir l'historique complet, utilisez la commande: *Historique ${prenomNom}*.\n`;
 
-        tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key]);
+        tempKeyboard.push([KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key]);
       }
       if (!isUserFollowingPerson) {
         tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key]);
@@ -203,16 +206,15 @@ export async function searchPersonHistory(
           text += `Pour suivre, utilisez la commande:\n*Suivre ${prenomNom}*`;
       }
     }
-    if (tempKeyboard.length >= 2)
-      tempKeyboard.unshift([KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key]);
-    tempKeyboard.unshift([KEYBOARD_KEYS.MAIN_MENU.key]);
+    if (tempKeyboard.length < 2)
+      tempKeyboard.push([KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key]);
+    tempKeyboard.push([KEYBOARD_KEYS.MAIN_MENU.key]);
 
-    await session.sendMessage(text, tempKeyboard);
-
-    await askFollowUpQuestion(session, "", handleSearchFollowUp, {
+    await askFollowUpQuestion(session, text, handleSearchFollowUp, {
       context: {
         prenomNom
-      }
+      },
+      keyboard: tempKeyboard
     });
 
     return true;
@@ -238,10 +240,14 @@ async function handleSearchFollowUp(
       await followCommand(session, "Suivre " + context.prenomNom);
       return true;
     case KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key.text:
-      await followCommand(session, "Historique " + context.prenomNom);
+      await searchPersonHistory(
+        session,
+        "Historique " + context.prenomNom,
+        "full"
+      );
       return true;
     case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key.text:
-      await followCommand(session, "SuivreN " + context.prenomNom);
+      await manualFollowCommand(session, "SuivreN " + context.prenomNom);
       return true;
   }
   return false;
@@ -299,12 +305,8 @@ export const followCommand = async (
       // With the search/follow flow this would happen only if the user types the "Suivre **" manually
       text += `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     }
-    if (session.messageApp === "Telegram")
-      await session.sendMessage(text, [
-        [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
-        [KEYBOARD_KEYS.MAIN_MENU.key]
-      ]);
-    else await session.sendMessage(text);
+
+    await session.sendMessage(text, SEARCH_PROMPT_KEYBOARD);
   } catch (error) {
     console.log(error);
   }

@@ -68,17 +68,10 @@ async function getJORFPromoSearchResult(
 const PROMO_PROMPT_TEXT =
   "Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n" +
   "⚠️ Attention, un nombre important de suivis seront ajoutés en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n" +
-  "Formats acceptés:\nGeorges-Clemenceau\n2017-2018\n" +
-  "Utilisez la command /promos pour consulter la liste des promotions INSP et ENA disponibles.";
+  "Formats acceptés:\nGeorges-Clemenceau\n2017-2018\n";
 
 const PROMO_SEARCH_KEYBOARD: Keyboard = [
-  [KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH.key],
   [KEYBOARD_KEYS.ENA_INSP_PROMO_LIST.key],
-  [KEYBOARD_KEYS.MAIN_MENU.key]
-];
-
-const PROMO_CONFIRM_KEYBOARD: Keyboard = [
-  [{ text: "Oui" }, { text: "Non" }],
   [KEYBOARD_KEYS.MAIN_MENU.key]
 ];
 
@@ -93,15 +86,18 @@ interface PromoConfirmContext {
 }
 
 async function askPromoQuestion(session: ISession): Promise<void> {
-  await askFollowUpQuestion(session, PROMO_PROMPT_TEXT, handlePromoAnswer, {
+  let text = PROMO_PROMPT_TEXT;
+  if (session.messageApp === "Signal")
+    text +=
+      "Utilisez la command /promos pour consulter la liste des promotions INSP et ENA disponibles.";
+  await askFollowUpQuestion(session, text, handlePromoAnswer, {
     keyboard: PROMO_SEARCH_KEYBOARD
   });
 }
 
 async function handlePromoAnswer(
   session: ISession,
-  answer: string,
-  _context: void
+  answer: string
 ): Promise<boolean> {
   const trimmedAnswer = answer.trim();
 
@@ -114,16 +110,6 @@ async function handlePromoAnswer(
     return true;
   }
 
-  if (/^\/promos/i.test(trimmedAnswer)) {
-    await promosCommand(session);
-    await askPromoQuestion(session);
-    return true;
-  }
-
-  if (trimmedAnswer.startsWith("/")) {
-    return false;
-  }
-
   const promoInfo = findENAINSPPromo(trimmedAnswer);
 
   if (promoInfo && !promoInfo.onJORF) {
@@ -132,8 +118,7 @@ async function handlePromoAnswer(
       : promoInfo.period;
 
     await session.sendMessage(
-      `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.\n` +
-        "Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.",
+      `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.`,
       PROMO_SEARCH_KEYBOARD
     );
     await askPromoQuestion(session);
@@ -146,11 +131,11 @@ async function handlePromoAnswer(
   }
 
   if (promoInfo == null || promoJORFList.length === 0) {
-    await session.sendMessage(
-      `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.\n\n` +
-        "Utilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.",
-      PROMO_SEARCH_KEYBOARD
-    );
+    let text = `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.\n`;
+    if (session.messageApp === "Signal")
+      text +=
+        "\nUtilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.";
+    await session.sendMessage(text, PROMO_SEARCH_KEYBOARD);
     await askPromoQuestion(session);
     return true;
   }
@@ -170,23 +155,17 @@ async function handlePromoAnswer(
   const contacts = promoJORFList.map((contact) => {
     return `${contact.nom} ${contact.prenom}`;
   });
-  if (contacts.length > 0) {
-    await session.sendMessage(contacts.join("\n"));
-  }
 
-  await askFollowUpQuestion(
-    session,
-    PROMO_CONFIRM_TEXT,
-    handlePromoConfirmation,
-    {
-      context: {
-        promoInfo,
-        promoJORFList,
-        promoLabel: promoStr
-      },
-      keyboard: PROMO_CONFIRM_KEYBOARD
+  let text = contacts.join("\n");
+  text += "\n\n" + PROMO_CONFIRM_TEXT;
+
+  await askFollowUpQuestion(session, text, handlePromoConfirmation, {
+    context: {
+      promoInfo,
+      promoJORFList,
+      promoLabel: promoStr
     }
-  );
+  });
   return true;
 }
 
@@ -207,8 +186,7 @@ async function handlePromoConfirmation(
       PROMO_CONFIRM_TEXT,
       handlePromoConfirmation,
       {
-        context,
-        keyboard: PROMO_CONFIRM_KEYBOARD
+        context
       }
     );
     return true;
@@ -219,7 +197,7 @@ async function handlePromoConfirmation(
   }
 
   if (/oui/i.test(trimmedAnswer)) {
-    await session.sendMessage(`Ajout en cours... ⏰`);
+    await session.sendMessage(`Ajout en cours... ⏰`, undefined, true);
     await session.sendTypingAction();
     session.user ??= await User.findOrCreate(session);
 
@@ -254,8 +232,7 @@ async function handlePromoConfirmation(
     PROMO_CONFIRM_TEXT,
     handlePromoConfirmation,
     {
-      context,
-      keyboard: PROMO_CONFIRM_KEYBOARD
+      context
     }
   );
   return true;
@@ -294,8 +271,9 @@ export const promosCommand = async (session: ISession): Promise<void> => {
     text +=
       "\nLes promotions antérieures ne sont pas disponibles sur JORFSearch.\n\n";
 
-    text +=
-      "Utilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
+    if (session.messageApp === "Signal")
+      text +=
+        "Utilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
     await session.sendMessage(text, [
       [KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH.key],
@@ -389,7 +367,7 @@ async function handleReferenceAnswer(
   const contacts = JORFResult.map((contact) => {
     return `${contact.nom} ${contact.prenom}`;
   });
-  await session.sendMessage(contacts.join("\n"));
+  await session.sendMessage(contacts.join("\n"), null, true);
 
   await askFollowUpQuestion(
     session,
@@ -438,7 +416,6 @@ async function handleReferenceConfirmation(
   }
 
   if (/oui/i.test(trimmedAnswer)) {
-    await session.sendMessage(`Ajout en cours... ⏰`);
     await session.sendTypingAction();
     session.user ??= await User.findOrCreate(session);
 

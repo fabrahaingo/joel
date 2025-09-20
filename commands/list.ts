@@ -178,11 +178,9 @@ export const listCommand = async (session: ISession) => {
 
 const UNFOLLOW_PROMPT_TEXT =
   "Entrez le(s) nombre(s) correspondant au(x) contact(s) à supprimer.\n" +
-  "Exemple: 1 4 7\n" +
-  "Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis";
+  "Exemple: 1 4 7\n";
 
 const UNFOLLOW_KEYBOARD: Keyboard = [
-  [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
   [KEYBOARD_KEYS.FOLLOWS_LIST.key],
   [KEYBOARD_KEYS.MAIN_MENU.key]
 ];

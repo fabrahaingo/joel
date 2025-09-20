@@ -61,27 +61,17 @@ const ORGANISATION_SEARCH_PROMPT =
   "Entrez le nom ou l'identifiant Wikidata de l'organisation que vous souhaitez suivre:\n" +
   "Exemples:\n*Conseil d'État* ou *Q769657*\n*Conseil constitutionnel* ou *Q1127218*";
 
-const ORGANISATION_SEARCH_KEYBOARD: Keyboard = [
-  [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key],
+const ORGANISATION_SEARCH_KEYBOARD = [
+  [KEYBOARD_KEYS.ORGANISATION_FOLLOW_NEW.key],
   [KEYBOARD_KEYS.MAIN_MENU.key]
 ];
 
 const ORGANISATION_SELECTION_PROMPT =
   "Entrez le(s) nombre(s) correspondant au(x) organisation(s) à suivre.\nExemple: 1 4 7";
 
-const ORGANISATION_SELECTION_KEYBOARD: Keyboard = [
-  [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key],
-  [KEYBOARD_KEYS.MAIN_MENU.key]
-];
-
-const ORGANISATION_CONFIRM_KEYBOARD: Keyboard = [
-  [{ text: "Oui" }, { text: "Non" }],
-  [KEYBOARD_KEYS.MAIN_MENU.key]
-];
-
 async function askOrganisationSelectionQuestion(
   session: ISession,
-  context: OrganisationSelectionContext
+  context: OrganisationsConfirmationContext
 ): Promise<void> {
   await askFollowUpQuestion(
     session,
@@ -89,38 +79,13 @@ async function askOrganisationSelectionQuestion(
     handleOrganisationSelection,
     {
       context,
-      keyboard:
-        session.messageApp === "WhatsApp"
-          ? undefined
-          : ORGANISATION_SELECTION_KEYBOARD
+      keyboard: ORGANISATION_SEARCH_KEYBOARD
     }
   );
 }
 
-async function askOrganisationConfirmationQuestion(
-  session: ISession,
-  context: OrganisationConfirmationContext
-): Promise<void> {
-  await askFollowUpQuestion(
-    session,
-    "Voulez-vous ajouter cette organisation à vos suivis ? (répondez *oui* ou *non*)",
-    handleOrganisationConfirmation,
-    {
-      context,
-      keyboard:
-        session.messageApp === "WhatsApp"
-          ? undefined
-          : ORGANISATION_CONFIRM_KEYBOARD
-    }
-  );
-}
-
-interface OrganisationSelectionContext {
+interface OrganisationsConfirmationContext {
   organisations: { nom: string; wikidataId: WikidataId }[];
-}
-
-interface OrganisationConfirmationContext {
-  organisation: { nom: string; wikidataId: WikidataId };
 }
 
 async function askOrganisationSearch(session: ISession): Promise<void> {
@@ -129,10 +94,7 @@ async function askOrganisationSearch(session: ISession): Promise<void> {
     ORGANISATION_SEARCH_PROMPT,
     handleOrganisationSearchAnswer,
     {
-      keyboard:
-        session.messageApp === "WhatsApp"
-          ? undefined
-          : ORGANISATION_SEARCH_KEYBOARD
+      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
     }
   );
 }
@@ -145,10 +107,8 @@ async function handleOrganisationSearchAnswer(
 
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
-      `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp"
-        ? undefined
-        : ORGANISATION_SEARCH_KEYBOARD
+      `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau.`,
+      ORGANISATION_SEARCH_KEYBOARD
     );
     await askOrganisationSearch(session);
     return true;
@@ -179,7 +139,7 @@ async function processOrganisationSearch(
 
   if (orgResults.length == 0) {
     let text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.`;
-    if (session.messageApp === "WhatsApp") {
+    if (session.messageApp === "Signal") {
       text += `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
     } else {
       text += `\n\nFormat:\n*Nom de l'organisation*\nou\n*WikidataId de l'organisation*`;
@@ -216,21 +176,38 @@ async function handleSingleOrganisationResult(
     session.user &&
     isOrganisationAlreadyFollowed(session.user, organisation.wikidataId)
   ) {
-    text += `\nVous suivez déjà *${organisation.nom}* ✅`;
-    await session.sendMessage(
-      text,
-      session.messageApp === "WhatsApp"
-        ? undefined
-        : ORGANISATION_SEARCH_KEYBOARD
-    );
-    await askOrganisationSearch(session);
+    text += `\n\nVous suivez déjà *${organisation.nom}* ✅`;
+    await session.sendMessage(text, ORGANISATION_SEARCH_KEYBOARD);
     return;
+  } else {
+    const tempKeyboard: Keyboard = ORGANISATION_SEARCH_KEYBOARD;
+    tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key]);
+    await askFollowUpQuestion(
+      session,
+      text,
+      handleSingleOrganisationConfirmation,
+      {
+        context: { organisations: [organisation] },
+        keyboard: tempKeyboard
+      }
+    );
   }
+}
 
-  text += `\nSouhaitez-vous suivre cette organisation ?`;
-
-  await session.sendMessage(text);
-  await askOrganisationConfirmationQuestion(session, { organisation });
+async function handleSingleOrganisationConfirmation(
+  session: ISession,
+  answer: string,
+  context: OrganisationsConfirmationContext
+): Promise<boolean> {
+  if (answer === KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key.text) {
+    await followOrganisationsFromWikidataIdStr(
+      session,
+      `SuivreO ${context.organisations[0].wikidataId}`,
+      false
+    );
+    return true;
+  }
+  return false;
 }
 
 async function handleMultipleOrganisationResults(
@@ -272,16 +249,14 @@ async function handleMultipleOrganisationResults(
 async function handleOrganisationSelection(
   session: ISession,
   answer: string,
-  context: OrganisationSelectionContext
+  context: OrganisationsConfirmationContext
 ): Promise<boolean> {
   const trimmedAnswer = answer.trim();
 
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp"
-        ? undefined
-        : ORGANISATION_SELECTION_KEYBOARD
+      ORGANISATION_SEARCH_KEYBOARD
     );
     await askOrganisationSelectionQuestion(session, context);
     return true;
@@ -296,9 +271,7 @@ async function handleOrganisationSelection(
   if (answers.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(context.organisations.length)}. 👎`,
-      session.messageApp === "WhatsApp"
-        ? undefined
-        : ORGANISATION_SELECTION_KEYBOARD
+      ORGANISATION_SEARCH_KEYBOARD
     );
     await askOrganisationSelectionQuestion(session, context);
     return true;
@@ -316,54 +289,7 @@ async function handleOrganisationSelection(
   return true;
 }
 
-async function handleOrganisationConfirmation(
-  session: ISession,
-  answer: string,
-  context: OrganisationConfirmationContext
-): Promise<boolean> {
-  const trimmedAnswer = answer.trim();
-
-  if (trimmedAnswer.length === 0) {
-    await session.sendMessage(
-      `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp"
-        ? undefined
-        : ORGANISATION_CONFIRM_KEYBOARD
-    );
-    await askOrganisationConfirmationQuestion(session, context);
-    return true;
-  }
-
-  if (trimmedAnswer.startsWith("/")) {
-    return false;
-  }
-
-  if (/oui/i.test(trimmedAnswer)) {
-    await followOrganisationsFromWikidataIdStr(
-      session,
-      `SuivreO ${context.organisation.wikidataId}`,
-      false
-    );
-    return true;
-  }
-
-  if (/non/i.test(trimmedAnswer)) {
-    await session.sendMessage(`Ok, aucun ajout n'a été effectué. 👌`);
-    await askOrganisationSearch(session);
-    return true;
-  }
-
-  await session.sendMessage(
-    `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-    session.messageApp === "WhatsApp"
-      ? undefined
-      : ORGANISATION_CONFIRM_KEYBOARD
-  );
-  await askOrganisationConfirmationQuestion(session, context);
-  return true;
-}
-
-export const followOrganisationTelegram = async (session: ISession) => {
+export const searchOrganisation = async (session: ISession) => {
   try {
     await session.log({ event: "/follow-organisation" });
     await askOrganisationSearch(session);
@@ -379,7 +305,9 @@ export const searchOrganisationFromStr = async (
 ) => {
   try {
     const orgName = msg.split(" ").splice(1).join(" ");
-    await processOrganisationSearch(session, orgName, triggerUmami);
+
+    if (orgName)
+      await processOrganisationSearch(session, orgName, triggerUmami);
   } catch (error) {
     console.log(error);
   }
