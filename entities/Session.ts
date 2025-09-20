@@ -64,8 +64,9 @@ export async function sendMessage(
     matrixClient?: MatrixClient;
     signalCli?: SignalCli;
     whatsAppAPI?: WhatsAppAPI;
-  },
-  keyboard?: Keyboard
+    forceNoKeyboard?: boolean;
+    keyboard?: Keyboard;
+  }
 ): Promise<boolean> {
   switch (messageApp) {
     case "Matrix":
@@ -75,7 +76,7 @@ export async function sendMessage(
         options.matrixClient,
         chatId,
         message,
-        keyboard
+        options.keyboard
       );
 
     case "Signal":
@@ -83,7 +84,7 @@ export async function sendMessage(
       return await sendSignalAppMessage(options.signalCli, chatId, message);
 
     case "Telegram":
-      return await sendTelegramMessage(chatId, message, keyboard);
+      return await sendTelegramMessage(chatId, message, options?.keyboard);
 
     case "WhatsApp":
       if (options?.whatsAppAPI == null)
@@ -92,7 +93,7 @@ export async function sendMessage(
         options.whatsAppAPI,
         chatId,
         message,
-        keyboard
+        options
       );
   }
   return false;

@@ -20,7 +20,13 @@ export interface ISession {
 
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
-  sendMessage: (msg: string, keyboard?: Keyboard) => Promise<void>;
+  sendMessage: (
+    msg: string,
+    keyboard?: Keyboard,
+    options?: {
+      forceNoKeyboard?: boolean;
+    }
+  ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
   log: typeof umami.log;
 }

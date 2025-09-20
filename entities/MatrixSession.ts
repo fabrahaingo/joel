@@ -58,12 +58,19 @@ export class MatrixSession implements ISession {
     //await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
-  async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
+  async sendMessage(
+    formattedData: string,
+    keyboard?: Keyboard,
+    options?: {
+      forceNoKeyboard?: boolean;
+    }
+  ): Promise<void> {
     await sendMatrixMessage(
       this.matrixClient,
       this.chatId,
       formattedData,
       keyboard,
+      options,
       this.roomId
     );
   }
@@ -74,6 +81,9 @@ export async function sendMatrixMessage(
   chatId: string,
   message: string,
   keyboard?: Keyboard,
+  options?: {
+    forceNoKeyboard?: boolean;
+  },
   roomId?: string,
   retryNumber = 0
 ): Promise<boolean> {
@@ -81,7 +91,7 @@ export async function sendMatrixMessage(
     await umami.log({ event: "/matrix-too-many-requests-aborted" });
     return false;
   } // give up after 5 retries
-  keyboard ??= mainMenuKeyboardMatrix;
+  if (!options?.forceNoKeyboard) keyboard ??= mainMenuKeyboardMatrix;
 
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
@@ -130,6 +140,7 @@ export async function sendMatrixMessage(
           chatId,
           mArr.slice(i).join("\n"),
           keyboard,
+          options,
           roomId,
           retryNumber + 1
         );

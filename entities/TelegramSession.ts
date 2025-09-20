@@ -67,8 +67,14 @@ export class TelegramSession implements ISession {
     await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
-  async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
-    keyboard ??= this.mainMenuKeyboard;
+  async sendMessage(
+    formattedData: string,
+    keyboard?: Keyboard,
+    options?: {
+      forceNoKeyboard?: boolean;
+    }
+  ): Promise<void> {
+    if (!options?.forceNoKeyboard) keyboard ??= this.mainMenuKeyboard;
 
     const keyboardFormatted = keyboard?.map((row) =>
       row.map(({ text }) => ({ text }))
