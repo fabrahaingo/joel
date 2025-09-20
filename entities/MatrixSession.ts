@@ -111,8 +111,8 @@ export async function sendMatrixMessage(
       await sendMatrixReactions(
         matrixClient,
         chatId,
-        roomId,
         keyboard.flat().map((k) => k.text),
+        roomId,
         promptId
       );
   } catch (error) {
@@ -152,9 +152,9 @@ export async function sendMatrixMessage(
 async function sendMatrixReactions(
   matrixClient: MatrixClient,
   chatId: string,
-  roomId?: string,
   reactions: string[],
   event_id: string,
+  roomId?: string,
   idx = 0,
   retryNumber = 0
 ): Promise<boolean> {
@@ -191,9 +191,9 @@ async function sendMatrixReactions(
         return await sendMatrixReactions(
           matrixClient,
           chatId,
-          roomId,
           reactions,
           event_id,
+          roomId,
           idx,
           retryNumber + 1
         );
