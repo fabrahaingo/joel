@@ -11,22 +11,27 @@ export const defaultCommand = async (session: ISession): Promise<void> => {
   }
 };
 
+const MAIN_MENU_MESSAGE =
+  "Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
+
 export const mainMenuCommand = async (session: ISession): Promise<void> => {
   try {
     await session.log({ event: "/main-menu-message" });
-    let message = "";
+    let message = MAIN_MENU_MESSAGE;
 
-    let keyboard: Keyboard;
-    if (session.messageApp === "Telegram") {
-      message +=
-        "Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
-    } else {
-      message += "\n\n" + TEXT_COMMANDS_MENU;
-      keyboard = [
-        [KEYBOARD_KEYS.FOLLOWS_LIST.key],
-        [KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
-        [KEYBOARD_KEYS.HELP.key]
-      ];
+    let keyboard: Keyboard | undefined = undefined;
+    switch (session.messageApp) {
+      case "Telegram":
+      case "WhatsApp":
+        break;
+      case "Matrix":
+      case "Signal":
+        keyboard = [
+          [KEYBOARD_KEYS.FOLLOWS_LIST.key],
+          [KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
+          [KEYBOARD_KEYS.HELP.key]
+        ];
+        message += "\n\n" + TEXT_COMMANDS_MENU;
     }
     await session.sendMessage(message, keyboard);
   } catch (error) {

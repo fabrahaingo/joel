@@ -7,9 +7,12 @@ import { ServerMessageResponse } from "whatsapp-api-js/types";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import {
   ActionButtons,
+  ActionList,
   Body,
   Button,
   Interactive,
+  ListSection,
+  Row,
   Text
 } from "whatsapp-api-js/messages";
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
@@ -24,7 +27,48 @@ export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second gl
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
-const mainMenuKeyboardWH: Keyboard = [[KEYBOARD_KEYS.COMMAND_LIST.key]];
+const quickButtonMenu: Keyboard = [[KEYBOARD_KEYS.MAIN_MENU.key]];
+
+const fullMenuKeyboard: ActionList = new ActionList(
+  "Menu principal",
+  new ListSection(
+    "Recherches",
+    new Row(
+      "opt_1",
+      KEYBOARD_KEYS.PEOPLE_SEARCH.key.text,
+      "Rechercher une personne au JORF/BO."
+    ),
+    new Row(
+      "opt_2",
+      KEYBOARD_KEYS.FUNCTION_FOLLOW.key.text,
+      "Suivre une fonction (ambassadeur, préfet ...)."
+    ),
+    new Row(
+      "opt_4",
+      KEYBOARD_KEYS.ORGANISATION_FOLLOW.key.text,
+      "Suivre une organisation (Conseil constitutionnel, Conseil d'Etat ...)."
+    ),
+    new Row(
+      "opt_5",
+      KEYBOARD_KEYS.REFERENCE_FOLLOW.key.text,
+      "Suivre à partir d'une référence JORF/BO. Ex: JORFTEXT000052184758"
+    )
+  ),
+  new ListSection(
+    "Mon compte", // optional if only 1 section; <= 24 chars
+    new Row(
+      "opt_6",
+      KEYBOARD_KEYS.FOLLOWS_LIST.key.text,
+      "Lister mes suivis. Supprimer un suivi."
+    ),
+    new Row("opt_7", KEYBOARD_KEYS.HELP.key.text, "Aide et contact."),
+    new Row(
+      "opt_8",
+      KEYBOARD_KEYS.DELETE.key.text,
+      "Supprimer mon compte et mes suivis."
+    )
+  )
+);
 
 export class WhatsAppSession implements ISession {
   messageApp = WhatsAppMessageApp;
@@ -48,7 +92,7 @@ export class WhatsAppSession implements ISession {
     this.botPhoneID = botPhoneID;
     this.chatId = userPhoneId;
     this.language_code = language_code;
-    this.mainMenuKeyboard = mainMenuKeyboardWH;
+    this.mainMenuKeyboard = quickButtonMenu;
   }
 
   // try to fetch user from db
@@ -66,13 +110,17 @@ export class WhatsAppSession implements ISession {
     // TODO: check implementation in WH
   }
 
-  async sendMessage(formattedData: string, keyboard?: Keyboard): Promise<void> {
-    await sendWhatsAppMessage(
-      this.whatsAppAPI,
-      this.chatId,
-      formattedData,
-      keyboard
-    );
+  async sendMessage(
+    formattedData: string,
+    keyboard?: Keyboard,
+    options?: {
+      forceNoKeyboard?: boolean;
+    }
+  ): Promise<void> {
+    await sendWhatsAppMessage(this.whatsAppAPI, this.chatId, formattedData, {
+      keyboard,
+      forceNoKeyboard: options?.forceNoKeyboard
+    });
   }
 }
 
@@ -105,7 +153,10 @@ export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
   userPhoneId: string,
   message: string,
-  keyboard?: Keyboard,
+  options?: {
+    keyboard?: Keyboard;
+    forceNoKeyboard?: boolean;
+  },
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
@@ -117,13 +168,15 @@ export async function sendWhatsAppMessage(
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
 
-  keyboard ??= mainMenuKeyboardWH;
+  let interactiveKeyboard: ActionList | ActionButtons | null = null;
 
-  const keyboardFlat = replaceWHButtons(keyboard)?.flat();
-  if (keyboardFlat != null) {
+  if (options?.keyboard == null && !options?.forceNoKeyboard)
+    interactiveKeyboard = fullMenuKeyboard;
+  else if (options.keyboard != null) {
+    const keyboardFlat = replaceWHButtons(options.keyboard).flat();
     if (keyboardFlat.length > 3) {
       console.log(
-        `WhatsApp keyboard length is ${String(keyboardFlat.length)}>3`
+        `WhatsApp keyboard length for buttons is ${String(keyboardFlat.length)}>3`
       );
       return false;
     }
@@ -133,6 +186,10 @@ export async function sendWhatsAppMessage(
         return false;
       }
     }
+    const buttons = keyboardFlat.map(
+      (u, idx) => new Button(`reply_${String(idx)}`, u.text)
+    );
+    interactiveKeyboard = new ActionButtons(...buttons);
   }
 
   let resp: ServerMessageResponse;
@@ -142,20 +199,20 @@ export async function sendWhatsAppMessage(
       WHATSAPP_MESSAGE_CHAR_LIMIT
     );
     for (let i = 0; i < mArr.length; i++) {
-      if (i == mArr.length - 1 && keyboardFlat != null) {
-        const buttons = keyboardFlat.map(
-          (u, idx) => new Button(`reply_${String(idx)}`, u.text)
-        );
-        const actionList: Interactive = new Interactive(
-          // @ts-expect-error the row spreader is correctly cast but not detected by ESLINT
-          new ActionButtons(...buttons),
-          new Body(mArr[i])
-        );
-        resp = await whatsAppAPI.sendMessage(
-          WHATSAPP_PHONE_ID,
-          userPhoneId,
-          actionList
-        );
+      if (i == mArr.length - 1 && interactiveKeyboard != null) {
+        if (interactiveKeyboard instanceof ActionButtons) {
+          resp = await whatsAppAPI.sendMessage(
+            WHATSAPP_PHONE_ID,
+            userPhoneId,
+            new Interactive(interactiveKeyboard, new Body(mArr[i]))
+          );
+        } else {
+          resp = await whatsAppAPI.sendMessage(
+            WHATSAPP_PHONE_ID,
+            userPhoneId,
+            new Interactive(interactiveKeyboard, new Body(mArr[i]))
+          );
+        }
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
@@ -179,7 +236,7 @@ export async function sendWhatsAppMessage(
               whatsAppAPI,
               userPhoneId,
               mArr.slice(i).join("\n"),
-              keyboard,
+              options,
               retryNumber + 1
             );
 
@@ -229,8 +286,7 @@ function replaceWHButtons(keyboard: Keyboard): Keyboard {
   if (!Array.isArray(keyboard)) return keyboard;
 
   const replacements: Record<string, KeyboardKey> = {
-    [KEYBOARD_KEYS.MAIN_MENU.key.text]: KEYBOARD_KEYS.COMMAND_LIST.key,
-    [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key.text]: KEYBOARD_KEYS.PEOPLE_SEARCH.key
+    //[KEYBOARD_KEYS.MAIN_MENU.key.text]: KEYBOARD_KEYS.COMMAND_LIST.key,
   };
 
   return keyboard.map((row) =>
