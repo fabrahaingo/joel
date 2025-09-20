@@ -148,7 +148,10 @@ export const commands: CommandType[] = [
   },
   {
     regex: /^Retirer \s*(.*)/i,
-    action: unfollowFromStr
+    action: async (session, msg) => {
+      await unfollowFromStr(session, msg);
+      return;
+    }
   },
   {
     regex: /^Historique complet de \s*(.*)/i,
