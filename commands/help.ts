@@ -4,7 +4,7 @@ import { ISession } from "../types.ts";
 export const helpCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/help" });
   await session.sendTypingAction();
-  let helpText = BotMessages.HELP.replace("{chatId}", session.chatId);
+  let helpText = BotMessages.HELP.replace("{chatId}", String(session.chatId));
 
   if (session.messageApp === "Telegram")
     helpText +=
