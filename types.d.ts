@@ -12,11 +12,10 @@ export type MessageApp = "Telegram" | "WhatsApp" | "Signal" | "Matrix";
 
 export interface ISession {
   messageApp: MessageApp;
-  chatId: string;
+  chatId: number;
   language_code: string;
   user: IUser | null | undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: Keyboard;
 
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
@@ -35,7 +34,7 @@ export interface ISession {
 export interface IUser {
   _id: Types.ObjectId;
   messageApp: MessageApp;
-  chatId: string;
+  chatId: number;
   language_code: string;
   status: "active" | "blocked";
   followedPeople: {

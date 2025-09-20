@@ -132,11 +132,6 @@ async function processOrganisationSearch(
 
   const orgResults = await searchOrganisationWikidataId(orgName);
 
-  const keyboard =
-    session.messageApp === "WhatsApp"
-      ? undefined
-      : ORGANISATION_SEARCH_KEYBOARD;
-
   if (orgResults.length == 0) {
     let text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.`;
     if (session.messageApp === "Signal") {
@@ -144,8 +139,7 @@ async function processOrganisationSearch(
     } else {
       text += `\n\nFormat:\n*Nom de l'organisation*\nou\n*WikidataId de l'organisation*`;
     }
-    await session.sendMessage(text, keyboard);
-    await askOrganisationSearch(session);
+    await session.sendMessage(text, ORGANISATION_SEARCH_KEYBOARD);
     return;
   }
 

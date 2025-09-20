@@ -8,21 +8,21 @@ import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { sendSignalAppMessage } from "./SignalSession.ts";
 import { SignalCli } from "signal-sdk";
 import { MatrixClient } from "matrix-bot-sdk";
-import { sendMatrixMessage } from "./MatrixSession.ts";
 import { Keyboard } from "./Keyboard.ts";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
 
-  const user: IUser | null = await User.findOne({
+  return User.findOne({
     messageApp: session.messageApp,
     chatId: session.chatId
   });
 
+  /*
   if (user == null) {
     const legacyUser = (await User.collection.findOne({
       messageApp: session.messageApp,
-      chatId: parseInt(session.chatId)
+      chatId: session.chatId
     })) as IRawUser | null;
     if (legacyUser !== null) {
       await migrateUser(legacyUser);
@@ -34,6 +34,7 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
     }
   }
   return user;
+   */
 }
 
 export async function migrateUser(rawUser: IRawUser): Promise<void> {
@@ -58,7 +59,7 @@ export async function migrateUser(rawUser: IRawUser): Promise<void> {
 
 export async function sendMessage(
   messageApp: MessageApp,
-  chatId: string,
+  chatId: number,
   message: string,
   options?: {
     matrixClient?: MatrixClient;
@@ -69,15 +70,17 @@ export async function sendMessage(
   }
 ): Promise<boolean> {
   switch (messageApp) {
-    case "Matrix":
-      if (options?.matrixClient == null)
-        throw new Error("matrixClient is required");
-      return await sendMatrixMessage(
-        options.matrixClient,
-        chatId,
-        message,
-        options.keyboard
-      );
+    /*
+      case "Matrix":
+        if (options?.matrixClient == null)
+          throw new Error("matrixClient is required");
+        return await sendMatrixMessage(
+          options.matrixClient,
+          chatId,
+          message,
+          options.keyboard
+        );
+        */
 
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");

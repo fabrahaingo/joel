@@ -27,8 +27,6 @@ export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second gl
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
-const quickButtonMenu: Keyboard = [[KEYBOARD_KEYS.MAIN_MENU.key]];
-
 const fullMenuKeyboard: ActionList = new ActionList(
   "Menu principal",
   new ListSection(
@@ -74,25 +72,23 @@ export class WhatsAppSession implements ISession {
   messageApp = WhatsAppMessageApp;
   whatsAppAPI: WhatsAppAPI;
   language_code: string;
-  chatId: string;
+  chatId: number;
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 
   constructor(
     whatsAppAPI: WhatsAppAPI,
     botPhoneID: string,
-    userPhoneId: string,
+    userPhoneId: number,
     language_code: string
   ) {
     this.whatsAppAPI = whatsAppAPI;
     this.botPhoneID = botPhoneID;
     this.chatId = userPhoneId;
     this.language_code = language_code;
-    this.mainMenuKeyboard = quickButtonMenu;
   }
 
   // try to fetch user from db
@@ -151,7 +147,7 @@ const { WHATSAPP_PHONE_ID } = process.env;
 
 export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
-  userPhoneId: string,
+  userPhoneId: number,
   message: string,
   options?: {
     keyboard?: Keyboard;
@@ -203,20 +199,20 @@ export async function sendWhatsAppMessage(
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneId,
+            userPhoneId.toString(),
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         } else {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneId,
+            userPhoneId.toString(),
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         }
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
-          userPhoneId,
+          userPhoneId.toString(),
           new Text(mArr[i])
         );
       }

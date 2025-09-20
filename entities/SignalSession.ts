@@ -4,7 +4,6 @@ import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
-import { Keyboard } from "./Keyboard.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
@@ -17,25 +16,23 @@ export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
   signalCli: SignalCli;
   language_code: string;
-  chatId: string;
+  chatId: number;
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 
   constructor(
     signalCli: SignalCli,
     botPhoneID: string,
-    userPhoneId: string,
+    userPhoneId: number,
     language_code: string
   ) {
     this.signalCli = signalCli;
     this.botPhoneID = botPhoneID;
     this.chatId = userPhoneId;
     this.language_code = language_code;
-    this.mainMenuKeyboard = undefined;
   }
 
   // try to fetch user from db
@@ -83,14 +80,12 @@ export async function extractSignalAppSession(
 
 export async function sendSignalAppMessage(
   signalCli: SignalCli,
-  userPhoneId: string,
+  userPhoneId: number,
   message: string
 ): Promise<boolean> {
   try {
     const cleanMessage = markdown2plainText(message);
-    const userPhoneIdInt = userPhoneId.startsWith("+")
-      ? userPhoneId
-      : "+" + userPhoneId;
+    const userPhoneIdInt = "+" + userPhoneId;
     const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
