@@ -1,8 +1,9 @@
 import "dotenv/config";
-import TelegramBot from "node-telegram-bot-api";
+import { Telegraf } from "telegraf";
+import { message } from "telegraf/filters";
 import { mongodbConnect } from "../db.ts";
 import { TelegramSession } from "../entities/TelegramSession.ts";
-import { commands, processMessage } from "../commands/Commands.ts";
+import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
@@ -10,45 +11,36 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 if (BOT_TOKEN === undefined)
   throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
 
-const bot: TelegramBot = new TelegramBot(BOT_TOKEN, {
-  polling: true,
-  onlyFirstMatch: true
-});
+const bot = new Telegraf(BOT_TOKEN);
 
 await (async () => {
   await mongodbConnect();
 
-  commands.forEach((command) => {
-    bot.onText(command.regex, (tgMsg: TelegramBot.Message) => {
-      void (async () => {
-        try {
-          // Check if the user is known
-          const tgUser: TelegramBot.User | undefined = tgMsg.from;
-          if (tgUser === undefined || tgUser.is_bot) return; // Ignore bots
-          if (tgMsg.text == undefined) return; // Ignore media messages without text
+  bot.on(message("text"), async (ctx): Promise<void> => {
+    try {
+      const tgUser = ctx.from;
+      if (tgUser.is_bot) return;
 
-          await umami.log({ event: "/message-telegram" });
+      await umami.log({ event: "/message-telegram" });
 
-          const msgText = tgMsg.text;
+      const tgSession = new TelegramSession(
+        bot.telegram,
+        ctx.chat.id.toString(),
+        tgUser.language_code ?? "fr"
+      );
+      await tgSession.loadUser();
+      tgSession.isReply = ctx.message.reply_to_message !== undefined;
 
-          const tgSession = new TelegramSession(
-            bot,
-            tgMsg.chat.id.toString(),
-            tgUser.language_code ?? "fr"
-          );
-          await tgSession.loadUser();
-          tgSession.isReply = tgMsg.reply_to_message !== undefined;
+      if (tgSession.user != null)
+        await tgSession.user.updateInteractionMetrics();
 
-          if (tgSession.user != null)
-            await tgSession.user.updateInteractionMetrics();
-
-          await processMessage(tgSession, msgText);
-        } catch (error) {
-          console.error("Telegram: Error processing command:", error);
-        }
-      })();
-    });
+      await processMessage(tgSession, ctx.message.text);
+    } catch (error) {
+      console.error("Telegram: Error processing command:", error);
+    }
   });
+
+  await bot.launch();
 
   console.log(`Telegram: JOEL started successfully \u{2705}`);
 })();

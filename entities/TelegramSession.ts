@@ -1,5 +1,5 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
-import TelegramBot, { ChatId } from "node-telegram-bot-api";
+import { Telegram } from "telegraf";
 import User from "../models/User.ts";
 import { loadUser } from "./Session.ts";
 import umami from "../utils/umami.ts";
@@ -7,7 +7,7 @@ import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
-
+import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
 const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
 
@@ -19,9 +19,11 @@ const mainMenuKeyboardTelegram: Keyboard = [
   [KEYBOARD_KEYS.HELP.key]
 ];
 
-export const telegramMessageOptions: TelegramBot.SendMessageOptions = {
+export const telegramMessageOptions: ExtraReplyMessage = {
   parse_mode: "Markdown",
-  disable_web_page_preview: true,
+  link_preview_options: {
+    is_disabled: true
+  },
   reply_markup: {
     selective: true,
     resize_keyboard: true,
@@ -33,20 +35,20 @@ const TelegramMessageApp: MessageApp = "Telegram";
 
 export class TelegramSession implements ISession {
   messageApp = TelegramMessageApp;
-  telegramBot: TelegramBot;
+  telegramBot: Telegram;
   language_code: string;
   chatId: string;
-  chatIdTg: ChatId;
+  chatIdTg: number;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
   mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 
-  constructor(telegramBot: TelegramBot, chatId: string, language_code: string) {
+  constructor(telegramBot: Telegram, chatId: string, language_code: string) {
     this.telegramBot = telegramBot;
     this.chatId = chatId;
-    this.chatIdTg = parseInt(chatId) as ChatId;
+    this.chatIdTg = parseInt(chatId);
     this.language_code = language_code;
     this.mainMenuKeyboard = mainMenuKeyboardTelegram;
   }
