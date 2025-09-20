@@ -6,14 +6,10 @@ import { SignalSession } from "../entities/SignalSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 
-const { SIGNAL_PHONE_NUMBER, TEST_TARGET_PHONE_NUMBER, SIGNAL_BAT_PATH } =
-  process.env;
+const { SIGNAL_PHONE_NUMBER, SIGNAL_BAT_PATH } = process.env;
 
 if (SIGNAL_PHONE_NUMBER === undefined) {
   throw new Error("SIGNAL_PHONE_NUMBER env variable not set");
-}
-if (TEST_TARGET_PHONE_NUMBER === undefined) {
-  throw new Error("TEST_TARGET_PHONE_NUMBER env variable not set");
 }
 
 if (SIGNAL_BAT_PATH === undefined) {
@@ -50,10 +46,19 @@ await (async () => {
 
           await umami.log({ event: "/message-signal" });
 
+          const userChatId = parseInt(message.envelope.sourceNumber);
+          if (isNaN(userChatId)) {
+            console.log(
+              "Signal: Invalid userChatId : ",
+              message.envelope.sourceNumber
+            );
+            return;
+          }
+
           const signalSession = new SignalSession(
             signalCli,
             SIGNAL_PHONE_NUMBER,
-            message.envelope.sourceNumber,
+            userChatId,
             "fr"
           );
           await signalSession.loadUser();

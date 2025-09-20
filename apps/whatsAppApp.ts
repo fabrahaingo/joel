@@ -163,7 +163,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     const userChatId = parseInt(from);
     if (isNaN(userChatId)) {
-      console.log("Invalid userChatId : ", from);
+      console.log("WhatsApp: Invalid userChatId : ", from);
       return;
     }
 
