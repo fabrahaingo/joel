@@ -31,7 +31,8 @@ const SEARCH_PROMPT_KEYBOARD: Keyboard = [
 
 async function askSearchQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, SEARCH_PROMPT_TEXT, handleSearchAnswer, {
-    keyboard: session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
+    keyboard:
+      session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
   });
 }
 
