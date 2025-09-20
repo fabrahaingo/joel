@@ -163,11 +163,9 @@ async function handlePromoAnswer(
     `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`
   );
 
-  promoJORFList.sort((a, b) => {
-    if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
-    if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;
-    return 0;
-  });
+  promoJORFList.sort((a, b) =>
+    a.nom.toUpperCase().localeCompare(b.nom.toUpperCase())
+  );
 
   const contacts = promoJORFList.map((contact) => {
     return `${contact.nom} ${contact.prenom}`;
