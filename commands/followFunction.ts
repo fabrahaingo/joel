@@ -1,7 +1,7 @@
 import User from "../models/User.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
-import { ISession } from "../types";
+import { ISession } from "../types.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 

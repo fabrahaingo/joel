@@ -1,4 +1,4 @@
-import { ISession } from "../types";
+import { ISession } from "../types.ts";
 
 export interface KeyboardKey {
   text: string;
