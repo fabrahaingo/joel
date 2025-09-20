@@ -163,15 +163,14 @@ export const listCommand = async (session: ISession) => {
     }
 
     if (session.messageApp === "Signal")
-      await session.sendMessage(text, [
-        [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
-        [KEYBOARD_KEYS.MAIN_MENU.key]
-      ]);
-    else {
       text +=
         "\nPour retirer un suivi, précisez le(s) nombre(s) à supprimer: *Retirer 1 4 7*";
-      await session.sendMessage(text);
-    }
+
+    const tempKeyboard: Keyboard = [
+      [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
+      [KEYBOARD_KEYS.MAIN_MENU.key]
+    ];
+    await session.sendMessage(text, tempKeyboard);
   } catch (error) {
     console.log(error);
   }
@@ -184,6 +183,7 @@ const UNFOLLOW_PROMPT_TEXT =
 
 const UNFOLLOW_KEYBOARD: Keyboard = [
   [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
+  [KEYBOARD_KEYS.FOLLOWS_LIST.key],
   [KEYBOARD_KEYS.MAIN_MENU.key]
 ];
 
@@ -193,8 +193,7 @@ async function askUnfollowQuestion(session: ISession): Promise<void> {
     UNFOLLOW_PROMPT_TEXT,
     handleUnfollowAnswer,
     {
-      keyboard:
-        session.messageApp === "WhatsApp" ? undefined : UNFOLLOW_KEYBOARD
+      keyboard: UNFOLLOW_KEYBOARD
     }
   );
 }
@@ -207,37 +206,17 @@ async function handleUnfollowAnswer(
 
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
-      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options. 👎`,
-      session.messageApp === "WhatsApp" ? undefined : UNFOLLOW_KEYBOARD
+      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options. 👎\nRéessayer la commande`,
+      UNFOLLOW_KEYBOARD
     );
-    await askUnfollowQuestion(session);
     return true;
   }
 
-  if (trimmedAnswer === "/list") {
-    await listCommand(session);
-    await askUnfollowQuestion(session);
-    return true;
-  }
-
-  if (trimmedAnswer.startsWith("/")) {
-    return false;
-  }
-
-  const success = await unfollowFromStr(
-    session,
-    `Retirer ${trimmedAnswer}`,
-    false
-  );
-
-  if (!success) {
-    await askUnfollowQuestion(session);
-  }
-
+  await unfollowFromStr(session, `Retirer ${trimmedAnswer}`, false);
   return true;
 }
 
-export const unfollowTelegram = async (session: ISession) => {
+export const unfollowCommand = async (session: ISession) => {
   await session.log({ event: "/unfollow" });
   try {
     await session.sendTypingAction();
