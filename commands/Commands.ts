@@ -35,19 +35,22 @@ export async function processMessage(
   // remove all spaces and replace them with a single space
   const cleanMsg = msg.trim().replace(/ +/g, " ");
 
-  if (await handleFollowUpMessage(session, cleanMsg)) return;
-  clearFollowUp(session);
+  const firstLine = cleanMsg.split("\n")[0];
 
   // Look through all keyboard keys to find a match
   for (const keyboardKey of Object.values(KEYBOARD_KEYS)) {
     if (keyboardKey.action === undefined) continue;
     const buttonText = keyboardKey.key.text;
 
-    if (buttonText === cleanMsg) {
+    if (firstLine === buttonText) {
+      clearFollowUp(session);
       await keyboardKey.action(session, cleanMsg);
       return;
     }
   }
+
+  if (await handleFollowUpMessage(session, cleanMsg)) return;
+  clearFollowUp(session);
 
   for (const command of commands) {
     if (command.regex.test(cleanMsg)) {
