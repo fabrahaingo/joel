@@ -13,7 +13,7 @@ import {
   Text
 } from "whatsapp-api-js/messages";
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
-import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
+import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
@@ -119,7 +119,7 @@ export async function sendWhatsAppMessage(
 
   keyboard ??= mainMenuKeyboardWH;
 
-  const keyboardFlat = keyboard?.flat();
+  const keyboardFlat = replaceWHButtons(keyboard)?.flat();
   if (keyboardFlat != null) {
     if (keyboardFlat.length > 3) {
       console.log(
@@ -223,4 +223,20 @@ export async function sendWhatsAppMessage(
     return false;
   }
   return true;
+}
+
+function replaceWHButtons(keyboard: Keyboard): Keyboard {
+  if (!Array.isArray(keyboard)) return keyboard;
+
+  const replacements: Record<string, KeyboardKey> = {
+    [KEYBOARD_KEYS.MAIN_MENU.key.text]: KEYBOARD_KEYS.COMMAND_LIST.key,
+    [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key.text]: KEYBOARD_KEYS.PEOPLE_SEARCH.key
+  };
+
+  return keyboard.map((row) =>
+    row.map((k) => {
+      const r = replacements[k.text];
+      return r ? r : k;
+    })
+  );
 }
