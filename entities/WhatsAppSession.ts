@@ -188,6 +188,8 @@ export async function sendWhatsAppMessage(
     interactiveKeyboard = new ActionButtons(...buttons);
   }
 
+  const userPhoneIdStr = String(userPhoneId);
+
   let resp: ServerMessageResponse;
   try {
     const mArr = splitText(
@@ -199,20 +201,20 @@ export async function sendWhatsAppMessage(
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneId.toString(),
+            userPhoneIdStr,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         } else {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneId.toString(),
+            userPhoneIdStr,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         }
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
-          userPhoneId.toString(),
+          userPhoneIdStr,
           new Text(mArr[i])
         );
       }
