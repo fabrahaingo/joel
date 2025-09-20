@@ -299,7 +299,7 @@ export const promosCommand = async (session: ISession): Promise<void> => {
 
     await session.sendMessage(text, [
       [KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH.key],
-      [KEYBOARD_KEYS.COMMAND_LIST.key]
+      [KEYBOARD_KEYS.MAIN_MENU.key]
     ]);
   } catch (error) {
     console.log(error);
