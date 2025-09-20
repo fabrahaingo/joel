@@ -299,7 +299,10 @@ export const promosCommand = async (session: ISession): Promise<void> => {
     text +=
       "Utilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
-    await session.sendMessage(text);
+    await session.sendMessage(text, [
+      [KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH.key],
+      [KEYBOARD_KEYS.COMMAND_LIST.key]
+    ]);
   } catch (error) {
     console.log(error);
   }
