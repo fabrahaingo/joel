@@ -197,7 +197,9 @@ async function handlePromoConfirmation(
   }
 
   if (/oui/i.test(trimmedAnswer)) {
-    await session.sendMessage(`Ajout en cours... ⏰`, undefined, true);
+    await session.sendMessage(`Ajout en cours... ⏰`, undefined, {
+      forceNoKeyboard: true
+    });
     await session.sendTypingAction();
     session.user ??= await User.findOrCreate(session);
 
@@ -367,7 +369,9 @@ async function handleReferenceAnswer(
   const contacts = JORFResult.map((contact) => {
     return `${contact.nom} ${contact.prenom}`;
   });
-  await session.sendMessage(contacts.join("\n"), null, true);
+  await session.sendMessage(contacts.join("\n"), null, {
+    forceNoKeyboard: true
+  });
 
   await askFollowUpQuestion(
     session,
