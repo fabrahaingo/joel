@@ -5,7 +5,7 @@ import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 const DELETE_PROFILE_CONFIRMATION_PROMPT =
   "*Vous êtes sur le point de supprimer votre profil JOÉL*, comprenant l'ensemble de vos contacts, fonctions et organisations suivis.\n" +
   "⚠️ *Attention, ces données ne sont pas récupérables par la suite* ⚠️\n" +
-  'Pour confirmer vous devez répondre "SUPPRIMER MON COMPTE" en majuscule à ce message';
+  "Pour confirmer vous devez répondre *SUPPRIMER MON COMPTE* en majuscule à ce message";
 
 async function askDeleteProfileQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(
