@@ -161,7 +161,18 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     await whatsAppAPI.markAsRead(phoneID, message.id);
 
-    const WHSession = new WhatsAppSession(whatsAppAPI, phoneID, from, "fr");
+    const userChatId = parseInt(from);
+    if (isNaN(userChatId)) {
+      console.log("Invalid userChatId : ", from);
+      return;
+    }
+
+    const WHSession = new WhatsAppSession(
+      whatsAppAPI,
+      phoneID,
+      userChatId,
+      "fr"
+    );
     await WHSession.loadUser();
 
     if (WHSession.user != null) await WHSession.user.updateInteractionMetrics();
