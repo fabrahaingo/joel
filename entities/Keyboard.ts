@@ -10,7 +10,7 @@ export const KEYBOARD_KEYS: Record<
   string,
   {
     key: KeyboardKey;
-    action: (session: ISession, msg?: string) => Promise<void>;
+    action?: (session: ISession, msg?: string) => Promise<void>;
   }
 > = {
   MAIN_MENU: {
@@ -90,8 +90,8 @@ export const KEYBOARD_KEYS: Record<
   FOLLOWS_REMOVE: {
     key: { text: "👨✋ Retirer un suivi" },
     action: async (session: ISession, _msg?: string) => {
-      const { unfollowTelegram } = await import("../commands/list.ts");
-      await unfollowTelegram(session);
+      const { unfollowCommand } = await import("../commands/list.ts");
+      await unfollowCommand(session);
     }
   },
   HELP: {
@@ -100,5 +100,14 @@ export const KEYBOARD_KEYS: Record<
       const { helpCommand } = await import("../commands/help.ts");
       await helpCommand(session);
     }
+  },
+  FOLLOW_UP_FOLLOW: {
+    key: { text: "Suivre" }
+  },
+  FOLLOW_UP_FOLLOW_MANUAL: {
+    key: { text: "🕵️ Suivi manuel" }
+  },
+  FOLLOW_UP_HISTORY: {
+    key: { text: "Historique" }
   }
 };

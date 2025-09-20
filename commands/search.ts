@@ -116,10 +116,7 @@ export async function searchPersonHistory(
     if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
     const nbRecords = JORFRes_data.length;
 
-    const tempKeyboard: Keyboard = [
-      [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
-      [KEYBOARD_KEYS.MAIN_MENU.key]
-    ];
+    const tempKeyboard: Keyboard = [];
 
     if (nbRecords == 0) {
       const personNameSplit = personName.split(" ");
@@ -138,21 +135,13 @@ export async function searchPersonHistory(
       const prenomNom = personNameSplit.join(" ");
       const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
-      let tgKeyboard = [
-        [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
-        [{ text: `🕵️ Forcer le suivi de ${prenomNom}` }],
-        [KEYBOARD_KEYS.MAIN_MENU.key]
-      ];
       if (session.user?.checkFollowedName(nomPrenom)) {
         text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
-        tgKeyboard = tempKeyboard;
-      } else if (session.messageApp !== "Telegram") {
-        text += `\n\nPour forcer le suivi manuel, utilisez la commande:\n*SuivreN ${prenomNom}*`;
+      } else {
+        tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key]);
       }
 
-      if (session.messageApp === "Telegram")
-        await session.sendMessage(text, tgKeyboard);
-      else await session.sendMessage(text);
+      await session.sendMessage(text, tempKeyboard);
       return false;
     }
 
@@ -192,29 +181,16 @@ export async function searchPersonHistory(
 
     const prenomNom = `${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`;
 
-    let temp_keyboard: Keyboard = tempKeyboard;
     if (nbRecords > 2 || !isUserFollowingPerson) {
-      temp_keyboard = [
-        [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
-        [KEYBOARD_KEYS.MAIN_MENU.key]
-      ];
       if (historyType === "latest" && nbRecords > 2) {
         text += `\n${String(nbRecords - 2)} autres mentions au JORF non affichées.\n`;
         if (session.messageApp !== "Telegram")
           text += `\nPour voir l'historique complet, utilisez la commande: *Historique ${prenomNom}*.\n`;
 
-        temp_keyboard.unshift([
-          {
-            text: `Historique complet de ${prenomNom}`
-          }
-        ]);
+        tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key]);
       }
       if (!isUserFollowingPerson) {
-        temp_keyboard.unshift([
-          {
-            text: `Suivre ${prenomNom}`
-          }
-        ]);
+        tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key]);
       }
     }
 
@@ -223,14 +199,50 @@ export async function searchPersonHistory(
         text += `\nVous suivez *${prenomNom}* ✅`;
       } else {
         text += `\nVous ne suivez pas *${prenomNom}* 🙅‍♂️\n\n`;
-        if (session.messageApp === "WhatsApp")
+        if (session.messageApp === "Signal")
           text += `Pour suivre, utilisez la commande:\n*Suivre ${prenomNom}*`;
       }
     }
-    await session.sendMessage(text, temp_keyboard);
+    if (tempKeyboard.length >= 2)
+      tempKeyboard.unshift([KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key]);
+    tempKeyboard.unshift([KEYBOARD_KEYS.MAIN_MENU.key]);
+
+    await session.sendMessage(text, tempKeyboard);
+
+    await askFollowUpQuestion(session, "", handleSearchFollowUp, {
+      context: {
+        prenomNom
+      }
+    });
+
     return true;
   } catch (error) {
     console.log(error);
+  }
+  return false;
+}
+
+interface SearchFollowUpContext {
+  prenomNom: string;
+}
+
+async function handleSearchFollowUp(
+  session: ISession,
+  answer: string,
+  context: SearchFollowUpContext
+): Promise<boolean> {
+  const trimmedAnswer = answer.trim();
+
+  switch (trimmedAnswer) {
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key.text:
+      await followCommand(session, "Suivre " + context.prenomNom);
+      return true;
+    case KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key.text:
+      await followCommand(session, "Historique " + context.prenomNom);
+      return true;
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key.text:
+      await followCommand(session, "SuivreN " + context.prenomNom);
+      return true;
   }
   return false;
 }
