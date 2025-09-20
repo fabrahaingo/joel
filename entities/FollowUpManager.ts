@@ -63,7 +63,7 @@ export async function askFollowUpQuestion<Context = unknown>(
   });
 
   try {
-    if (question === "") await session.sendMessage(question, options.keyboard);
+    if (question !== "") await session.sendMessage(question, options.keyboard);
   } catch (error) {
     followUps.delete(key);
     throw error;
