@@ -195,7 +195,7 @@ export const commands: CommandType[] = [
     action: followOrganisationTelegram
   },
   {
-    regex: /^\/supprimerCompte/i,
+    regex: /^\/supprimerCompte|supprimerCompte/i,
     action: deleteProfileCommand
   }
 ];
