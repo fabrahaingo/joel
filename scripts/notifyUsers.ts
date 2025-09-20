@@ -45,6 +45,16 @@ const { ENABLED_APPS } = process.env;
 if (ENABLED_APPS === undefined) throw new Error("ENABLED_APPS env var not set");
 const enabledApps = JSON.parse(ENABLED_APPS) as MessageApp[];
 
+const invalidApps: string[] = [];
+for (const app of enabledApps) {
+  if (!["Telegram", "Matrix", "WhatsApp", "Signal"].includes(app))
+    invalidApps.push(app);
+}
+if (invalidApps.length > 0)
+  throw new Error(
+    `Invalid message app${invalidApps.length > 0 ? "s" : ""}: ${invalidApps.join(", ")}`
+  );
+
 let matrixClient: MatrixClient | undefined = undefined;
 if (enabledApps.includes("Matrix")) {
   const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
