@@ -15,7 +15,7 @@ const MATRIX_COOL_DOWN_DELAY_SECONDS = 1;
 
 export const MATRIX_API_SENDING_CONCURRENCY = 1;
 
-const mainMenuKeyboardMatrix: Keyboard = [[KEYBOARD_KEYS.COMMAND_LIST.key]];
+const mainMenuKeyboardMatrix: Keyboard = [[KEYBOARD_KEYS.MAIN_MENU.key]];
 
 const MatrixMessageApp: MessageApp = "Matrix";
 
