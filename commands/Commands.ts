@@ -39,7 +39,7 @@ export async function processMessage(
 
   // Look through all keyboard keys to find a match
   for (const keyboardKey of Object.values(KEYBOARD_KEYS)) {
-    const buttonText = keyboardKey.key.text.toLowerCase();
+    const buttonText = keyboardKey.key.text;
 
     // Check for an exact match
     if (buttonText === cleanMsg) {
