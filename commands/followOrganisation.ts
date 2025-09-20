@@ -146,7 +146,9 @@ async function handleOrganisationSearchAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : ORGANISATION_SEARCH_KEYBOARD
+      session.messageApp === "WhatsApp"
+        ? undefined
+        : ORGANISATION_SEARCH_KEYBOARD
     );
     await askOrganisationSearch(session);
     return true;
@@ -210,11 +212,16 @@ async function handleSingleOrganisationResult(
     text += ` - [JORFSearch](${orgUrl})`;
   }
 
-  if (session.user && isOrganisationAlreadyFollowed(session.user, organisation.wikidataId)) {
+  if (
+    session.user &&
+    isOrganisationAlreadyFollowed(session.user, organisation.wikidataId)
+  ) {
     text += `\nVous suivez déjà *${organisation.nom}* ✅`;
     await session.sendMessage(
       text,
-      session.messageApp === "WhatsApp" ? undefined : ORGANISATION_SEARCH_KEYBOARD
+      session.messageApp === "WhatsApp"
+        ? undefined
+        : ORGANISATION_SEARCH_KEYBOARD
     );
     await askOrganisationSearch(session);
     return;
@@ -253,7 +260,8 @@ async function handleMultipleOrganisationResults(
   }
 
   if (orgResults.length >= 10)
-    text += "Des résultats ont pu être omis en raison de la taille de la liste.\n\n";
+    text +=
+      "Des résultats ont pu être omis en raison de la taille de la liste.\n\n";
 
   await session.sendMessage(text);
   await askOrganisationSelectionQuestion(session, {

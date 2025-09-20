@@ -34,7 +34,8 @@ function formatFunctionList(session: ISession): string {
 }
 
 async function askFunctionQuestion(session: ISession): Promise<void> {
-  let promptText = "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\n";
+  let promptText =
+    "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\n";
   if (session.messageApp === "WhatsApp") {
     promptText += "Exemple: 1 4 7";
   } else {
@@ -194,10 +195,7 @@ export const followFunctionFromStrCommand = async (
     }
 
     const selectedFunctions = parseFunctionSelection(
-      msg
-        .split(" ")
-        .slice(1)
-        .join(" ")
+      msg.split(" ").slice(1).join(" ")
     );
 
     if (selectedFunctions.length == 0) {

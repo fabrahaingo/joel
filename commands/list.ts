@@ -188,9 +188,15 @@ const UNFOLLOW_KEYBOARD: Keyboard = [
 ];
 
 async function askUnfollowQuestion(session: ISession): Promise<void> {
-  await askFollowUpQuestion(session, UNFOLLOW_PROMPT_TEXT, handleUnfollowAnswer, {
-    keyboard: session.messageApp === "WhatsApp" ? undefined : UNFOLLOW_KEYBOARD
-  });
+  await askFollowUpQuestion(
+    session,
+    UNFOLLOW_PROMPT_TEXT,
+    handleUnfollowAnswer,
+    {
+      keyboard:
+        session.messageApp === "WhatsApp" ? undefined : UNFOLLOW_KEYBOARD
+    }
+  );
 }
 
 async function handleUnfollowAnswer(

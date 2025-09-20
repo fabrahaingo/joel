@@ -329,10 +329,17 @@ const REFERENCE_CONFIRM_KEYBOARD: Keyboard = [
 ];
 
 async function askReferenceQuestion(session: ISession): Promise<void> {
-  await askFollowUpQuestion(session, REFERENCE_PROMPT_TEXT, handleReferenceAnswer, {
-    keyboard:
-      session.messageApp === "WhatsApp" ? undefined : REFERENCE_PROMPT_KEYBOARD
-  });
+  await askFollowUpQuestion(
+    session,
+    REFERENCE_PROMPT_TEXT,
+    handleReferenceAnswer,
+    {
+      keyboard:
+        session.messageApp === "WhatsApp"
+          ? undefined
+          : REFERENCE_PROMPT_KEYBOARD
+    }
+  );
 }
 
 async function handleReferenceAnswer(
@@ -383,11 +390,18 @@ async function handleReferenceAnswer(
   });
   await session.sendMessage(contacts.join("\n"));
 
-  await askFollowUpQuestion(session, REFERENCE_CONFIRM_TEXT, handleReferenceConfirmation, {
-    context: { reference, results: JORFResult },
-    keyboard:
-      session.messageApp === "WhatsApp" ? undefined : REFERENCE_CONFIRM_KEYBOARD
-  });
+  await askFollowUpQuestion(
+    session,
+    REFERENCE_CONFIRM_TEXT,
+    handleReferenceConfirmation,
+    {
+      context: { reference, results: JORFResult },
+      keyboard:
+        session.messageApp === "WhatsApp"
+          ? undefined
+          : REFERENCE_CONFIRM_KEYBOARD
+    }
+  );
   return true;
 }
 
@@ -403,13 +417,18 @@ async function handleReferenceConfirmation(
       `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
       session.messageApp === "WhatsApp" ? undefined : REFERENCE_CONFIRM_KEYBOARD
     );
-    await askFollowUpQuestion(session, REFERENCE_CONFIRM_TEXT, handleReferenceConfirmation, {
-      context,
-      keyboard:
-        session.messageApp === "WhatsApp"
-          ? undefined
-          : REFERENCE_CONFIRM_KEYBOARD
-    });
+    await askFollowUpQuestion(
+      session,
+      REFERENCE_CONFIRM_TEXT,
+      handleReferenceConfirmation,
+      {
+        context,
+        keyboard:
+          session.messageApp === "WhatsApp"
+            ? undefined
+            : REFERENCE_CONFIRM_KEYBOARD
+      }
+    );
     return true;
   }
 
@@ -449,11 +468,18 @@ async function handleReferenceConfirmation(
     `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
     session.messageApp === "WhatsApp" ? undefined : REFERENCE_CONFIRM_KEYBOARD
   );
-  await askFollowUpQuestion(session, REFERENCE_CONFIRM_TEXT, handleReferenceConfirmation, {
-    context,
-    keyboard:
-      session.messageApp === "WhatsApp" ? undefined : REFERENCE_CONFIRM_KEYBOARD
-  });
+  await askFollowUpQuestion(
+    session,
+    REFERENCE_CONFIRM_TEXT,
+    handleReferenceConfirmation,
+    {
+      context,
+      keyboard:
+        session.messageApp === "WhatsApp"
+          ? undefined
+          : REFERENCE_CONFIRM_KEYBOARD
+    }
+  );
   return true;
 }
 
