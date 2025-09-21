@@ -32,11 +32,13 @@ import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
+/*
 import {
   MatrixClient,
   RustSdkCryptoStorageProvider,
   SimpleFsStorageProvider
 } from "matrix-bot-sdk";
+*/
 import { Keyboard } from "../entities/Keyboard.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
@@ -56,6 +58,7 @@ if (invalidApps.length > 0)
     `Invalid message app${invalidApps.length > 0 ? "s" : ""}: ${invalidApps.join(", ")}`
   );
 
+/*
 let matrixClient: MatrixClient | undefined = undefined;
 if (enabledApps.includes("Matrix")) {
   const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
@@ -72,6 +75,7 @@ if (enabledApps.includes("Matrix")) {
     cryptoProvider
   );
 }
+*/
 
 let whatsAppAPI: WhatsAppAPI | undefined = undefined;
 if (enabledApps.includes("WhatsApp")) {
@@ -103,13 +107,13 @@ if (enabledApps.includes("Signal")) {
 }
 
 const messageAppsOptions: {
-  matrixClient?: MatrixClient;
+  //matrixClient?: MatrixClient;
   signalCli?: SignalCli;
   whatsAppAPI?: WhatsAppAPI;
   forceNoKeyboard?: boolean;
   keyboard?: Keyboard;
 } = {
-  matrixClient,
+  //matrixClient,
   signalCli: signalCli,
   whatsAppAPI: whatsAppAPI
 };

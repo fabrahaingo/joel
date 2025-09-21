@@ -7,7 +7,7 @@ import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { sendSignalAppMessage } from "./SignalSession.ts";
 import { SignalCli } from "signal-sdk";
-import { MatrixClient } from "matrix-bot-sdk";
+//import { MatrixClient } from "matrix-bot-sdk";
 import { Keyboard } from "./Keyboard.ts";
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
@@ -62,7 +62,7 @@ export async function sendMessage(
   chatId: number,
   message: string,
   options?: {
-    matrixClient?: MatrixClient;
+    //matrixClient?: MatrixClient;
     signalCli?: SignalCli;
     whatsAppAPI?: WhatsAppAPI;
     forceNoKeyboard?: boolean;
