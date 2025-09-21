@@ -13,7 +13,7 @@ export const defaultCommand = async (session: ISession): Promise<void> => {
 };
 
 const MAIN_MENU_MESSAGE =
-  "Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
+  "Utilisez un des boutons ci-dessous pour interagir avec moi.";
 
 export const mainMenuCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/main-menu-message" });
