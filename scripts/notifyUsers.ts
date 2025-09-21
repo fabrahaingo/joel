@@ -37,6 +37,7 @@ import {
   RustSdkCryptoStorageProvider,
   SimpleFsStorageProvider
 } from "matrix-bot-sdk";
+import { Keyboard } from "../entities/Keyboard.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 30;
@@ -101,10 +102,16 @@ if (enabledApps.includes("Signal")) {
   await signalCli.connect();
 }
 
-const messageAppsOptions = {
+const messageAppsOptions: {
+  matrixClient?: MatrixClient;
+  signalCli?: SignalCli;
+  whatsAppAPI?: WhatsAppAPI;
+  forceNoKeyboard?: boolean;
+  keyboard?: Keyboard;
+} = {
   matrixClient,
-  SignalCli: signalCli,
-  WhatsAppAPI: whatsAppAPI
+  signalCli: signalCli,
+  whatsAppAPI: whatsAppAPI
 };
 
 async function getJORFRecordsFromDate(
