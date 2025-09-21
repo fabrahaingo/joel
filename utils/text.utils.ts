@@ -1,3 +1,5 @@
+import emojiRegex from "emoji-regex";
+
 export function splitText(text: string, max: number): string[] {
   if (!Number.isFinite(max) || max <= 0) return [text];
 
@@ -121,4 +123,85 @@ export function trimStrings<T>(value: T): T {
 
   // Any other primitive (number, boolean, null, undefined, symbol, bigint) – return as-is
   return value;
+}
+
+// Remove every accent/diacritic and return plain ASCII letters.
+export function markdown2plainText(msg: string): string {
+  function deburr(input: string): string {
+    // 1. Use canonical decomposition (NFD) so "é" → "e\u0301"
+    const decomposed = input.normalize("NFD");
+
+    // 2. Strip all combining diacritical marks (U+0300–036F)
+    const stripped = decomposed.replace(
+      /\s[\u0300-\u036f]|[\u0300-\u036f]|🛡/gu,
+      ""
+    );
+
+    // 3. Map remaining special-case runes that don't decompose nicely
+    return stripped
+      .replace(/ß/g, "ss")
+      .replace(/Æ/g, "AE")
+      .replace(/æ/g, "ae")
+      .replace(/Ø/g, "O")
+      .replace(/ø/g, "o")
+      .replace(/Ð/g, "D")
+      .replace(/ð/g, "d")
+      .replace(/Þ/g, "Th")
+      .replace(/þ/g, "th")
+      .replace(/Œ/g, "OE")
+      .replace(/œ/g, "oe");
+  }
+
+  const emoteFreeText = msg.replace(emojiRegex(), "");
+
+  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/gu, "");
+
+  const accentFreeText = deburr(formattingFreeText);
+
+  return accentFreeText;
+}
+
+export function markdown2WHMarkdown(input: string): string {
+  return input.replace(/\[(.*?)\]\((.*?)\)/g, "*$1*\n$2");
+}
+
+export function markdown2html(input: string): string {
+  // Minimal markdown → HTML: [text](url), **bold** / __bold__, *italic* / _italic_
+  /*
+    const escapeHtml = (s: string) =>
+      s.replace(
+        /[&<>"']/g,
+        (ch) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+          })[ch]!
+      );
+
+    // Escape all HTML first so inserted tags are the only HTML.
+    let out = escapeHtml(input);
+     */
+
+  // Links: [text](url)
+  let out = input.replace(
+    /\[([^\]]+)\]\(([^)\s]+)\)/g,
+    (_m, text: string, url: string) =>
+      `<a href="${url}" rel="noopener noreferrer">${text}</a>`
+  );
+
+  // Bold: *text*
+  out = out.replace(
+    /\*([^*\s][^*]*?)\*/g,
+    (_m, t: string) => `<strong>${t}</strong>`
+  );
+  // Italic: _text_
+
+  out = out.replace(/_([^_\s][^_]*?)_/g, (_m, t: string) => `<em>${t}</em>`);
+
+  out = out.replace(/\n/g, `<br />`);
+
+  return out;
 }
