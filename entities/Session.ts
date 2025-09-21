@@ -7,11 +7,12 @@ import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { sendSignalAppMessage } from "./SignalSession.ts";
 import { SignalCli } from "signal-sdk";
-//import { MatrixClient } from "matrix-bot-sdk";
+import { MatrixClient } from "matrix-bot-sdk";
 import { Keyboard } from "./Keyboard.ts";
+import { sendMatrixMessage } from "./MatrixSession.ts";
 
 export interface ExternalMessageOptions {
-  //matrixClient?: MatrixClient;
+  matrixClient?: MatrixClient;
   signalCli?: SignalCli;
   whatsAppAPI?: WhatsAppAPI;
   forceNoKeyboard?: boolean;
@@ -21,12 +22,11 @@ export interface ExternalMessageOptions {
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
 
-  return User.findOne({
+  const user: IUser | null = await User.findOne({
     messageApp: session.messageApp,
     chatId: session.chatId
   });
 
-  /*
   if (user == null) {
     const legacyUser = (await User.collection.findOne({
       messageApp: session.messageApp,
@@ -42,7 +42,6 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
     }
   }
   return user;
-   */
 }
 
 export async function migrateUser(rawUser: IRawUser): Promise<void> {
@@ -67,28 +66,20 @@ export async function migrateUser(rawUser: IRawUser): Promise<void> {
 
 export async function sendMessage(
   messageApp: MessageApp,
-  chatId: number,
+  chatId: string,
   message: string,
-  options?: {
-    //matrixClient?: MatrixClient;
-    signalCli?: SignalCli;
-    whatsAppAPI?: WhatsAppAPI;
-    forceNoKeyboard?: boolean;
-    keyboard?: Keyboard;
-  }
+  options?: ExternalMessageOptions
 ): Promise<boolean> {
   switch (messageApp) {
-    /*
-      case "Matrix":
-        if (options?.matrixClient == null)
-          throw new Error("matrixClient is required");
-        return await sendMatrixMessage(
-          options.matrixClient,
-          chatId,
-          message,
-          options.keyboard
-        );
-        */
+    case "Matrix":
+      if (options?.matrixClient == null)
+        throw new Error("matrixClient is required");
+      return await sendMatrixMessage(
+        options.matrixClient,
+        chatId,
+        message,
+        options.keyboard
+      );
 
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");

@@ -37,16 +37,18 @@ export class TelegramSession implements ISession {
   messageApp = TelegramMessageApp;
   telegramBot: Telegram;
   language_code: string;
-  chatId: number;
+  chatId: string;
+  chatIdTg: number;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
   mainMenuKeyboard: Keyboard;
 
   log = umami.log;
 
-  constructor(telegramBot: Telegram, chatId: number, language_code: string) {
+  constructor(telegramBot: Telegram, chatId: string, language_code: string) {
     this.telegramBot = telegramBot;
     this.chatId = chatId;
+    this.chatIdTg = parseInt(chatId);
     this.language_code = language_code;
     this.mainMenuKeyboard = mainMenuKeyboardTelegram;
   }
@@ -62,7 +64,7 @@ export class TelegramSession implements ISession {
   }
 
   async sendTypingAction() {
-    await this.telegramBot.sendChatAction(this.chatId, "typing");
+    await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
   async sendMessage(
@@ -93,13 +95,13 @@ export class TelegramSession implements ISession {
     for (let i = 0; i < mArr.length; i++) {
       if (i == mArr.length - 1 && keyboard !== undefined) {
         await this.telegramBot.sendMessage(
-          this.chatId,
+          this.chatIdTg,
           mArr[i],
           tgMessageOptions
         );
       } else {
         await this.telegramBot.sendMessage(
-          this.chatId,
+          this.chatIdTg,
           mArr[i],
           telegramMessageOptions
         );
@@ -152,7 +154,7 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
  2. If the user is deactivated, the user is deleted from the database.
 */
 export async function sendTelegramMessage(
-  chatId: number,
+  chatId: string,
   message: string,
   keyboard?: Keyboard,
   retryNumber = 0
@@ -166,11 +168,12 @@ export async function sendTelegramMessage(
   if (BOT_TOKEN === undefined) {
     throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
   }
+  const chatIdTg = parseInt(chatId);
   let i = 0;
   try {
     for (; i < mArr.length; i++) {
       const payload: Record<string, unknown> = {
-        chat_id: chatId,
+        chat_id: chatIdTg,
         text: mArr[i],
         parse_mode: "markdown",
         link_preview_options: {

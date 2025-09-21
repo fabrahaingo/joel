@@ -16,7 +16,7 @@ export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
   signalCli: SignalCli;
   language_code: string;
-  chatId: number;
+  chatId: string;
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
@@ -26,7 +26,7 @@ export class SignalSession implements ISession {
   constructor(
     signalCli: SignalCli,
     botPhoneID: string,
-    userPhoneId: number,
+    userPhoneId: string,
     language_code: string
   ) {
     this.signalCli = signalCli;
@@ -80,12 +80,14 @@ export async function extractSignalAppSession(
 
 export async function sendSignalAppMessage(
   signalCli: SignalCli,
-  userPhoneId: number,
+  userPhoneId: string,
   message: string
 ): Promise<boolean> {
   try {
     const cleanMessage = markdown2plainText(message);
-    const userPhoneIdInt = "+" + userPhoneId;
+    const userPhoneIdInt = userPhoneId.startsWith("+")
+      ? userPhoneId
+      : "+" + userPhoneId;
     const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);

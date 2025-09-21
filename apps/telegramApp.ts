@@ -25,7 +25,7 @@ await (async () => {
 
       const tgSession = new TelegramSession(
         bot.telegram,
-        ctx.chat.id,
+        ctx.chat.id.toString(),
         tgUser.language_code ?? "fr"
       );
       await tgSession.loadUser();

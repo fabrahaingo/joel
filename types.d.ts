@@ -12,7 +12,7 @@ export type MessageApp = "Telegram" | "WhatsApp" | "Signal" | "Matrix";
 
 export interface ISession {
   messageApp: MessageApp;
-  chatId: number;
+  chatId: string;
   language_code: string;
   user: IUser | null | undefined;
   isReply: boolean | undefined;
@@ -34,7 +34,7 @@ export interface ISession {
 export interface IUser {
   _id: Types.ObjectId;
   messageApp: MessageApp;
-  chatId: number;
+  chatId: string;
   language_code: string;
   status: "active" | "blocked";
   followedPeople: {

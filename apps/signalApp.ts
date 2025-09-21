@@ -46,19 +46,10 @@ await (async () => {
 
           await umami.log({ event: "/message-signal" });
 
-          const userChatId = parseInt(message.envelope.sourceNumber);
-          if (isNaN(userChatId)) {
-            console.log(
-              "Signal: Invalid userChatId : ",
-              message.envelope.sourceNumber
-            );
-            return;
-          }
-
           const signalSession = new SignalSession(
             signalCli,
             SIGNAL_PHONE_NUMBER,
-            userChatId,
+            message.envelope.sourceNumber,
             "fr"
           );
           await signalSession.loadUser();

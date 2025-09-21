@@ -12,7 +12,7 @@ export const USER_SCHEMA_VERSION = 3;
 const UserSchema = new Schema<IUser, UserModel>(
   {
     chatId: {
-      type: Number,
+      type: String,
       required: true
     },
     messageApp: {

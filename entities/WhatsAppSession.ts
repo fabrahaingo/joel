@@ -72,7 +72,7 @@ export class WhatsAppSession implements ISession {
   messageApp = WhatsAppMessageApp;
   whatsAppAPI: WhatsAppAPI;
   language_code: string;
-  chatId: number;
+  chatId: string;
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
@@ -82,7 +82,7 @@ export class WhatsAppSession implements ISession {
   constructor(
     whatsAppAPI: WhatsAppAPI,
     botPhoneID: string,
-    userPhoneId: number,
+    userPhoneId: string,
     language_code: string
   ) {
     this.whatsAppAPI = whatsAppAPI;
@@ -147,7 +147,7 @@ const { WHATSAPP_PHONE_ID } = process.env;
 
 export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
-  userPhoneId: number,
+  userPhoneId: string,
   message: string,
   options?: {
     keyboard?: Keyboard;
@@ -188,8 +188,6 @@ export async function sendWhatsAppMessage(
     interactiveKeyboard = new ActionButtons(...buttons);
   }
 
-  const userPhoneIdStr = String(userPhoneId);
-
   let resp: ServerMessageResponse;
   try {
     const mArr = splitText(
@@ -201,20 +199,20 @@ export async function sendWhatsAppMessage(
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneIdStr,
+            userPhoneId,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         } else {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneIdStr,
+            userPhoneId,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         }
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
-          userPhoneIdStr,
+          userPhoneId,
           new Text(mArr[i])
         );
       }
