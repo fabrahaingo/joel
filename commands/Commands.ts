@@ -1,7 +1,7 @@
-import { CommandType } from "../types.ts";
+import { CommandType, ISession } from "../types.ts";
 
 import {
-  followOrganisationTelegram,
+  searchOrganisation,
   searchOrganisationFromStr,
   followOrganisationsFromWikidataIdStr
 } from "./followOrganisation.ts";
@@ -14,15 +14,53 @@ import {
 } from "./search.ts";
 import { enaCommand, promosCommand, suivreFromJOReference } from "./ena.ts";
 import { statsCommand } from "./stats.ts";
-import { defaultCommand, mainMenuCommand } from "./default.ts";
+import { defaultCommand } from "./default.ts";
 import { startCommand } from "./start.ts";
 import { deleteProfileCommand } from "./deleteProfile.ts";
-import { helpCommand } from "./help.ts";
 import {
   followFunctionCommand,
   followFunctionFromStrCommand
 } from "./followFunction.ts";
-import { listCommand, unfollowFromStr, unfollowTelegram } from "./list.ts";
+import { listCommand, unfollowFromStr } from "./list.ts";
+import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import {
+  clearFollowUp,
+  handleFollowUpMessage
+} from "../entities/FollowUpManager.ts";
+
+export async function processMessage(
+  session: ISession,
+  msg: string
+): Promise<void> {
+  // remove all spaces and replace them with a single space
+  const cleanMsg = msg.trim().replace(/ +/g, " ");
+
+  const firstLine = cleanMsg.split("\n")[0];
+
+  // Look through all keyboard keys to find a match
+  for (const keyboardKey of Object.values(KEYBOARD_KEYS)) {
+    if (keyboardKey.action === undefined) continue;
+    const buttonText = keyboardKey.key.text;
+
+    if (firstLine === buttonText) {
+      clearFollowUp(session);
+      await keyboardKey.action(session, cleanMsg);
+      return;
+    }
+  }
+
+  if (await handleFollowUpMessage(session, cleanMsg)) return;
+  clearFollowUp(session);
+
+  for (const command of commands) {
+    if (command.regex.test(cleanMsg)) {
+      await command.action(session, cleanMsg);
+      return;
+    }
+  }
+
+  await defaultCommand(session);
+}
 
 export const commands: CommandType[] = [
   {
@@ -30,12 +68,12 @@ export const commands: CommandType[] = [
     action: startCommand
   },
   {
-    regex: /^🏠 Menu principal|^🔎 Commandes/i,
-    action: mainMenuCommand
+    regex: /^Rechercher$|^Recherche$/i,
+    action: searchCommand
   },
   {
-    regex: /^Rechercher$|^Recherche$|^🔎 Rechercher$|^🔎 Nouvelle recherche$/i,
-    action: searchCommand
+    regex: /^🧐 Mes suivis$|^Suivis$|^Suivi$/i,
+    action: listCommand
   },
   {
     regex: /^🕵️ Forcer le suivi de \s*(.*)/i,
@@ -47,7 +85,7 @@ export const commands: CommandType[] = [
   },
   {
     regex:
-      /^SuivreR|^SuiviR|^Suivre R|^Suivi R|^Suivre à partir d'une référence JORF\/BO/i,
+      /^SuivreR|^SuiviR|^Suivre R |^Suivi R |^Suivre R$|^Suivi R$|^Suivre à partir d'une référence JORF\/BO/i,
     action: suivreFromJOReference
   },
   {
@@ -55,7 +93,7 @@ export const commands: CommandType[] = [
     action: manualFollowCommand
   },
   {
-    regex: /^Suivre N|^Suivi N/i,
+    regex: /^Suivre N |^Suivre N$|^Suivi N |^Suivi N$/i,
     action: (session, msg) =>
       manualFollowCommand(
         session,
@@ -63,8 +101,7 @@ export const commands: CommandType[] = [
       )
   },
   {
-    regex:
-      /^👨‍💼 Ajouter une fonction|^👨‍💼 Ajout Fonction|^Suivre une fonction|^Fonction$/i,
+    regex: /^Suivre une fonction|^Fonction$/i,
     action: followFunctionCommand
   },
   {
@@ -72,7 +109,8 @@ export const commands: CommandType[] = [
     action: followFunctionFromStrCommand
   },
   {
-    regex: /^Suivre F|^Suivi F|^Rechercher F|^Recherche F/i,
+    regex:
+      /^Suivre F |^Suivre F$|^Suivi F |^Suivi F$|^Rechercher F |^Rechercher F$|^Recherche F |^Recherche F$/i,
     action: (session, msg) =>
       followFunctionFromStrCommand(
         session,
@@ -84,7 +122,7 @@ export const commands: CommandType[] = [
     action: followOrganisationsFromWikidataIdStr
   },
   {
-    regex: /^Suivre O|^Suivi O/i,
+    regex: /^Suivre O |^Suivre O$|^Suivi O |^Suivi O$/i,
     action: (session, msg) =>
       followOrganisationsFromWikidataIdStr(
         session,
@@ -92,7 +130,7 @@ export const commands: CommandType[] = [
       )
   },
   {
-    regex: /^Rechercher O|^Recherche O/i,
+    regex: /^Rechercher O |^Rechercher O$|^Recherche O |^Recherche O$/i,
     action: (session, msg) =>
       searchOrganisationFromStr(
         session,
@@ -108,20 +146,11 @@ export const commands: CommandType[] = [
     action: followCommand
   },
   {
-    regex: /^✋ Retirer un suivi$/i,
-    action: unfollowTelegram
-  },
-  {
     regex: /^Retirer \s*(.*)/i,
-    action: unfollowFromStr
-  },
-  {
-    regex: /^🧐 Lister mes suivis$|^🧐 Mes suivis$|^Suivis$/i,
-    action: listCommand
-  },
-  {
-    regex: /^❓ Aide|^❓ Aide & Contact/i,
-    action: helpCommand
+    action: async (session, msg) => {
+      await unfollowFromStr(session, msg);
+      return;
+    }
   },
   {
     regex: /^Historique complet de \s*(.*)/i,
@@ -148,11 +177,11 @@ export const commands: CommandType[] = [
     action: (session, msg) => searchPersonHistory(session, msg, "latest").then()
   },
   {
-    regex: /^\/promos|^Liste des promos ENA\/INSP/i,
+    regex: /^\/promos/i,
     action: promosCommand
   },
   {
-    regex: /^\/secret|^\/ENA|^\/INSP|^Rechercher une promo ENA\/INSP/i,
+    regex: /^\/secret$|^\/ENA$|^\/INSP$|^ENA$|^INSP$/i,
     action: enaCommand
   },
   {
@@ -162,14 +191,10 @@ export const commands: CommandType[] = [
   {
     regex:
       /^🏛️️ Ajouter une organisation|^\/followOrganisation|^\/followOrganization|^🏛️️ Ajout Organisation/i,
-    action: followOrganisationTelegram
+    action: searchOrganisation
   },
   {
-    regex: /^\/supprimerCompte/i,
+    regex: /^\/supprimerCompte|supprimerCompte/i,
     action: deleteProfileCommand
-  },
-  {
-    regex: /.*/,
-    action: defaultCommand
   }
 ];

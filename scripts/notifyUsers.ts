@@ -23,7 +23,7 @@ import {
   getJORFSearchLinkPeople
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
-import { sendMessage } from "../entities/Session.ts";
+import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
@@ -32,6 +32,14 @@ import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
+/*
+import {
+  MatrixClient,
+  RustSdkCryptoStorageProvider,
+  SimpleFsStorageProvider
+} from "matrix-bot-sdk";
+*/
+import { sendMainMenu } from "../commands/default.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 30;
@@ -39,6 +47,35 @@ const SHIFT_DAYS = 30;
 const { ENABLED_APPS } = process.env;
 if (ENABLED_APPS === undefined) throw new Error("ENABLED_APPS env var not set");
 const enabledApps = JSON.parse(ENABLED_APPS) as MessageApp[];
+
+const invalidApps: string[] = [];
+for (const app of enabledApps) {
+  if (!["Telegram", "Matrix", "WhatsApp", "Signal"].includes(app))
+    invalidApps.push(app);
+}
+if (invalidApps.length > 0)
+  throw new Error(
+    `Invalid message app${invalidApps.length > 0 ? "s" : ""}: ${invalidApps.join(", ")}`
+  );
+
+/*
+let matrixClient: MatrixClient | undefined = undefined;
+if (enabledApps.includes("Matrix")) {
+  const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
+  if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined)
+    throw new Error("MATRIX env is not set");
+
+  const storageProvider = new SimpleFsStorageProvider("matrix-bot.json");
+  const cryptoProvider = new RustSdkCryptoStorageProvider("matrix-crypto");
+
+  matrixClient = new MatrixClient(
+    "https://" + MATRIX_HOME_URL,
+    MATRIX_BOT_TOKEN,
+    storageProvider,
+    cryptoProvider
+  );
+}
+*/
 
 let whatsAppAPI: WhatsAppAPI | undefined = undefined;
 if (enabledApps.includes("WhatsApp")) {
@@ -68,6 +105,12 @@ if (enabledApps.includes("Signal")) {
   signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
   await signalCli.connect();
 }
+
+const messageAppsOptions: ExternalMessageOptions = {
+  //matrixClient,
+  signalCli: signalCli,
+  whatsAppAPI: whatsAppAPI
+};
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -700,7 +743,7 @@ async function sendNameMentionUpdates(
 
   const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
 
-  const markdownEnabled = messageApp === "Telegram";
+  const markdownLinkEnabled = messageApp !== "Telegram";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
 
@@ -720,12 +763,12 @@ async function sendNameMentionUpdates(
 
     const pluralHandler = nameUpdates.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
-      markdownEnabled
+      markdownLinkEnabled
         ? `[${prenomNom}](${getJORFSearchLinkPeople(prenomNom)})`
         : `*${prenomNom}*`
     }\n\n`;
 
-    notification_text += formatSearchResult(nameUpdates, markdownEnabled, {
+    notification_text += formatSearchResult(nameUpdates, markdownLinkEnabled, {
       isConfirmation: false,
       isListing: true,
       displayName: "no"
@@ -735,10 +778,21 @@ async function sendNameMentionUpdates(
     if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
-    signalCli: signalCli,
-    whatsAppAPI: whatsAppAPI
-  });
+  const messageAppsOptionsApp = {
+    ...messageAppsOptions,
+    forceNoKeyboard: messageApp === "WhatsApp"
+  };
+
+  const messageSent = await sendMessage(
+    messageApp,
+    chatId,
+    notification_text,
+    messageAppsOptionsApp
+  );
+  if (messageApp === "WhatsApp")
+    await sendMainMenu(messageApp, chatId, {
+      externalOptions: messageAppsOptions
+    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-name" });
@@ -757,7 +811,7 @@ async function sendPeopleUpdate(
 
   const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
 
-  const markdownEnabled = messageApp === "Telegram";
+  const markdownLinkEnabled = messageApp !== "WhatsApp";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les personnes que vous suivez :\n\n`;
 
@@ -777,24 +831,39 @@ async function sendPeopleUpdate(
 
     const pluralHandler = peopleRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
-      markdownEnabled
+      markdownLinkEnabled
         ? `[${prenomNom}](${getJORFSearchLinkPeople(prenomNom)})`
         : `*${prenomNom}*`
     }\n\n`;
 
-    notification_text += formatSearchResult(peopleRecords, markdownEnabled, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "no"
-    });
+    notification_text += formatSearchResult(
+      peopleRecords,
+      markdownLinkEnabled,
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "no"
+      }
+    );
 
     if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
-    signalCli: signalCli,
-    whatsAppAPI: whatsAppAPI
-  });
+  const messageAppsOptionsApp = {
+    ...messageAppsOptions,
+    forceNoKeyboard: messageApp === "WhatsApp"
+  };
+
+  const messageSent = await sendMessage(
+    messageApp,
+    chatId,
+    notification_text,
+    messageAppsOptionsApp
+  );
+  if (messageApp === "WhatsApp")
+    await sendMainMenu(messageApp, chatId, {
+      externalOptions: messageAppsOptions
+    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-people" });
@@ -812,7 +881,7 @@ async function sendOrganisationUpdate(
   let notification_text =
     "📢 Nouvelles publications parmi les organisations que suivez :\n\n";
 
-  const markdownEnabled = messageApp === "Telegram";
+  const markdownLinkEnabled = messageApp !== "WhatsApp";
 
   const keys = Array.from(organisationsUpdateRecordsMap.keys());
   const lastKey = keys[keys.length - 1];
@@ -836,12 +905,12 @@ async function sendOrganisationUpdate(
 
     const pluralHandler = orgRecords.length > 1 ? "s" : "";
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
-      markdownEnabled
+      markdownLinkEnabled
         ? `[${orgName}](${getJORFSearchLinkOrganisation(orgId)})`
         : `*${orgName}*`
     }\n\n`;
 
-    notification_text += formatSearchResult(orgRecords, markdownEnabled, {
+    notification_text += formatSearchResult(orgRecords, markdownLinkEnabled, {
       isConfirmation: false,
       isListing: true,
       displayName: "all"
@@ -850,10 +919,21 @@ async function sendOrganisationUpdate(
     if (orgId !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
-    signalCli: signalCli,
-    whatsAppAPI: whatsAppAPI
-  });
+  const messageAppsOptionsApp = {
+    ...messageAppsOptions,
+    forceNoKeyboard: messageApp === "WhatsApp"
+  };
+
+  const messageSent = await sendMessage(
+    messageApp,
+    chatId,
+    notification_text,
+    messageAppsOptionsApp
+  );
+  if (messageApp === "WhatsApp")
+    await sendMainMenu(messageApp, chatId, {
+      externalOptions: messageAppsOptions
+    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-organisation" });
@@ -877,7 +957,7 @@ async function sendTagUpdates(
   let notification_text =
     "📢 Nouvelles publications parmi les fonctions que suivez :\n\n";
 
-  const markdownEnabled = messageApp === "Telegram";
+  const markdownLinkEnabled = messageApp !== "WhatsApp";
 
   const keys = Array.from(tagMap.keys());
   const lastKey = keys[keys.length - 1];
@@ -894,13 +974,13 @@ async function sendTagUpdates(
     // updatedRecords.reverse();
 
     const pluralHandler = tagRecords.length > 1 ? "s" : "";
-    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction *${
-      markdownEnabled
+    notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour la fonction ${
+      markdownLinkEnabled
         ? `[${tagKey}](${getJORFSearchLinkFunctionTag(tag)})`
         : `*${tagKey}*`
-    }*\n\n`;
+    }\n\n`;
 
-    notification_text += formatSearchResult(tagRecords, markdownEnabled, {
+    notification_text += formatSearchResult(tagRecords, markdownLinkEnabled, {
       isConfirmation: false,
       isListing: true,
       displayName: "all"
@@ -909,10 +989,21 @@ async function sendTagUpdates(
     if (tag !== lastKey) notification_text += "====================\n\n";
   }
 
-  const messageSent = await sendMessage(messageApp, chatId, notification_text, {
-    signalCli: signalCli,
-    whatsAppAPI: whatsAppAPI
-  });
+  const messageAppsOptionsApp = {
+    ...messageAppsOptions,
+    forceNoKeyboard: messageApp === "WhatsApp"
+  };
+
+  const messageSent = await sendMessage(
+    messageApp,
+    chatId,
+    notification_text,
+    messageAppsOptionsApp
+  );
+  if (messageApp === "WhatsApp")
+    await sendMainMenu(messageApp, chatId, {
+      externalOptions: messageAppsOptions
+    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-function" });

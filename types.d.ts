@@ -1,20 +1,14 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
+import { Keyboard } from "./Keyboard.ts";
 import umami from "./utils/umami";
-import { FindCursor } from "mongodb";
 
 export interface CommandType {
   regex: RegExp;
   action: (session: ISession, msg: string) => Promise<void>;
 }
 
-export type MessageApp = "Telegram" | "WhatsApp" | "Signal";
-//| "Matrix";
-
-export type Keyboard = {
-  text: string;
-  desc?: string;
-}[][];
+export type MessageApp = "Telegram" | "WhatsApp" | "Signal" | "Matrix";
 
 export interface ISession {
   messageApp: MessageApp;
@@ -22,14 +16,15 @@ export interface ISession {
   language_code: string;
   user: IUser | null | undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: Keyboard;
 
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
   sendMessage: (
     msg: string,
     keyboard?: Keyboard,
-    menuType?: KeyboardType
+    options?: {
+      forceNoKeyboard?: boolean;
+    }
   ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
   log: typeof umami.log;
@@ -105,11 +100,6 @@ export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
-  collection: {
-    insertOne(arg): Promise<void>;
-    find(arg): FindCursor<IUser>; //  ← cursor, not IUser[]
-    findOne(arg): Promise<IUser | null>;
-  };
 }
 
 export interface IPeople {
