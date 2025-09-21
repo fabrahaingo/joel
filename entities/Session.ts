@@ -10,6 +10,14 @@ import { SignalCli } from "signal-sdk";
 //import { MatrixClient } from "matrix-bot-sdk";
 import { Keyboard } from "./Keyboard.ts";
 
+export interface ExternalMessageOptions {
+  //matrixClient?: MatrixClient;
+  signalCli?: SignalCli;
+  whatsAppAPI?: WhatsAppAPI;
+  forceNoKeyboard?: boolean;
+  keyboard?: Keyboard;
+}
+
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
 

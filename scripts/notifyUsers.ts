@@ -23,7 +23,7 @@ import {
   getJORFSearchLinkPeople
 } from "../utils/JORFSearch.utils.ts";
 import Organisation from "../models/Organisation.ts";
-import { sendMessage } from "../entities/Session.ts";
+import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
@@ -39,7 +39,7 @@ import {
   SimpleFsStorageProvider
 } from "matrix-bot-sdk";
 */
-import { Keyboard } from "../entities/Keyboard.ts";
+import { sendMainMenu } from "../commands/default.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 30;
@@ -106,13 +106,7 @@ if (enabledApps.includes("Signal")) {
   await signalCli.connect();
 }
 
-const messageAppsOptions: {
-  //matrixClient?: MatrixClient;
-  signalCli?: SignalCli;
-  whatsAppAPI?: WhatsAppAPI;
-  forceNoKeyboard?: boolean;
-  keyboard?: Keyboard;
-} = {
+const messageAppsOptions: ExternalMessageOptions = {
   //matrixClient,
   signalCli: signalCli,
   whatsAppAPI: whatsAppAPI
@@ -784,12 +778,21 @@ async function sendNameMentionUpdates(
     if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
 
+  const messageAppsOptionsApp = {
+    ...messageAppsOptions,
+    forceNoKeyboard: messageApp === "WhatsApp"
+  };
+
   const messageSent = await sendMessage(
     messageApp,
     chatId,
     notification_text,
-    messageAppsOptions
+    messageAppsOptionsApp
   );
+  if (messageApp === "WhatsApp")
+    await sendMainMenu(messageApp, chatId, {
+      externalOptions: messageAppsOptions
+    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-name" });
@@ -846,12 +849,21 @@ async function sendPeopleUpdate(
     if (peopleId !== lastKey) notification_text += "====================\n\n";
   }
 
+  const messageAppsOptionsApp = {
+    ...messageAppsOptions,
+    forceNoKeyboard: messageApp === "WhatsApp"
+  };
+
   const messageSent = await sendMessage(
     messageApp,
     chatId,
     notification_text,
-    messageAppsOptions
+    messageAppsOptionsApp
   );
+  if (messageApp === "WhatsApp")
+    await sendMainMenu(messageApp, chatId, {
+      externalOptions: messageAppsOptions
+    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-people" });
@@ -907,12 +919,21 @@ async function sendOrganisationUpdate(
     if (orgId !== lastKey) notification_text += "====================\n\n";
   }
 
+  const messageAppsOptionsApp = {
+    ...messageAppsOptions,
+    forceNoKeyboard: messageApp === "WhatsApp"
+  };
+
   const messageSent = await sendMessage(
     messageApp,
     chatId,
     notification_text,
-    messageAppsOptions
+    messageAppsOptionsApp
   );
+  if (messageApp === "WhatsApp")
+    await sendMainMenu(messageApp, chatId, {
+      externalOptions: messageAppsOptions
+    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-organisation" });
@@ -968,12 +989,21 @@ async function sendTagUpdates(
     if (tag !== lastKey) notification_text += "====================\n\n";
   }
 
+  const messageAppsOptionsApp = {
+    ...messageAppsOptions,
+    forceNoKeyboard: messageApp === "WhatsApp"
+  };
+
   const messageSent = await sendMessage(
     messageApp,
     chatId,
     notification_text,
-    messageAppsOptions
+    messageAppsOptionsApp
   );
+  if (messageApp === "WhatsApp")
+    await sendMainMenu(messageApp, chatId, {
+      externalOptions: messageAppsOptions
+    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-function" });

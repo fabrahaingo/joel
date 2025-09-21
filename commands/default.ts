@@ -1,5 +1,6 @@
-import { ISession } from "../types.ts";
+import { ISession, IUser, MessageApp } from "../types.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
@@ -15,12 +16,26 @@ const MAIN_MENU_MESSAGE =
   "Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
 
 export const mainMenuCommand = async (session: ISession): Promise<void> => {
+  await session.log({ event: "/main-menu-message" });
+  await sendMainMenu(session.messageApp, session.chatId, { session });
+};
+
+export async function sendMainMenu(
+  messageApp: MessageApp,
+  chatId: IUser["chatId"],
+  options: {
+    externalOptions?: ExternalMessageOptions;
+    session?: ISession;
+  }
+): Promise<void> {
+  if (options.session == null && options.externalOptions == null)
+    throw new Error("session or externalOptions is required");
+
   try {
-    await session.log({ event: "/main-menu-message" });
     let message = MAIN_MENU_MESSAGE;
 
     let keyboard: Keyboard | undefined = undefined;
-    switch (session.messageApp) {
+    switch (messageApp) {
       case "Telegram":
       case "WhatsApp":
         break;
@@ -33,11 +48,17 @@ export const mainMenuCommand = async (session: ISession): Promise<void> => {
         ];
         message += "\n\n" + TEXT_COMMANDS_MENU;
     }
-    await session.sendMessage(message, keyboard);
+    if (options.session != null)
+      await options.session.sendMessage(message, keyboard);
+    else if (options.externalOptions != null)
+      await sendMessage(messageApp, chatId, message, {
+        ...options.externalOptions,
+        keyboard
+      });
   } catch (error) {
     console.log(error);
   }
-};
+}
 
 const TEXT_COMMANDS_MENU = `Utilisez une des commandes suivantes pour interagir avec moi:
 Format: *commande [arguments]*
