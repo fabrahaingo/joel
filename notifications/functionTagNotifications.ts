@@ -12,27 +12,40 @@ import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
+import {
+  LeafFormatter,
+  NotificationGroupingConfig,
+  SeparatorSelector,
+  createFieldGrouping,
+  createReferenceGrouping,
+  formatGroupedRecords,
+  groupRecordsBy
+} from "./grouping.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 const DEFAULT_SUBGROUP_SEPARATOR = "--------------------\n\n";
+const DEFAULT_REFERENCE_SUBGROUP_SEPARATOR = "....................\n\n";
 
 const tagValues = Object.values(FunctionTags);
 const tagKeys = Object.keys(FunctionTags);
 
-type GroupIdentifier = string | string[] | null | undefined;
-
-interface NotificationGroupingConfig {
-  getGroupId: (record: JORFSearchItem) => GroupIdentifier;
-  fallbackLabel?: string;
-  formatGroupTitle?: (options: {
-    groupId: string;
-    markdownLinkEnabled: boolean;
-  }) => string;
-  sortGroupIds?: (groupIds: string[]) => string[];
-  omitOrganisationNames?: boolean;
-}
-
 const CABINET_GROUP_FALLBACK_LABEL = "Autres ministères";
+const DEFAULT_REFERENCE_GROUPING = createReferenceGrouping();
+
+const formatTagLeafGroup: LeafFormatter = (
+  records,
+  markdownEnabled,
+  config
+) =>
+  formatSearchResult(records, markdownEnabled, {
+    isConfirmation: false,
+    isListing: true,
+    displayName: "all",
+    omitOrganisationNames: config.omitOrganisationNames ?? false
+  });
+
+const functionTagSeparatorSelector: SeparatorSelector = (level) =>
+  level === 0 ? DEFAULT_SUBGROUP_SEPARATOR : DEFAULT_REFERENCE_SUBGROUP_SEPARATOR;
 
 const functionTagGroupingStrategies: Partial<
   Record<FunctionTags, NotificationGroupingConfig>
@@ -50,7 +63,8 @@ const functionTagGroupingStrategies: Partial<
       if (groupIds.includes(CABINET_GROUP_FALLBACK_LABEL))
         sorted.push(CABINET_GROUP_FALLBACK_LABEL);
       return sorted;
-    }
+    },
+    subGrouping: createReferenceGrouping()
   })
 };
 
@@ -204,56 +218,32 @@ async function sendTagUpdates(
         : `*${tagKey}*`
     }\n\n`;
 
-    const groupingConfig = functionTagGroupingStrategies[tag];
-    let handledByGrouping = false;
+    const groupingConfig =
+      functionTagGroupingStrategies[tag] ?? DEFAULT_REFERENCE_GROUPING;
 
-    if (groupingConfig) {
-      const groupedMap = groupRecordsBy(tagRecords, groupingConfig);
-      const orderedEntries = orderGroupedEntries(
-        groupedMap,
-        groupingConfig.sortGroupIds
-      ).filter(([, records]) => records.length > 0);
+    const groupedMap = groupRecordsBy(tagRecords, groupingConfig);
 
-      if (orderedEntries.length > 0) {
-        handledByGrouping = true;
+    const formattedGroups = formatGroupedRecords(
+      groupedMap,
+      groupingConfig,
+      markdownLinkEnabled,
+      formatTagLeafGroup,
+      functionTagSeparatorSelector
+    );
 
-        orderedEntries.forEach(([groupId, groupRecords], groupIndex) => {
-          const groupTitle =
-            groupingConfig.formatGroupTitle?.({
-              groupId,
-              markdownLinkEnabled
-            }) ?? `👉 ${groupId}\n\n`;
-
-          notification_text += groupTitle;
-
-          notification_text += formatSearchResult(
-            groupRecords,
-            markdownLinkEnabled,
-            {
-              isConfirmation: false,
-              isListing: true,
-              displayName: "all",
-              omitOrganisationNames:
-                groupingConfig.omitOrganisationNames ?? false
-            }
-          );
-
-          const isLastGroup = groupIndex === orderedEntries.length - 1;
-          if (!isLastGroup) notification_text += DEFAULT_SUBGROUP_SEPARATOR;
-          else if (tag !== lastTag)
-            notification_text += DEFAULT_GROUP_SEPARATOR;
-        });
-      }
-    }
-
-    if (handledByGrouping) continue;
-
-    notification_text += formatSearchResult(tagRecords, markdownLinkEnabled, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "all",
-      omitOrganisationNames: groupingConfig?.omitOrganisationNames ?? false
-    });
+    if (formattedGroups.length > 0)
+      notification_text += formattedGroups;
+    else
+      notification_text += formatSearchResult(
+        tagRecords,
+        markdownLinkEnabled,
+        {
+          isConfirmation: false,
+          isListing: true,
+          displayName: "all",
+          omitOrganisationNames: groupingConfig.omitOrganisationNames ?? false
+        }
+      );
 
     if (tag !== lastTag) notification_text += DEFAULT_GROUP_SEPARATOR;
   }
@@ -277,59 +267,4 @@ async function sendTagUpdates(
 
   await umami.log({ event: "/notification-update-function" });
   return true;
-}
-
-function normaliseGroupId(id: string | null | undefined): string | null {
-  if (id === undefined || id === null) return null;
-  const trimmed = String(id).trim();
-  return trimmed.length > 0 ? trimmed : null;
-}
-
-function groupRecordsBy(
-  records: JORFSearchItem[],
-  config: NotificationGroupingConfig
-): Map<string, JORFSearchItem[]> {
-  const grouped = new Map<string, JORFSearchItem[]>();
-
-  for (const record of records) {
-    const rawGroupId = config.getGroupId(record);
-    const candidateIds = Array.isArray(rawGroupId) ? rawGroupId : [rawGroupId];
-
-    const validIds = candidateIds
-      .map((value) => normaliseGroupId(value))
-      .filter((value): value is string => value !== null);
-
-    const fallbackKey = normaliseGroupId(config.fallbackLabel);
-    const keysToUse =
-      validIds.length > 0 ? validIds : fallbackKey ? [fallbackKey] : [];
-
-    for (const key of keysToUse) {
-      const existing = grouped.get(key) ?? [];
-      existing.push(record);
-      grouped.set(key, existing);
-    }
-  }
-
-  return grouped;
-}
-
-function orderGroupedEntries(
-  groupedMap: Map<string, JORFSearchItem[]>,
-  sort?: (groupIds: string[]) => string[]
-): [string, JORFSearchItem[]][] {
-  const groupIds = sort ? sort([...groupedMap.keys()]) : [...groupedMap.keys()];
-  return groupIds.map((groupId) => [groupId, groupedMap.get(groupId) ?? []]);
-}
-
-function createFieldGrouping(
-  accessor: (record: JORFSearchItem) => GroupIdentifier,
-  options?: Omit<NotificationGroupingConfig, "getGroupId">
-): NotificationGroupingConfig {
-  return {
-    getGroupId: accessor,
-    fallbackLabel: options?.fallbackLabel,
-    formatGroupTitle: options?.formatGroupTitle,
-    sortGroupIds: options?.sortGroupIds,
-    omitOrganisationNames: options?.omitOrganisationNames
-  };
 }

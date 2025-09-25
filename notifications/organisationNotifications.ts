@@ -12,8 +12,35 @@ import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
+import {
+  LeafFormatter,
+  createReferenceGrouping,
+  formatGroupedRecords,
+  groupRecordsBy,
+  SeparatorSelector
+} from "./grouping.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
+const DEFAULT_SUBGROUP_SEPARATOR = "--------------------\n\n";
+
+const organisationReferenceGrouping = createReferenceGrouping({
+  omitOrganisationNames: true
+});
+
+const organisationLeafFormatter: LeafFormatter = (
+  records,
+  markdownEnabled,
+  config
+) =>
+  formatSearchResult(records, markdownEnabled, {
+    isConfirmation: false,
+    isListing: true,
+    displayName: "all",
+    omitOrganisationNames: config.omitOrganisationNames ?? false
+  });
+
+const organisationSeparatorSelector: SeparatorSelector = () =>
+  DEFAULT_SUBGROUP_SEPARATOR;
 
 export async function notifyOrganisationsUpdates(
   allUpdatedRecords: JORFSearchItem[],
@@ -197,12 +224,28 @@ async function sendOrganisationUpdate(
         : `*${orgName}*`
     }\n\n`;
 
-    notification_text += formatSearchResult(orgRecords, markdownLinkEnabled, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "all",
-      omitOrganisationNames: true
-    });
+    const groupedByReference = groupRecordsBy(
+      orgRecords,
+      organisationReferenceGrouping
+    );
+
+    const formattedGroups = formatGroupedRecords(
+      groupedByReference,
+      organisationReferenceGrouping,
+      markdownLinkEnabled,
+      organisationLeafFormatter,
+      organisationSeparatorSelector
+    );
+
+    notification_text +=
+      formattedGroups.length > 0
+        ? formattedGroups
+        : formatSearchResult(orgRecords, markdownLinkEnabled, {
+            isConfirmation: false,
+            isListing: true,
+            displayName: "all",
+            omitOrganisationNames: true
+          });
 
     if (orgId !== lastKey) notification_text += DEFAULT_GROUP_SEPARATOR;
   }
