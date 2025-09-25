@@ -66,7 +66,7 @@ export async function migrateUser(rawUser: IRawUser): Promise<void> {
 
 export async function recordSuccessfulDelivery(
   messageApp: MessageApp,
-  chatId: number
+  chatId: string
 ): Promise<void> {
   await User.updateOne(
     { messageApp, chatId },

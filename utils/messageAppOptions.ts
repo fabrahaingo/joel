@@ -4,6 +4,11 @@ import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { MessageApp } from "../types.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { SignalCli } from "signal-sdk";
+import {
+  MatrixClient,
+  RustSdkCryptoStorageProvider,
+  SimpleFsStorageProvider
+} from "matrix-bot-sdk";
 
 export const SUPPORTED_MESSAGE_APPS: readonly MessageApp[] = [
   "Telegram",
@@ -69,6 +74,22 @@ export async function resolveExternalMessageOptions(
     const signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
     await signalCli.connect();
     resolved.signalCli = signalCli;
+  }
+
+  if (enabledApps.includes("Matrix") && resolved.matrixClient == null) {
+    const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
+    if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined)
+      throw new Error("MATRIX env is not set");
+
+    const storageProvider = new SimpleFsStorageProvider("matrix-bot.json");
+    const cryptoProvider = new RustSdkCryptoStorageProvider("matrix-crypto");
+
+    resolved.matrixClient = new MatrixClient(
+      "https://" + MATRIX_HOME_URL,
+      MATRIX_BOT_TOKEN,
+      storageProvider,
+      cryptoProvider
+    );
   }
 
   return resolved;
