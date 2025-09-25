@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { mongodbConnect } from "../db.ts";
 import User from "../models/User.ts";
-import { MessageApp } from "../types.d.ts";
+import { MessageApp } from "../types.ts";
 import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
 import {
   parseEnabledMessageApps,
@@ -60,11 +60,11 @@ export async function broadcastMessage(
     if (success) {
       succeeded += 1;
       options?.logger?.(
-        `Message delivered to ${recipient.messageApp} user ${recipient.chatId}`
+        `Message delivered to ${recipient.messageApp} user ${String(recipient.chatId)}`
       );
     } else {
       options?.logger?.(
-        `Failed to deliver message to ${recipient.messageApp} user ${recipient.chatId}`
+        `Failed to deliver message to ${recipient.messageApp} user ${String(recipient.chatId)}`
       );
     }
   }
@@ -76,14 +76,9 @@ export async function broadcastMessage(
   };
 }
 
-if (import.meta.main) {
-  const [, , ...args] = process.argv;
-  if (args.length === 0) {
-    console.error("Usage: ts-node utils/broadcastMessage.ts <message>");
-    process.exit(1);
-  }
-
-  const message = args.join(" ");
+await (async () => {
+  const message = "test message";
+  //const message = args.join(" ");
 
   try {
     await mongodbConnect();
@@ -91,11 +86,11 @@ if (import.meta.main) {
       logger: console.log
     });
     console.log(
-      `Broadcast completed: ${result.succeeded}/${result.attempted} deliveries succeeded.`
+      `Broadcast completed: ${String(result.succeeded)}/${String(result.attempted)} deliveries succeeded.`
     );
     process.exit(result.failed === 0 ? 0 : 2);
   } catch (error) {
     console.error("Broadcast failed:", error);
     process.exit(1);
   }
-}
+})();
