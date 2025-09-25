@@ -1,7 +1,7 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import { Telegram } from "telegraf";
 import User from "../models/User.ts";
-import { loadUser } from "./Session.ts";
+import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
@@ -111,6 +111,8 @@ export class TelegramSession implements ISession {
         setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
+
+    await recordSuccessfulDelivery(this.messageApp, this.chatId);
   }
 }
 
@@ -233,5 +235,6 @@ export async function sendTelegramMessage(
     return false;
   }
 
+  await recordSuccessfulDelivery("Telegram", chatId);
   return true;
 }

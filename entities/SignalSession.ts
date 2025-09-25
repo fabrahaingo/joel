@@ -1,6 +1,6 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser } from "./Session.ts";
+import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
@@ -85,7 +85,7 @@ export async function sendSignalAppMessage(
 ): Promise<boolean> {
   try {
     const cleanMessage = markdown2plainText(message);
-    const userPhoneIdInt = "+" + userPhoneId;
+    const userPhoneIdInt = "+" + userPhoneId.toString();
     const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
@@ -97,6 +97,7 @@ export async function sendSignalAppMessage(
         setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
+    await recordSuccessfulDelivery(SignalMessageApp, userPhoneId);
   } catch (error) {
     console.log(error);
     return false;
