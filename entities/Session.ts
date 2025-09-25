@@ -64,6 +64,16 @@ export async function migrateUser(rawUser: IRawUser): Promise<void> {
   return;
 }
 
+export async function recordSuccessfulDelivery(
+  messageApp: MessageApp,
+  chatId: number
+): Promise<void> {
+  await User.updateOne(
+    { messageApp, chatId },
+    { $set: { lastMessageReceivedAt: new Date(), status: "active" } }
+  );
+}
+
 export async function sendMessage(
   messageApp: MessageApp,
   chatId: string,

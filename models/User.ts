@@ -103,6 +103,9 @@ const UserSchema = new Schema<IUser, UserModel>(
     },
     lastInteractionMonth: {
       type: Date
+    },
+    lastMessageReceivedAt: {
+      type: Date
     }
   },
   {

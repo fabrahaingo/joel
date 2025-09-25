@@ -22,6 +22,8 @@ interface WikiDataAPIResponse {
   }[];
 }
 
+const FULL_COMMAND_PROMPT = `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
+
 async function searchOrganisationWikidataId(
   org_name: string
 ): Promise<{ nom: string; wikidataId: WikidataId }[]> {
@@ -302,6 +304,7 @@ export const searchOrganisationFromStr = async (
 
     if (orgName)
       await processOrganisationSearch(session, orgName, triggerUmami);
+    else await session.sendMessage(FULL_COMMAND_PROMPT);
   } catch (error) {
     console.log(error);
   }

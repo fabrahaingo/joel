@@ -43,6 +43,7 @@ export type UmamiEvent =
   | "/message-sent-signal"
   | "/message-sent-telegram"
   | "/message-sent-whatsapp"
+  | "/message-sent-broadcast"
   | "/matrix-too-many-requests"
   | "/matrix-too-many-requests-aborted"
   | "/telegram-too-many-requests"

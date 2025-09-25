@@ -55,6 +55,8 @@ export interface IUser {
     lastUpdate: Date;
   }[];
 
+  lastMessageReceivedAt?: Date;
+
   lastInteractionDay?: Date;
   lastInteractionWeek?: Date;
   lastInteractionMonth?: Date;

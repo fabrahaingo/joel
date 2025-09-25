@@ -1,6 +1,6 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser } from "./Session.ts";
+import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
@@ -99,6 +99,7 @@ export async function sendSignalAppMessage(
         setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
+    await recordSuccessfulDelivery(SignalMessageApp, userPhoneId);
   } catch (error) {
     console.log(error);
     return false;
