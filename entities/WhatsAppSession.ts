@@ -265,14 +265,6 @@ export async function sendWhatsAppMessage(
         setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
-    if (mArr.length > 20)
-      // If a very long message, we wait the equivalent of (6s-1s)/message
-      await new Promise((resolve) =>
-        setTimeout(
-          resolve,
-          mArr.length * (WHATSAPP_COOL_DOWN_DELAY_SECONDS - 1) * 1000
-        )
-      );
   } catch (error) {
     console.log(error);
     return false;
