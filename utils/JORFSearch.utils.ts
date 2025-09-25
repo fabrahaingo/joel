@@ -59,7 +59,9 @@ export async function callJORFSearchPeople(
   }
 }
 
-export async function callJORFSearchDay(day: Date): Promise<JORFSearchItem[]> {
+export async function callJORFSearchDay(
+  day: Date
+): Promise<JORFSearchItem[] | null> {
   try {
     await umami.log({ event: "/jorfsearch-request-date" });
     return await axios
@@ -77,7 +79,7 @@ export async function callJORFSearchDay(day: Date): Promise<JORFSearchItem[]> {
   } catch (error) {
     console.log(error);
   }
-  return [];
+  return null;
 }
 
 export async function callJORFSearchTag(
@@ -236,4 +238,8 @@ export function getJORFSearchLinkOrganisation(
   return encodeURI(
     `https://jorfsearch.steinertriples.ch/${wikidataId}${json ? "?format=JSON" : ""}`
   );
+}
+
+export function getJORFTextLink(source_id: string) {
+  return encodeURI(`https://bodata.steinertriples.ch/${source_id}/redirect`);
 }
