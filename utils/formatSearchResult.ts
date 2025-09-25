@@ -3,12 +3,14 @@ import { dateToFrenchString } from "./date.utils.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { getJORFSearchLinkPeople } from "./JORFSearch.utils.ts";
 
-export type FormatSearchResultOptions = {
+export interface FormatSearchResultOptions {
   isConfirmation?: boolean;
   isListing?: boolean;
   displayName?: "all" | "first" | "no";
   omitOrganisationNames?: boolean;
-};
+  omitCabinet?: boolean;
+  omitReference?: boolean;
+}
 
 function addPoste(
   elem: JORFSearchItem,
@@ -16,18 +18,27 @@ function addPoste(
   options?: FormatSearchResultOptions
 ) {
   if (elem.grade) {
-    message += `👉 au grade de *${elem.grade}*`;
-    if (elem.ordre_merite) {
-      message += ` de l'Ordre national du mérite\n`;
-    } else if (elem.legion_honneur) {
-      message += ` de la Légion d'honneur\n`;
+    if (elem.cabinet || elem.cabinet_ministeriel) {
+      message += `👉 *${elem.grade}*`;
+      if (
+        ["Chef militaire", "Chef", "Directeur", "Directeur adjoint"].some(
+          (s) => s === elem.grade
+        )
+      )
+        message += ` *de cabinet*`;
+      if (elem.cabinet && !options?.omitCabinet)
+        message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+      else message += `\n`;
     } else {
-      message += `\n`;
-    }
-    if (elem.nomme_par) {
-      message += `🏛️ par le *${elem.nomme_par}*\n`;
-    } else if (elem.cabinet) {
-      message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+      message += `👉 au grade de *${elem.grade}*`;
+      if (elem.ordre_merite) {
+        message += ` de l'Ordre national du mérite\n`;
+      } else if (elem.legion_honneur) {
+        message += ` de la Légion d'honneur\n`;
+      } else {
+        message += `\n`;
+      }
+      if (elem.nomme_par) message += `🏛️ par le *${elem.nomme_par}*\n`;
     }
   } else if (elem.armee_grade) {
     if (elem.type_ordre == "nomination") {
@@ -44,9 +55,13 @@ function addPoste(
       message += `\n🪖 *${elem.corps}*\n`;
     }
   } else if (elem.cabinet) {
-    message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+    if (!options?.omitCabinet) message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
   } else if (elem.cabinet_ministeriel) {
-    if (!options?.omitOrganisationNames && elem.organisations[0]?.nom)
+    if (
+      !options?.omitCabinet &&
+      !options?.omitOrganisationNames &&
+      elem.organisations[0]?.nom
+    )
       message += `🏛️ Cabinet *${elem.organisations[0].nom}*\n`;
     else message += `🏛️ Cabinet\n`;
   } else if (elem.ambassadeur) {
@@ -126,7 +141,7 @@ export function formatSearchResult(
     } else if (elem.date_fin) {
       message += `🗓 Jusqu'au ${dateToFrenchString(elem.date_fin)}\n`;
     }
-    if (elem.source_id && elem.source_date) {
+    if (!options?.omitReference && elem.source_id && elem.source_date) {
       message += `🔗 _${elem.source_name} du ${dateToFrenchString(elem.source_date)}_: `;
       if (markdownLink)
         message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}/redirect)\n`;

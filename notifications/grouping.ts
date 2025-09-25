@@ -1,5 +1,6 @@
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { dateToFrenchString, JORFtoDate } from "../utils/date.utils.ts";
+import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 
 export type GroupIdentifier = string | string[] | null | undefined;
 
@@ -148,18 +149,16 @@ export function createReferenceGrouping(options?: {
 
       const { groupId, markdownLinkEnabled, records } = args;
       const firstRecord = records[0];
-      const sourceName = firstRecord?.source_name ?? "Publication";
-      const dateLabel = firstRecord?.source_date
-        ? dateToFrenchString(firstRecord.source_date)
-        : null;
+      const dateLabel = dateToFrenchString(firstRecord.source_date);
 
-      const label = dateLabel
-        ? `${sourceName} du ${dateLabel} (${groupId})`
-        : `${sourceName} (${groupId})`;
+      let label = `${firstRecord.source_name} du ${dateLabel}`;
+      const refLink = getJORFTextLink(groupId);
 
-      const wrappedLabel = markdownLinkEnabled ? `*${label}*` : `*${label}*`;
+      label += markdownLinkEnabled
+        ? `: [cliquez ici](${refLink})`
+        : `\n${refLink}`;
 
-      return `📰 ${wrappedLabel}\n\n`;
+      return `📰 ${label}\n\n`;
     },
     sortGroupIds: (groupIds, groupedMap) => {
       return [...groupIds].sort((a, b) => {

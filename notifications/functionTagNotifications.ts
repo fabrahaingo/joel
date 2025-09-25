@@ -23,8 +23,8 @@ import {
 } from "./grouping.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
-const DEFAULT_SUBGROUP_SEPARATOR = "--------------------\n\n";
-const DEFAULT_REFERENCE_SUBGROUP_SEPARATOR = "....................\n\n";
+const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
+const DEFAULT_REFERENCE_SUBGROUP_SEPARATOR = "\n....................\n\n";
 
 const tagValues = Object.values(FunctionTags);
 const tagKeys = Object.keys(FunctionTags);
@@ -37,7 +37,9 @@ const formatTagLeafGroup: LeafFormatter = (records, markdownEnabled, config) =>
     isConfirmation: false,
     isListing: true,
     displayName: "all",
-    omitOrganisationNames: config.omitOrganisationNames ?? false
+    omitOrganisationNames: config.omitOrganisationNames ?? false,
+    omitCabinet: true,
+    omitReference: true
   });
 
 const functionTagSeparatorSelector: SeparatorSelector = (level) =>

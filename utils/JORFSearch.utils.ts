@@ -239,3 +239,7 @@ export function getJORFSearchLinkOrganisation(
     `https://jorfsearch.steinertriples.ch/${wikidataId}${json ? "?format=JSON" : ""}`
   );
 }
+
+export function getJORFTextLink(source_id: string) {
+  return encodeURI(`https://bodata.steinertriples.ch/${source_id}/redirect`);
+}
