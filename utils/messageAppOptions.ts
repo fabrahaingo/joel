@@ -29,9 +29,7 @@ export function parseEnabledMessageApps(
   );
 
   if (unsupportedApps.length > 0) {
-    console.warn(
-      `Ignoring unsupported apps: ${unsupportedApps.join(", ")}`
-    );
+    console.warn(`Ignoring unsupported apps: ${unsupportedApps.join(", ")}`);
   }
 
   return supportedApps;
