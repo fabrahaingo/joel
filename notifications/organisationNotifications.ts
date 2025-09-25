@@ -21,7 +21,7 @@ import {
 } from "./grouping.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
-const DEFAULT_SUBGROUP_SEPARATOR = "--------------------\n\n";
+const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
 
 const organisationReferenceGrouping = createReferenceGrouping({
   omitOrganisationNames: true
@@ -36,7 +36,8 @@ const organisationLeafFormatter: LeafFormatter = (
     isConfirmation: false,
     isListing: true,
     displayName: "all",
-    omitOrganisationNames: config.omitOrganisationNames ?? false
+    omitOrganisationNames: config.omitOrganisationNames ?? false,
+    omitReference: true
   });
 
 const organisationSeparatorSelector: SeparatorSelector = () =>
