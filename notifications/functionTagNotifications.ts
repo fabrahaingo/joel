@@ -32,11 +32,7 @@ const tagKeys = Object.keys(FunctionTags);
 const CABINET_GROUP_FALLBACK_LABEL = "Autres ministères";
 const DEFAULT_REFERENCE_GROUPING = createReferenceGrouping();
 
-const formatTagLeafGroup: LeafFormatter = (
-  records,
-  markdownEnabled,
-  config
-) =>
+const formatTagLeafGroup: LeafFormatter = (records, markdownEnabled, config) =>
   formatSearchResult(records, markdownEnabled, {
     isConfirmation: false,
     isListing: true,
@@ -45,7 +41,9 @@ const formatTagLeafGroup: LeafFormatter = (
   });
 
 const functionTagSeparatorSelector: SeparatorSelector = (level) =>
-  level === 0 ? DEFAULT_SUBGROUP_SEPARATOR : DEFAULT_REFERENCE_SUBGROUP_SEPARATOR;
+  level === 0
+    ? DEFAULT_SUBGROUP_SEPARATOR
+    : DEFAULT_REFERENCE_SUBGROUP_SEPARATOR;
 
 const functionTagGroupingStrategies: Partial<
   Record<FunctionTags, NotificationGroupingConfig>
@@ -231,19 +229,14 @@ async function sendTagUpdates(
       functionTagSeparatorSelector
     );
 
-    if (formattedGroups.length > 0)
-      notification_text += formattedGroups;
+    if (formattedGroups.length > 0) notification_text += formattedGroups;
     else
-      notification_text += formatSearchResult(
-        tagRecords,
-        markdownLinkEnabled,
-        {
-          isConfirmation: false,
-          isListing: true,
-          displayName: "all",
-          omitOrganisationNames: groupingConfig.omitOrganisationNames ?? false
-        }
-      );
+      notification_text += formatSearchResult(tagRecords, markdownLinkEnabled, {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "all",
+        omitOrganisationNames: groupingConfig.omitOrganisationNames ?? false
+      });
 
     if (tag !== lastTag) notification_text += DEFAULT_GROUP_SEPARATOR;
   }

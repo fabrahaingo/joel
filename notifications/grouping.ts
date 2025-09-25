@@ -157,9 +157,7 @@ export function createReferenceGrouping(options?: {
         ? `${sourceName} du ${dateLabel} (${groupId})`
         : `${sourceName} (${groupId})`;
 
-      const wrappedLabel = markdownLinkEnabled
-        ? `*${label}*`
-        : `*${label}*`;
+      const wrappedLabel = markdownLinkEnabled ? `*${label}*` : `*${label}*`;
 
       return `📰 ${wrappedLabel}\n\n`;
     },
