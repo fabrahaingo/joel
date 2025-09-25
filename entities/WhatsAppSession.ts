@@ -1,6 +1,6 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser } from "./Session.ts";
+import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ServerMessageResponse } from "whatsapp-api-js/types";
@@ -277,6 +277,7 @@ export async function sendWhatsAppMessage(
     console.log(error);
     return false;
   }
+  await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneId);
   return true;
 }
 
