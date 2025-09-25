@@ -3,20 +3,42 @@ import { dateToFrenchString } from "./date.utils.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { getJORFSearchLinkPeople } from "./JORFSearch.utils.ts";
 
-function addPoste(elem: JORFSearchItem, message: string) {
+export interface FormatSearchResultOptions {
+  isConfirmation?: boolean;
+  isListing?: boolean;
+  displayName?: "all" | "first" | "no";
+  omitOrganisationNames?: boolean;
+  omitCabinet?: boolean;
+  omitReference?: boolean;
+}
+
+function addPoste(
+  elem: JORFSearchItem,
+  message: string,
+  options?: FormatSearchResultOptions
+) {
   if (elem.grade) {
-    message += `👉 au grade de *${elem.grade}*`;
-    if (elem.ordre_merite) {
-      message += ` de l'Ordre national du mérite\n`;
-    } else if (elem.legion_honneur) {
-      message += ` de la Légion d'honneur\n`;
+    if (elem.cabinet || elem.cabinet_ministeriel) {
+      message += `👉 *${elem.grade}*`;
+      if (
+        ["Chef militaire", "Chef", "Directeur", "Directeur adjoint"].some(
+          (s) => s === elem.grade
+        )
+      )
+        message += ` *de cabinet*`;
+      if (elem.cabinet && !options?.omitCabinet)
+        message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+      else message += `\n`;
     } else {
-      message += `\n`;
-    }
-    if (elem.nomme_par) {
-      message += `🏛️ par le *${elem.nomme_par}*\n`;
-    } else if (elem.cabinet) {
-      message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+      message += `👉 au grade de *${elem.grade}*`;
+      if (elem.ordre_merite) {
+        message += ` de l'Ordre national du mérite\n`;
+      } else if (elem.legion_honneur) {
+        message += ` de la Légion d'honneur\n`;
+      } else {
+        message += `\n`;
+      }
+      if (elem.nomme_par) message += `🏛️ par le *${elem.nomme_par}*\n`;
     }
   } else if (elem.armee_grade) {
     if (elem.type_ordre == "nomination") {
@@ -27,15 +49,19 @@ function addPoste(elem: JORFSearchItem, message: string) {
     if (elem.armee === "réserve") {
       message += ` de réserve`;
     }
-    if (elem.organisations[0]?.nom) {
+    if (!options?.omitOrganisationNames && elem.organisations[0]?.nom) {
       message += `\n🪖 *${elem.organisations[0].nom}*\n`;
     } else if (elem.corps) {
       message += `\n🪖 *${elem.corps}*\n`;
     }
   } else if (elem.cabinet) {
-    message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
+    if (!options?.omitCabinet) message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
   } else if (elem.cabinet_ministeriel) {
-    if (elem.organisations[0]?.nom)
+    if (
+      !options?.omitCabinet &&
+      !options?.omitOrganisationNames &&
+      elem.organisations[0]?.nom
+    )
       message += `🏛️ Cabinet *${elem.organisations[0].nom}*\n`;
     else message += `🏛️ Cabinet\n`;
   } else if (elem.ambassadeur) {
@@ -45,7 +71,7 @@ function addPoste(elem: JORFSearchItem, message: string) {
     else if (elem.ambassadeur_thematique)
       message += `🏛️ Ambassadeur thématique\n`;
     else message += `🏛️ Ambassadeur\n`;
-  } else if (elem.organisations.length > 0) {
+  } else if (!options?.omitOrganisationNames && elem.organisations.length > 0) {
     elem.organisations.forEach((o) => {
       message += `👉 *${o.nom}*\n`;
     });
@@ -64,11 +90,7 @@ function addPoste(elem: JORFSearchItem, message: string) {
 export function formatSearchResult(
   result: JORFSearchItem[],
   markdownLink: boolean,
-  options?: {
-    isConfirmation?: boolean;
-    isListing?: boolean;
-    displayName?: "all" | "first" | "no";
-  }
+  options?: FormatSearchResultOptions
 ) {
   let message = "";
 
@@ -97,7 +119,7 @@ export function formatSearchResult(
       message += `🕵️ ${prenomNomLink}\n`;
     }
     message += textTypeOrdre(elem.type_ordre, elem.sexe ?? "M");
-    message = addPoste(elem, message);
+    message = addPoste(elem, message, options);
 
     if (elem.date_debut) {
       if (
@@ -119,7 +141,7 @@ export function formatSearchResult(
     } else if (elem.date_fin) {
       message += `🗓 Jusqu'au ${dateToFrenchString(elem.date_fin)}\n`;
     }
-    if (elem.source_id && elem.source_date) {
+    if (!options?.omitReference && elem.source_id && elem.source_date) {
       message += `🔗 _${elem.source_name} du ${dateToFrenchString(elem.source_date)}_: `;
       if (markdownLink)
         message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}/redirect)\n`;
