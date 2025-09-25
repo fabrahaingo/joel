@@ -5,9 +5,7 @@ import { IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
-import {
-  getJORFSearchLinkFunctionTag
-} from "../utils/JORFSearch.utils.ts";
+import { getJORFSearchLinkFunctionTag } from "../utils/JORFSearch.utils.ts";
 import umami from "../utils/umami.ts";
 import { sendMainMenu } from "../commands/default.ts";
 import {
@@ -245,7 +243,8 @@ async function sendTagUpdates(
 
           const isLastGroup = groupIndex === orderedEntries.length - 1;
           if (!isLastGroup) notification_text += DEFAULT_SUBGROUP_SEPARATOR;
-          else if (tag !== lastTag) notification_text += DEFAULT_GROUP_SEPARATOR;
+          else if (tag !== lastTag)
+            notification_text += DEFAULT_GROUP_SEPARATOR;
         });
       }
     }
@@ -297,9 +296,7 @@ function groupRecordsBy(
 
   for (const record of records) {
     const rawGroupId = config.getGroupId(record);
-    const candidateIds = Array.isArray(rawGroupId)
-      ? rawGroupId
-      : [rawGroupId];
+    const candidateIds = Array.isArray(rawGroupId) ? rawGroupId : [rawGroupId];
 
     const validIds = candidateIds
       .map((value) => normaliseGroupId(value))
@@ -307,11 +304,7 @@ function groupRecordsBy(
 
     const fallbackKey = normaliseGroupId(config.fallbackLabel);
     const keysToUse =
-      validIds.length > 0
-        ? validIds
-        : fallbackKey
-        ? [fallbackKey]
-        : [];
+      validIds.length > 0 ? validIds : fallbackKey ? [fallbackKey] : [];
 
     for (const key of keysToUse) {
       const existing = grouped.get(key) ?? [];

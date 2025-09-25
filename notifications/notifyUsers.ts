@@ -8,17 +8,11 @@ import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { SignalCli } from "signal-sdk";
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
-import {
-  callJORFSearchDay
-} from "../utils/JORFSearch.utils.ts";
-import {
-  notifyOrganisationsUpdates
-} from "./organisationNotifications.ts";
+import { callJORFSearchDay } from "../utils/JORFSearch.utils.ts";
+import { notifyOrganisationsUpdates } from "./organisationNotifications.ts";
 import { notifyPeopleUpdates } from "./peopleNotifications.ts";
 import { notifyNameMentionUpdates } from "./nameNotifications.ts";
-import {
-  notifyFunctionTagsUpdates
-} from "./functionTagNotifications.ts";
+import { notifyFunctionTagsUpdates } from "./functionTagNotifications.ts";
 import umami from "../utils/umami.ts";
 
 const SHIFT_DAYS = 30;

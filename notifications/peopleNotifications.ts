@@ -224,11 +224,15 @@ async function sendPeopleUpdate(
         : `*${prenomNom}*`
     }\n\n`;
 
-    notification_text += formatSearchResult(peopleRecords, markdownLinkEnabled, {
-      isConfirmation: false,
-      isListing: true,
-      displayName: "all"
-    });
+    notification_text += formatSearchResult(
+      peopleRecords,
+      markdownLinkEnabled,
+      {
+        isConfirmation: false,
+        isListing: true,
+        displayName: "all"
+      }
+    );
 
     if (peopleId !== lastKey) notification_text += DEFAULT_GROUP_SEPARATOR;
   }

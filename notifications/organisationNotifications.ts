@@ -5,9 +5,7 @@ import Organisation from "../models/Organisation.ts";
 import User from "../models/User.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
-import {
-  getJORFSearchLinkOrganisation
-} from "../utils/JORFSearch.utils.ts";
+import { getJORFSearchLinkOrganisation } from "../utils/JORFSearch.utils.ts";
 import umami from "../utils/umami.ts";
 import { sendMainMenu } from "../commands/default.ts";
 import {
