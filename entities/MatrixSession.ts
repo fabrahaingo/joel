@@ -1,6 +1,6 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser } from "./Session.ts";
+import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
 import umami from "../utils/umami.ts";
 import {
   markdown2html,
@@ -157,6 +157,8 @@ export async function sendMatrixMessage(
     }
     return false;
   }
+  await recordSuccessfulDelivery("Matrix", chatId);
+
   return true;
 }
 
