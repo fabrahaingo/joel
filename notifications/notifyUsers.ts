@@ -90,7 +90,11 @@ async function getJORFRecordsFromDate(
   }
 
   return results
-    .flat()
+    .reduce((fullTab: JORFSearchItem[], resDay) => {
+      if (resDay == null) throw new Error("JORFSearch returned a null value");
+
+      return fullTab.concat(resDay);
+    }, [])
     .sort(
       (a, b) =>
         JORFtoDate(a.source_date).getTime() -
@@ -99,45 +103,50 @@ async function getJORFRecordsFromDate(
 }
 
 await (async () => {
-  await mongodbConnect();
+  try {
+    await mongodbConnect();
 
-  const currentDate = new Date();
-  const startDate = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth(),
-    currentDate.getDate() - SHIFT_DAYS
-  );
-  startDate.setHours(0, 0, 0, 0);
-
-  const JORFAllRecordsFromDate = await getJORFRecordsFromDate(startDate);
-
-  if (JORFAllRecordsFromDate.length > 0) {
-    await notifyPeopleUpdates(
-      JORFAllRecordsFromDate,
-      enabledApps,
-      messageAppsOptions
+    const currentDate = new Date();
+    const startDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate() - SHIFT_DAYS
     );
+    startDate.setHours(0, 0, 0, 0);
 
-    await notifyNameMentionUpdates(
-      JORFAllRecordsFromDate,
-      enabledApps,
-      messageAppsOptions
-    );
+    const JORFAllRecordsFromDate = await getJORFRecordsFromDate(startDate);
 
-    await notifyFunctionTagsUpdates(
-      JORFAllRecordsFromDate,
-      enabledApps,
-      messageAppsOptions
-    );
+    if (JORFAllRecordsFromDate.length > 0) {
+      await notifyPeopleUpdates(
+        JORFAllRecordsFromDate,
+        enabledApps,
+        messageAppsOptions
+      );
 
-    await notifyOrganisationsUpdates(
-      JORFAllRecordsFromDate,
-      enabledApps,
-      messageAppsOptions
-    );
+      await notifyNameMentionUpdates(
+        JORFAllRecordsFromDate,
+        enabledApps,
+        messageAppsOptions
+      );
+
+      await notifyFunctionTagsUpdates(
+        JORFAllRecordsFromDate,
+        enabledApps,
+        messageAppsOptions
+      );
+
+      await notifyOrganisationsUpdates(
+        JORFAllRecordsFromDate,
+        enabledApps,
+        messageAppsOptions
+      );
+    }
+
+    await umami.log({ event: "/notification-process-completed" });
+
+    process.exit(0);
+  } catch (error) {
+    console.error("Error during notification process:", error);
+    process.exit(1);
   }
-
-  await umami.log({ event: "/notification-process-completed" });
-
-  process.exit(0);
 })();
