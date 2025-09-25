@@ -37,24 +37,21 @@ const CABINET_GROUP_FALLBACK_LABEL = "Autres ministères";
 const functionTagGroupingStrategies: Partial<
   Record<FunctionTags, NotificationGroupingConfig>
 > = {
-  [FunctionTags["Cabinet ministériel"]]: createFieldGrouping(
-    (record) => record.ministere ?? record.cabinet,
-    {
-      fallbackLabel: CABINET_GROUP_FALLBACK_LABEL,
-      formatGroupTitle: ({ groupId }) => `🏛️ Ministère : *${groupId}*\n\n`,
-      sortGroupIds: (groupIds) => {
-        const withoutFallback = groupIds.filter(
-          (groupId) => groupId !== CABINET_GROUP_FALLBACK_LABEL
-        );
-        const sorted = withoutFallback.sort((a, b) =>
-          a.localeCompare(b, "fr", { sensitivity: "base" })
-        );
-        if (groupIds.includes(CABINET_GROUP_FALLBACK_LABEL))
-          sorted.push(CABINET_GROUP_FALLBACK_LABEL);
-        return sorted;
-      }
+  ["cabinet_ministeriel"]: createFieldGrouping((record) => record.cabinet, {
+    fallbackLabel: CABINET_GROUP_FALLBACK_LABEL,
+    formatGroupTitle: ({ groupId }) => `🏛️ *${groupId}*\n\n`,
+    sortGroupIds: (groupIds) => {
+      const withoutFallback = groupIds.filter(
+        (groupId) => groupId !== CABINET_GROUP_FALLBACK_LABEL
+      );
+      const sorted = withoutFallback.sort((a, b) =>
+        a.localeCompare(b, "fr", { sensitivity: "base" })
+      );
+      if (groupIds.includes(CABINET_GROUP_FALLBACK_LABEL))
+        sorted.push(CABINET_GROUP_FALLBACK_LABEL);
+      return sorted;
     }
-  )
+  })
 };
 
 export async function notifyFunctionTagsUpdates(
@@ -319,7 +316,7 @@ function groupRecordsBy(
 function orderGroupedEntries(
   groupedMap: Map<string, JORFSearchItem[]>,
   sort?: (groupIds: string[]) => string[]
-): Array<[string, JORFSearchItem[]]> {
+): [string, JORFSearchItem[]][] {
   const groupIds = sort ? sort([...groupedMap.keys()]) : [...groupedMap.keys()];
   return groupIds.map((groupId) => [groupId, groupedMap.get(groupId) ?? []]);
 }
