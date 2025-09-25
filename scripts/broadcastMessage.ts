@@ -1,12 +1,12 @@
 import "dotenv/config";
 import { mongodbConnect } from "../db.ts";
 import User from "../models/User.ts";
-import { MessageApp } from "../types.ts";
+import { MessageApp } from "../types.d.ts";
 import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
 import {
   parseEnabledMessageApps,
   resolveExternalMessageOptions
-} from "./messageAppOptions.ts";
+} from "../utils/messageAppOptions.ts";
 
 export interface BroadcastMessageOptions {
   includeBlockedUsers?: boolean;
