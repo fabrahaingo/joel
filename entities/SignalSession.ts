@@ -85,7 +85,7 @@ export async function sendSignalAppMessage(
 ): Promise<boolean> {
   try {
     const cleanMessage = markdown2plainText(message);
-    const userPhoneIdInt = "+" + userPhoneId;
+    const userPhoneIdInt = "+" + userPhoneId.toString();
     const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
