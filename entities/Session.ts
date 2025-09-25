@@ -70,7 +70,7 @@ export async function recordSuccessfulDelivery(
   chatId: number
 ): Promise<void> {
   await User.updateOne(
-    { messageApp, chatId, status: { $ne: "deactivated" } },
+    { messageApp, chatId },
     { $set: { lastMessageReceivedAt: new Date(), status: "active" } }
   );
 }
