@@ -104,6 +104,7 @@ export interface JORFSearchItem extends JORFSearchRawItem {
   huissier_residence_departement_code?: number;
   inspecteur_general?: string;
   magistrat?: string;
+  ministere?: string;
   medaille_agrafe?: string;
   medaille_militaire?: string;
   medaille_securite_interieure?: string;

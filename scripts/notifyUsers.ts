@@ -112,6 +112,108 @@ const messageAppsOptions: ExternalMessageOptions = {
   whatsAppAPI: whatsAppAPI
 };
 
+type GroupIdentifier = string | string[] | null | undefined;
+
+interface NotificationGroupingConfig {
+  getGroupId: (record: JORFSearchItem) => GroupIdentifier;
+  fallbackLabel?: string;
+  formatGroupTitle?: (options: {
+    groupId: string;
+    markdownLinkEnabled: boolean;
+  }) => string;
+  sortGroupIds?: (groupIds: string[]) => string[];
+  omitOrganisationNames?: boolean;
+}
+
+const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
+const DEFAULT_SUBGROUP_SEPARATOR = "--------------------\n\n";
+
+function normaliseGroupId(id: string | null | undefined): string | null {
+  if (id === undefined || id === null) return null;
+  const trimmed = String(id).trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function groupRecordsBy(
+  records: JORFSearchItem[],
+  config: NotificationGroupingConfig
+): Map<string, JORFSearchItem[]> {
+  const grouped = new Map<string, JORFSearchItem[]>();
+
+  for (const record of records) {
+    const rawGroupId = config.getGroupId(record);
+    const candidateIds = Array.isArray(rawGroupId)
+      ? rawGroupId
+      : [rawGroupId];
+
+    const validIds = candidateIds
+      .map((value) => normaliseGroupId(value))
+      .filter((value): value is string => value !== null);
+
+    const fallbackKey = normaliseGroupId(config.fallbackLabel);
+    const keysToUse =
+      validIds.length > 0
+        ? validIds
+        : fallbackKey
+        ? [fallbackKey]
+        : [];
+
+    for (const key of keysToUse) {
+      const existing = grouped.get(key) ?? [];
+      existing.push(record);
+      grouped.set(key, existing);
+    }
+  }
+
+  return grouped;
+}
+
+function orderGroupedEntries(
+  groupedMap: Map<string, JORFSearchItem[]>,
+  sort?: (groupIds: string[]) => string[]
+): Array<[string, JORFSearchItem[]]> {
+  const groupIds = sort ? sort([...groupedMap.keys()]) : [...groupedMap.keys()];
+  return groupIds.map((groupId) => [groupId, groupedMap.get(groupId) ?? []]);
+}
+
+function createFieldGrouping(
+  accessor: (record: JORFSearchItem) => GroupIdentifier,
+  options?: Omit<NotificationGroupingConfig, "getGroupId">
+): NotificationGroupingConfig {
+  return {
+    getGroupId: accessor,
+    fallbackLabel: options?.fallbackLabel,
+    formatGroupTitle: options?.formatGroupTitle,
+    sortGroupIds: options?.sortGroupIds,
+    omitOrganisationNames: options?.omitOrganisationNames
+  };
+}
+
+const CABINET_GROUP_FALLBACK_LABEL = "Autres ministères";
+
+const functionTagGroupingStrategies: Partial<
+  Record<FunctionTags, NotificationGroupingConfig>
+> = {
+  [FunctionTags["Cabinet ministériel"]]: createFieldGrouping(
+    (record) => record.ministere ?? record.cabinet,
+    {
+      fallbackLabel: CABINET_GROUP_FALLBACK_LABEL,
+      formatGroupTitle: ({ groupId }) => `🏛️ Ministère : *${groupId}*\n\n`,
+      sortGroupIds: (groupIds) => {
+        const withoutFallback = groupIds.filter(
+          (groupId) => groupId !== CABINET_GROUP_FALLBACK_LABEL
+        );
+        const sorted = withoutFallback.sort((a, b) =>
+          a.localeCompare(b, "fr", { sensitivity: "base" })
+        );
+        if (groupIds.includes(CABINET_GROUP_FALLBACK_LABEL))
+          sorted.push(CABINET_GROUP_FALLBACK_LABEL);
+        return sorted;
+      }
+    }
+  )
+};
+
 async function getJORFRecordsFromDate(
   startDate: Date
 ): Promise<JORFSearchItem[]> {
@@ -913,10 +1015,11 @@ async function sendOrganisationUpdate(
     notification_text += formatSearchResult(orgRecords, markdownLinkEnabled, {
       isConfirmation: false,
       isListing: true,
-      displayName: "all"
+      displayName: "all",
+      omitOrganisationNames: true
     });
 
-    if (orgId !== lastKey) notification_text += "====================\n\n";
+    if (orgId !== lastKey) notification_text += DEFAULT_GROUP_SEPARATOR;
   }
 
   const messageAppsOptionsApp = {
@@ -959,10 +1062,10 @@ async function sendTagUpdates(
 
   const markdownLinkEnabled = messageApp !== "WhatsApp";
 
-  const keys = Array.from(tagMap.keys());
-  const lastKey = keys[keys.length - 1];
+  const tagOrder = Array.from(tagMap.keys());
+  const lastTag = tagOrder[tagOrder.length - 1];
 
-  for (const tag of tagMap.keys()) {
+  for (const tag of tagOrder) {
     const tagRecords = tagMap.get(tag);
     if (tagRecords === undefined || tagRecords.length == 0) {
       console.log("Tag notification update sent with no records");
@@ -980,13 +1083,57 @@ async function sendTagUpdates(
         : `*${tagKey}*`
     }\n\n`;
 
+    const groupingConfig = functionTagGroupingStrategies[tag];
+    let handledByGrouping = false;
+
+    if (groupingConfig) {
+      const groupedMap = groupRecordsBy(tagRecords, groupingConfig);
+      const orderedEntries = orderGroupedEntries(
+        groupedMap,
+        groupingConfig.sortGroupIds
+      ).filter(([, records]) => records.length > 0);
+
+      if (orderedEntries.length > 0) {
+        handledByGrouping = true;
+
+        orderedEntries.forEach(([groupId, groupRecords], groupIndex) => {
+          const groupTitle =
+            groupingConfig.formatGroupTitle?.({
+              groupId,
+              markdownLinkEnabled
+            }) ?? `👉 ${groupId}\n\n`;
+
+          notification_text += groupTitle;
+
+          notification_text += formatSearchResult(
+            groupRecords,
+            markdownLinkEnabled,
+            {
+              isConfirmation: false,
+              isListing: true,
+              displayName: "all",
+              omitOrganisationNames:
+                groupingConfig.omitOrganisationNames ?? false
+            }
+          );
+
+          const isLastGroup = groupIndex === orderedEntries.length - 1;
+          if (!isLastGroup) notification_text += DEFAULT_SUBGROUP_SEPARATOR;
+          else if (tag !== lastTag) notification_text += DEFAULT_GROUP_SEPARATOR;
+        });
+      }
+    }
+
+    if (handledByGrouping) continue;
+
     notification_text += formatSearchResult(tagRecords, markdownLinkEnabled, {
       isConfirmation: false,
       isListing: true,
-      displayName: "all"
+      displayName: "all",
+      omitOrganisationNames: groupingConfig?.omitOrganisationNames ?? false
     });
 
-    if (tag !== lastKey) notification_text += "====================\n\n";
+    if (tag !== lastTag) notification_text += DEFAULT_GROUP_SEPARATOR;
   }
 
   const messageAppsOptionsApp = {

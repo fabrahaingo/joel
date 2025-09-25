@@ -3,7 +3,18 @@ import { dateToFrenchString } from "./date.utils.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { getJORFSearchLinkPeople } from "./JORFSearch.utils.ts";
 
-function addPoste(elem: JORFSearchItem, message: string) {
+export type FormatSearchResultOptions = {
+  isConfirmation?: boolean;
+  isListing?: boolean;
+  displayName?: "all" | "first" | "no";
+  omitOrganisationNames?: boolean;
+};
+
+function addPoste(
+  elem: JORFSearchItem,
+  message: string,
+  options?: FormatSearchResultOptions
+) {
   if (elem.grade) {
     message += `👉 au grade de *${elem.grade}*`;
     if (elem.ordre_merite) {
@@ -27,7 +38,7 @@ function addPoste(elem: JORFSearchItem, message: string) {
     if (elem.armee === "réserve") {
       message += ` de réserve`;
     }
-    if (elem.organisations[0]?.nom) {
+    if (!options?.omitOrganisationNames && elem.organisations[0]?.nom) {
       message += `\n🪖 *${elem.organisations[0].nom}*\n`;
     } else if (elem.corps) {
       message += `\n🪖 *${elem.corps}*\n`;
@@ -35,7 +46,7 @@ function addPoste(elem: JORFSearchItem, message: string) {
   } else if (elem.cabinet) {
     message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
   } else if (elem.cabinet_ministeriel) {
-    if (elem.organisations[0]?.nom)
+    if (!options?.omitOrganisationNames && elem.organisations[0]?.nom)
       message += `🏛️ Cabinet *${elem.organisations[0].nom}*\n`;
     else message += `🏛️ Cabinet\n`;
   } else if (elem.ambassadeur) {
@@ -45,7 +56,7 @@ function addPoste(elem: JORFSearchItem, message: string) {
     else if (elem.ambassadeur_thematique)
       message += `🏛️ Ambassadeur thématique\n`;
     else message += `🏛️ Ambassadeur\n`;
-  } else if (elem.organisations.length > 0) {
+  } else if (!options?.omitOrganisationNames && elem.organisations.length > 0) {
     elem.organisations.forEach((o) => {
       message += `👉 *${o.nom}*\n`;
     });
@@ -64,11 +75,7 @@ function addPoste(elem: JORFSearchItem, message: string) {
 export function formatSearchResult(
   result: JORFSearchItem[],
   markdownLink: boolean,
-  options?: {
-    isConfirmation?: boolean;
-    isListing?: boolean;
-    displayName?: "all" | "first" | "no";
-  }
+  options?: FormatSearchResultOptions
 ) {
   let message = "";
 
@@ -97,7 +104,7 @@ export function formatSearchResult(
       message += `🕵️ ${prenomNomLink}\n`;
     }
     message += textTypeOrdre(elem.type_ordre, elem.sexe ?? "M");
-    message = addPoste(elem, message);
+    message = addPoste(elem, message, options);
 
     if (elem.date_debut) {
       if (
