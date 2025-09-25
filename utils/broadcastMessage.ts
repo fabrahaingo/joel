@@ -1,18 +1,12 @@
 import "dotenv/config";
 import { mongodbConnect } from "../db.ts";
-import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
-import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
-import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import User from "../models/User.ts";
 import { MessageApp } from "../types.ts";
-import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
-import { SignalCli } from "signal-sdk";
-
-const SUPPORTED_MESSAGE_APPS: readonly MessageApp[] = [
-  "Telegram",
-  "WhatsApp",
-  "Signal"
-];
+import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
+import {
+  parseEnabledMessageApps,
+  resolveExternalMessageOptions
+} from "./messageAppOptions.ts";
 
 export interface BroadcastMessageOptions {
   includeBlockedUsers?: boolean;
@@ -25,69 +19,6 @@ export interface BroadcastMessageResult {
   attempted: number;
   succeeded: number;
   failed: number;
-}
-
-function parseEnabledMessageApps(): MessageApp[] {
-  const { ENABLED_APPS } = process.env;
-  if (ENABLED_APPS === undefined) {
-    throw new Error("ENABLED_APPS env var not set");
-  }
-
-  const parsed = JSON.parse(ENABLED_APPS) as MessageApp[];
-  const supportedApps = parsed.filter((app) =>
-    SUPPORTED_MESSAGE_APPS.includes(app)
-  );
-
-  const unsupportedApps = parsed.filter(
-    (app) => !SUPPORTED_MESSAGE_APPS.includes(app)
-  );
-
-  if (unsupportedApps.length > 0) {
-    console.warn(
-      `Ignoring unsupported apps for broadcast: ${unsupportedApps.join(", ")}`
-    );
-  }
-
-  return supportedApps;
-}
-
-async function ensureExternalMessageOptions(
-  enabledApps: MessageApp[],
-  provided?: ExternalMessageOptions
-): Promise<ExternalMessageOptions> {
-  const resolved: ExternalMessageOptions = { ...(provided ?? {}) };
-
-  if (enabledApps.includes("WhatsApp") && resolved.whatsAppAPI == null) {
-    const { WHATSAPP_USER_TOKEN, WHATSAPP_APP_SECRET, WHATSAPP_VERIFY_TOKEN } =
-      process.env;
-    if (
-      WHATSAPP_USER_TOKEN === undefined ||
-      WHATSAPP_APP_SECRET === undefined ||
-      WHATSAPP_VERIFY_TOKEN === undefined
-    ) {
-      throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
-    }
-
-    resolved.whatsAppAPI = new WhatsAppAPI({
-      token: WHATSAPP_USER_TOKEN,
-      appSecret: WHATSAPP_APP_SECRET,
-      webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-      v: WHATSAPP_API_VERSION
-    });
-  }
-
-  if (enabledApps.includes("Signal") && resolved.signalCli == null) {
-    const { SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER } = process.env;
-    if (SIGNAL_BAT_PATH === undefined || SIGNAL_PHONE_NUMBER === undefined) {
-      throw new Error(ErrorMessages.SIGNAL_ENV_NOT_SET);
-    }
-
-    const signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
-    await signalCli.connect();
-    resolved.signalCli = signalCli;
-  }
-
-  return resolved;
 }
 
 export async function broadcastMessage(
@@ -103,7 +34,7 @@ export async function broadcastMessage(
     return { attempted: 0, succeeded: 0, failed: 0 };
   }
 
-  const deliveryOptions = await ensureExternalMessageOptions(
+  const deliveryOptions = await resolveExternalMessageOptions(
     enabledApps,
     options?.externalMessageOptions
   );
