@@ -12,9 +12,7 @@ async function askDeleteProfileQuestion(session: ISession): Promise<void> {
     session,
     DELETE_PROFILE_CONFIRMATION_PROMPT,
     handleDeleteProfileAnswer,
-    {
-      keyboard: session.messageApp === "WhatsApp" ? undefined : []
-    }
+    { messageOptions: { forceNoKeyboard: true } }
   );
 }
 
@@ -37,7 +35,7 @@ async function handleDeleteProfileAnswer(
 
   if (session.user == null) {
     await session.sendMessage(
-      `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`
+      `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`
     );
     return true;
   }
@@ -65,7 +63,7 @@ export const deleteProfileCommand = async (
   try {
     if (session.user == null) {
       await session.sendMessage(
-        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`
+        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`
       );
       return;
     }

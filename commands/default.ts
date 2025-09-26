@@ -6,14 +6,15 @@ export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
     if (session.isReply) return;
     await session.log({ event: "/default-message" });
-    await session.sendMessage("Je n'ai pas compris votre message 🥺");
+    await session.sendMessage("Je n'ai pas compris votre message 🥺", {
+      separateMenuMessage: true
+    });
   } catch (error) {
     console.log(error);
   }
 };
 
-const MAIN_MENU_MESSAGE =
-  "Utilisez un des boutons ci-dessous pour interagir avec moi.";
+export const MAIN_MENU_MESSAGE = "Utilisez le clavier ci-dessous.";
 
 export const mainMenuCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/main-menu-message" });
@@ -49,7 +50,7 @@ export async function sendMainMenu(
         message += "\n\n" + TEXT_COMMANDS_MENU;
     }
     if (options.session != null)
-      await options.session.sendMessage(message, keyboard);
+      await options.session.sendMessage(message, { keyboard });
     else if (options.externalOptions != null)
       await sendMessage(messageApp, chatId, message, {
         ...options.externalOptions,

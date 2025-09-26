@@ -43,8 +43,9 @@ async function askFunctionQuestion(session: ISession): Promise<void> {
   }
 
   await askFollowUpQuestion(session, promptText, handleFunctionAnswer, {
-    keyboard:
-      session.messageApp === "WhatsApp" ? undefined : FUNCTION_PROMPT_KEYBOARD
+    messageOptions: {
+      keyboard: FUNCTION_PROMPT_KEYBOARD
+    }
   });
 }
 
@@ -57,7 +58,7 @@ async function handleFunctionAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}. 👎 Veuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : FUNCTION_PROMPT_KEYBOARD
+      { keyboard: FUNCTION_PROMPT_KEYBOARD }
     );
     await askFunctionQuestion(session);
     return true;
@@ -72,7 +73,7 @@ async function handleFunctionAnswer(
   if (selectedFunctions.length === 0) {
     await session.sendMessage(
       `La fonction demandée n'est pas reconnue. 👎 Veuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : FUNCTION_PROMPT_KEYBOARD
+      { keyboard: FUNCTION_PROMPT_KEYBOARD }
     );
     await askFunctionQuestion(session);
     return true;
@@ -199,12 +200,12 @@ export const followFunctionFromStrCommand = async (
     );
 
     if (selectedFunctions.length == 0) {
-      await session.sendMessage(
-        "La fonction demandée n'est pas reconnue.",
-        session.messageApp !== "WhatsApp"
-          ? [[KEYBOARD_KEYS.FUNCTION_FOLLOW.key], [KEYBOARD_KEYS.MAIN_MENU.key]]
-          : undefined
-      );
+      await session.sendMessage("La fonction demandée n'est pas reconnue.", {
+        keyboard: [
+          [KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
+          [KEYBOARD_KEYS.MAIN_MENU.key]
+        ]
+      });
       return;
     }
 

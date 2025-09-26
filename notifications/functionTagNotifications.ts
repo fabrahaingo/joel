@@ -7,7 +7,6 @@ import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkFunctionTag } from "../utils/JORFSearch.utils.ts";
 import umami from "../utils/umami.ts";
-import { sendMainMenu } from "../commands/default.ts";
 import {
   NotificationTask,
   dispatchTasksToMessageApps
@@ -245,7 +244,7 @@ async function sendTagUpdates(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    forceNoKeyboard: messageApp === "WhatsApp"
+    separateMenuMessage: true
   };
 
   const messageSent = await sendMessage(
@@ -254,10 +253,6 @@ async function sendTagUpdates(
     notification_text,
     messageAppsOptionsApp
   );
-  if (messageApp === "WhatsApp")
-    await sendMainMenu(messageApp, chatId, {
-      externalOptions: messageAppsOptions
-    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-function" });

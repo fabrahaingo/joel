@@ -31,8 +31,9 @@ const SEARCH_PROMPT_KEYBOARD: Keyboard = [
 
 async function askSearchQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, SEARCH_PROMPT_TEXT, handleSearchAnswer, {
-    keyboard:
-      session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
+    messageOptions: {
+      keyboard: SEARCH_PROMPT_KEYBOARD
+    }
   });
 }
 
@@ -45,7 +46,7 @@ async function handleSearchAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue. 👎\n\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
     );
     await askSearchQuestion(session);
     return true;
@@ -90,7 +91,7 @@ export const fullHistoryCommand = async (
   if (personName.length == 0) {
     await session.sendMessage(
       "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-      SEARCH_PROMPT_KEYBOARD
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
     );
     return;
   }
@@ -122,7 +123,7 @@ export async function searchPersonHistory(
         // Minimum is two words: Prénom + Nom
         await session.sendMessage(
           "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-          session.messageApp == "Telegram" ? tempKeyboard : undefined
+          { keyboard: tempKeyboard }
         );
         return false;
       }
@@ -143,7 +144,9 @@ export async function searchPersonHistory(
         context: {
           prenomNom
         },
-        keyboard: tempKeyboard
+        messageOptions: {
+          keyboard: tempKeyboard
+        }
       });
       return false;
     }
@@ -214,7 +217,9 @@ export async function searchPersonHistory(
       context: {
         prenomNom
       },
-      keyboard: tempKeyboard
+      messageOptions: {
+        keyboard: tempKeyboard
+      }
     });
 
     return true;
@@ -306,7 +311,7 @@ export const followCommand = async (
       text += `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     }
 
-    await session.sendMessage(text, SEARCH_PROMPT_KEYBOARD);
+    await session.sendMessage(text, { keyboard: SEARCH_PROMPT_KEYBOARD });
   } catch (error) {
     console.log(error);
   }

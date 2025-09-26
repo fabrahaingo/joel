@@ -1,6 +1,10 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
+import {
+  loadUser,
+  MessageSendingOptionsInternal,
+  recordSuccessfulDelivery
+} from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ServerMessageResponse } from "whatsapp-api-js/types";
@@ -108,15 +112,14 @@ export class WhatsAppSession implements ISession {
 
   async sendMessage(
     formattedData: string,
-    keyboard?: Keyboard,
-    options?: {
-      forceNoKeyboard?: boolean;
-    }
+    options?: MessageSendingOptionsInternal
   ): Promise<void> {
-    await sendWhatsAppMessage(this.whatsAppAPI, this.chatId, formattedData, {
-      keyboard,
-      forceNoKeyboard: options?.forceNoKeyboard
-    });
+    await sendWhatsAppMessage(
+      this.whatsAppAPI,
+      this.chatId,
+      formattedData,
+      options
+    );
   }
 }
 
@@ -149,10 +152,7 @@ export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
   userPhoneId: number,
   message: string,
-  options?: {
-    keyboard?: Keyboard;
-    forceNoKeyboard?: boolean;
-  },
+  options?: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
@@ -164,9 +164,14 @@ export async function sendWhatsAppMessage(
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
 
+  if (options?.separateMenuMessage) options.forceNoKeyboard = true;
+
   let interactiveKeyboard: ActionList | ActionButtons | null = null;
 
-  if (options?.keyboard == null && !options?.forceNoKeyboard)
+  if (
+    (options?.keyboard == null && !options?.forceNoKeyboard) ||
+    options.separateMenuMessage
+  )
     interactiveKeyboard = fullMenuKeyboard;
   else if (options.keyboard != null) {
     const keyboardFlat = replaceWHButtons(options.keyboard).flat();
@@ -197,7 +202,11 @@ export async function sendWhatsAppMessage(
       WHATSAPP_MESSAGE_CHAR_LIMIT
     );
     for (let i = 0; i < mArr.length; i++) {
-      if (i == mArr.length - 1 && interactiveKeyboard != null) {
+      if (
+        i == mArr.length - 1 &&
+        interactiveKeyboard != null &&
+        !options?.separateMenuMessage
+      ) {
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
