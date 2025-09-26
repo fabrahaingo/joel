@@ -26,7 +26,7 @@ function formatFunctionList(session: ISession): string {
         .map((f) => f.functionTag)
         .includes(fctValue)
     )
-      functionListMessage += " - Followed";
+      functionListMessage += " - Suivi";
 
     functionListMessage += "\n";
   }
