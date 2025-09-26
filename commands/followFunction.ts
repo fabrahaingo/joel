@@ -34,13 +34,8 @@ function formatFunctionList(session: ISession): string {
 }
 
 async function askFunctionQuestion(session: ISession): Promise<void> {
-  let promptText =
-    "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\n";
-  if (session.messageApp === "WhatsApp") {
-    promptText += "Exemple: 1 4 7";
-  } else {
-    promptText += "Exemples: 1 4 7";
-  }
+  const promptText =
+    "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\nExemple: 1 4 7";
 
   await askFollowUpQuestion(session, promptText, handleFunctionAnswer, {
     messageOptions: {
