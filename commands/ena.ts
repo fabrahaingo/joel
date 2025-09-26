@@ -10,11 +10,13 @@ import {
   callJORFSearchOrganisation,
   callJORFSearchReference,
   callJORFSearchTag,
-  cleanPeopleName
+  cleanPeopleName,
+  getJORFTextLink
 } from "../utils/JORFSearch.utils.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
+import { extractJORFTextId } from "../utils/JORFSearch.utils.ts";
 
 const inspId = "Q109039648" as WikidataId;
 
@@ -343,7 +345,7 @@ async function handleReferenceAnswer(
     return false;
   }
 
-  const reference = trimmedAnswer.toUpperCase();
+  const reference = extractJORFTextId(trimmedAnswer).toUpperCase();
   await session.sendTypingAction();
 
   const JORFResult = await callJORFSearchReference(reference);
