@@ -135,11 +135,11 @@ async function handlePromoAnswer(
   }
 
   if (promoInfo == null || promoJORFList.length === 0) {
-    let text = `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.\n`;
+    let text = `La promotion n'a pas été reconnue.👎`;
     if (session.messageApp === "Signal")
       text +=
         "\nUtilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.";
-    await session.sendMessage(text, { keyboard: PROMO_SEARCH_KEYBOARD });
+    await session.sendMessage(text, { forceNoKeyboard: true });
     await askPromoQuestion(session);
     return true;
   }
