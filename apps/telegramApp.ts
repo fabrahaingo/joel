@@ -39,8 +39,7 @@ await (async () => {
       console.error("Telegram: Error processing command:", error);
     }
   });
+  console.log(`Telegram: JOEL started successfully \u{2705}`);
 
   await bot.launch();
-
-  console.log(`Telegram: JOEL started successfully \u{2705}`);
 })();

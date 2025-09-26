@@ -1,7 +1,11 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import { Telegram } from "telegraf";
 import User from "../models/User.ts";
-import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
+import {
+  loadUser,
+  MessageSendingOptionsInternal,
+  recordSuccessfulDelivery
+} from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
@@ -67,11 +71,9 @@ export class TelegramSession implements ISession {
 
   async sendMessage(
     formattedData: string,
-    keyboard?: Keyboard,
-    options?: {
-      forceNoKeyboard?: boolean;
-    }
+    options?: MessageSendingOptionsInternal
   ): Promise<void> {
+    let keyboard = options?.keyboard;
     if (!options?.forceNoKeyboard) keyboard ??= this.mainMenuKeyboard;
 
     const keyboardFormatted = keyboard?.map((row) =>
