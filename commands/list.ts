@@ -170,7 +170,7 @@ export const listCommand = async (session: ISession) => {
       [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
       [KEYBOARD_KEYS.MAIN_MENU.key]
     ];
-    await session.sendMessage(text, tempKeyboard);
+    await session.sendMessage(text, { keyboard: tempKeyboard });
   } catch (error) {
     console.log(error);
   }
@@ -191,7 +191,7 @@ async function askUnfollowQuestion(session: ISession): Promise<void> {
     UNFOLLOW_PROMPT_TEXT,
     handleUnfollowAnswer,
     {
-      keyboard: UNFOLLOW_KEYBOARD
+      messageOptions: { keyboard: UNFOLLOW_KEYBOARD }
     }
   );
 }
@@ -205,7 +205,7 @@ async function handleUnfollowAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options. 👎\nRéessayer la commande`,
-      UNFOLLOW_KEYBOARD
+      { keyboard: UNFOLLOW_KEYBOARD }
     );
     return true;
   }
@@ -272,10 +272,12 @@ export const unfollowFromStr = async (
     if (answers.length === 0) {
       const text = `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.`;
       if (session.messageApp === "Telegram")
-        await session.sendMessage(text, [
-          [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
-          [KEYBOARD_KEYS.MAIN_MENU.key]
-        ]);
+        await session.sendMessage(text, {
+          keyboard: [
+            [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
+            [KEYBOARD_KEYS.MAIN_MENU.key]
+          ]
+        });
       else await session.sendMessage(text);
       return false;
     }

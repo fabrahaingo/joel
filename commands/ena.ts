@@ -10,11 +10,13 @@ import {
   callJORFSearchOrganisation,
   callJORFSearchReference,
   callJORFSearchTag,
-  cleanPeopleName
+  cleanPeopleName,
+  getJORFTextLink
 } from "../utils/JORFSearch.utils.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
+import { extractJORFTextId } from "../utils/JORFSearch.utils.ts";
 
 const inspId = "Q109039648" as WikidataId;
 
@@ -91,7 +93,9 @@ async function askPromoQuestion(session: ISession): Promise<void> {
     text +=
       "Utilisez la command /promos pour consulter la liste des promotions INSP et ENA disponibles.";
   await askFollowUpQuestion(session, text, handlePromoAnswer, {
-    keyboard: PROMO_SEARCH_KEYBOARD
+    messageOptions: {
+      keyboard: PROMO_SEARCH_KEYBOARD
+    }
   });
 }
 
@@ -104,7 +108,7 @@ async function handlePromoAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
-      PROMO_SEARCH_KEYBOARD
+      { keyboard: PROMO_SEARCH_KEYBOARD }
     );
     await askPromoQuestion(session);
     return true;
@@ -119,7 +123,7 @@ async function handlePromoAnswer(
 
     await session.sendMessage(
       `La promotion *${promoStr}* n'est pas disponible dans les archives du JO car elle est trop ancienne.`,
-      PROMO_SEARCH_KEYBOARD
+      { keyboard: PROMO_SEARCH_KEYBOARD }
     );
     await askPromoQuestion(session);
     return true;
@@ -131,11 +135,11 @@ async function handlePromoAnswer(
   }
 
   if (promoInfo == null || promoJORFList.length === 0) {
-    let text = `La promotion n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.\n`;
+    let text = `La promotion n'a pas été reconnue.👎`;
     if (session.messageApp === "Signal")
       text +=
         "\nUtilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.";
-    await session.sendMessage(text, PROMO_SEARCH_KEYBOARD);
+    await session.sendMessage(text, { forceNoKeyboard: true });
     await askPromoQuestion(session);
     return true;
   }
@@ -145,7 +149,8 @@ async function handlePromoAnswer(
     : promoInfo.period;
 
   await session.sendMessage(
-    `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`
+    `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`,
+    { separateMenuMessage: true }
   );
 
   promoJORFList.sort((a, b) =>
@@ -179,7 +184,9 @@ async function handlePromoConfirmation(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-      PROMO_SEARCH_KEYBOARD
+      {
+        keyboard: PROMO_SEARCH_KEYBOARD
+      }
     );
     await askFollowUpQuestion(
       session,
@@ -197,7 +204,7 @@ async function handlePromoConfirmation(
   }
 
   if (/oui/i.test(trimmedAnswer)) {
-    await session.sendMessage(`Ajout en cours... ⏰`, undefined, {
+    await session.sendMessage(`Ajout en cours... ⏰`, {
       forceNoKeyboard: true
     });
     await session.sendTypingAction();
@@ -227,7 +234,7 @@ async function handlePromoConfirmation(
 
   await session.sendMessage(
     `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-    PROMO_SEARCH_KEYBOARD
+    { keyboard: PROMO_SEARCH_KEYBOARD }
   );
   await askFollowUpQuestion(
     session,
@@ -277,10 +284,12 @@ export const promosCommand = async (session: ISession): Promise<void> => {
       text +=
         "Utilisez la commande /ENA ou /INSP pour suivre la promotion de votre choix.\n\n";
 
-    await session.sendMessage(text, [
-      [KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH.key],
-      [KEYBOARD_KEYS.MAIN_MENU.key]
-    ]);
+    await session.sendMessage(text, {
+      keyboard: [
+        [KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH.key],
+        [KEYBOARD_KEYS.MAIN_MENU.key]
+      ]
+    });
   } catch (error) {
     console.log(error);
   }
@@ -304,21 +313,15 @@ const REFERENCE_PROMPT_KEYBOARD: Keyboard = [
 const REFERENCE_CONFIRM_TEXT =
   "Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\n\n⚠️ Attention : les retirer peut ensuite prendre du temps.";
 
-const REFERENCE_CONFIRM_KEYBOARD: Keyboard = [
-  [{ text: "Oui" }, { text: "Non" }],
-  [KEYBOARD_KEYS.MAIN_MENU.key]
-];
-
 async function askReferenceQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(
     session,
     REFERENCE_PROMPT_TEXT,
     handleReferenceAnswer,
     {
-      keyboard:
-        session.messageApp === "WhatsApp"
-          ? undefined
-          : REFERENCE_PROMPT_KEYBOARD
+      messageOptions: {
+        keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+      }
     }
   );
 }
@@ -332,7 +335,7 @@ async function handleReferenceAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : REFERENCE_PROMPT_KEYBOARD
+      { keyboard: REFERENCE_PROMPT_KEYBOARD }
     );
     await askReferenceQuestion(session);
     return true;
@@ -342,7 +345,7 @@ async function handleReferenceAnswer(
     return false;
   }
 
-  const reference = trimmedAnswer.toUpperCase();
+  const reference = extractJORFTextId(trimmedAnswer).toUpperCase();
   await session.sendTypingAction();
 
   const JORFResult = await callJORFSearchReference(reference);
@@ -350,15 +353,11 @@ async function handleReferenceAnswer(
   if (JORFResult.length === 0) {
     await session.sendMessage(
       `La référence n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : REFERENCE_PROMPT_KEYBOARD
+      { keyboard: REFERENCE_PROMPT_KEYBOARD }
     );
     await askReferenceQuestion(session);
     return true;
   }
-
-  await session.sendMessage(
-    `Le texte *${reference}* mentionne *${String(JORFResult.length)} personnes*:`
-  );
 
   JORFResult.sort((a, b) => {
     if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
@@ -369,9 +368,11 @@ async function handleReferenceAnswer(
   const contacts = JORFResult.map((contact) => {
     return `${contact.nom} ${contact.prenom}`;
   });
-  await session.sendMessage(contacts.join("\n"), null, {
-    forceNoKeyboard: true
-  });
+
+  let message = `Le texte [${reference}](${getJORFTextLink(reference)}) mentionne *${String(JORFResult.length)}* personnes:\n`;
+  message += contacts.join("\n");
+
+  await session.sendMessage(message, { separateMenuMessage: true });
 
   await askFollowUpQuestion(
     session,
@@ -379,10 +380,7 @@ async function handleReferenceAnswer(
     handleReferenceConfirmation,
     {
       context: { reference, results: JORFResult },
-      keyboard:
-        session.messageApp === "WhatsApp"
-          ? undefined
-          : REFERENCE_CONFIRM_KEYBOARD
+      messageOptions: { forceNoKeyboard: true }
     }
   );
   return true;
@@ -397,8 +395,7 @@ async function handleReferenceConfirmation(
 
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
-      `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : REFERENCE_CONFIRM_KEYBOARD
+      `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`
     );
     await askFollowUpQuestion(
       session,
@@ -406,10 +403,9 @@ async function handleReferenceConfirmation(
       handleReferenceConfirmation,
       {
         context,
-        keyboard:
-          session.messageApp === "WhatsApp"
-            ? undefined
-            : REFERENCE_CONFIRM_KEYBOARD
+        messageOptions: {
+          keyboard: REFERENCE_PROMPT_KEYBOARD
+        }
       }
     );
     return true;
@@ -446,22 +442,7 @@ async function handleReferenceConfirmation(
     return true;
   }
 
-  await session.sendMessage(
-    `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-    session.messageApp === "WhatsApp" ? undefined : REFERENCE_CONFIRM_KEYBOARD
-  );
-  await askFollowUpQuestion(
-    session,
-    REFERENCE_CONFIRM_TEXT,
-    handleReferenceConfirmation,
-    {
-      context,
-      keyboard:
-        session.messageApp === "WhatsApp"
-          ? undefined
-          : REFERENCE_CONFIRM_KEYBOARD
-    }
-  );
+  await session.sendMessage(`Votre réponse n'a pas été reconnue. 👎`);
   return true;
 }
 

@@ -1,6 +1,10 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
+import {
+  loadUser,
+  MessageSendingOptionsInternal,
+  recordSuccessfulDelivery
+} from "./Session.ts";
 import umami from "../utils/umami.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ServerMessageResponse } from "whatsapp-api-js/types";
@@ -17,11 +21,15 @@ import {
 } from "whatsapp-api-js/messages";
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
+import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
 const WHATSAPP_MESSAGE_CHAR_LIMIT = 1023;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the same user, but we'll take 1 here
+const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages in burst mode
+
+const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst mode, before switching to full cooldown
 
 export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
 
@@ -45,23 +53,31 @@ const fullMenuKeyboard: ActionList = new ActionList(
       "opt_4",
       KEYBOARD_KEYS.ORGANISATION_FOLLOW.key.text,
       "Suivre une organisation (Conseil constitutionnel, Conseil d'Etat ...)."
-    ),
+    )
+  ),
+  new ListSection(
+    "Recherches",
     new Row(
       "opt_5",
-      KEYBOARD_KEYS.REFERENCE_FOLLOW.key.text,
+      KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH_LONG_NO_KEYBOARD.key.text,
+      "Suivre les élèves d'une promotion ENA ou INSP."
+    ),
+    new Row(
+      "opt_6",
+      KEYBOARD_KEYS.REFERENCE_FOLLOW_NO_KEYBOARD.key.text,
       "Suivre à partir d'une référence JORF/BO. Ex: JORFTEXT000052184758"
     )
   ),
   new ListSection(
-    "Mon compte", // optional if only 1 section; <= 24 chars
+    "Mon compte",
     new Row(
-      "opt_6",
+      "opt_7",
       KEYBOARD_KEYS.FOLLOWS_LIST.key.text,
       "Lister mes suivis. Supprimer un suivi."
     ),
-    new Row("opt_7", KEYBOARD_KEYS.HELP.key.text, "Aide et contact."),
+    new Row("opt_8", KEYBOARD_KEYS.HELP.key.text, "Aide et contact."),
     new Row(
-      "opt_8",
+      "opt_9",
       KEYBOARD_KEYS.DELETE.key.text,
       "Supprimer mon compte et mes suivis."
     )
@@ -108,15 +124,14 @@ export class WhatsAppSession implements ISession {
 
   async sendMessage(
     formattedData: string,
-    keyboard?: Keyboard,
-    options?: {
-      forceNoKeyboard?: boolean;
-    }
+    options?: MessageSendingOptionsInternal
   ): Promise<void> {
-    await sendWhatsAppMessage(this.whatsAppAPI, this.chatId, formattedData, {
-      keyboard,
-      forceNoKeyboard: options?.forceNoKeyboard
-    });
+    await sendWhatsAppMessage(
+      this.whatsAppAPI,
+      this.chatId,
+      formattedData,
+      options
+    );
   }
 }
 
@@ -149,10 +164,7 @@ export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
   userPhoneId: number,
   message: string,
-  options?: {
-    keyboard?: Keyboard;
-    forceNoKeyboard?: boolean;
-  },
+  options?: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
@@ -164,9 +176,14 @@ export async function sendWhatsAppMessage(
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
 
+  if (options?.separateMenuMessage) options.forceNoKeyboard = true;
+
   let interactiveKeyboard: ActionList | ActionButtons | null = null;
 
-  if (options?.keyboard == null && !options?.forceNoKeyboard)
+  if (
+    (options?.keyboard == null && !options?.forceNoKeyboard) ||
+    options.separateMenuMessage
+  )
     interactiveKeyboard = fullMenuKeyboard;
   else if (options.keyboard != null) {
     const keyboardFlat = replaceWHButtons(options.keyboard).flat();
@@ -196,8 +213,15 @@ export async function sendWhatsAppMessage(
       markdown2WHMarkdown(message),
       WHATSAPP_MESSAGE_CHAR_LIMIT
     );
+
+    const burstMode = mArr.length <= WHATSAPP_BURST_MODE_THRESHOLD; // Limit cooldown if less than 10
+
     for (let i = 0; i < mArr.length; i++) {
-      if (i == mArr.length - 1 && interactiveKeyboard != null) {
+      if (
+        i == mArr.length - 1 &&
+        interactiveKeyboard != null &&
+        !options?.separateMenuMessage
+      ) {
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
@@ -260,9 +284,47 @@ export async function sendWhatsAppMessage(
       }
       await umami.log({ event: "/message-sent-whatsapp" });
 
-      // prevent hitting the WH API rate limit
+      if (burstMode || (i == mArr.length - 1 && options?.separateMenuMessage)) {
+        // prevent hitting the WH API rate limit
+        await new Promise((resolve) =>
+          setTimeout(resolve, WHATSAPP_BURST_MODE_DELAY_SECONDS * 1000)
+        );
+      } else {
+        await new Promise((resolve) =>
+          setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
+        );
+      }
+    }
+    let numberMessageBurst = burstMode ? mArr.length : 0;
+
+    if (options?.separateMenuMessage && interactiveKeyboard != null) {
+      if (interactiveKeyboard instanceof ActionButtons) {
+        resp = await whatsAppAPI.sendMessage(
+          WHATSAPP_PHONE_ID,
+          userPhoneIdStr,
+          new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
+        );
+      } else {
+        resp = await whatsAppAPI.sendMessage(
+          WHATSAPP_PHONE_ID,
+          userPhoneIdStr,
+          new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
+        );
+      }
+      numberMessageBurst += 1;
+      await umami.log({ event: "/message-sent-whatsapp" });
+    }
+
+    // make up for the cooldown delay borrowed in the burst mode
+    if (burstMode) {
       await new Promise((resolve) =>
-        setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
+        setTimeout(
+          resolve,
+          numberMessageBurst *
+            (WHATSAPP_COOL_DOWN_DELAY_SECONDS -
+              WHATSAPP_BURST_MODE_DELAY_SECONDS) *
+            1000
+        )
       );
     }
   } catch (error) {

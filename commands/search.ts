@@ -31,8 +31,9 @@ const SEARCH_PROMPT_KEYBOARD: Keyboard = [
 
 async function askSearchQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, SEARCH_PROMPT_TEXT, handleSearchAnswer, {
-    keyboard:
-      session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
+    messageOptions: {
+      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+    }
   });
 }
 
@@ -45,7 +46,7 @@ async function handleSearchAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue. 👎\n\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
     );
     await askSearchQuestion(session);
     return true;
@@ -53,6 +54,14 @@ async function handleSearchAnswer(
 
   if (trimmedAnswer.startsWith("/")) {
     return false;
+  }
+
+  if (trimmedAnswer.split(" ").length < 2) {
+    await session.sendMessage(
+      "Saisie incorrecte. Veuillez réessayer:\nFormat : *Prénom Nom*",
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
+    );
+    return true;
   }
 
   await session.sendTypingAction();
@@ -90,7 +99,7 @@ export const fullHistoryCommand = async (
   if (personName.length == 0) {
     await session.sendMessage(
       "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-      SEARCH_PROMPT_KEYBOARD
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
     );
     return;
   }
@@ -106,8 +115,6 @@ export async function searchPersonHistory(
   fromFollow = false
 ): Promise<boolean> {
   try {
-    if (message.split(" ").length < 2) return false;
-
     const personName = message.split(" ").slice(1).join(" ");
 
     let JORFRes_data: JORFSearchItem[] = [];
@@ -122,7 +129,7 @@ export async function searchPersonHistory(
         // Minimum is two words: Prénom + Nom
         await session.sendMessage(
           "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-          session.messageApp == "Telegram" ? tempKeyboard : undefined
+          { keyboard: tempKeyboard }
         );
         return false;
       }
@@ -143,7 +150,9 @@ export async function searchPersonHistory(
         context: {
           prenomNom
         },
-        keyboard: tempKeyboard
+        messageOptions: {
+          keyboard: tempKeyboard
+        }
       });
       return false;
     }
@@ -214,7 +223,9 @@ export async function searchPersonHistory(
       context: {
         prenomNom
       },
-      keyboard: tempKeyboard
+      messageOptions: {
+        keyboard: tempKeyboard
+      }
     });
 
     return true;
@@ -306,7 +317,7 @@ export const followCommand = async (
       text += `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     }
 
-    await session.sendMessage(text, SEARCH_PROMPT_KEYBOARD);
+    await session.sendMessage(text, { keyboard: SEARCH_PROMPT_KEYBOARD });
   } catch (error) {
     console.log(error);
   }

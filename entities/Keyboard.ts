@@ -35,7 +35,14 @@ export const KEYBOARD_KEYS: Record<
     }
   },
   ENA_INSP_PROMO_SEARCH: {
-    key: { text: "Suivre promo INSP" },
+    key: { text: "🎓 Suivre promo INSP" },
+    action: async (session: ISession) => {
+      const { enaCommand } = await import("../commands/ena.ts");
+      await enaCommand(session);
+    }
+  },
+  ENA_INSP_PROMO_SEARCH_LONG_NO_KEYBOARD: {
+    key: { text: "🎓 Promotion ENA/INSP" },
     action: async (session: ISession) => {
       const { enaCommand } = await import("../commands/ena.ts");
       await enaCommand(session);
@@ -76,7 +83,14 @@ export const KEYBOARD_KEYS: Record<
     }
   },
   REFERENCE_FOLLOW: {
-    key: { text: "📰 Ajouter référence" },
+    key: { text: "📰 Suivre référence" },
+    action: async (session: ISession) => {
+      const { suivreFromJOReference } = await import("../commands/ena.ts");
+      await suivreFromJOReference(session);
+    }
+  },
+  REFERENCE_FOLLOW_NO_KEYBOARD: {
+    key: { text: "📰 À partir d'un texte" },
     action: async (session: ISession) => {
       const { suivreFromJOReference } = await import("../commands/ena.ts");
       await suivreFromJOReference(session);
@@ -113,12 +127,12 @@ export const KEYBOARD_KEYS: Record<
     }
   },
   FOLLOW_UP_FOLLOW: {
-    key: { text: "Suivre" }
+    key: { text: "🔎 Suivre" }
   },
   FOLLOW_UP_FOLLOW_MANUAL: {
     key: { text: "🕵️ Suivi manuel" }
   },
   FOLLOW_UP_HISTORY: {
-    key: { text: "Historique complet" }
+    key: { text: "📖 Historique complet" }
   }
 };
