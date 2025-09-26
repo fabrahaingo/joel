@@ -320,7 +320,7 @@ async function askReferenceQuestion(session: ISession): Promise<void> {
     handleReferenceAnswer,
     {
       messageOptions: {
-        forceNoKeyboard: true
+        keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
       }
     }
   );

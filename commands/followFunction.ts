@@ -28,7 +28,7 @@ function formatFunctionList(session: ISession): string {
     )
       functionListMessage += " - Followed";
 
-    functionListMessage += "\n\n";
+    functionListMessage += "\n";
   }
   return functionListMessage;
 }
@@ -44,7 +44,7 @@ async function askFunctionQuestion(session: ISession): Promise<void> {
 
   await askFollowUpQuestion(session, promptText, handleFunctionAnswer, {
     messageOptions: {
-      keyboard: FUNCTION_PROMPT_KEYBOARD
+      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
     }
   });
 }
@@ -126,7 +126,8 @@ export const followFunctionCommand = async (
     await session.sendMessage(
       `Voici la liste des fonctions que vous pouvez suivre:\n\n${formatFunctionList(
         session
-      )}`
+      )}`,
+      { forceNoKeyboard: true }
     );
 
     await askFunctionQuestion(session);

@@ -32,7 +32,7 @@ const SEARCH_PROMPT_KEYBOARD: Keyboard = [
 async function askSearchQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, SEARCH_PROMPT_TEXT, handleSearchAnswer, {
     messageOptions: {
-      keyboard: SEARCH_PROMPT_KEYBOARD
+      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
     }
   });
 }
@@ -54,6 +54,14 @@ async function handleSearchAnswer(
 
   if (trimmedAnswer.startsWith("/")) {
     return false;
+  }
+
+  if (trimmedAnswer.split(" ").length < 2) {
+    await session.sendMessage(
+      "Saisie incorrecte. Veuillez réessayer:\nFormat : *Prénom Nom*",
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
+    );
+    return true;
   }
 
   await session.sendTypingAction();
@@ -107,8 +115,6 @@ export async function searchPersonHistory(
   fromFollow = false
 ): Promise<boolean> {
   try {
-    if (message.split(" ").length < 2) return false;
-
     const personName = message.split(" ").slice(1).join(" ");
 
     let JORFRes_data: JORFSearchItem[] = [];
