@@ -162,7 +162,7 @@ export function markdown2plainText(msg: string): string {
 }
 
 export function markdown2WHMarkdown(input: string): string {
-  return input.replace(/\[(.*?)\]\((.*?)\)/g, "*$1*\n$2");
+  return input.replace(/\[(.*?)]\((.*?)\)/g, "*$1*\n$2");
 }
 
 export function markdown2html(input: string): string {
