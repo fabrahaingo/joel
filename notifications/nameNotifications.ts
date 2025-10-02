@@ -10,7 +10,6 @@ import {
   cleanPeopleName,
   getJORFSearchLinkPeople
 } from "../utils/JORFSearch.utils.ts";
-import { sendMainMenu } from "../commands/default.ts";
 import {
   NotificationTask,
   dispatchTasksToMessageApps
@@ -199,7 +198,7 @@ async function sendNameMentionUpdates(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    forceNoKeyboard: messageApp === "WhatsApp"
+    separateMenuMessage: true
   };
 
   const messageSent = await sendMessage(
@@ -208,10 +207,6 @@ async function sendNameMentionUpdates(
     notification_text,
     messageAppsOptionsApp
   );
-  if (messageApp === "WhatsApp")
-    await sendMainMenu(messageApp, chatId, {
-      externalOptions: messageAppsOptions
-    });
   if (!messageSent) return false;
 
   await umami.log({ event: "/notification-update-name" });

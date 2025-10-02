@@ -26,25 +26,21 @@ function formatFunctionList(session: ISession): string {
         .map((f) => f.functionTag)
         .includes(fctValue)
     )
-      functionListMessage += " - Followed";
+      functionListMessage += " - Suivi";
 
-    functionListMessage += "\n\n";
+    functionListMessage += "\n";
   }
   return functionListMessage;
 }
 
 async function askFunctionQuestion(session: ISession): Promise<void> {
-  let promptText =
-    "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\n";
-  if (session.messageApp === "WhatsApp") {
-    promptText += "Exemple: 1 4 7";
-  } else {
-    promptText += "Exemples: 1 4 7";
-  }
+  const promptText =
+    "Entrez le(s) nombre(s) correspondant aux fonctions à suivre.\nExemple: 1 4 7";
 
   await askFollowUpQuestion(session, promptText, handleFunctionAnswer, {
-    keyboard:
-      session.messageApp === "WhatsApp" ? undefined : FUNCTION_PROMPT_KEYBOARD
+    messageOptions: {
+      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+    }
   });
 }
 
@@ -57,7 +53,7 @@ async function handleFunctionAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(functionTagValues.length)}. 👎 Veuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : FUNCTION_PROMPT_KEYBOARD
+      { keyboard: FUNCTION_PROMPT_KEYBOARD }
     );
     await askFunctionQuestion(session);
     return true;
@@ -72,7 +68,7 @@ async function handleFunctionAnswer(
   if (selectedFunctions.length === 0) {
     await session.sendMessage(
       `La fonction demandée n'est pas reconnue. 👎 Veuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : FUNCTION_PROMPT_KEYBOARD
+      { keyboard: FUNCTION_PROMPT_KEYBOARD }
     );
     await askFunctionQuestion(session);
     return true;
@@ -125,7 +121,8 @@ export const followFunctionCommand = async (
     await session.sendMessage(
       `Voici la liste des fonctions que vous pouvez suivre:\n\n${formatFunctionList(
         session
-      )}`
+      )}`,
+      { forceNoKeyboard: true }
     );
 
     await askFunctionQuestion(session);
@@ -199,12 +196,12 @@ export const followFunctionFromStrCommand = async (
     );
 
     if (selectedFunctions.length == 0) {
-      await session.sendMessage(
-        "La fonction demandée n'est pas reconnue.",
-        session.messageApp !== "WhatsApp"
-          ? [[KEYBOARD_KEYS.FUNCTION_FOLLOW.key], [KEYBOARD_KEYS.MAIN_MENU.key]]
-          : undefined
-      );
+      await session.sendMessage("La fonction demandée n'est pas reconnue.", {
+        keyboard: [
+          [KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
+          [KEYBOARD_KEYS.MAIN_MENU.key]
+        ]
+      });
       return;
     }
 

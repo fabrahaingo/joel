@@ -1,7 +1,7 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
-import { Keyboard } from "./Keyboard.ts";
 import umami from "./utils/umami";
+import { MessageSendingOptionsInternal } from "./entities/Session.ts";
 
 export interface CommandType {
   regex: RegExp;
@@ -21,10 +21,7 @@ export interface ISession {
   createUser: () => Promise<void>;
   sendMessage: (
     msg: string,
-    keyboard?: Keyboard,
-    options?: {
-      forceNoKeyboard?: boolean;
-    }
+    options?: MessageSendingOptionsInternal
   ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
   log: typeof umami.log;

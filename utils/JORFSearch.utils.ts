@@ -243,3 +243,28 @@ export function getJORFSearchLinkOrganisation(
 export function getJORFTextLink(source_id: string) {
   return encodeURI(`https://bodata.steinertriples.ch/${source_id}/redirect`);
 }
+
+export function extractJORFTextId(url: string): string {
+  const parts = url.split("?");
+  const path = parts[0];
+  const queryString = parts[1];
+
+  if (!queryString) {
+    const pathParts = path.split("/");
+    const lastNonEmptyPart = pathParts.filter((part) => part !== "").pop();
+    return lastNonEmptyPart ?? "";
+  }
+
+  const queryParams = queryString.split("&");
+  for (const param of queryParams) {
+    const [key, value] = param.split("=");
+    if (key === "cidTexte") {
+      return value;
+    }
+  }
+
+  // Fallback in case 'cidTexte' is not found in the query string
+  const pathParts = path.split("/");
+  const lastNonEmptyPart = pathParts.filter((part) => part !== "").pop();
+  return lastNonEmptyPart ?? "";
+}
