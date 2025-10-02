@@ -5,7 +5,6 @@
     "start-tg": "tsx apps/telegramApp.ts",
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
-    "start-all": "tsx apps/telegramApp.ts && tsx apps/whatsAppApp.ts & tsx apps/signalApp.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest --config=jest.config.js"
