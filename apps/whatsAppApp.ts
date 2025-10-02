@@ -30,7 +30,8 @@ const {
   WHATSAPP_APP_PORT,
   WHATSAPP_PHONE_ID,
   NGROK_AUTH_TOKEN,
-  NGROK_DEV_HOOK
+  NGROK_DEV_HOOK,
+  NGROK_API_KEY
 } = process.env;
 
 export function getWhatsAppAPI(): WhatsAppAPI {
@@ -207,6 +208,17 @@ server = app.listen(WHATSAPP_APP_PORT, function () {
 
 await (async function () {
   await mongodbConnect();
+  await killConflictingNgrokSessions(
+    String(process.env.NGROK_DEV_HOOK),
+    Number(process.env.WHATSAPP_APP_PORT)
+  );
+  // then:
+  const url = await ngrok.connect({
+    proto: "http",
+    authtoken: process.env.NGROK_AUTH_TOKEN,
+    hostname: process.env.NGROK_DEV_HOOK,
+    addr: process.env.WHATSAPP_APP_PORT
+  });
 
   console.log("WhatsApp: Initializing Ngrok tunnel...");
   ngrokUrl = await startNgrokWithRetry(1);
@@ -334,4 +346,79 @@ function installSignalHandlers() {
     await gracefulShutdown(0);
     process.kill(process.pid, "SIGUSR2");
   });
+}
+
+async function ngrokApi<T = any>(
+  path: string,
+  init: RequestInit = {}
+): Promise<T> {
+  if (!NGROK_API_KEY) throw new Error("NGROK_API_KEY not set");
+  const res = await fetch(`https://api.ngrok.com${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${NGROK_API_KEY}`,
+      "Ngrok-Version": "2",
+      "Content-Type": "application/json",
+      ...(init.headers || {})
+    }
+  });
+  if (!res.ok)
+    throw new Error(
+      `ngrok API ${path} failed: ${res.status} ${await res.text()}`
+    );
+  return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
+}
+
+/** Kill any remote session holding the reserved hostname or the same public URL target. */
+async function killConflictingNgrokSessions(
+  hostname: string,
+  targetPort?: number
+) {
+  interface Session {
+    id: string;
+  }
+  interface TunnelsResp {
+    tunnels: { public_url?: string; forwards_to?: string }[];
+  }
+  interface SessionsResp {
+    tunnel_sessions: Session[];
+    next_page_uri?: string;
+  }
+
+  let next = "/tunnel_sessions?limit=100";
+  const victims = new Set<string>();
+
+  // Enumerate sessions and inspect their tunnels
+  while (next) {
+    const page = await ngrokApi<SessionsResp>(next);
+    if (page.tunnel_sessions.length === 0) {
+      console.log("WhatsApp: No previous tunnel to kill ...");
+      return;
+    }
+    for (const s of page.tunnel_sessions) {
+      const tPage = await ngrokApi<TunnelsResp>(
+        `/tunnel_sessions/${s.id}/tunnels`
+      );
+      const match = tPage.tunnels.some((t) => {
+        const hitHost = t.public_url?.includes(hostname);
+        const hitPort = targetPort
+          ? t.forwards_to?.includes(String(targetPort))
+          : false;
+        return Boolean(hitHost ?? hitPort);
+      });
+      if (match) victims.add(s.id);
+    }
+    next = page.next_page_uri ?? "";
+  }
+
+  // Kill matched sessions
+  for (const id of victims) {
+    try {
+      await ngrokApi<void>(`/tunnel_sessions/${id}`, { method: "DELETE" });
+    } catch (e) {
+      console.error("Failed to delete tunnel_session", id, e);
+    }
+  }
+  console.log("WhatsApp: Previous tunnels killed...");
+  return victims.size;
 }
