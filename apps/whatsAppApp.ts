@@ -90,16 +90,55 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
-    console.log(error);
     res.sendStatus(500);
+    console.log(error);
   }
+});
+
+app.get("/", (req, res) => {
+  res.type("text/plain").send("JOEL WH server is running.");
 });
 
 app.get("/webhook", (req, res) => {
   try {
-    res.send(whatsAppAPI.handle_get(req));
+    const {
+      "hub.mode": mode,
+      "hub.verify_token": verifyToken,
+      "hub.challenge": challenge
+    } = req.query as Record<string, string | undefined>;
+
+    if (
+      mode === undefined &&
+      verifyToken === undefined &&
+      challenge === undefined
+    ) {
+      res.type("text/plain").send("JOEL WhatsApp webhook is reachable.");
+      return;
+    }
+
+    const challengeNumber = challenge ? parseInt(challenge) : NaN;
+    if (challenge === undefined || isNaN(challengeNumber)) {
+      res.status(403).send("Forbidden");
+      return;
+    }
+
+    if (mode === "subscribe") {
+      if (
+        typeof verifyToken === "string" &&
+        verifyToken === WHATSAPP_VERIFY_TOKEN
+      ) {
+        console.log("WhatsApp : Successful webhook verification");
+        res.send(challenge);
+        return;
+      } else {
+        res.status(403).send("Forbidden");
+        return;
+      }
+    }
+    res.sendStatus(400);
   } catch (e: unknown) {
     res.sendStatus(e as number);
+    console.log(e);
   }
 });
 
