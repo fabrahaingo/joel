@@ -140,6 +140,8 @@ export function textFromMessage(msg: ServerMessage): string | null {
   }
 }
 
+const warnedPhoneIDs = new Set<string>();
+
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   // Ignore echoes of messages the bot just sent
   if (from === WHATSAPP_PHONE_ID) return;
@@ -148,10 +150,12 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   const msgText = textFromMessage(message);
 
   if (phoneID !== WHATSAPP_PHONE_ID) {
-    if (msgText != null)
-      console.log(
-        `WhatsApp: Message received from non-production number ${phoneID} : ${msgText}`
+    if (!warnedPhoneIDs.has(phoneID)) {
+      warnedPhoneIDs.add(phoneID);
+      console.warn(
+        `WhatsApp: first inbound from non-primary phoneID ${phoneID} (expected ${WHATSAPP_PHONE_ID ?? ""}). Ignoring from now on.`
       );
+    }
     return;
   }
   if (msgText == null) return;
