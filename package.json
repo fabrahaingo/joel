@@ -11,10 +11,6 @@
     "test": "jest --config=jest.config.js"
   },
   "license": "MIT",
-  "engines": {
-    "node": "v24.9.0",
-    "npm": "11.6.1"
-  },
   "dependencies": {
     "@babel/preset-env": "^7.28.3",
     "axios": "^1.12.2",
