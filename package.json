@@ -21,7 +21,6 @@
     "mongoose": "^8.18.3",
     "ngrok": "^5.0.0-beta.2",
     "nodemon": "^3.1.10",
-    "npm": "^11.6.1",
     "p-limit": "^6.2.0",
     "signal-sdk": "^0.0.6",
     "telegraf": "^4.16.3",
