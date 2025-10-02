@@ -8,8 +8,11 @@ import umami from "../utils/umami.ts";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
-if (BOT_TOKEN === undefined)
-  throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
+if (BOT_TOKEN === undefined) {
+  console.log(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
+  console.log("Shutting down JOEL Telegram bot... \u{1F6A9}");
+  process.exit(0);
+}
 
 const bot = new Telegraf(BOT_TOKEN);
 
