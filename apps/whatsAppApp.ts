@@ -2,6 +2,12 @@ import "dotenv/config";
 import ngrok from "ngrok";
 
 import express from "express";
+import type { Server } from "http";
+
+let server: Server | null = null;
+let ngrokUrl: string | null = null;
+let shuttingDown = false;
+
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { PostData, ServerMessage } from "whatsapp-api-js/types";
 
@@ -193,7 +199,9 @@ whatsAppAPI.on.sent = ({ phoneID, to }) => {
   //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
 };
 
-app.listen(WHATSAPP_APP_PORT, function () {
+installSignalHandlers();
+
+server = app.listen(WHATSAPP_APP_PORT, function () {
   //console.log(`Example WhatsApp listening at ${String(WHATSAPP_APP_PORT)}`);
 });
 
@@ -201,26 +209,9 @@ await (async function () {
   await mongodbConnect();
 
   console.log("WhatsApp: Initializing Ngrok tunnel...");
-
-  // Initialise ngrok using the auth token and hostname
-  const url = await ngrok.connect({
-    proto: "http",
-    // Your authtoken if you want your hostname to be the same everytime
-    authtoken: NGROK_AUTH_TOKEN,
-    // Your hostname if you want your hostname to be the same everytime
-    hostname: NGROK_DEV_HOOK,
-    // Your app port
-    addr: WHATSAPP_APP_PORT
-    /*
-         verify_webhook_provider: "whatsapp",
-         verify_webhook_secret: WHATSAPP_VERIFY_TOKEN,
-         verify_webhook: WHATSAPP_GRAPH_API_TOKEN
-         */
-  });
-
-  console.log(`WhatsApp: Listening on url ${url}`);
+  ngrokUrl = await startNgrokWithRetry(1);
+  console.log(`WhatsApp: Listening on url ${ngrokUrl}`);
   console.log("WhatsApp: Ngrok tunnel initialized!");
-
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
 
@@ -249,4 +240,98 @@ function newestTimestampSec(data: PostData): number | null {
     }
   }
   return newest;
+}
+
+function delay(ms: number) {
+  return new Promise((res) => setTimeout(res, ms));
+}
+
+async function stopNgrok() {
+  try {
+    if (ngrokUrl) await ngrok.disconnect(ngrokUrl);
+  } catch {}
+  try {
+    await ngrok.kill();
+  } catch {}
+  ngrokUrl = null;
+}
+function ngrokOptions(withHostname = true) {
+  const o: any = {
+    proto: "http",
+    authtoken: NGROK_AUTH_TOKEN,
+    addr: WHATSAPP_APP_PORT
+  };
+  if (withHostname && NGROK_DEV_HOOK) o.hostname = NGROK_DEV_HOOK;
+  return o;
+}
+
+async function startNgrokWithRetry(
+  retries = 1,
+  withHostname = true
+): Promise<string> {
+  try {
+    return await ngrok.connect(ngrokOptions(withHostname));
+  } catch (e: any) {
+    const msg = String(e?.message || e);
+    const already =
+      msg.includes("already exists") ||
+      msg.includes("already bound") ||
+      msg.includes("ERR_NGROK_102") ||
+      msg.includes("code: 102");
+
+    if (already && retries > 0) {
+      await stopNgrok();
+      await delay(1500);
+      // final retry: drop reserved hostname to get a random subdomain
+      if (withHostname && retries === 1)
+        return startNgrokWithRetry(retries - 1, false);
+      return startNgrokWithRetry(retries - 1, withHostname);
+    }
+    throw e;
+  }
+}
+
+async function gracefulShutdown(code = 0) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  try {
+    if (server)
+      await new Promise<void>((r) =>
+        server.close(() => {
+          r();
+        })
+      );
+  } catch {
+    /* empty */
+  }
+  try {
+    await stopNgrok();
+  } catch {
+    /* empty */
+  }
+  console.log(`WhatsApp: Graceful shutdown complete with code ${code}`);
+  process.exit(code);
+}
+
+function installSignalHandlers() {
+  const handler = (sig: NodeJS.Signals) => () => gracefulShutdown(0);
+  ["SIGINT", "SIGTERM", "SIGQUIT", "SIGHUP"].forEach((s) =>
+    process.on(s as NodeJS.Signals, handler(s as NodeJS.Signals))
+  );
+
+  process.on("uncaughtException", async (err) => {
+    console.error(err);
+    await gracefulShutdown(1);
+  });
+  process.on("unhandledRejection", async (reason) => {
+    console.error(reason);
+    await gracefulShutdown(1);
+  });
+
+  // Nodemon restarts
+  process.once("SIGUSR2", async () => {
+    await gracefulShutdown(0);
+    process.kill(process.pid, "SIGUSR2");
+  });
 }
