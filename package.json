@@ -5,16 +5,14 @@
     "start-tg": "tsx apps/telegramApp.ts",
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
-    "start-all": "tsx apps/telegramApp.ts && tsx apps/whatsAppApp.ts & tsx apps/signalApp.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest --config=jest.config.js"
   },
-  "license": "MIT",
   "engines": {
-    "node": "v24.9.0",
-    "npm": "11.6.1"
+    "node": "23"
   },
+  "license": "MIT",
   "dependencies": {
     "@babel/preset-env": "^7.28.3",
     "axios": "^1.12.2",
@@ -24,9 +22,7 @@
     "express": "^5.1.0",
     "mongodb": "^6.20.0",
     "mongoose": "^8.18.3",
-    "ngrok": "^5.0.0-beta.2",
     "nodemon": "^3.1.10",
-    "npm": "^11.6.1",
     "p-limit": "^6.2.0",
     "signal-sdk": "^0.0.6",
     "telegraf": "^4.16.3",

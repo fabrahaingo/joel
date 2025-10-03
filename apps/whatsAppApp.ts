@@ -1,17 +1,13 @@
 import "dotenv/config";
-import ngrok from "ngrok";
 
 import express from "express";
 import type { Server } from "http";
 
 let server: Server | null = null;
-let ngrokUrl: string | null = null;
 let shuttingDown = false;
 
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { PostData, ServerMessage } from "whatsapp-api-js/types";
-
-import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
 import { mongodbConnect } from "../db.ts";
 import umami from "../utils/umami.ts";
@@ -28,10 +24,7 @@ const {
   WHATSAPP_APP_SECRET,
   WHATSAPP_VERIFY_TOKEN,
   WHATSAPP_APP_PORT,
-  WHATSAPP_PHONE_ID,
-  NGROK_AUTH_TOKEN,
-  NGROK_DEV_HOOK,
-  NGROK_API_KEY
+  WHATSAPP_PHONE_ID
 } = process.env;
 
 export function getWhatsAppAPI(): WhatsAppAPI {
@@ -40,7 +33,8 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     WHATSAPP_APP_SECRET === undefined ||
     WHATSAPP_PHONE_ID === undefined
   ) {
-    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+    console.log("Shutting down JOEL WhatsApp bot... \u{1F6A9}");
+    process.exit(0);
   }
 
   return new WhatsAppAPI({
@@ -96,16 +90,55 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
-    console.log(error);
     res.sendStatus(500);
+    console.log(error);
   }
+});
+
+app.get("/", (req, res) => {
+  res.type("text/plain").send("JOEL WH server is running.");
 });
 
 app.get("/webhook", (req, res) => {
   try {
-    res.send(whatsAppAPI.handle_get(req));
+    const {
+      "hub.mode": mode,
+      "hub.verify_token": verifyToken,
+      "hub.challenge": challenge
+    } = req.query as Record<string, string | undefined>;
+
+    if (
+      mode === undefined &&
+      verifyToken === undefined &&
+      challenge === undefined
+    ) {
+      res.type("text/plain").send("JOEL WhatsApp webhook is reachable.");
+      return;
+    }
+
+    const challengeNumber = challenge ? parseInt(challenge) : NaN;
+    if (challenge === undefined || isNaN(challengeNumber)) {
+      res.status(403).send("Forbidden");
+      return;
+    }
+
+    if (mode === "subscribe") {
+      if (
+        typeof verifyToken === "string" &&
+        verifyToken === WHATSAPP_VERIFY_TOKEN
+      ) {
+        console.log("WhatsApp : Successful webhook verification");
+        res.send(challenge);
+        return;
+      } else {
+        res.status(403).send("Forbidden");
+        return;
+      }
+    }
+    res.sendStatus(400);
   } catch (e: unknown) {
     res.sendStatus(e as number);
+    console.log(e);
   }
 });
 
@@ -208,22 +241,7 @@ server = app.listen(WHATSAPP_APP_PORT, function () {
 
 await (async function () {
   await mongodbConnect();
-  await killConflictingNgrokSessions(
-    String(process.env.NGROK_DEV_HOOK),
-    Number(process.env.WHATSAPP_APP_PORT)
-  );
-  // then:
-  const url = await ngrok.connect({
-    proto: "http",
-    authtoken: process.env.NGROK_AUTH_TOKEN,
-    hostname: process.env.NGROK_DEV_HOOK,
-    addr: process.env.WHATSAPP_APP_PORT
-  });
 
-  console.log("WhatsApp: Initializing Ngrok tunnel...");
-  ngrokUrl = await startNgrokWithRetry(1);
-  console.log(`WhatsApp: Listening on url ${ngrokUrl}`);
-  console.log("WhatsApp: Ngrok tunnel initialized!");
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
 
@@ -254,55 +272,6 @@ function newestTimestampSec(data: PostData): number | null {
   return newest;
 }
 
-function delay(ms: number) {
-  return new Promise((res) => setTimeout(res, ms));
-}
-
-async function stopNgrok() {
-  try {
-    if (ngrokUrl) await ngrok.disconnect(ngrokUrl);
-  } catch {}
-  try {
-    await ngrok.kill();
-  } catch {}
-  ngrokUrl = null;
-}
-function ngrokOptions(withHostname = true) {
-  const o: any = {
-    proto: "http",
-    authtoken: NGROK_AUTH_TOKEN,
-    addr: WHATSAPP_APP_PORT
-  };
-  if (withHostname && NGROK_DEV_HOOK) o.hostname = NGROK_DEV_HOOK;
-  return o;
-}
-
-async function startNgrokWithRetry(
-  retries = 1,
-  withHostname = true
-): Promise<string> {
-  try {
-    return await ngrok.connect(ngrokOptions(withHostname));
-  } catch (e: any) {
-    const msg = String(e?.message || e);
-    const already =
-      msg.includes("already exists") ||
-      msg.includes("already bound") ||
-      msg.includes("ERR_NGROK_102") ||
-      msg.includes("code: 102");
-
-    if (already && retries > 0) {
-      await stopNgrok();
-      await delay(1500);
-      // final retry: drop reserved hostname to get a random subdomain
-      if (withHostname && retries === 1)
-        return startNgrokWithRetry(retries - 1, false);
-      return startNgrokWithRetry(retries - 1, withHostname);
-    }
-    throw e;
-  }
-}
-
 async function gracefulShutdown(code = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
@@ -317,11 +286,7 @@ async function gracefulShutdown(code = 0) {
   } catch {
     /* empty */
   }
-  try {
-    await stopNgrok();
-  } catch {
-    /* empty */
-  }
+
   console.log(`WhatsApp: Graceful shutdown complete with code ${code}`);
   process.exit(code);
 }
@@ -346,79 +311,4 @@ function installSignalHandlers() {
     await gracefulShutdown(0);
     process.kill(process.pid, "SIGUSR2");
   });
-}
-
-async function ngrokApi<T = any>(
-  path: string,
-  init: RequestInit = {}
-): Promise<T> {
-  if (!NGROK_API_KEY) throw new Error("NGROK_API_KEY not set");
-  const res = await fetch(`https://api.ngrok.com${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${NGROK_API_KEY}`,
-      "Ngrok-Version": "2",
-      "Content-Type": "application/json",
-      ...(init.headers || {})
-    }
-  });
-  if (!res.ok)
-    throw new Error(
-      `ngrok API ${path} failed: ${res.status} ${await res.text()}`
-    );
-  return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
-}
-
-/** Kill any remote session holding the reserved hostname or the same public URL target. */
-async function killConflictingNgrokSessions(
-  hostname: string,
-  targetPort?: number
-) {
-  interface Session {
-    id: string;
-  }
-  interface TunnelsResp {
-    tunnels: { public_url?: string; forwards_to?: string }[];
-  }
-  interface SessionsResp {
-    tunnel_sessions: Session[];
-    next_page_uri?: string;
-  }
-
-  let next = "/tunnel_sessions?limit=100";
-  const victims = new Set<string>();
-
-  // Enumerate sessions and inspect their tunnels
-  while (next) {
-    const page = await ngrokApi<SessionsResp>(next);
-    if (page.tunnel_sessions.length === 0) {
-      console.log("WhatsApp: No previous tunnel to kill ...");
-      return;
-    }
-    for (const s of page.tunnel_sessions) {
-      const tPage = await ngrokApi<TunnelsResp>(
-        `/tunnel_sessions/${s.id}/tunnels`
-      );
-      const match = tPage.tunnels.some((t) => {
-        const hitHost = t.public_url?.includes(hostname);
-        const hitPort = targetPort
-          ? t.forwards_to?.includes(String(targetPort))
-          : false;
-        return Boolean(hitHost ?? hitPort);
-      });
-      if (match) victims.add(s.id);
-    }
-    next = page.next_page_uri ?? "";
-  }
-
-  // Kill matched sessions
-  for (const id of victims) {
-    try {
-      await ngrokApi<void>(`/tunnel_sessions/${id}`, { method: "DELETE" });
-    } catch (e) {
-      console.error("Failed to delete tunnel_session", id, e);
-    }
-  }
-  console.log("WhatsApp: Previous tunnels killed...");
-  return victims.size;
 }
