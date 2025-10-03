@@ -9,7 +9,9 @@ import umami from "../utils/umami.ts";
 const { SIGNAL_PHONE_NUMBER, SIGNAL_BAT_PATH } = process.env;
 
 if (SIGNAL_PHONE_NUMBER === undefined) {
-  throw new Error("SIGNAL_PHONE_NUMBER env variable not set");
+  console.log("SIGNAL_PHONE_NUMBER env variable not set");
+  console.log("Shutting down JOEL Signal bot... \u{1F6A9}");
+  process.exit(0);
 }
 
 if (SIGNAL_BAT_PATH === undefined) {
