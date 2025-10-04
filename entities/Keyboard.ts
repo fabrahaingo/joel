@@ -133,6 +133,6 @@ export const KEYBOARD_KEYS: Record<
     key: { text: "🕵️ Suivi manuel" }
   },
   FOLLOW_UP_HISTORY: {
-    key: { text: "📖 Historique complet" }
+    key: { text: "📖 Historique" }
   }
 };
