@@ -5,7 +5,7 @@ import {
   MessageSendingOptionsInternal,
   recordSuccessfulDelivery
 } from "./Session.ts";
-import umami from "../utils/umami.ts";
+import umami, { UmamiEvent } from "../utils/umami.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ServerMessageResponse } from "whatsapp-api-js/types";
 import { ErrorMessages } from "./ErrorMessages.ts";
@@ -22,6 +22,7 @@ import {
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
+import Umami from "../utils/umami.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
@@ -93,8 +94,6 @@ export class WhatsAppSession implements ISession {
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
 
-  log = umami.log;
-
   constructor(
     whatsAppAPI: WhatsAppAPI,
     botPhoneID: string,
@@ -120,6 +119,10 @@ export class WhatsAppSession implements ISession {
   async sendTypingAction() {
     await Promise.resolve();
     // TODO: check implementation in WH
+  }
+
+  async log(args: { event: UmamiEvent }) {
+    await Umami.log(args.event, this.messageApp);
   }
 
   async sendMessage(
@@ -168,7 +171,7 @@ export async function sendWhatsAppMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log({ event: "/whatsapp-too-many-requests-aborted" });
+    await umami.log("/whatsapp-too-many-requests-aborted", "WhatsApp");
     return false;
   } // give up after 5 retries
 
@@ -250,7 +253,7 @@ export async function sendWhatsAppMessage(
           case 130429:
           case 131048:
           case 131056:
-            await umami.log({ event: "/whatsapp-too-many-requests" });
+            await umami.log("/whatsapp-too-many-requests", "WhatsApp");
             await new Promise((resolve) =>
               setTimeout(resolve, Math.pow(4, retryNumber) * 1000)
             );
@@ -263,7 +266,7 @@ export async function sendWhatsAppMessage(
             );
 
           case 131008: // user blocked the bot
-            await umami.log({ event: "/user-blocked-joel" });
+            await umami.log("/user-blocked-joel", "WhatsApp");
             await User.updateOne(
               { messageApp: "WhatsApp", chatId: userPhoneId },
               { $set: { status: "blocked" } }
@@ -271,7 +274,7 @@ export async function sendWhatsAppMessage(
             break;
           case 131026: // user not on WhatsApp
           case 131030:
-            await umami.log({ event: "/user-deactivated" });
+            await umami.log("/user-deactivated", "WhatsApp");
             await User.deleteOne({
               messageApp: "WhatsApp",
               chatId: userPhoneId
@@ -282,7 +285,7 @@ export async function sendWhatsAppMessage(
         }
         return false;
       }
-      await umami.log({ event: "/message-sent-whatsapp" });
+      await umami.log("/message-sent-whatsapp", "WhatsApp");
 
       if (burstMode || (i == mArr.length - 1 && options?.separateMenuMessage)) {
         // prevent hitting the WH API rate limit
@@ -312,7 +315,7 @@ export async function sendWhatsAppMessage(
         );
       }
       numberMessageBurst += 1;
-      await umami.log({ event: "/message-sent-whatsapp" });
+      await umami.log("/message-sent-whatsapp", "WhatsApp");
     }
 
     // make up for the cooldown delay borrowed in the burst mode
