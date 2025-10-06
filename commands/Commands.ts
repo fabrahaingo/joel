@@ -27,6 +27,7 @@ import {
   clearFollowUp,
   handleFollowUpMessage
 } from "../entities/FollowUpManager.ts";
+import { buildInfoCommand } from "./help.ts";
 
 export async function processMessage(
   session: ISession,
@@ -196,5 +197,9 @@ export const commands: CommandType[] = [
   {
     regex: /^\/supprimerCompte|supprimerCompte/i,
     action: deleteProfileCommand
+  },
+  {
+    regex: /^\/build|build/i,
+    action: buildInfoCommand
   }
 ];

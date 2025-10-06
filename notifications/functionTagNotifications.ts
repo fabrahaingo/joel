@@ -255,6 +255,6 @@ async function sendTagUpdates(
   );
   if (!messageSent) return false;
 
-  await umami.log({ event: "/notification-update-function" });
+  await umami.log("/notification-update-function", messageApp);
   return true;
 }

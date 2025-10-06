@@ -24,7 +24,7 @@ await (async () => {
       const tgUser = ctx.from;
       if (tgUser.is_bot) return;
 
-      await umami.log({ event: "/message-telegram" });
+      await umami.log("/message-telegram", "Telegram");
 
       const tgSession = new TelegramSession(
         bot.telegram,

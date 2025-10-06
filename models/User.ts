@@ -122,7 +122,7 @@ UserSchema.static(
 
     if (user != null) return user;
 
-    await umami.log({ event: "/new-user" });
+    await umami.log("/new-user", session.messageApp);
     return await this.create({
       chatId: session.chatId,
       messageApp: session.messageApp,
@@ -138,7 +138,7 @@ UserSchema.method(
     let needSaving = false;
 
     if (this.status === "blocked") {
-      await umami.log({ event: "/user-unblocked-joel" });
+      await umami.log("/user-unblocked-joel", this.messageApp);
       this.status = "active";
       needSaving = true;
     }
@@ -153,7 +153,7 @@ UserSchema.method(
       this.lastInteractionDay.toDateString() !== currentDay.toDateString()
     ) {
       this.lastInteractionDay = currentDay;
-      await umami.log({ event: "/daily-active-user" });
+      await umami.log("/daily-active-user", this.messageApp);
       needSaving = true;
     }
 
@@ -167,7 +167,7 @@ UserSchema.method(
       thisWeek !== lastInteractionWeek
     ) {
       this.lastInteractionWeek = currentDay;
-      await umami.log({ event: "/weekly-active-user" });
+      await umami.log("/weekly-active-user", this.messageApp);
       needSaving = true;
     }
 
@@ -180,7 +180,7 @@ UserSchema.method(
       const startMonth = new Date(currentDay);
       startMonth.setDate(1);
       this.lastInteractionMonth = startMonth;
-      await umami.log({ event: "/monthly-active-user" });
+      await umami.log("/monthly-active-user", this.messageApp);
       needSaving = true;
     }
 

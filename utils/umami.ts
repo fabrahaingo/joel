@@ -1,8 +1,11 @@
 import axios from "axios";
+import { MessageApp } from "../types";
 
-export const log = async (args: { event: UmamiEvent; data?: never }) => {
+export const log = async (event: UmamiEvent, messageApp?: MessageApp) => {
   if (process.env.NODE_ENV === "development") {
-    console.log("Umami event", args.event);
+    console.log(
+      `Umami event ${messageApp ? " (" + messageApp + ")" : ""}: ${event}`
+    );
     return;
   }
 
@@ -11,8 +14,8 @@ export const log = async (args: { event: UmamiEvent; data?: never }) => {
     payload: {
       hostname: process.env.UMAMI_HOST,
       website: process.env.UMAMI_ID,
-      name: args.event,
-      data: args.data
+      name: event,
+      data: messageApp ? { messageApp: messageApp } : {}
     },
     type: "event"
   };

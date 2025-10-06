@@ -209,6 +209,6 @@ async function sendNameMentionUpdates(
   );
   if (!messageSent) return false;
 
-  await umami.log({ event: "/notification-update-name" });
+  await umami.log("/notification-update-name", messageApp);
   return true;
 }
