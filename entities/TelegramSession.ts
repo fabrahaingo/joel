@@ -13,7 +13,7 @@ import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import Umami from "../utils/umami.ts";
-const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
+export const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
 const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
 
 export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
