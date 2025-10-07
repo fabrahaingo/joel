@@ -171,7 +171,7 @@ export async function sendWhatsAppMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log("/whatsapp-too-many-requests-aborted", "WhatsApp");
+    await umami.log("/message-fail-too-many-requests-aborted", "WhatsApp");
     return false;
   } // give up after 5 retries
 
@@ -253,7 +253,7 @@ export async function sendWhatsAppMessage(
           case 130429:
           case 131048:
           case 131056:
-            await umami.log("/whatsapp-too-many-requests", "WhatsApp");
+            await umami.log("/message-fail-too-many-requests", "WhatsApp");
             await new Promise((resolve) =>
               setTimeout(resolve, Math.pow(4, retryNumber) * 1000)
             );
@@ -285,7 +285,7 @@ export async function sendWhatsAppMessage(
         }
         return false;
       }
-      await umami.log("/message-sent-whatsapp", "WhatsApp");
+      await umami.log("/message-sent", "WhatsApp");
 
       if (burstMode || (i == mArr.length - 1 && options?.separateMenuMessage)) {
         // prevent hitting the WH API rate limit
@@ -315,7 +315,7 @@ export async function sendWhatsAppMessage(
         );
       }
       numberMessageBurst += 1;
-      await umami.log("/message-sent-whatsapp", "WhatsApp");
+      await umami.log("/message-sent", "WhatsApp");
     }
 
     // make up for the cooldown delay borrowed in the burst mode

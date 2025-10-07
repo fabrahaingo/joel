@@ -109,7 +109,7 @@ export class TelegramSession implements ISession {
           telegramMessageOptions
         );
       }
-      await this.log({ event: "/message-sent-telegram" });
+      await this.log({ event: "/message-sent" });
 
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
@@ -165,7 +165,7 @@ export async function sendTelegramMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log("/telegram-too-many-requests-aborted", "Telegram");
+    await umami.log("/message-fail-too-many-requests-aborted", "Telegram");
     return false;
   }
   const mArr = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
@@ -195,7 +195,7 @@ export async function sendTelegramMessage(
         `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
         payload
       );
-      await umami.log("/message-sent-telegram", "Telegram");
+      await umami.log("/message-sent", "Telegram");
 
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
@@ -221,7 +221,7 @@ export async function sendTelegramMessage(
           });
           break;
         case "Too many requests":
-          await umami.log("/telegram-too-many-requests", "Telegram");
+          await umami.log("/message-fail-too-many-requests", "Telegram");
           await new Promise((resolve) =>
             setTimeout(resolve, Math.pow(2, retryNumber) * 1000)
           );
