@@ -30,7 +30,7 @@ async function searchOrganisationWikidataId(
   try {
     if (org_name.length == 0) return [];
 
-    await umami.log({ event: "/jorfsearch-request-wikidata-names" });
+    await umami.log("/jorfsearch-request-wikidata-names");
 
     const wikidataIds_raw: WikidataId[] = await axios
       .get<WikiDataAPIResponse>(

@@ -98,7 +98,7 @@ await (async () => {
       );
     }
 
-    await umami.log({ event: "/notification-process-completed" });
+    await umami.log("/notification-process-completed");
 
     process.exit(0);
   } catch (error) {

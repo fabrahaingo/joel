@@ -39,3 +39,9 @@ export const getHelpText = (session: ISession): string => {
 
   return helpText;
 };
+
+export const buildInfoCommand = async (session: ISession): Promise<void> => {
+  const message = "";
+
+  await session.sendMessage(message, { separateMenuMessage: true });
+};

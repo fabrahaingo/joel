@@ -1,6 +1,6 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
-import umami from "./utils/umami";
+import { UmamiEvent } from "./utils/umami";
 import { MessageSendingOptionsInternal } from "./entities/Session.ts";
 
 export interface CommandType {
@@ -24,7 +24,7 @@ export interface ISession {
     options?: MessageSendingOptionsInternal
   ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
-  log: typeof umami.log;
+  log: (args: { event: UmamiEvent }) => Promise<void>;
 }
 
 // fields are undefined for users created before implementation

@@ -263,6 +263,6 @@ async function sendOrganisationUpdate(
   );
   if (!messageSent) return false;
 
-  await umami.log({ event: "/notification-update-organisation" });
+  await umami.log("/notification-update-organisation", messageApp);
   return true;
 }

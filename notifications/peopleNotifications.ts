@@ -249,6 +249,6 @@ async function sendPeopleUpdate(
   );
   if (!messageSent) return false;
 
-  await umami.log({ event: "/notification-update-people" });
+  await umami.log("/notification-update-people", messageApp);
   return true;
 }

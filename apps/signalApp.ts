@@ -46,7 +46,7 @@ await (async () => {
           const msgText = message.envelope.dataMessage?.message;
           if (msgText === undefined) return;
 
-          await umami.log({ event: "/message-signal" });
+          await umami.log("/message-signal", "Signal");
 
           const userChatId = parseInt(message.envelope.sourceNumber);
           if (isNaN(userChatId)) {
