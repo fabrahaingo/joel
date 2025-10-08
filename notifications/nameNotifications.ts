@@ -15,7 +15,7 @@ import {
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
 
-const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
+const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
 export async function notifyNameMentionUpdates(
   updatedRecords: JORFSearchItem[],
