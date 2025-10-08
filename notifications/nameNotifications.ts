@@ -4,7 +4,7 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import People from "../models/People.ts";
-import umami from "../utils/umami.ts";
+import umami, { UmamiNotificationData } from "../utils/umami.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   cleanPeopleName,
@@ -14,6 +14,7 @@ import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
+import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 
@@ -209,6 +210,14 @@ async function sendNameMentionUpdates(
   );
   if (!messageSent) return false;
 
-  await umami.log("/notification-update-name", messageApp);
+  const notifData: UmamiNotificationData = {
+    message_nb: getSplitTextMessageSize(notification_text, messageApp),
+    updated_follows_nb: updatedRecordMap.size,
+    total_records_nb: updatedRecordMap
+      .values()
+      .reduce((total: number, value) => total + value.length, 0)
+  };
+
+  await umami.log("/notification-update-name", messageApp, notifData);
   return true;
 }

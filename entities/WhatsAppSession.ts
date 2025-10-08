@@ -26,7 +26,7 @@ import Umami from "../utils/umami.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
-const WHATSAPP_MESSAGE_CHAR_LIMIT = 1023;
+export const WHATSAPP_MESSAGE_CHAR_LIMIT = 1023;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the same user, but we'll take 1 here
 const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages in burst mode
 

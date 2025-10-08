@@ -1,21 +1,41 @@
 import axios from "axios";
 import { MessageApp } from "../types";
 
-export const log = async (event: UmamiEvent, messageApp?: MessageApp) => {
+export interface UmamiNotificationData {
+  message_nb: number;
+  updated_follows_nb: number;
+  total_records_nb: number;
+}
+
+export const log = async (
+  event: UmamiEvent,
+  messageApp?: MessageApp,
+  notificationData?: UmamiNotificationData
+) => {
   if (process.env.NODE_ENV === "development") {
     console.log(
       `Umami event ${messageApp ? " (" + messageApp + ")" : ""}: ${event}`
     );
+    if (notificationData != null) console.log(notificationData);
     return;
   }
 
+  const extra_data: Record<string, unknown> = {};
+  if (messageApp) {
+    extra_data.messageApp = messageApp;
+  }
+  if (notificationData != null) {
+    extra_data.message_nb = notificationData.message_nb;
+    extra_data.updated_follows_nb = notificationData.updated_follows_nb;
+    extra_data.total_records_nb = notificationData.total_records_nb;
+  }
   const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;
   const payload = {
     payload: {
       hostname: process.env.UMAMI_HOST,
       website: process.env.UMAMI_ID,
       name: event,
-      data: messageApp ? { messageApp: messageApp } : {}
+      data: extra_data
     },
     type: "event"
   };
