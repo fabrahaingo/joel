@@ -6,6 +6,7 @@
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
     "lint": "eslint .",
+    "notify" : "tsx notifications/notifyUsers.ts",
     "lint:fix": "eslint . --fix",
     "test": "jest --config=jest.config.js"
   },
