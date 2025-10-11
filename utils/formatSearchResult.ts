@@ -25,7 +25,7 @@ function addPoste(
           (s) => s === elem.grade
         )
       )
-        message += ` *de cabinet*`;
+        message += ` *de cabinet*\n`;
       if (elem.cabinet && !options?.omitCabinet)
         message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
       else message += `\n`;
