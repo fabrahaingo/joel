@@ -16,7 +16,7 @@ import {
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
 
-const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
+const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
 export async function notifyPeopleUpdates(
   updatedRecords: JORFSearchItem[],
@@ -229,7 +229,7 @@ async function sendPeopleUpdate(
       {
         isConfirmation: false,
         isListing: true,
-        displayName: "all"
+        displayName: "no"
       }
     );
 
