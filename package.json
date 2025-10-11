@@ -6,11 +6,9 @@
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
     "lint": "eslint .",
+    "notify" : "tsx notifications/notifyUsers.ts",
     "lint:fix": "eslint . --fix",
     "test": "jest --config=jest.config.js"
-  },
-  "engines": {
-    "node": "23"
   },
   "license": "MIT",
   "dependencies": {
@@ -21,7 +19,7 @@
     "emoji-regex": "^10.5.0",
     "express": "^5.1.0",
     "mongodb": "^6.20.0",
-    "mongoose": "^8.18.3",
+    "mongoose": "^8.19.1",
     "nodemon": "^3.1.10",
     "p-limit": "^6.2.0",
     "signal-sdk": "^0.0.6",
@@ -36,14 +34,14 @@
     "@tsconfig/node24": "^24.0.1",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
-    "eslint": "^9.36.0",
+    "eslint": "^9.37.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "jest": "^30.2.0",
-    "mongodb-memory-server": "^10.2.1",
+    "mongodb-memory-server": "^10.2.3",
     "prettier": "^3.6.2",
-    "ts-jest": "^29.4.4",
+    "ts-jest": "^29.4.5",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.45.0"
+    "typescript-eslint": "^8.46.0"
   }
 }
