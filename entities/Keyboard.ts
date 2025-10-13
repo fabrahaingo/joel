@@ -126,6 +126,13 @@ export const KEYBOARD_KEYS: Record<
       await helpCommand(session);
     }
   },
+  STATS: {
+    key: { text: "📈 Statistiques" },
+    action: async (session: ISession) => {
+      const { statsCommand } = await import("../commands/stats.ts");
+      await statsCommand(session);
+    }
+  },
   FOLLOW_UP_FOLLOW: {
     key: { text: "🔎 Suivre" }
   },

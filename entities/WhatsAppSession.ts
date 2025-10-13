@@ -57,7 +57,7 @@ const fullMenuKeyboard: ActionList = new ActionList(
     )
   ),
   new ListSection(
-    "Recherches",
+    "Ajout groupé",
     new Row(
       "opt_5",
       KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH_LONG_NO_KEYBOARD.key.text,
@@ -79,6 +79,11 @@ const fullMenuKeyboard: ActionList = new ActionList(
     new Row("opt_8", KEYBOARD_KEYS.HELP.key.text, "Aide et contact."),
     new Row(
       "opt_9",
+      KEYBOARD_KEYS.STATS.key.text,
+      "Pour jetez un oeil au statistiques de suivi JOEL."
+    ),
+    new Row(
+      "opt_10",
       KEYBOARD_KEYS.DELETE.key.text,
       "Supprimer mon compte et mes suivis."
     )
