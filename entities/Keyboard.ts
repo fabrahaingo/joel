@@ -104,7 +104,7 @@ export const KEYBOARD_KEYS: Record<
     }
   },
   FOLLOWS_REMOVE: {
-    key: { text: "👨✋ Retirer un suivi" },
+    key: { text: "🗑️ Retirer un suivi" },
     action: async (session: ISession) => {
       const { unfollowCommand } = await import("../commands/list.ts");
       await unfollowCommand(session);
@@ -124,6 +124,13 @@ export const KEYBOARD_KEYS: Record<
     action: async (session: ISession) => {
       const { helpCommand } = await import("../commands/help.ts");
       await helpCommand(session);
+    }
+  },
+  STATS: {
+    key: { text: "📈 Statistiques" },
+    action: async (session: ISession) => {
+      const { statsCommand } = await import("../commands/stats.ts");
+      await statsCommand(session);
     }
   },
   FOLLOW_UP_FOLLOW: {

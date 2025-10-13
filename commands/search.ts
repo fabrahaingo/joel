@@ -156,6 +156,16 @@ export async function searchPersonHistory(
       });
       return false;
     }
+    const peopleFromDB: IPeople | null = await People.findOne({
+      nom: JORFRes_data[0].nom,
+      prenom: JORFRes_data[0].prenom
+    });
+    let numberFollowers: number | undefined;
+    if (peopleFromDB != null) {
+      numberFollowers = await User.countDocuments({
+        followedPeople: { $elemMatch: { peopleId: peopleFromDB._id } }
+      });
+    }
 
     let text = "";
     if (historyType === "latest") {
@@ -163,13 +173,17 @@ export async function searchPersonHistory(
         JORFRes_data.slice(0, 2),
         session.messageApp !== "WhatsApp",
         {
-          isConfirmation: true
+          isConfirmation: true,
+          numberUserFollowing: numberFollowers
         }
       );
     } else {
       text += formatSearchResult(
         JORFRes_data,
-        session.messageApp !== "WhatsApp"
+        session.messageApp !== "WhatsApp",
+        {
+          numberUserFollowing: numberFollowers
+        }
       );
     }
 

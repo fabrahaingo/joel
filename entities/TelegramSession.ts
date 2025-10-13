@@ -21,7 +21,7 @@ export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second gl
 const mainMenuKeyboardTelegram: Keyboard = [
   [KEYBOARD_KEYS.PEOPLE_SEARCH.key, KEYBOARD_KEYS.FOLLOWS_LIST.key],
   [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key, KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
-  [KEYBOARD_KEYS.HELP.key]
+  [KEYBOARD_KEYS.STATS.key, KEYBOARD_KEYS.HELP.key]
 ];
 
 export const telegramMessageOptions: ExtraReplyMessage = {
