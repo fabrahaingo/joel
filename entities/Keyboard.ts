@@ -104,7 +104,7 @@ export const KEYBOARD_KEYS: Record<
     }
   },
   FOLLOWS_REMOVE: {
-    key: { text: "👨✋ Retirer un suivi" },
+    key: { text: "🗑️ Retirer un suivi" },
     action: async (session: ISession) => {
       const { unfollowCommand } = await import("../commands/list.ts");
       await unfollowCommand(session);
