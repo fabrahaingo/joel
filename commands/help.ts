@@ -7,9 +7,16 @@ export const helpCommand = async (session: ISession): Promise<void> => {
 
   let helpText = getHelpText(session);
 
-  if (session.messageApp === "Telegram")
+  if (session.messageApp === "Telegram") {
     helpText +=
-      "\n\nSi vous souhaitez supprimer votre compte: utilisez la commande /supprimerCompte";
+      "\n\nPour exporter vos suivis sur une autre messagerie: utilisez la commande /export";
+    helpText +=
+      "\n\nPour supprimer votre compte: utilisez la commande /supprimerCompte";
+  } else {
+    helpText +=
+      "\n\nPour exporter vos suivis sur une autre messagerie: utilisez la commande *Exporter*";
+  }
+
   await session.sendMessage(helpText, { separateMenuMessage: true });
 };
 

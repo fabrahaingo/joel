@@ -52,6 +52,11 @@ export interface IUser {
     lastUpdate: Date;
   }[];
 
+  transferData?: {
+    code: string;
+    expiresAt: Date;
+  };
+
   lastMessageReceivedAt?: Date;
 
   lastInteractionDay?: Date;

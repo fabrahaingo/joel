@@ -70,7 +70,7 @@ const fullMenuKeyboard: ActionList = new ActionList(
     )
   ),
   new ListSection(
-    "Mon compte",
+    "Compte",
     new Row(
       "opt_7",
       KEYBOARD_KEYS.FOLLOWS_LIST.key.text,
@@ -80,7 +80,7 @@ const fullMenuKeyboard: ActionList = new ActionList(
     new Row(
       "opt_9",
       KEYBOARD_KEYS.STATS.key.text,
-      "Pour jetez un oeil au statistiques de suivi JOEL."
+      "Pour jeter un oeil aux statistiques de suivi JOEL."
     ),
     new Row(
       "opt_10",
