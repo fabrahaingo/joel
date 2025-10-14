@@ -16,7 +16,7 @@ import {
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 
-interface UserFollows {
+export interface UserFollows {
   functions: FunctionTags[];
   organisations: IOrganisation[];
   peopleAndNames: {
@@ -28,9 +28,103 @@ interface UserFollows {
   meta: never[];
 }
 
+export function getUserFollowsTotal(userFollows: UserFollows): number {
+  return (
+    userFollows.functions.length +
+    userFollows.organisations.length +
+    userFollows.peopleAndNames.length +
+    userFollows.meta.length
+  );
+}
+
+interface BuildFollowsListMessageOptions {
+  perspective?: "self" | "thirdParty";
+}
+
+export function buildFollowsListMessage(
+  session: ISession,
+  userFollows: UserFollows,
+  options: BuildFollowsListMessageOptions = {}
+): string {
+  const perspective = options.perspective ?? "self";
+  const followVerb =
+    perspective === "thirdParty" ? "Ce compte suit" : "Vous suivez";
+
+  let text = "";
+  let index = 0;
+
+  if (userFollows.functions.length > 0) {
+    text += `${followVerb} ${String(userFollows.functions.length)} fonction${
+      userFollows.functions.length > 1 ? "s" : ""
+    } : \n\n`;
+    const functionsKeys = getFunctionsFromValues(userFollows.functions);
+    userFollows.functions.forEach((_functionTag, idx) => {
+      text += `${String(index + 1)}. *${functionsKeys[idx]}*`;
+
+      if (session.messageApp === "Telegram")
+        text += ` - [JORFSearch](${getJORFSearchLinkFunctionTag(
+          userFollows.functions[idx]
+        )})`;
+      else
+        text += `\n${getJORFSearchLinkFunctionTag(userFollows.functions[idx])}`;
+      text += `\n`;
+      if (userFollows.functions.length < 10) text += `\n`;
+      index++;
+    });
+  }
+
+  if (userFollows.organisations.length > 0) {
+    text += `${followVerb} ${String(
+      userFollows.organisations.length
+    )} organisation${userFollows.organisations.length > 1 ? "s" : ""} : \n\n`;
+    userFollows.organisations.forEach((organisation) => {
+      text += `${String(index + 1)}. *${organisation.nom}*`;
+
+      if (session.messageApp === "Telegram")
+        text += ` - [JORFSearch](${getJORFSearchLinkOrganisation(
+          organisation.wikidataId
+        )})`;
+      else
+        text += `\n${getJORFSearchLinkOrganisation(organisation.wikidataId)}`;
+
+      text += `\n`;
+      if (userFollows.organisations.length < 10) text += `\n`;
+      index++;
+    });
+  }
+
+  if (userFollows.peopleAndNames.length > 0) {
+    text += `${followVerb} ${String(
+      userFollows.peopleAndNames.length
+    )} personne${userFollows.peopleAndNames.length > 1 ? "s" : ""} : \n\n`;
+    userFollows.peopleAndNames.forEach((followedName, idx) => {
+      text += `${String(index + 1)}. *${followedName.nomPrenom}*`;
+      if (followedName.JORFSearchLink !== undefined) {
+        if (session.messageApp !== "WhatsApp")
+          text += ` - [JORFSearch](${followedName.JORFSearchLink})`;
+        else text += `\n${followedName.JORFSearchLink}`;
+        text += `\n`;
+      } else {
+        text += ` - Suivi manuel\n`;
+      }
+      if (
+        idx + 1 < userFollows.peopleAndNames.length &&
+        userFollows.peopleAndNames.length < 10
+      ) {
+        text += `\n`;
+      }
+      index++;
+    });
+  }
+
+  return text;
+}
+
 const noDataText = `Vous ne suivez aucun contact, fonction, ni organisation pour le moment.`;
 
-async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
+export async function getAllUserFollowsOrdered(
+  user: IUser
+): Promise<UserFollows> {
   const followedFunctions = user.followedFunctions.sort((a, b) =>
     a.functionTag.localeCompare(b.functionTag)
   );
@@ -103,64 +197,7 @@ export const listCommand = async (session: ISession) => {
       return;
     }
 
-    let text = "";
-
-    let i = 0;
-    if (userFollows.functions.length > 0) {
-      text += `Vous suivez ${String(userFollows.functions.length)} fonction${userFollows.functions.length > 1 ? "s" : ""} : \n\n`;
-      const functionsKeys = getFunctionsFromValues(userFollows.functions);
-      for (; i < userFollows.functions.length; i++) {
-        text += `${String(i + 1)}. *${functionsKeys[i]}*`;
-
-        if (session.messageApp === "Telegram")
-          text += ` - [JORFSearch](${getJORFSearchLinkFunctionTag(userFollows.functions[i])})`;
-        else
-          text += `\n${getJORFSearchLinkFunctionTag(userFollows.functions[i])}`;
-        text += `\n`;
-        if (userFollows.functions.length < 10) text += `\n`;
-      }
-    }
-
-    let k = 0;
-    if (userFollows.organisations.length > 0) {
-      text += `Vous suivez ${String(userFollows.organisations.length)} organisation${userFollows.organisations.length > 1 ? "s" : ""} : \n\n`;
-      for (; k < userFollows.organisations.length; k++) {
-        text += `${String(i + k + 1)}. *${userFollows.organisations[k].nom}*`;
-
-        if (session.messageApp === "Telegram")
-          text += ` - [JORFSearch](${getJORFSearchLinkOrganisation(userFollows.organisations[k].wikidataId)})`;
-        else
-          text += `\n${getJORFSearchLinkOrganisation(
-            userFollows.organisations[k].wikidataId
-          )}`;
-
-        text += `\n`;
-        if (userFollows.organisations.length < 10) text += `\n`;
-      }
-    }
-
-    let j = 0;
-    if (userFollows.peopleAndNames.length > 0) {
-      text += `Vous suivez ${String(userFollows.peopleAndNames.length)} personne${userFollows.peopleAndNames.length > 1 ? "s" : ""} : \n\n`;
-      for (; j < userFollows.peopleAndNames.length; j++) {
-        const followedName = userFollows.peopleAndNames[j];
-        text += `${String(i + k + j + 1)}. *${followedName.nomPrenom}*`;
-        if (followedName.JORFSearchLink !== undefined) {
-          if (session.messageApp !== "WhatsApp")
-            text += ` - [JORFSearch](${followedName.JORFSearchLink})`;
-          else text += `\n${followedName.JORFSearchLink}`;
-          text += `\n`;
-        } else {
-          text += ` - Suivi manuel\n`;
-        }
-        if (
-          userFollows.peopleAndNames[j + 1] &&
-          userFollows.peopleAndNames.length < 10
-        ) {
-          text += `\n`;
-        }
-      }
-    }
+    let text = buildFollowsListMessage(session, userFollows);
 
     if (session.messageApp === "Signal")
       text +=
@@ -225,11 +262,7 @@ export const unfollowCommand = async (session: ISession) => {
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
 
-    const followTotal =
-      userFollows.functions.length +
-      userFollows.organisations.length +
-      userFollows.peopleAndNames.length +
-      userFollows.meta.length;
+    const followTotal = getUserFollowsTotal(userFollows);
     if (followTotal == 0) {
       await session.sendMessage(noDataText);
       return;
@@ -255,11 +288,7 @@ export const unfollowFromStr = async (
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
 
-    const followTotal =
-      userFollows.functions.length +
-      userFollows.organisations.length +
-      userFollows.peopleAndNames.length +
-      userFollows.meta.length;
+    const followTotal = getUserFollowsTotal(userFollows);
     if (followTotal == 0) {
       await session.sendMessage(noDataText);
       return false;

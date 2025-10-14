@@ -6,7 +6,7 @@
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
     "lint": "eslint .",
-    "notify" : "tsx notifications/notifyUsers.ts",
+    "notify": "tsx notifications/notifyUsers.ts",
     "lint:fix": "eslint . --fix",
     "test": "jest --config=jest.config.js"
   },
@@ -16,7 +16,7 @@
     "axios": "^1.12.2",
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
-    "emoji-regex": "^10.5.0",
+    "emoji-regex": "^10.6.0",
     "express": "^5.1.0",
     "mongodb": "^6.20.0",
     "mongoose": "^8.19.1",
@@ -25,7 +25,7 @@
     "signal-sdk": "^0.0.6",
     "telegraf": "^4.16.3",
     "tsx": "^4.20.6",
-    "whatsapp-api-js": "^6.1.0"
+    "whatsapp-api-js": "^6.1.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -42,6 +42,6 @@
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.5",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.0"
+    "typescript-eslint": "^8.46.1"
   }
 }
