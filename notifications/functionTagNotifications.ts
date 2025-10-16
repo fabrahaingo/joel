@@ -6,7 +6,7 @@ import User from "../models/User.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkFunctionTag } from "../utils/JORFSearch.utils.ts";
-import umami from "../utils/umami.ts";
+import umami, { UmamiNotificationData } from "../utils/umami.ts";
 import {
   NotificationTask,
   dispatchTasksToMessageApps
@@ -20,6 +20,7 @@ import {
   formatGroupedRecords,
   groupRecordsBy
 } from "./grouping.ts";
+import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
@@ -255,6 +256,14 @@ async function sendTagUpdates(
   );
   if (!messageSent) return false;
 
-  await umami.log("/notification-update-function", messageApp);
+  const notifData: UmamiNotificationData = {
+    message_nb: getSplitTextMessageSize(notification_text, messageApp),
+    updated_follows_nb: tagMap.size,
+    total_records_nb: tagMap
+      .values()
+      .reduce((total: number, value) => total + value.length, 0)
+  };
+
+  await umami.log("/notification-update-function", messageApp, notifData);
   return true;
 }

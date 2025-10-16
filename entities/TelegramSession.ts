@@ -13,7 +13,7 @@ import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import Umami from "../utils/umami.ts";
-const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
+export const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
 const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
 
 export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
@@ -111,7 +111,7 @@ export class TelegramSession implements ISession {
           telegramMessageOptions
         );
       }
-      await session.log({ event: "/message-sent" });
+      await this.log({ event: "/message-sent" });
 
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
@@ -167,7 +167,7 @@ export async function sendTelegramMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await session.log("/telegram-too-many-requests-aborted");
+    await umami.log("/message-fail-too-many-requests-aborted", "Telegram");
     return false;
   }
   const mArr = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
@@ -224,7 +224,7 @@ export async function sendTelegramMessage(
           });
           break;
         case "Too many requests":
-          await umami.log("/telegram-too-many-requests", "Telegram");
+          await umami.log("/message-fail-too-many-requests", "Telegram");
           await new Promise((resolve) =>
             setTimeout(resolve, Math.pow(2, retryNumber) * 1000)
           );

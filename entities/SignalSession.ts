@@ -8,7 +8,7 @@ import Umami from "../utils/umami.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
-const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
+export const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
 const SIGNAL_COOL_DOWN_DELAY_SECONDS = 6;
 
 export const SIGNAL_API_SENDING_CONCURRENCY = 1;
@@ -95,7 +95,7 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
-      await umami.log("/message-sent-signal", "Telegram");
+      await umami.log("/message-sent", "Telegram");
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
