@@ -11,13 +11,12 @@ import {
   cleanPeopleName,
   getJORFSearchLinkPeople
 } from "../utils/JORFSearch.utils.ts";
-import { sendMainMenu } from "../commands/default.ts";
 import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "../utils/notificationDispatch.ts";
 
-const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
+const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
 export async function notifyPeopleUpdates(
   updatedRecords: JORFSearchItem[],
@@ -230,7 +229,7 @@ async function sendPeopleUpdate(
       {
         isConfirmation: false,
         isListing: true,
-        displayName: "all"
+        displayName: "no"
       }
     );
 
@@ -239,7 +238,7 @@ async function sendPeopleUpdate(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    forceNoKeyboard: messageApp === "WhatsApp"
+    separateMenuMessage: true
   };
 
   const messageSent = await sendMessage(
@@ -248,12 +247,8 @@ async function sendPeopleUpdate(
     notification_text,
     messageAppsOptionsApp
   );
-  if (messageApp === "WhatsApp")
-    await sendMainMenu(messageApp, chatId, {
-      externalOptions: messageAppsOptions
-    });
   if (!messageSent) return false;
 
-  await umami.log({ event: "/notification-update-people" });
+  await umami.log("/notification-update-people", messageApp);
   return true;
 }

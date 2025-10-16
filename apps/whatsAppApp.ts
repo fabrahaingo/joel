@@ -1,11 +1,13 @@
 import "dotenv/config";
-import ngrok from "ngrok";
 
 import express from "express";
+import type { Server } from "http";
+
+let server: Server | null = null;
+let shuttingDown = false;
+
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { PostData, ServerMessage } from "whatsapp-api-js/types";
-
-import { ErrorMessages } from "../entities/ErrorMessages.ts";
 
 import { mongodbConnect } from "../db.ts";
 import umami from "../utils/umami.ts";
@@ -22,9 +24,7 @@ const {
   WHATSAPP_APP_SECRET,
   WHATSAPP_VERIFY_TOKEN,
   WHATSAPP_APP_PORT,
-  WHATSAPP_PHONE_ID,
-  NGROK_AUTH_TOKEN,
-  NGROK_DEV_HOOK
+  WHATSAPP_PHONE_ID
 } = process.env;
 
 export function getWhatsAppAPI(): WhatsAppAPI {
@@ -33,7 +33,8 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     WHATSAPP_APP_SECRET === undefined ||
     WHATSAPP_PHONE_ID === undefined
   ) {
-    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+    console.log("Shutting down JOEL WhatsApp bot... \u{1F6A9}");
+    process.exit(0);
   }
 
   return new WhatsAppAPI({
@@ -70,7 +71,7 @@ app.post("/webhook", async (req, res) => {
     if (now - ts > MAX_AGE_SEC) {
       // Acknowledge but skip processing so Meta doesn't retry
       res.sendStatus(200);
-      await umami.log({ event: "/whatsapp-echo-refused" });
+      await umami.log("/whatsapp-echo-refused", "WhatsApp");
       return;
     }
   }
@@ -89,16 +90,55 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
-    console.log(error);
     res.sendStatus(500);
+    console.log(error);
   }
+});
+
+app.get("/", (req, res) => {
+  res.type("text/plain").send("JOEL WH server is running.");
 });
 
 app.get("/webhook", (req, res) => {
   try {
-    res.send(whatsAppAPI.handle_get(req));
+    const {
+      "hub.mode": mode,
+      "hub.verify_token": verifyToken,
+      "hub.challenge": challenge
+    } = req.query as Record<string, string | undefined>;
+
+    if (
+      mode === undefined &&
+      verifyToken === undefined &&
+      challenge === undefined
+    ) {
+      res.type("text/plain").send("JOEL WhatsApp webhook is reachable.");
+      return;
+    }
+
+    const challengeNumber = challenge ? parseInt(challenge) : NaN;
+    if (challenge === undefined || isNaN(challengeNumber)) {
+      res.status(403).send("Forbidden");
+      return;
+    }
+
+    if (mode === "subscribe") {
+      if (
+        typeof verifyToken === "string" &&
+        verifyToken === WHATSAPP_VERIFY_TOKEN
+      ) {
+        console.log("WhatsApp : Successful webhook verification");
+        res.send(challenge);
+        return;
+      } else {
+        res.status(403).send("Forbidden");
+        return;
+      }
+    }
+    res.sendStatus(400);
   } catch (e: unknown) {
     res.sendStatus(e as number);
+    console.log(e);
   }
 });
 
@@ -140,6 +180,8 @@ export function textFromMessage(msg: ServerMessage): string | null {
   }
 }
 
+const warnedPhoneIDs = new Set<string>();
+
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   // Ignore echoes of messages the bot just sent
   if (from === WHATSAPP_PHONE_ID) return;
@@ -148,16 +190,18 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   const msgText = textFromMessage(message);
 
   if (phoneID !== WHATSAPP_PHONE_ID) {
-    if (msgText != null)
-      console.log(
-        `WhatsApp: Message received from non-production number ${phoneID} : ${msgText}`
+    if (!warnedPhoneIDs.has(phoneID)) {
+      warnedPhoneIDs.add(phoneID);
+      console.warn(
+        `WhatsApp: first inbound from non-primary phoneID ${phoneID} (expected ${WHATSAPP_PHONE_ID ?? ""}). Ignoring from now on.`
       );
+    }
     return;
   }
   if (msgText == null) return;
 
   try {
-    await umami.log({ event: "/message-whatsapp" });
+    await umami.log("/message-whatsapp", "WhatsApp");
 
     await whatsAppAPI.markAsRead(phoneID, message.id);
 
@@ -189,33 +233,14 @@ whatsAppAPI.on.sent = ({ phoneID, to }) => {
   //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
 };
 
-app.listen(WHATSAPP_APP_PORT, function () {
+installSignalHandlers();
+
+server = app.listen(WHATSAPP_APP_PORT, function () {
   //console.log(`Example WhatsApp listening at ${String(WHATSAPP_APP_PORT)}`);
 });
 
 await (async function () {
   await mongodbConnect();
-
-  console.log("WhatsApp: Initializing Ngrok tunnel...");
-
-  // Initialise ngrok using the auth token and hostname
-  const url = await ngrok.connect({
-    proto: "http",
-    // Your authtoken if you want your hostname to be the same everytime
-    authtoken: NGROK_AUTH_TOKEN,
-    // Your hostname if you want your hostname to be the same everytime
-    hostname: NGROK_DEV_HOOK,
-    // Your app port
-    addr: WHATSAPP_APP_PORT
-    /*
-         verify_webhook_provider: "whatsapp",
-         verify_webhook_secret: WHATSAPP_VERIFY_TOKEN,
-         verify_webhook: WHATSAPP_GRAPH_API_TOKEN
-         */
-  });
-
-  console.log(`WhatsApp: Listening on url ${url}`);
-  console.log("WhatsApp: Ngrok tunnel initialized!");
 
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
@@ -245,4 +270,45 @@ function newestTimestampSec(data: PostData): number | null {
     }
   }
   return newest;
+}
+
+async function gracefulShutdown(code = 0) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  try {
+    if (server)
+      await new Promise<void>((r) =>
+        server.close(() => {
+          r();
+        })
+      );
+  } catch {
+    /* empty */
+  }
+
+  console.log(`WhatsApp: Graceful shutdown complete with code ${code}`);
+  process.exit(code);
+}
+
+function installSignalHandlers() {
+  const handler = (sig: NodeJS.Signals) => () => gracefulShutdown(0);
+  ["SIGINT", "SIGTERM", "SIGQUIT", "SIGHUP"].forEach((s) =>
+    process.on(s as NodeJS.Signals, handler(s as NodeJS.Signals))
+  );
+
+  process.on("uncaughtException", async (err) => {
+    console.error(err);
+    await gracefulShutdown(1);
+  });
+  process.on("unhandledRejection", async (reason) => {
+    console.error(reason);
+    await gracefulShutdown(1);
+  });
+
+  // Nodemon restarts
+  process.once("SIGUSR2", async () => {
+    await gracefulShutdown(0);
+    process.kill(process.pid, "SIGUSR2");
+  });
 }

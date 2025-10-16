@@ -30,7 +30,7 @@ async function searchOrganisationWikidataId(
   try {
     if (org_name.length == 0) return [];
 
-    await umami.log({ event: "/jorfsearch-request-wikidata-names" });
+    await umami.log("/jorfsearch-request-wikidata-names");
 
     const wikidataIds_raw: WikidataId[] = await axios
       .get<WikiDataAPIResponse>(
@@ -81,7 +81,9 @@ async function askOrganisationSelectionQuestion(
     handleOrganisationSelection,
     {
       context,
-      keyboard: ORGANISATION_SEARCH_KEYBOARD
+      messageOptions: {
+        keyboard: ORGANISATION_SEARCH_KEYBOARD
+      }
     }
   );
 }
@@ -96,7 +98,9 @@ async function askOrganisationSearch(session: ISession): Promise<void> {
     ORGANISATION_SEARCH_PROMPT,
     handleOrganisationSearchAnswer,
     {
-      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+      messageOptions: {
+        keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+      }
     }
   );
 }
@@ -110,7 +114,7 @@ async function handleOrganisationSearchAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau.`,
-      ORGANISATION_SEARCH_KEYBOARD
+      { keyboard: ORGANISATION_SEARCH_KEYBOARD }
     );
     await askOrganisationSearch(session);
     return true;
@@ -141,7 +145,7 @@ async function processOrganisationSearch(
     } else {
       text += `\n\nFormat:\n*Nom de l'organisation*\nou\n*WikidataId de l'organisation*`;
     }
-    await session.sendMessage(text, ORGANISATION_SEARCH_KEYBOARD);
+    await session.sendMessage(text, { keyboard: ORGANISATION_SEARCH_KEYBOARD });
     return;
   }
 
@@ -173,7 +177,7 @@ async function handleSingleOrganisationResult(
     isOrganisationAlreadyFollowed(session.user, organisation.wikidataId)
   ) {
     text += `\n\nVous suivez déjà *${organisation.nom}* ✅`;
-    await session.sendMessage(text, ORGANISATION_SEARCH_KEYBOARD);
+    await session.sendMessage(text, { keyboard: ORGANISATION_SEARCH_KEYBOARD });
     return;
   } else {
     const tempKeyboard: Keyboard = ORGANISATION_SEARCH_KEYBOARD;
@@ -184,7 +188,9 @@ async function handleSingleOrganisationResult(
       handleSingleOrganisationConfirmation,
       {
         context: { organisations: [organisation] },
-        keyboard: tempKeyboard
+        messageOptions: {
+          keyboard: tempKeyboard
+        }
       }
     );
   }
@@ -252,7 +258,7 @@ async function handleOrganisationSelection(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue. 👎\nVeuillez essayer de nouveau la commande.`,
-      ORGANISATION_SEARCH_KEYBOARD
+      { keyboard: ORGANISATION_SEARCH_KEYBOARD }
     );
     await askOrganisationSelectionQuestion(session, context);
     return true;
@@ -267,7 +273,7 @@ async function handleOrganisationSelection(
   if (answers.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(context.organisations.length)}. 👎`,
-      ORGANISATION_SEARCH_KEYBOARD
+      { keyboard: ORGANISATION_SEARCH_KEYBOARD }
     );
     await askOrganisationSelectionQuestion(session, context);
     return true;
@@ -335,10 +341,7 @@ export const followOrganisationsFromWikidataIdStr = async (
 
     if (selectedWikiDataIds.length == 0) {
       const text = `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`;
-      await session.sendMessage(
-        text,
-        session.messageApp !== "WhatsApp" ? tempKeyboard : undefined
-      );
+      await session.sendMessage(text, { keyboard: tempKeyboard });
       return;
     }
 
@@ -382,10 +385,7 @@ export const followOrganisationsFromWikidataIdStr = async (
       else msg += "L'id fourni n'a pas été reconnu. 👎";
       msg += "\nVeuillez essayer de nouveau la commande.";
 
-      await session.sendMessage(
-        msg,
-        session.messageApp !== "WhatsApp" ? tempKeyboard : undefined
-      );
+      await session.sendMessage(msg, { keyboard: tempKeyboard });
       return;
     }
 
@@ -412,7 +412,7 @@ export const followOrganisationsFromWikidataIdStr = async (
         .join("\n")}`;
 
     if (session.messageApp === "Telegram")
-      await session.sendMessage(text, tempKeyboard);
+      await session.sendMessage(text, { keyboard: tempKeyboard });
     else await session.sendMessage(text);
   } catch (error) {
     console.log(error);

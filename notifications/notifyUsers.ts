@@ -73,18 +73,6 @@ await (async () => {
     const JORFAllRecordsFromDate = await getJORFRecordsFromDate(startDate);
 
     if (JORFAllRecordsFromDate.length > 0) {
-      await notifyPeopleUpdates(
-        JORFAllRecordsFromDate,
-        enabledApps,
-        messageAppsOptions
-      );
-
-      await notifyNameMentionUpdates(
-        JORFAllRecordsFromDate,
-        enabledApps,
-        messageAppsOptions
-      );
-
       await notifyFunctionTagsUpdates(
         JORFAllRecordsFromDate,
         enabledApps,
@@ -98,7 +86,19 @@ await (async () => {
       );
     }
 
-    await umami.log({ event: "/notification-process-completed" });
+    await notifyPeopleUpdates(
+      JORFAllRecordsFromDate,
+      enabledApps,
+      messageAppsOptions
+    );
+
+    await notifyNameMentionUpdates(
+      JORFAllRecordsFromDate,
+      enabledApps,
+      messageAppsOptions
+    );
+
+    await umami.log("/notification-process-completed");
 
     process.exit(0);
   } catch (error) {

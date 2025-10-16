@@ -1,6 +1,7 @@
 import { ISession } from "../types.ts";
 import { BotMessages } from "../entities/BotMessages.ts";
 import { processMessage } from "./Commands.ts";
+import { getHelpText } from "./help.ts";
 
 export const startCommand = async (
   session: ISession,
@@ -11,25 +12,13 @@ export const startCommand = async (
   try {
     await session.sendTypingAction();
 
-    const botName = process.env.BOT_NAME;
-
-    let message = BotMessages.START.replace(
-      "{botName}",
-      botName ?? "undefined"
-    );
-
-    message = message.replace(
-      "{LINK_PRIVACY_POLICY}",
-      `[Politique de confidentialité](${BotMessages.URL_PRIVACY_POLICY})`
-    );
-    message = message.replace(
-      "{LINK_GCU}",
-      `[Conditions générales d'utilisation](${BotMessages.URL_GCU})`
-    );
-    await session.sendMessage(message);
-
     // if "Bonjour JOEL ! Suivre ..." or "/start Suivre ..."
-    if (messageSplit.length > 1 && messageSplit[1] !== "") {
+    const commandMsg = messageSplit
+      .slice(1)
+      .map((part) => part.trim())
+      .find((part) => part.length > 0);
+
+    if (commandMsg != null) {
       const commandMsg = messageSplit[1].trim();
       if (commandMsg.toLowerCase().startsWith("suivreo"))
         await session.log({ event: "/start-from-organisation" });
@@ -41,9 +30,16 @@ export const startCommand = async (
       )
         await session.log({ event: "/start-from-people" });
 
+      await session.sendMessage(getHelpText(session), {
+        forceNoKeyboard: true
+      });
+
       await processMessage(session, commandMsg);
     } else {
       //  start classique
+      await session.sendMessage(getHelpText(session), {
+        separateMenuMessage: true
+      });
       await session.log({ event: "/start" });
     }
   } catch (error) {

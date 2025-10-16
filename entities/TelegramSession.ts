@@ -1,13 +1,18 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import { Telegram } from "telegraf";
 import User from "../models/User.ts";
-import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
-import umami from "../utils/umami.ts";
+import {
+  loadUser,
+  MessageSendingOptionsInternal,
+  recordSuccessfulDelivery
+} from "./Session.ts";
+import umami, { UmamiEvent } from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
 import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
+import Umami from "../utils/umami.ts";
 const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
 const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
 
@@ -16,7 +21,7 @@ export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second gl
 const mainMenuKeyboardTelegram: Keyboard = [
   [KEYBOARD_KEYS.PEOPLE_SEARCH.key, KEYBOARD_KEYS.FOLLOWS_LIST.key],
   [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key, KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
-  [KEYBOARD_KEYS.HELP.key]
+  [KEYBOARD_KEYS.STATS.key, KEYBOARD_KEYS.HELP.key]
 ];
 
 export const telegramMessageOptions: ExtraReplyMessage = {
@@ -43,8 +48,6 @@ export class TelegramSession implements ISession {
   isReply: boolean | undefined;
   mainMenuKeyboard: Keyboard;
 
-  log = umami.log;
-
   constructor(telegramBot: Telegram, chatId: string, language_code: string) {
     this.telegramBot = telegramBot;
     this.chatId = chatId;
@@ -67,13 +70,15 @@ export class TelegramSession implements ISession {
     await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
+  async log(args: { event: UmamiEvent }) {
+    await Umami.log(args.event, this.messageApp);
+  }
+
   async sendMessage(
     formattedData: string,
-    keyboard?: Keyboard,
-    options?: {
-      forceNoKeyboard?: boolean;
-    }
+    options?: MessageSendingOptionsInternal
   ): Promise<void> {
+    let keyboard = options?.keyboard;
     if (!options?.forceNoKeyboard) keyboard ??= this.mainMenuKeyboard;
 
     const keyboardFormatted = keyboard?.map((row) =>
@@ -106,7 +111,7 @@ export class TelegramSession implements ISession {
           telegramMessageOptions
         );
       }
-      await umami.log({ event: "/message-sent-telegram" });
+      await session.log({ event: "/message-sent" });
 
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
@@ -162,7 +167,7 @@ export async function sendTelegramMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log({ event: "/telegram-too-many-requests-aborted" });
+    await session.log("/telegram-too-many-requests-aborted");
     return false;
   }
   const mArr = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
@@ -193,7 +198,7 @@ export async function sendTelegramMessage(
         `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
         payload
       );
-      await umami.log({ event: "/message-sent-telegram" });
+      await umami.log("/message-sent", "Telegram");
 
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
@@ -205,21 +210,21 @@ export async function sendTelegramMessage(
       const error = err as AxiosError<TelegramAPIError>;
       switch (error.response?.data.description) {
         case "Forbidden: bot was blocked by the user":
-          await umami.log({ event: "/user-blocked-joel" });
+          await umami.log("/user-blocked-joel", "Telegram");
           await User.updateOne(
             { messageApp: "Telegram", chatId: chatId },
             { $set: { status: "blocked" } }
           );
           break;
         case "Forbidden: user is deactivated":
-          await umami.log({ event: "/user-deactivated" });
+          await umami.log("/user-deactivated", "Telegram");
           await User.deleteOne({
             messageApp: "Telegram",
             chatId: chatId
           });
           break;
         case "Too many requests":
-          await umami.log({ event: "/telegram-too-many-requests" });
+          await umami.log("/telegram-too-many-requests", "Telegram");
           await new Promise((resolve) =>
             setTimeout(resolve, Math.pow(2, retryNumber) * 1000)
           );

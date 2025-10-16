@@ -31,8 +31,9 @@ const SEARCH_PROMPT_KEYBOARD: Keyboard = [
 
 async function askSearchQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, SEARCH_PROMPT_TEXT, handleSearchAnswer, {
-    keyboard:
-      session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
+    messageOptions: {
+      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+    }
   });
 }
 
@@ -45,7 +46,7 @@ async function handleSearchAnswer(
   if (trimmedAnswer.length === 0) {
     await session.sendMessage(
       `Votre réponse n'a pas été reconnue. 👎\n\nVeuillez essayer de nouveau la commande.`,
-      session.messageApp === "WhatsApp" ? undefined : SEARCH_PROMPT_KEYBOARD
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
     );
     await askSearchQuestion(session);
     return true;
@@ -53,6 +54,14 @@ async function handleSearchAnswer(
 
   if (trimmedAnswer.startsWith("/")) {
     return false;
+  }
+
+  if (trimmedAnswer.split(" ").length < 2) {
+    await session.sendMessage(
+      "Saisie incorrecte. Veuillez réessayer:\nFormat : *Prénom Nom*",
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
+    );
+    return true;
   }
 
   await session.sendTypingAction();
@@ -90,7 +99,7 @@ export const fullHistoryCommand = async (
   if (personName.length == 0) {
     await session.sendMessage(
       "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-      SEARCH_PROMPT_KEYBOARD
+      { keyboard: SEARCH_PROMPT_KEYBOARD }
     );
     return;
   }
@@ -106,8 +115,6 @@ export async function searchPersonHistory(
   fromFollow = false
 ): Promise<boolean> {
   try {
-    if (message.split(" ").length < 2) return false;
-
     const personName = message.split(" ").slice(1).join(" ");
 
     let JORFRes_data: JORFSearchItem[] = [];
@@ -122,30 +129,42 @@ export async function searchPersonHistory(
         // Minimum is two words: Prénom + Nom
         await session.sendMessage(
           "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
-          session.messageApp == "Telegram" ? tempKeyboard : undefined
+          { keyboard: tempKeyboard }
         );
         return false;
       }
-
-      let text =
-        "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.";
-
       const prenomNom = personNameSplit.join(" ");
       const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
       if (session.user?.checkFollowedName(nomPrenom)) {
-        text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
-      } else {
-        tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key]);
+        const text = `Vous suivez manuellement *${prenomNom}* ✅`;
+        await session.sendMessage(text);
+        return false;
       }
+
+      const text = `*${personName}* est introuvable au JO !\n\nAssurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.\n\nUtilisez le bouton ci-dessous pour forcer le suivi sur les nominations à venir.`;
+
+      tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key]);
 
       await askFollowUpQuestion(session, text, handleSearchFollowUp, {
         context: {
           prenomNom
         },
-        keyboard: tempKeyboard
+        messageOptions: {
+          keyboard: tempKeyboard
+        }
       });
       return false;
+    }
+    const peopleFromDB: IPeople | null = await People.findOne({
+      nom: JORFRes_data[0].nom,
+      prenom: JORFRes_data[0].prenom
+    });
+    let numberFollowers: number | undefined;
+    if (peopleFromDB != null) {
+      numberFollowers = await User.countDocuments({
+        followedPeople: { $elemMatch: { peopleId: peopleFromDB._id } }
+      });
     }
 
     let text = "";
@@ -154,13 +173,17 @@ export async function searchPersonHistory(
         JORFRes_data.slice(0, 2),
         session.messageApp !== "WhatsApp",
         {
-          isConfirmation: true
+          isConfirmation: true,
+          numberUserFollowing: numberFollowers
         }
       );
     } else {
       text += formatSearchResult(
         JORFRes_data,
-        session.messageApp !== "WhatsApp"
+        session.messageApp !== "WhatsApp",
+        {
+          numberUserFollowing: numberFollowers
+        }
       );
     }
 
@@ -214,7 +237,9 @@ export async function searchPersonHistory(
       context: {
         prenomNom
       },
-      keyboard: tempKeyboard
+      messageOptions: {
+        keyboard: tempKeyboard
+      }
     });
 
     return true;
@@ -306,7 +331,7 @@ export const followCommand = async (
       text += `Vous suivez déjà *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     }
 
-    await session.sendMessage(text, SEARCH_PROMPT_KEYBOARD);
+    await session.sendMessage(text, { keyboard: SEARCH_PROMPT_KEYBOARD });
   } catch (error) {
     console.log(error);
   }

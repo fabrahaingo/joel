@@ -74,11 +74,26 @@ export async function recordSuccessfulDelivery(
   );
 }
 
+export interface MessageSendingOptionsInternal {
+  keyboard?: Keyboard;
+  forceNoKeyboard?: boolean;
+  separateMenuMessage?: boolean;
+}
+
+export interface MessageSendingOptionsExternal {
+  matrixClient?: MatrixClient;
+  signalCli?: SignalCli;
+  whatsAppAPI?: WhatsAppAPI;
+  forceNoKeyboard?: boolean;
+  keyboard?: Keyboard;
+  separateMenuMessage?: boolean;
+}
+
 export async function sendMessage(
   messageApp: MessageApp,
   chatId: string,
   message: string,
-  options?: ExternalMessageOptions
+  options?: MessageSendingOptionsExternal
 ): Promise<boolean> {
   switch (messageApp) {
     case "Matrix":

@@ -24,7 +24,7 @@ export async function callJORFSearchPeople(
   peopleName: string
 ): Promise<JORFSearchItem[]> {
   try {
-    await umami.log({ event: "/jorfsearch-request-people" });
+    await umami.log("/jorfsearch-request-people");
     return await axios
       .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true))
       .then(async (res1: AxiosResponse<JORFSearchResponse>) => {
@@ -36,7 +36,7 @@ export async function callJORFSearchPeople(
         // If the peopleName had nom/prenom inverted or bad formatting:
         // we need to call JORFSearch again with the response url in the correct format
         if (request.res?.responseUrl) {
-          await umami.log({ event: "/jorfsearch-request-people-formatted" });
+          await umami.log("/jorfsearch-request-people-formatted");
           return await axios
             .get<JORFSearchResponse>(
               request.res.responseUrl.endsWith("?format=JSON")
@@ -63,7 +63,7 @@ export async function callJORFSearchDay(
   day: Date
 ): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-date" });
+    await umami.log("/jorfsearch-request-date");
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
@@ -87,7 +87,7 @@ export async function callJORFSearchTag(
   tagValue?: string
 ): Promise<JORFSearchItem[]> {
   try {
-    await umami.log({ event: "/jorfsearch-request-tag" });
+    await umami.log("/jorfsearch-request-tag");
     return await axios
       .get<JORFSearchResponse>(
         getJORFSearchLinkFunctionTag(tag, true, tagValue)
@@ -106,7 +106,7 @@ export async function callJORFSearchOrganisation(
   wikiId: WikidataId
 ): Promise<JORFSearchItem[]> {
   try {
-    await umami.log({ event: "/jorfsearch-request-organisation" });
+    await umami.log("/jorfsearch-request-organisation");
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
@@ -127,7 +127,7 @@ export async function callJORFSearchReference(
   reference: string
 ): Promise<JORFSearchItem[]> {
   try {
-    await umami.log({ event: "/jorfsearch-request-reference" });
+    await umami.log("/jorfsearch-request-reference");
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
@@ -150,7 +150,7 @@ async function JORFSearchCallPublications(
   currentDay: string
 ): Promise<JORFSearchPublication[]> {
   try {
-    await umami.log({ event: "/jorfsearch-request-meta" });
+    await umami.log("/jorfsearch-request-meta");
     return await axios
       .get<JORFSearchResponseMeta>(
         `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`
@@ -242,4 +242,29 @@ export function getJORFSearchLinkOrganisation(
 
 export function getJORFTextLink(source_id: string) {
   return encodeURI(`https://bodata.steinertriples.ch/${source_id}/redirect`);
+}
+
+export function extractJORFTextId(url: string): string {
+  const parts = url.split("?");
+  const path = parts[0];
+  const queryString = parts[1];
+
+  if (!queryString) {
+    const pathParts = path.split("/");
+    const lastNonEmptyPart = pathParts.filter((part) => part !== "").pop();
+    return lastNonEmptyPart ?? "";
+  }
+
+  const queryParams = queryString.split("&");
+  for (const param of queryParams) {
+    const [key, value] = param.split("=");
+    if (key === "cidTexte") {
+      return value;
+    }
+  }
+
+  // Fallback in case 'cidTexte' is not found in the query string
+  const pathParts = path.split("/");
+  const lastNonEmptyPart = pathParts.filter((part) => part !== "").pop();
+  return lastNonEmptyPart ?? "";
 }

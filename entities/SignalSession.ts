@@ -1,9 +1,10 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
-import umami from "../utils/umami.ts";
+import umami, { UmamiEvent } from "../utils/umami.ts";
 import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
+import Umami from "../utils/umami.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
@@ -20,8 +21,6 @@ export class SignalSession implements ISession {
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
-
-  log = umami.log;
 
   constructor(
     signalCli: SignalCli,
@@ -48,6 +47,10 @@ export class SignalSession implements ISession {
   async sendTypingAction() {
     await Promise.resolve();
     // TODO: check implementation in Signal
+  }
+
+  async log(args: { event: UmamiEvent }) {
+    await Umami.log(args.event, this.messageApp);
   }
 
   async sendMessage(formattedData: string): Promise<void> {
@@ -92,7 +95,7 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
-      await umami.log({ event: "/message-sent-signal" });
+      await umami.log("/message-sent-signal", "Telegram");
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>

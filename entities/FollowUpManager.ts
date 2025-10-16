@@ -1,8 +1,8 @@
 import { ISession } from "../types.ts";
-import { Keyboard } from "./Keyboard.ts";
+import { MessageSendingOptionsInternal } from "./Session.ts";
 
 function sessionKey(session: ISession): string {
-  return `${session.messageApp}:${session.chatId}`;
+  return `${session.messageApp}:${String(session.chatId)}`;
 }
 
 type FollowUpHandler = (
@@ -14,7 +14,7 @@ type FollowUpHandler = (
 interface FollowUpRecord {
   handler: FollowUpHandler;
   context: unknown;
-  keyboard?: Keyboard;
+  messageOptions?: MessageSendingOptionsInternal;
 }
 
 const followUps = new Map<string, FollowUpRecord>();
@@ -42,7 +42,7 @@ export async function handleFollowUpMessage(
 
 interface AskFollowUpOptions<Context> {
   context?: Context;
-  keyboard?: Keyboard;
+  messageOptions?: MessageSendingOptionsInternal;
 }
 
 export async function askFollowUpQuestion<Context = unknown>(
@@ -59,11 +59,12 @@ export async function askFollowUpQuestion<Context = unknown>(
   followUps.set(key, {
     handler: handler as FollowUpHandler,
     context: options.context,
-    keyboard: options.keyboard
+    messageOptions: options.messageOptions
   });
 
   try {
-    if (question !== "") await session.sendMessage(question, options.keyboard);
+    if (question !== "")
+      await session.sendMessage(question, options.messageOptions);
   } catch (error) {
     followUps.delete(key);
     throw error;
