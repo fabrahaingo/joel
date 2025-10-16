@@ -103,7 +103,7 @@ export async function sendMessage(
         options.matrixClient,
         chatId,
         message,
-        options.keyboard
+        options
       );
 
     case "Signal":

@@ -170,7 +170,7 @@ const { WHATSAPP_PHONE_ID } = process.env;
 
 export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
-  userPhoneId: string,
+  userPhoneIdStr: string,
   message: string,
   options?: MessageSendingOptionsInternal,
   retryNumber = 0
@@ -231,20 +231,20 @@ export async function sendWhatsAppMessage(
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneId,
+            userPhoneIdStr,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         } else {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneId,
+            userPhoneIdStr,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         }
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
-          userPhoneId,
+          userPhoneIdStr,
           new Text(mArr[i])
         );
       }
@@ -262,7 +262,7 @@ export async function sendWhatsAppMessage(
             );
             return await sendWhatsAppMessage(
               whatsAppAPI,
-              userPhoneId,
+              userPhoneIdStr,
               mArr.slice(i).join("\n"),
               options,
               retryNumber + 1
@@ -271,7 +271,7 @@ export async function sendWhatsAppMessage(
           case 131008: // user blocked the bot
             await umami.log("/user-blocked-joel", "WhatsApp");
             await User.updateOne(
-              { messageApp: "WhatsApp", chatId: userPhoneId },
+              { messageApp: "WhatsApp", chatId: userPhoneIdStr },
               { $set: { status: "blocked" } }
             );
             break;
@@ -280,7 +280,7 @@ export async function sendWhatsAppMessage(
             await umami.log("/user-deactivated", "WhatsApp");
             await User.deleteOne({
               messageApp: "WhatsApp",
-              chatId: userPhoneId
+              chatId: userPhoneIdStr
             });
             break;
           default:
@@ -337,7 +337,7 @@ export async function sendWhatsAppMessage(
     console.log(error);
     return false;
   }
-  await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneId);
+  await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneIdStr);
   return true;
 }
 

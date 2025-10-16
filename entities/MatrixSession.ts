@@ -1,7 +1,11 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
-import umami from "../utils/umami.ts";
+import {
+  loadUser,
+  MessageSendingOptionsInternal,
+  recordSuccessfulDelivery
+} from "./Session.ts";
+import umami, { UmamiEvent } from "../utils/umami.ts";
 import {
   markdown2html,
   markdown2plainText,
@@ -9,6 +13,7 @@ import {
 } from "../utils/text.utils.ts";
 import { MatrixClient, MatrixError } from "matrix-bot-sdk";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
+import Umami from "../utils/umami.ts";
 
 const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
 const MATRIX_COOL_DOWN_DELAY_SECONDS = 1;
@@ -28,8 +33,6 @@ export class MatrixSession implements ISession {
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
   mainMenuKeyboard: Keyboard;
-
-  log = umami.log;
 
   constructor(
     matrixClient: MatrixClient,
@@ -58,18 +61,18 @@ export class MatrixSession implements ISession {
     //await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
+  async log(args: { event: UmamiEvent }) {
+    await Umami.log(args.event, this.messageApp);
+  }
+
   async sendMessage(
     formattedData: string,
-    keyboard?: Keyboard,
-    options?: {
-      forceNoKeyboard?: boolean;
-    }
+    options?: MessageSendingOptionsInternal
   ): Promise<void> {
     await sendMatrixMessage(
       this.matrixClient,
       this.chatId,
       formattedData,
-      keyboard,
       options,
       this.roomId
     );
@@ -80,17 +83,15 @@ export async function sendMatrixMessage(
   matrixClient: MatrixClient,
   chatId: string,
   message: string,
-  keyboard?: Keyboard,
-  options?: {
-    forceNoKeyboard?: boolean;
-  },
+  options?: MessageSendingOptionsInternal,
   roomId?: string,
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log({ event: "/matrix-too-many-requests-aborted" });
+    await umami.log("/message-fail-too-many-requests-aborted", "Matrix");
     return false;
   } // give up after 5 retries
+  let keyboard = options?.keyboard;
   if (!options?.forceNoKeyboard) keyboard ??= mainMenuKeyboardMatrix;
 
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
@@ -110,7 +111,7 @@ export async function sendMatrixMessage(
         formatted_body: markdown2html(mArr[i])
       });
 
-      await umami.log({ event: "/message-sent-matrix" });
+      await umami.log("/message-sent", "Matrix");
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
@@ -129,7 +130,7 @@ export async function sendMatrixMessage(
     const mError = error as MatrixError;
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
-        await umami.log({ event: "/matrix-too-many-requests" });
+        await umami.log("/message-fail-too-many-requests", "Matrix");
         const retryAfterMs =
           mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
         await new Promise((resolve) =>
@@ -139,14 +140,13 @@ export async function sendMatrixMessage(
           matrixClient,
           chatId,
           mArr.slice(i).join("\n"),
-          keyboard,
           options,
           roomId,
           retryNumber + 1
         );
       }
       case "M_FORBIDDEN":
-        await umami.log({ event: "/user-blocked-joel" });
+        await umami.log("/user-blocked-joel", "Matrix");
         await User.updateOne(
           { messageApp: "Matrix", chatId: chatId },
           { $set: { status: "blocked" } }
@@ -195,7 +195,7 @@ async function sendMatrixReactions(
     const mError = error as MatrixError;
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
-        await umami.log({ event: "/matrix-too-many-requests" });
+        await umami.log("/message-fail-too-many-requests", "Matrix");
         const retryAfterMs =
           mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
         await new Promise((resolve) =>

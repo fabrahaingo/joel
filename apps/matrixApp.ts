@@ -83,7 +83,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     if (event.sender === (await matrixClient.getUserId())) return;
 
     try {
-      await umami.log({ event: "/message-matrix" });
+      await umami.log("/message-received", "Matrix");
 
       await matrixClient.sendReadReceipt(roomId, event.event_id);
 
