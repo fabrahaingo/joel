@@ -123,5 +123,5 @@ export async function sendMessage(
         options
       );
   }
-  return false;
+  throw new Error("Unknown messageApp : ", messageApp);
 }
