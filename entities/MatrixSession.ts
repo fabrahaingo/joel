@@ -12,7 +12,7 @@ import {
   splitText
 } from "../utils/text.utils.ts";
 import { MatrixClient, MatrixError } from "matrix-bot-sdk";
-import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
+import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import Umami from "../utils/umami.ts";
 
 const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
@@ -21,6 +21,17 @@ const MATRIX_COOL_DOWN_DELAY_SECONDS = 1;
 export const MATRIX_API_SENDING_CONCURRENCY = 1;
 
 const mainMenuKeyboardMatrix: Keyboard = [[KEYBOARD_KEYS.MAIN_MENU.key]];
+
+const fullMenuKeyboard: KeyboardKey[] = [
+  KEYBOARD_KEYS.PEOPLE_SEARCH.key,
+  KEYBOARD_KEYS.ORGANISATION_FOLLOW.key,
+  KEYBOARD_KEYS.FUNCTION_FOLLOW.key,
+  KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH_LONG_NO_KEYBOARD.key,
+  KEYBOARD_KEYS.REFERENCE_FOLLOW_NO_KEYBOARD.key,
+  KEYBOARD_KEYS.FOLLOWS_LIST.key,
+  KEYBOARD_KEYS.STATS.key,
+  KEYBOARD_KEYS.HELP.key
+];
 
 const MatrixMessageApp: MessageApp = "Matrix";
 
@@ -91,8 +102,6 @@ export async function sendMatrixMessage(
     await umami.log("/message-fail-too-many-requests-aborted", "Matrix");
     return false;
   } // give up after 5 retries
-  let keyboard = options?.keyboard;
-  if (!options?.forceNoKeyboard) keyboard ??= mainMenuKeyboardMatrix;
 
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
@@ -118,14 +127,19 @@ export async function sendMatrixMessage(
         setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
-    if (keyboard != null)
+    if (options?.keyboard != null)
       await sendMatrixReactions(
         matrixClient,
         chatId,
-        keyboard.flat().map((k) => k.text),
-        roomId,
-        promptId
+        options.keyboard.flat().map((k) => k.text),
+        promptId,
+        roomId
       );
+    else if (!options?.forceNoKeyboard)
+      await sendPollMenu(matrixClient, roomId, {
+        title: KEYBOARD_KEYS.MAIN_MENU.key.text,
+        options: fullMenuKeyboard.map((k) => ({ text: k.text }))
+      });
   } catch (error) {
     const mError = error as MatrixError;
     switch (mError.errcode) {
@@ -162,18 +176,75 @@ export async function sendMatrixMessage(
   return true;
 }
 
+interface PollMenu {
+  title: string;
+  options: { text: string }[];
+}
+
+export async function sendPollMenu(
+  matrixClient: MatrixClient,
+  roomId: string,
+  pollMenu: PollMenu
+): Promise<boolean> {
+  //const body = fallbackBody(pollMenu.title, pollMenu.options);
+
+  const content = {
+    //"org.matrix.msc1767.text": body,
+    "org.matrix.msc3381.poll.start": {
+      answers: pollMenu.options.map((o) => ({
+        id: o.text,
+        "org.matrix.msc1767.text": o.text
+      })),
+      kind: "org.matrix.msc3381.poll.undisclosed",
+      max_selections: 1,
+      question: {
+        "org.matrix.msc1767.text": pollMenu.title
+      }
+    }
+  };
+
+  await matrixClient.sendEvent(
+    roomId,
+    "org.matrix.msc3381.poll.start",
+    content
+  );
+  await umami.log("/message-sent", "Matrix");
+
+  return true;
+}
+
+export async function closePollMenu(
+  matrixClient: MatrixClient,
+  roomId: string,
+  event_id: string
+): Promise<boolean> {
+  const content = {
+    "org.matrix.msc3381.poll.end": {},
+    "m.relates_to": {
+      event_id: event_id,
+      rel_type: "m.reference"
+    },
+    "org.matrix.msc1767.text": "Menu non disponible"
+  };
+  await matrixClient.sendEvent(roomId, "org.matrix.msc3381.poll.end", content);
+
+  return true;
+}
+
 async function sendMatrixReactions(
   matrixClient: MatrixClient,
   chatId: string,
   reactions: string[],
-  event_id: string,
+  eventId: string,
   roomId?: string,
-  idx = 0,
   retryNumber = 0
 ): Promise<boolean> {
-  if (retryNumber > 5) return false;
+  if (retryNumber > 5) {
+    await umami.log("/message-fail-too-many-requests-aborted", "Matrix");
+    return false;
+  }
 
-  let i = idx;
+  let i = 0;
   try {
     roomId ??= await findUserDMRoomId(matrixClient, chatId);
     if (!roomId) {
@@ -185,7 +256,7 @@ async function sendMatrixReactions(
       const content = {
         "m.relates_to": {
           rel_type: "m.annotation",
-          event_id,
+          event_id: eventId,
           key: reactions[i]
         }
       };
@@ -204,10 +275,9 @@ async function sendMatrixReactions(
         return await sendMatrixReactions(
           matrixClient,
           chatId,
-          reactions,
-          event_id,
+          reactions.slice(i),
+          eventId,
           roomId,
-          idx,
           retryNumber + 1
         );
       }

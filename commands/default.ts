@@ -37,10 +37,10 @@ export async function sendMainMenu(
 
     let keyboard: Keyboard | undefined = undefined;
     switch (messageApp) {
+      case "Matrix":
       case "Telegram":
       case "WhatsApp":
         break;
-      case "Matrix":
       case "Signal":
         keyboard = [
           [KEYBOARD_KEYS.FOLLOWS_LIST.key],

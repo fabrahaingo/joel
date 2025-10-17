@@ -41,11 +41,11 @@ export async function processMessage(
 
   // Look through all keyboard keys to find a match
   for (const keyboardKey of Object.values(KEYBOARD_KEYS)) {
-    if (keyboardKey.action === undefined) continue;
     const buttonText = keyboardKey.key.text;
 
     if (firstLine === buttonText) {
       clearFollowUp(session);
+      if (keyboardKey.action === undefined) continue;
       await keyboardKey.action(session, cleanMsg);
       return;
     }

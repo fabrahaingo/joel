@@ -5,7 +5,7 @@ import {
   RustSdkCryptoStorageProvider,
   AutojoinRoomsMixin
 } from "matrix-bot-sdk";
-import { MatrixSession } from "../entities/MatrixSession.ts";
+import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
@@ -38,13 +38,17 @@ matrixClient.on("room.join", (_roomId: string, _event: unknown) => {
 });
  */
 
+let serverUserId: string | undefined;
+
 await (async function () {
   await mongodbConnect();
+
   // Now that everything is set up, start the bot. This will start the sync loop and run until killed.
-  await matrixClient.start().then(() => {
-    console.log(`Matrix: JOEL started successfully \u{2705}`);
-  });
-})();
+  await matrixClient.start();
+  serverUserId = await matrixClient.getUserId();
+})().then(() => {
+  console.log(`Matrix: JOEL started successfully \u{2705}`);
+});
 
 interface MatrixRoomEvent {
   type: string;
@@ -53,22 +57,36 @@ interface MatrixRoomEvent {
   content: {
     body?: string;
     "m.relates_to"?: {
-      key: string;
+      rel_type: string;
+      event_id?: string;
+      key?: string;
+      "m.in_reply_to"?: { event_id: string };
     };
+    "org.matrix.msc3381.poll.response": { answers: string[] };
   };
 }
 
 // This is the command handler we registered a few lines up
 function handleCommand(roomId: string, event: MatrixRoomEvent) {
   void (async () => {
+    // ignore message from itself
+    if (event.sender === serverUserId) return;
+
     let msgText: string | undefined;
     switch (event.type) {
       case "m.room.message":
         msgText = event.content.body;
         break;
+
       case "m.reaction":
         msgText = event.content["m.relates_to"]?.key;
         break;
+
+      case "org.matrix.msc3381.poll.response": {
+        const eventId = event.content["m.relates_to"]?.event_id;
+        if (eventId != null) await closePollMenu(matrixClient, roomId, eventId);
+        msgText = event.content["org.matrix.msc3381.poll.response"].answers[0];
+      }
     }
     if (msgText == null) return;
 
@@ -79,8 +97,6 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
       await matrixClient.sendReadReceipt(roomId, event.event_id);
       return;
     }
-
-    if (event.sender === (await matrixClient.getUserId())) return;
 
     try {
       await umami.log("/message-received", "Matrix");
