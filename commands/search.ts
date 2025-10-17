@@ -121,9 +121,12 @@ export async function searchPersonHistory(
     if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
     const nbRecords = JORFRes_data.length;
 
-    const tempKeyboard: Keyboard = [];
-
     if (nbRecords == 0) {
+      const tempKeyboard: Keyboard = [
+        [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
+        [KEYBOARD_KEYS.MAIN_MENU.key]
+      ];
+
       const personNameSplit = personName.split(" ");
       if (personNameSplit.length < 2) {
         // Minimum is two words: Prénom + Nom
@@ -156,6 +159,8 @@ export async function searchPersonHistory(
       });
       return false;
     }
+    const tempKeyboard: Keyboard = [];
+
     const peopleFromDB: IPeople | null = await People.findOne({
       nom: JORFRes_data[0].nom,
       prenom: JORFRes_data[0].prenom
