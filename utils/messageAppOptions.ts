@@ -84,12 +84,16 @@ export async function resolveExternalMessageOptions(
     const storageProvider = new SimpleFsStorageProvider("matrix-bot.json");
     const cryptoProvider = new RustSdkCryptoStorageProvider("matrix-crypto");
 
-    resolved.matrixClient = new MatrixClient(
+    const matrixClient = new MatrixClient(
       "https://" + MATRIX_HOME_URL,
       MATRIX_BOT_TOKEN,
       storageProvider,
       cryptoProvider
     );
+
+    // Ensure E2EE is initialized for scripts (like notifyUsers) that send to encrypted rooms
+    await matrixClient.start();
+    resolved.matrixClient = matrixClient;
   }
 
   return resolved;
