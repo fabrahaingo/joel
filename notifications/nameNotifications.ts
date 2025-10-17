@@ -199,7 +199,7 @@ async function sendNameMentionUpdates(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: true
+    separateMenuMessage: messageApp === "WhatsApp"
   };
 
   const messageSent = await sendMessage(

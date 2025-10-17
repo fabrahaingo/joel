@@ -245,7 +245,7 @@ async function sendTagUpdates(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: true
+    separateMenuMessage: messageApp === "WhatsApp"
   };
 
   const messageSent = await sendMessage(

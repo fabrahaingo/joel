@@ -34,13 +34,18 @@ export async function sendMainMenu(
 
   try {
     let message = MAIN_MENU_MESSAGE;
+    let separateMenuMessage = undefined;
 
     let keyboard: Keyboard | undefined = undefined;
     switch (messageApp) {
       case "Matrix":
+        separateMenuMessage = true;
+        break;
+
       case "Telegram":
       case "WhatsApp":
         break;
+
       case "Signal":
         keyboard = [
           [KEYBOARD_KEYS.FOLLOWS_LIST.key],
@@ -54,7 +59,8 @@ export async function sendMainMenu(
     else if (options.externalOptions != null)
       await sendMessage(messageApp, chatId, message, {
         ...options.externalOptions,
-        keyboard
+        keyboard,
+        separateMenuMessage
       });
   } catch (error) {
     console.log(error);

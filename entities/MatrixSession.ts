@@ -102,6 +102,8 @@ export async function sendMatrixMessage(
     await umami.log("/message-fail-too-many-requests-aborted", "Matrix");
     return false;
   } // give up after 5 retries
+  let keyboard = options?.keyboard;
+  if (!options?.forceNoKeyboard) keyboard ??= mainMenuKeyboardMatrix;
 
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
@@ -127,19 +129,19 @@ export async function sendMatrixMessage(
         setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
-    if (options?.keyboard != null)
-      await sendMatrixReactions(
-        matrixClient,
-        chatId,
-        options.keyboard.flat().map((k) => k.text),
-        promptId,
-        roomId
-      );
-    else if (!options?.forceNoKeyboard)
+    if (options?.separateMenuMessage)
       await sendPollMenu(matrixClient, roomId, {
         title: KEYBOARD_KEYS.MAIN_MENU.key.text,
         options: fullMenuKeyboard.map((k) => ({ text: k.text }))
       });
+    else if (keyboard != null)
+      await sendMatrixReactions(
+        matrixClient,
+        chatId,
+        keyboard.flat().map((k) => k.text),
+        promptId,
+        roomId
+      );
   } catch (error) {
     const mError = error as MatrixError;
     switch (mError.errcode) {

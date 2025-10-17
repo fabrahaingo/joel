@@ -253,7 +253,7 @@ async function sendOrganisationUpdate(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: true
+    separateMenuMessage: messageApp === "WhatsApp"
   };
 
   const messageSent = await sendMessage(
