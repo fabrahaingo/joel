@@ -55,7 +55,10 @@ export async function sendMainMenu(
         message += "\n\n" + TEXT_COMMANDS_MENU;
     }
     if (options.session != null)
-      await options.session.sendMessage(message, { keyboard });
+      await options.session.sendMessage(message, {
+        keyboard,
+        separateMenuMessage
+      });
     else if (options.externalOptions != null)
       await sendMessage(messageApp, chatId, message, {
         ...options.externalOptions,
