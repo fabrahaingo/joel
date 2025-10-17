@@ -10,6 +10,7 @@ export interface FormatSearchResultOptions {
   omitOrganisationNames?: boolean;
   omitCabinet?: boolean;
   omitReference?: boolean;
+  numberUserFollowing?: number;
 }
 
 function addPoste(
@@ -25,10 +26,11 @@ function addPoste(
           (s) => s === elem.grade
         )
       )
-        message += ` *de cabinet*`;
+        message += ` *de cabinet*\n`;
+      else message += `\n`;
+
       if (elem.cabinet && !options?.omitCabinet)
         message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
-      else message += `\n`;
     } else {
       message += `👉 au grade de *${elem.grade}*`;
       if (elem.ordre_merite) {
@@ -41,10 +43,8 @@ function addPoste(
       if (elem.nomme_par) message += `🏛️ par le *${elem.nomme_par}*\n`;
     }
   } else if (elem.armee_grade) {
-    if (elem.type_ordre == "nomination") {
+    if (elem.type_ordre == "nomination" || elem.type_ordre == "promotion") {
       message += `👉 au grade de *${elem.armee_grade}*`;
-    } else if (elem.type_ordre == "promotion") {
-      message += `👉 au grade de *${elem.armee_grade}* (TA)`;
     }
     if (elem.armee === "réserve") {
       message += ` de réserve`;
@@ -99,6 +99,15 @@ export function formatSearchResult(
     const prenomNom = `${elem.prenom} ${elem.nom}`;
     const url = getJORFSearchLinkPeople(prenomNom);
 
+    const numberFollowStr =
+      options?.numberUserFollowing && options.numberUserFollowing > 0
+        ? ` (suivi par ${String(options.numberUserFollowing)} utilisateur${options.numberUserFollowing > 1 ? "s" : ""})`
+        : "";
+
+    const prenomNomLinkWithFollowers = markdownLink
+      ? `[${prenomNom}](${url})${numberFollowStr}`
+      : `*${prenomNom}*${numberFollowStr}\n${url}`;
+
     const prenomNomLink = markdownLink
       ? `[${prenomNom}](${url})`
       : `*${prenomNom}*\n${url}`;
@@ -106,13 +115,13 @@ export function formatSearchResult(
     if (result.indexOf(elem) == 0) {
       if (options?.isConfirmation) {
         if (result.length === 1)
-          message += `Voici la dernière information que nous avons sur ${prenomNomLink}\n\n`;
+          message += `Voici la dernière information que nous avons sur ${prenomNomLinkWithFollowers}\n\n`;
         else
-          message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLink}\n\n`;
+          message += `Voici les ${String(result.length)} dernières informations que nous avons sur ${prenomNomLinkWithFollowers}\n\n`;
       } else if (!options?.isListing) {
-        message += `Voici la liste des postes connus pour ${prenomNomLink}\n\n`;
+        message += `Voici la liste des postes connus pour ${prenomNomLinkWithFollowers}\n\n`;
       } else if (options.displayName === "first") {
-        message += `🕵️ ${prenomNomLink}\n\n`;
+        message += `🕵️ ${prenomNomLinkWithFollowers}\n\n`;
       }
     }
     if (options?.displayName === "all") {

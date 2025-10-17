@@ -121,9 +121,12 @@ export async function searchPersonHistory(
     if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
     const nbRecords = JORFRes_data.length;
 
-    const tempKeyboard: Keyboard = [];
-
     if (nbRecords == 0) {
+      const tempKeyboard: Keyboard = [
+        [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
+        [KEYBOARD_KEYS.MAIN_MENU.key]
+      ];
+
       const personNameSplit = personName.split(" ");
       if (personNameSplit.length < 2) {
         // Minimum is two words: Prénom + Nom
@@ -133,18 +136,18 @@ export async function searchPersonHistory(
         );
         return false;
       }
-
-      let text =
-        "Personne introuvable, assurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.";
-
       const prenomNom = personNameSplit.join(" ");
       const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
       if (session.user?.checkFollowedName(nomPrenom)) {
-        text += `\n\nVous suivez manuellement *${prenomNom}* ✅`;
-      } else {
-        tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key]);
+        const text = `Vous suivez manuellement *${prenomNom}* ✅`;
+        await session.sendMessage(text);
+        return false;
       }
+
+      const text = `*${personName}* est introuvable au JO !\n\nAssurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.\n\nUtilisez le bouton ci-dessous pour forcer le suivi sur les nominations à venir.`;
+
+      tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key]);
 
       await askFollowUpQuestion(session, text, handleSearchFollowUp, {
         context: {
@@ -156,6 +159,18 @@ export async function searchPersonHistory(
       });
       return false;
     }
+    const tempKeyboard: Keyboard = [];
+
+    const peopleFromDB: IPeople | null = await People.findOne({
+      nom: JORFRes_data[0].nom,
+      prenom: JORFRes_data[0].prenom
+    });
+    let numberFollowers: number | undefined;
+    if (peopleFromDB != null) {
+      numberFollowers = await User.countDocuments({
+        followedPeople: { $elemMatch: { peopleId: peopleFromDB._id } }
+      });
+    }
 
     let text = "";
     if (historyType === "latest") {
@@ -163,13 +178,17 @@ export async function searchPersonHistory(
         JORFRes_data.slice(0, 2),
         session.messageApp !== "WhatsApp",
         {
-          isConfirmation: true
+          isConfirmation: true,
+          numberUserFollowing: numberFollowers
         }
       );
     } else {
       text += formatSearchResult(
         JORFRes_data,
-        session.messageApp !== "WhatsApp"
+        session.messageApp !== "WhatsApp",
+        {
+          numberUserFollowing: numberFollowers
+        }
       );
     }
 

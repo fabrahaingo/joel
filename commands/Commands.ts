@@ -28,6 +28,7 @@ import {
   handleFollowUpMessage
 } from "../entities/FollowUpManager.ts";
 import { buildInfoCommand } from "./help.ts";
+import { exportCommand, importCommand } from "./importExport.ts";
 
 export async function processMessage(
   session: ISession,
@@ -40,11 +41,11 @@ export async function processMessage(
 
   // Look through all keyboard keys to find a match
   for (const keyboardKey of Object.values(KEYBOARD_KEYS)) {
-    if (keyboardKey.action === undefined) continue;
     const buttonText = keyboardKey.key.text;
 
     if (firstLine === buttonText) {
       clearFollowUp(session);
+      if (keyboardKey.action === undefined) continue;
       await keyboardKey.action(session, cleanMsg);
       return;
     }
@@ -197,6 +198,14 @@ export const commands: CommandType[] = [
   {
     regex: /^\/supprimerCompte|supprimerCompte/i,
     action: deleteProfileCommand
+  },
+  {
+    regex: /^\/export$|^Exporter$|^Export$/i,
+    action: exportCommand
+  },
+  {
+    regex: /^\/import$|^Importer$|^Import$/i,
+    action: importCommand
   },
   {
     regex: /^\/build|build/i,
