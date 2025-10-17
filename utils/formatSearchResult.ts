@@ -27,9 +27,10 @@ function addPoste(
         )
       )
         message += ` *de cabinet*\n`;
+      else message += `\n`;
+
       if (elem.cabinet && !options?.omitCabinet)
         message += `🏛️ Cabinet du *${elem.cabinet}*\n`;
-      else message += `\n`;
     } else {
       message += `👉 au grade de *${elem.grade}*`;
       if (elem.ordre_merite) {
@@ -42,10 +43,8 @@ function addPoste(
       if (elem.nomme_par) message += `🏛️ par le *${elem.nomme_par}*\n`;
     }
   } else if (elem.armee_grade) {
-    if (elem.type_ordre == "nomination") {
+    if (elem.type_ordre == "nomination" || elem.type_ordre == "promotion") {
       message += `👉 au grade de *${elem.armee_grade}*`;
-    } else if (elem.type_ordre == "promotion") {
-      message += `👉 au grade de *${elem.armee_grade}* (TA)`;
     }
     if (elem.armee === "réserve") {
       message += ` de réserve`;
