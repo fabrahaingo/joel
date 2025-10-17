@@ -1,7 +1,8 @@
 {
   "type": "module",
   "scripts": {
-    "start": "concurrently \"npm run start-tg\" \"npm run start-wh\"",
+    "start": "concurrently \"npm run start-tg\" \"npm run start-wh\" \"npm run start-mx\"",
+    "start-mx": "tsx apps/matrixApp.ts",
     "start-tg": "tsx apps/telegramApp.ts",
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
