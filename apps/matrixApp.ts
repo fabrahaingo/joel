@@ -15,8 +15,8 @@ if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined)
   throw new Error("MATRIX env is not set");
 
 // Persist sync token + crypto state
-const storageProvider = new SimpleFsStorageProvider("matrix-bot.json");
-const cryptoProvider = new RustSdkCryptoStorageProvider("matrix-crypto");
+const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
+const cryptoProvider = new RustSdkCryptoStorageProvider("matrix/matrix-crypto");
 
 // Use the access token you got from login or registration above.
 const matrixClient = new MatrixClient(
