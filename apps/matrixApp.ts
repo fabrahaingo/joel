@@ -11,8 +11,11 @@ import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
 
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
-if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined)
-  throw new Error("MATRIX env is not set");
+if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined) {
+  console.log("Matrix env is not set");
+  console.log("Shutting down JOEL Matrix bot... \u{1F6A9}");
+  process.exit(0);
+}
 
 // Persist sync token + crypto state
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
