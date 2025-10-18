@@ -81,8 +81,12 @@ export async function resolveExternalMessageOptions(
     if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined)
       throw new Error("MATRIX env is not set");
 
-    const storageProvider = new SimpleFsStorageProvider("matrix-bot.json");
-    const cryptoProvider = new RustSdkCryptoStorageProvider("matrix-crypto");
+    const storageProvider = new SimpleFsStorageProvider(
+      "matrix/matrix-bot.json"
+    );
+    const cryptoProvider = new RustSdkCryptoStorageProvider(
+      "matrix/matrix-crypto"
+    );
 
     const matrixClient = new MatrixClient(
       "https://" + MATRIX_HOME_URL,
