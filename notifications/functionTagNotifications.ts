@@ -10,7 +10,7 @@ import umami, { UmamiNotificationData } from "../utils/umami.ts";
 import {
   NotificationTask,
   dispatchTasksToMessageApps
-} from "../utils/notificationDispatch.ts";
+} from "./notificationDispatch.ts";
 import {
   LeafFormatter,
   NotificationGroupingConfig,

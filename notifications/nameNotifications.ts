@@ -13,7 +13,7 @@ import {
 import {
   NotificationTask,
   dispatchTasksToMessageApps
-} from "../utils/notificationDispatch.ts";
+} from "./notificationDispatch.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";

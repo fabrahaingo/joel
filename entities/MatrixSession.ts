@@ -15,7 +15,7 @@ import { MatrixClient, MatrixError } from "matrix-bot-sdk";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import Umami from "../utils/umami.ts";
 
-const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
+export const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
 const MATRIX_COOL_DOWN_DELAY_SECONDS = 1;
 
 export const MATRIX_API_SENDING_CONCURRENCY = 1;

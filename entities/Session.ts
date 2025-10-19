@@ -14,6 +14,7 @@ import { sendMatrixMessage } from "./MatrixSession.ts";
 export interface ExternalMessageOptions {
   matrixClient?: MatrixClient;
   signalCli?: SignalCli;
+  telegramBotToken?: string;
   whatsAppAPI?: WhatsAppAPI;
   forceNoKeyboard?: boolean;
   keyboard?: Keyboard;
@@ -81,6 +82,7 @@ export interface MessageSendingOptionsInternal {
 }
 
 export interface MessageSendingOptionsExternal {
+  telegramBotToken?: string;
   matrixClient?: MatrixClient;
   signalCli?: SignalCli;
   whatsAppAPI?: WhatsAppAPI;
@@ -111,7 +113,14 @@ export async function sendMessage(
       return await sendSignalAppMessage(options.signalCli, chatId, message);
 
     case "Telegram":
-      return await sendTelegramMessage(chatId, message, options?.keyboard);
+      if (options?.telegramBotToken == null)
+        throw new Error("telegramBotToken is required");
+      return await sendTelegramMessage(
+        options.telegramBotToken,
+        chatId,
+        message,
+        options.keyboard
+      );
 
     case "WhatsApp":
       if (options?.whatsAppAPI == null)

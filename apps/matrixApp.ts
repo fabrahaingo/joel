@@ -9,6 +9,7 @@ import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
+import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
 if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined) {
@@ -37,7 +38,7 @@ matrixClient.on("room.event", handleCommand);
 /*
 matrixClient.on("room.join", (_roomId: string, _event: unknown) => {
   // The client has been invited to `roomId`
-  // if only an other person in the room: send a welcome message
+  // if only another person in the room: send a welcome message
 });
  */
 
@@ -49,6 +50,8 @@ await (async function () {
   // Now that everything is set up, start the bot. This will start the sync loop and run until killed.
   await matrixClient.start();
   serverUserId = await matrixClient.getUserId();
+
+  startDailyNotificationJobs(["Matrix"], { matrixClient: matrixClient });
 })().then(() => {
   console.log(`Matrix: JOEL started successfully \u{2705}`);
 });

@@ -5,7 +5,7 @@ import { mongodbConnect } from "../db.ts";
 import { SignalSession } from "../entities/SignalSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
-import { startDailyNotificationJob } from "../notifications/notificationScheduler.ts";
+import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
 const { SIGNAL_PHONE_NUMBER, SIGNAL_BAT_PATH } = process.env;
 
@@ -67,9 +67,8 @@ await (async () => {
       })();
     });
 
+    startDailyNotificationJobs(["Signal"], { signalCli: signalCli });
     console.log(`Signal: JOEL started successfully \u{2705}`);
-
-    startDailyNotificationJob("Signal");
 
     // Graceful shutdown
     //await signal.gracefulShutdown();

@@ -1,19 +1,18 @@
 import "dotenv/config";
 import { MessageApp } from "../types.ts";
 import { runNotificationProcess } from "./runNotificationProcess.ts";
+import { ExternalMessageOptions } from "../entities/Session.ts";
 
-const DAILY_NOTIFICATION_TIME_ENV = "DAILY_NOTIFICATION_TIME";
-
-type DailyTime = {
+interface DailyTime {
   hour: number;
   minute: number;
-};
+}
 
 function parseDailyTime(value: string): DailyTime {
-  const match = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
   if (match == null) {
     throw new Error(
-      `Invalid ${DAILY_NOTIFICATION_TIME_ENV} format. Expected HH:MM, received "${value}".`
+      `Invalid time format in DAILY_NOTIFICATION_TIME. Expected HH:MM, received "${value}".`
     );
   }
 
@@ -22,7 +21,7 @@ function parseDailyTime(value: string): DailyTime {
 
   if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
     throw new Error(
-      `${DAILY_NOTIFICATION_TIME_ENV} must be a valid 24h time. Received ${value}.`
+      `DAILY_NOTIFICATION_TIME must be a valid 24h time. Received ${value}.`
     );
   }
 
@@ -39,11 +38,16 @@ function computeNextOccurrence({ hour, minute }: DailyTime): Date {
   return next;
 }
 
-export function startDailyNotificationJob(appType: MessageApp): void {
-  const configuredTime = process.env[DAILY_NOTIFICATION_TIME_ENV];
+export function startDailyNotificationJobs(
+  messageApps: MessageApp[],
+  messageOptions: ExternalMessageOptions
+): void {
+  const configuredTime = process.env.DAILY_NOTIFICATION_TIME;
+
+  const appsToString = messageApps.join(", ");
   if (configuredTime == null) {
     throw new Error(
-      `${DAILY_NOTIFICATION_TIME_ENV} environment variable must be defined to schedule notifications.`
+      `${appsToString}: DAILY_NOTIFICATION_TIME environment variable must be defined to schedule notifications.`
     );
   }
 
@@ -58,7 +62,7 @@ export function startDailyNotificationJob(appType: MessageApp): void {
     setTimeout(async () => {
       if (running) {
         console.warn(
-          `${appType}: notification process is still running when the next schedule fired. Skipping this cycle.`
+          `${appsToString}: notification process is still running when the next schedule fired. Skipping this cycle.`
         );
         scheduleNextRun();
         return;
@@ -66,9 +70,12 @@ export function startDailyNotificationJob(appType: MessageApp): void {
 
       running = true;
       try {
-        await runNotificationProcess(appType);
+        await runNotificationProcess(messageApps, messageOptions);
       } catch (error) {
-        console.error(`${appType}: error during notification process`, error);
+        console.error(
+          `${appsToString}: error during notification process`,
+          error
+        );
       } finally {
         running = false;
         scheduleNextRun();
@@ -76,9 +83,24 @@ export function startDailyNotificationJob(appType: MessageApp): void {
     }, delay);
 
     console.log(
-      `${appType}: next notification process scheduled for ${nextRun.toISOString()}`
+      `${appsToString}: next notification process scheduled for ${nextRun.toISOString()} (in ${formatDuration(delay)}ms)`
     );
   };
 
   scheduleNextRun();
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 0) ms = -ms;
+  const time = {
+    day: Math.floor(ms / 86400000),
+    hour: Math.floor(ms / 3600000) % 24,
+    minute: Math.floor(ms / 60000) % 60,
+    second: Math.floor(ms / 1000) % 60,
+    millisecond: Math.floor(ms) % 1000
+  };
+  return Object.entries(time)
+    .filter((val) => val[1] !== 0)
+    .map(([key, val]) => `${String(val)} ${key}${val !== 1 ? "s" : ""}`)
+    .join(", ");
 }

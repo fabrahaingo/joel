@@ -8,7 +8,6 @@ import {
 } from "./Session.ts";
 import umami, { UmamiEvent } from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
-import { ErrorMessages } from "./ErrorMessages.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
@@ -40,6 +39,7 @@ const TelegramMessageApp: MessageApp = "Telegram";
 
 export class TelegramSession implements ISession {
   messageApp = TelegramMessageApp;
+  botToken: string;
   telegramBot: Telegram;
   language_code: string;
   chatId: string;
@@ -48,7 +48,13 @@ export class TelegramSession implements ISession {
   isReply: boolean | undefined;
   mainMenuKeyboard: Keyboard;
 
-  constructor(telegramBot: Telegram, chatId: string, language_code: string) {
+  constructor(
+    botToken: string,
+    telegramBot: Telegram,
+    chatId: string,
+    language_code: string
+  ) {
+    this.botToken = botToken;
     this.telegramBot = telegramBot;
     this.chatId = chatId;
     this.chatIdTg = parseInt(chatId);
@@ -153,14 +159,13 @@ interface TelegramAPIError {
   description?: string;
 }
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
-
 /*
  Returns whether the message was successfully sent. Two error cases are handled:
  1. If the user blocked the bot, the user is marked as blocked in the database.
  2. If the user is deactivated, the user is deleted from the database.
 */
 export async function sendTelegramMessage(
+  botToken: string,
   chatId: string,
   message: string,
   keyboard?: Keyboard,
@@ -172,9 +177,6 @@ export async function sendTelegramMessage(
   }
   const mArr = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
-  if (BOT_TOKEN === undefined) {
-    throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
-  }
   const chatIdTg = parseInt(chatId);
   let i = 0;
   try {
@@ -195,7 +197,7 @@ export async function sendTelegramMessage(
         };
       }
       await axios.post(
-        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+        `https://api.telegram.org/bot${botToken}/sendMessage`,
         payload
       );
       await umami.log("/message-sent", "Telegram");
@@ -230,6 +232,7 @@ export async function sendTelegramMessage(
           );
           // retry sending the remainder of the message, indicating this is a retry
           return sendTelegramMessage(
+            botToken,
             chatId,
             mArr.slice(i).join("\n"),
             keyboard,

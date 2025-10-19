@@ -9,16 +9,12 @@ import { notifyPeopleUpdates } from "./peopleNotifications.ts";
 import { notifyNameMentionUpdates } from "./nameNotifications.ts";
 import { notifyFunctionTagsUpdates } from "./functionTagNotifications.ts";
 import umami from "../utils/umami.ts";
-import {
-  parseEnabledMessageApps,
-  resolveExternalMessageOptions
-} from "../utils/messageAppOptions.ts";
+import mongoose from "mongoose";
+
 import { ExternalMessageOptions } from "../entities/Session.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 30;
-
-const messageAppOptionsCache = new Map<MessageApp, ExternalMessageOptions>();
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -57,30 +53,47 @@ async function getJORFRecordsFromDate(
     );
 }
 
-async function getMessageAppOptions(
-  appType: MessageApp
-): Promise<ExternalMessageOptions> {
-  const cachedOptions = messageAppOptionsCache.get(appType);
-  const resolvedOptions = await resolveExternalMessageOptions(
-    [appType],
-    cachedOptions
-  );
-  messageAppOptionsCache.set(appType, resolvedOptions);
-  return resolvedOptions;
-}
-
 export async function runNotificationProcess(
-  appType: MessageApp
+  targetApps: MessageApp[],
+  messageAppsOptions: ExternalMessageOptions
 ): Promise<void> {
-  const enabledApps = parseEnabledMessageApps();
-  if (!enabledApps.includes(appType)) {
-    console.warn(
-      `Notification process skipped: ${appType} is not enabled in ENABLED_APPS`
+  if (
+    targetApps.some((a) => a === "Matrix") &&
+    messageAppsOptions.matrixClient == null
+  ) {
+    throw new Error(
+      `Matrix: notification process skipped for as the Matrix client is not set.`
     );
-    return;
+  }
+  if (
+    targetApps.some((a) => a === "Telegram") &&
+    messageAppsOptions.telegramBotToken == null
+  ) {
+    throw new Error(
+      `Telegram: notification process skipped for as the bot token is not set.`
+    );
   }
 
-  await mongodbConnect();
+  if (
+    targetApps.some((a) => a === "Signal") &&
+    messageAppsOptions.signalCli == null
+  ) {
+    throw new Error(
+      `Signal: notification process skipped for as the signal client is not set.`
+    );
+  }
+
+  if (
+    targetApps.some((a) => a === "WhatsApp") &&
+    messageAppsOptions.whatsAppAPI == null
+  ) {
+    throw new Error(
+      `WhatsApp: notification process skipped for as the WhatsApp client is not set.`
+    );
+  }
+
+  // Start mdb connection if not already connected
+  if (mongoose.connection.readyState.valueOf() != 1) await mongodbConnect();
 
   const currentDate = new Date();
   const startDate = new Date(
@@ -91,9 +104,6 @@ export async function runNotificationProcess(
   startDate.setHours(0, 0, 0, 0);
 
   const JORFAllRecordsFromDate = await getJORFRecordsFromDate(startDate);
-
-  const targetApps: MessageApp[] = [appType];
-  const messageAppsOptions = await getMessageAppOptions(appType);
 
   if (JORFAllRecordsFromDate.length > 0) {
     await notifyFunctionTagsUpdates(
@@ -121,5 +131,7 @@ export async function runNotificationProcess(
     messageAppsOptions
   );
 
-  await umami.log("/notification-process-completed", appType);
+  for (const appType of targetApps) {
+    await umami.log("/notification-process-completed", appType);
+  }
 }
