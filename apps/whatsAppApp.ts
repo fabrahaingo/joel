@@ -16,6 +16,7 @@ import {
   WhatsAppSession
 } from "../entities/WhatsAppSession.ts";
 import { processMessage } from "../commands/Commands.ts";
+import { startDailyNotificationJob } from "../notifications/notificationScheduler.ts";
 
 const MAX_AGE_SEC = 5 * 60;
 
@@ -232,6 +233,8 @@ await (async function () {
   await mongodbConnect();
 
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
+
+  startDailyNotificationJob("WhatsApp");
 })();
 
 // Define an interface for the potential message-containing object
