@@ -6,6 +6,7 @@ import { TelegramSession } from "../entities/TelegramSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { ErrorMessages } from "../entities/ErrorMessages.ts";
+import { startDailyNotificationJob } from "../notifications/notificationScheduler.ts";
 
 const BOT_TOKEN = process.env.BOT_TOKEN;
 if (BOT_TOKEN === undefined) {
@@ -45,4 +46,6 @@ await (async () => {
   console.log(`Telegram: JOEL started successfully \u{2705}`);
 
   await bot.launch();
+
+  startDailyNotificationJob("Telegram");
 })();

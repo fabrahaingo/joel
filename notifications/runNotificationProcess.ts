@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { mongodbConnect } from "../db.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { MessageApp } from "../types.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
 import { callJORFSearchDay } from "../utils/JORFSearch.utils.ts";
 import { notifyOrganisationsUpdates } from "./organisationNotifications.ts";
@@ -8,18 +9,16 @@ import { notifyPeopleUpdates } from "./peopleNotifications.ts";
 import { notifyNameMentionUpdates } from "./nameNotifications.ts";
 import { notifyFunctionTagsUpdates } from "./functionTagNotifications.ts";
 import umami from "../utils/umami.ts";
-
 import {
   parseEnabledMessageApps,
   resolveExternalMessageOptions
 } from "../utils/messageAppOptions.ts";
+import { ExternalMessageOptions } from "../entities/Session.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 30;
 
-const enabledApps = parseEnabledMessageApps();
-
-const messageAppsOptions = await resolveExternalMessageOptions(enabledApps);
+const messageAppOptionsCache = new Map<MessageApp, ExternalMessageOptions>();
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -58,51 +57,69 @@ async function getJORFRecordsFromDate(
     );
 }
 
-await (async () => {
-  try {
-    await mongodbConnect();
+async function getMessageAppOptions(
+  appType: MessageApp
+): Promise<ExternalMessageOptions> {
+  const cachedOptions = messageAppOptionsCache.get(appType);
+  const resolvedOptions = await resolveExternalMessageOptions(
+    [appType],
+    cachedOptions
+  );
+  messageAppOptionsCache.set(appType, resolvedOptions);
+  return resolvedOptions;
+}
 
-    const currentDate = new Date();
-    const startDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      currentDate.getDate() - SHIFT_DAYS
+export async function runNotificationProcess(
+  appType: MessageApp
+): Promise<void> {
+  const enabledApps = parseEnabledMessageApps();
+  if (!enabledApps.includes(appType)) {
+    console.warn(
+      `Notification process skipped: ${appType} is not enabled in ENABLED_APPS`
     );
-    startDate.setHours(0, 0, 0, 0);
-
-    const JORFAllRecordsFromDate = await getJORFRecordsFromDate(startDate);
-
-    if (JORFAllRecordsFromDate.length > 0) {
-      await notifyFunctionTagsUpdates(
-        JORFAllRecordsFromDate,
-        enabledApps,
-        messageAppsOptions
-      );
-
-      await notifyOrganisationsUpdates(
-        JORFAllRecordsFromDate,
-        enabledApps,
-        messageAppsOptions
-      );
-    }
-
-    await notifyPeopleUpdates(
-      JORFAllRecordsFromDate,
-      enabledApps,
-      messageAppsOptions
-    );
-
-    await notifyNameMentionUpdates(
-      JORFAllRecordsFromDate,
-      enabledApps,
-      messageAppsOptions
-    );
-
-    await umami.log("/notification-process-completed");
-
-    process.exit(0);
-  } catch (error) {
-    console.error("Error during notification process:", error);
-    process.exit(1);
+    return;
   }
-})();
+
+  await mongodbConnect();
+
+  const currentDate = new Date();
+  const startDate = new Date(
+    currentDate.getFullYear(),
+    currentDate.getMonth(),
+    currentDate.getDate() - SHIFT_DAYS
+  );
+  startDate.setHours(0, 0, 0, 0);
+
+  const JORFAllRecordsFromDate = await getJORFRecordsFromDate(startDate);
+
+  const targetApps: MessageApp[] = [appType];
+  const messageAppsOptions = await getMessageAppOptions(appType);
+
+  if (JORFAllRecordsFromDate.length > 0) {
+    await notifyFunctionTagsUpdates(
+      JORFAllRecordsFromDate,
+      targetApps,
+      messageAppsOptions
+    );
+
+    await notifyOrganisationsUpdates(
+      JORFAllRecordsFromDate,
+      targetApps,
+      messageAppsOptions
+    );
+  }
+
+  await notifyPeopleUpdates(
+    JORFAllRecordsFromDate,
+    targetApps,
+    messageAppsOptions
+  );
+
+  await notifyNameMentionUpdates(
+    JORFAllRecordsFromDate,
+    targetApps,
+    messageAppsOptions
+  );
+
+  await umami.log("/notification-process-completed", appType);
+}
