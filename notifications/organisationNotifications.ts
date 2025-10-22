@@ -6,7 +6,7 @@ import User from "../models/User.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkOrganisation } from "../utils/JORFSearch.utils.ts";
-import umami from "../utils/umami.ts";
+import umami, { UmamiNotificationData } from "../utils/umami.ts";
 import {
   NotificationTask,
   dispatchTasksToMessageApps
@@ -18,6 +18,7 @@ import {
   groupRecordsBy,
   SeparatorSelector
 } from "./grouping.ts";
+import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
@@ -263,6 +264,14 @@ async function sendOrganisationUpdate(
   );
   if (!messageSent) return false;
 
-  await umami.log("/notification-update-organisation", messageApp);
+  const notifData: UmamiNotificationData = {
+    message_nb: getSplitTextMessageSize(notification_text, messageApp),
+    updated_follows_nb: organisationsUpdateRecordsMap.size,
+    total_records_nb: organisationsUpdateRecordsMap
+      .values()
+      .reduce((total: number, value) => total + value.length, 0)
+  };
+
+  await umami.log("/notification-update-organisation", messageApp, notifData);
   return true;
 }
