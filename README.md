@@ -84,7 +84,7 @@ JOEL requiert d'avoir téléchargé au moins une des applications compatibles (T
 
 - Telegram : <a href="https://t.me/JOEL_hellofabot">Par içi !</a>
 - WhatsApp : <a href="https://wa.me/33769441915?text=Bonjour%20JOEL%20!">Par là !</a>
-- Matrix : <a href="https://matrix.to/#/@JOEL_bot:matrix.org">Ici encore !</a>
+- Matrix : <a href="https://matrix.to/#/@joel_bot:matrix.org">Ici encore !</a>
 
 ### Utilisation
 
