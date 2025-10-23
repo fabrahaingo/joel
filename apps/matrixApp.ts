@@ -13,8 +13,7 @@ import { startDailyNotificationJobs } from "../notifications/notificationSchedul
 
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
 if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined) {
-  console.log("Matrix env is not set");
-  console.log("Shutting down JOEL Matrix bot... \u{1F6A9}");
+  console.log("Matrix: env is not set, bot did not start \u{1F6A9}");
   process.exit(0);
 }
 

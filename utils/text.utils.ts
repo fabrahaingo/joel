@@ -67,8 +67,7 @@ export function getSplitTextMessageSize(text: string, app: MessageApp): number {
 
     case "Telegram":
       return splitText(text, TELEGRAM_MESSAGE_CHAR_LIMIT).length;
-    //case "Matrix":
-    //    return splitText(text,MATRIX_CHAR_LIMIT).length;
+
     case "WhatsApp":
       return splitText(text, WHATSAPP_MESSAGE_CHAR_LIMIT).length;
 

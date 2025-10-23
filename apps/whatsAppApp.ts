@@ -34,7 +34,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     WHATSAPP_APP_SECRET === undefined ||
     WHATSAPP_PHONE_ID === undefined
   ) {
-    console.log("Shutting down JOEL WhatsApp bot... \u{1F6A9}");
+    console.log("WhatsApp: env is not set, bot did not start \u{1F6A9}");
     process.exit(0);
   }
 

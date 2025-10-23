@@ -5,13 +5,11 @@ import { mongodbConnect } from "../db.ts";
 import { TelegramSession } from "../entities/TelegramSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
-import { ErrorMessages } from "../entities/ErrorMessages.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (TELEGRAM_BOT_TOKEN === undefined) {
-  console.log(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
-  console.log("Shutting down JOEL Telegram bot... \u{1F6A9}");
+  console.log("Telegram: env is not set, bot did not start \u{1F6A9}");
   process.exit(0);
 }
 

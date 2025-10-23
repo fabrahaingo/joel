@@ -210,6 +210,7 @@ export async function sendWhatsAppMessage(
     const buttons = keyboardFlat.map(
       (u, idx) => new Button(`reply_${String(idx)}`, u.text)
     );
+    // @ts-expect-error Typescript does not account for the spread operator
     interactiveKeyboard = new ActionButtons(...buttons);
   }
 

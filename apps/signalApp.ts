@@ -10,8 +10,7 @@ import { startDailyNotificationJobs } from "../notifications/notificationSchedul
 const { SIGNAL_PHONE_NUMBER, SIGNAL_BAT_PATH } = process.env;
 
 if (SIGNAL_PHONE_NUMBER === undefined) {
-  console.log("SIGNAL_PHONE_NUMBER env variable not set");
-  console.log("Shutting down JOEL Signal bot... \u{1F6A9}");
+  console.log("Signal: env is not set, bot did not start \u{1F6A9}");
   process.exit(0);
 }
 

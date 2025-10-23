@@ -95,7 +95,7 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
-      await umami.log("/message-sent", "Telegram");
+      await umami.log("/message-sent", "Signal");
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
