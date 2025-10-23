@@ -7,12 +7,14 @@ import { sendWhatsAppMessage } from "./WhatsAppSession.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { sendSignalAppMessage } from "./SignalSession.ts";
 import { SignalCli } from "signal-sdk";
-//import { MatrixClient } from "matrix-bot-sdk";
+import { MatrixClient } from "matrix-bot-sdk";
 import { Keyboard } from "./Keyboard.ts";
+import { sendMatrixMessage } from "./MatrixSession.ts";
 
 export interface ExternalMessageOptions {
-  //matrixClient?: MatrixClient;
+  matrixClient?: MatrixClient;
   signalCli?: SignalCli;
+  telegramBotToken?: string;
   whatsAppAPI?: WhatsAppAPI;
   forceNoKeyboard?: boolean;
   keyboard?: Keyboard;
@@ -21,12 +23,11 @@ export interface ExternalMessageOptions {
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
 
-  return User.findOne({
+  const user: IUser | null = await User.findOne({
     messageApp: session.messageApp,
     chatId: session.chatId
   });
 
-  /*
   if (user == null) {
     const legacyUser = (await User.collection.findOne({
       messageApp: session.messageApp,
@@ -42,7 +43,6 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
     }
   }
   return user;
-   */
 }
 
 export async function migrateUser(rawUser: IRawUser): Promise<void> {
@@ -67,7 +67,7 @@ export async function migrateUser(rawUser: IRawUser): Promise<void> {
 
 export async function recordSuccessfulDelivery(
   messageApp: MessageApp,
-  chatId: number
+  chatId: string
 ): Promise<void> {
   await User.updateOne(
     { messageApp, chatId },
@@ -82,7 +82,8 @@ export interface MessageSendingOptionsInternal {
 }
 
 export interface MessageSendingOptionsExternal {
-  //matrixClient?: MatrixClient;
+  telegramBotToken?: string;
+  matrixClient?: MatrixClient;
   signalCli?: SignalCli;
   whatsAppAPI?: WhatsAppAPI;
   forceNoKeyboard?: boolean;
@@ -92,29 +93,34 @@ export interface MessageSendingOptionsExternal {
 
 export async function sendMessage(
   messageApp: MessageApp,
-  chatId: number,
+  chatId: string,
   message: string,
   options?: MessageSendingOptionsExternal
 ): Promise<boolean> {
   switch (messageApp) {
-    /*
-      case "Matrix":
-        if (options?.matrixClient == null)
-          throw new Error("matrixClient is required");
-        return await sendMatrixMessage(
-          options.matrixClient,
-          chatId,
-          message,
-          options.keyboard
-        );
-        */
+    case "Matrix":
+      if (options?.matrixClient == null)
+        throw new Error("matrixClient is required");
+      return await sendMatrixMessage(
+        options.matrixClient,
+        chatId,
+        message,
+        options
+      );
 
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");
       return await sendSignalAppMessage(options.signalCli, chatId, message);
 
     case "Telegram":
-      return await sendTelegramMessage(chatId, message, options?.keyboard);
+      if (options?.telegramBotToken == null)
+        throw new Error("telegramBotToken is required");
+      return await sendTelegramMessage(
+        options.telegramBotToken,
+        chatId,
+        message,
+        options.keyboard
+      );
 
     case "WhatsApp":
       if (options?.whatsAppAPI == null)
@@ -126,5 +132,5 @@ export async function sendMessage(
         options
       );
   }
-  return false;
+  throw new Error("Unknown messageApp : ", messageApp);
 }

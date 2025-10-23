@@ -35,11 +35,13 @@ export const exportCommand = async (session: ISession): Promise<void> => {
   await session.user.save();
 
   await session.sendMessage(
-    `Voici votre code d'export *valable 4 heures* est :`
+    `Voici votre code d'export *valable 4 heures* est :`,
+    { forceNoKeyboard: true }
   );
-  await session.sendMessage(`*${code}*`);
+  await session.sendMessage(`*${code}*`, { forceNoKeyboard: true });
   await session.sendMessage(
-    `Utilisez la commande *Importer* ou /import sur votre nouveau compte afin de transférer les données.`
+    `Utilisez la commande *Importer* ou /import sur votre nouveau compte afin de transférer les données.`,
+    { separateMenuMessage: true }
   );
 };
 

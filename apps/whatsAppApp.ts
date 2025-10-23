@@ -16,6 +16,7 @@ import {
   WhatsAppSession
 } from "../entities/WhatsAppSession.ts";
 import { processMessage } from "../commands/Commands.ts";
+import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
 const MAX_AGE_SEC = 5 * 60;
 
@@ -33,7 +34,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     WHATSAPP_APP_SECRET === undefined ||
     WHATSAPP_PHONE_ID === undefined
   ) {
-    console.log("Shutting down JOEL WhatsApp bot... \u{1F6A9}");
+    console.log("WhatsApp: env is not set, bot did not start \u{1F6A9}");
     process.exit(0);
   }
 
@@ -205,18 +206,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     await whatsAppAPI.markAsRead(phoneID, message.id);
 
-    const userChatId = parseInt(from);
-    if (isNaN(userChatId)) {
-      console.log("WhatsApp: Invalid userChatId : ", from);
-      return;
-    }
-
-    const WHSession = new WhatsAppSession(
-      whatsAppAPI,
-      phoneID,
-      userChatId,
-      "fr"
-    );
+    const WHSession = new WhatsAppSession(whatsAppAPI, phoneID, from, "fr");
     await WHSession.loadUser();
 
     if (WHSession.user != null) await WHSession.user.updateInteractionMetrics();
@@ -242,6 +232,7 @@ server = app.listen(WHATSAPP_APP_PORT, function () {
 await (async function () {
   await mongodbConnect();
 
+  startDailyNotificationJobs(["WhatsApp"], { whatsAppAPI: whatsAppAPI });
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
 

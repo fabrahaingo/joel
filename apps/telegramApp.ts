@@ -5,16 +5,15 @@ import { mongodbConnect } from "../db.ts";
 import { TelegramSession } from "../entities/TelegramSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
-import { ErrorMessages } from "../entities/ErrorMessages.ts";
+import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
-if (BOT_TOKEN === undefined) {
-  console.log(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
-  console.log("Shutting down JOEL Telegram bot... \u{1F6A9}");
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+if (TELEGRAM_BOT_TOKEN === undefined) {
+  console.log("Telegram: env is not set, bot did not start \u{1F6A9}");
   process.exit(0);
 }
 
-const bot = new Telegraf(BOT_TOKEN);
+const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
 await (async () => {
   await mongodbConnect();
@@ -27,8 +26,9 @@ await (async () => {
       await umami.log("/message-received", "Telegram");
 
       const tgSession = new TelegramSession(
+        TELEGRAM_BOT_TOKEN,
         bot.telegram,
-        ctx.chat.id,
+        ctx.chat.id.toString(),
         tgUser.language_code ?? "fr"
       );
       await tgSession.loadUser();
@@ -41,6 +41,10 @@ await (async () => {
     } catch (error) {
       console.error("Telegram: Error processing command:", error);
     }
+  });
+
+  startDailyNotificationJobs(["Telegram"], {
+    telegramBotToken: TELEGRAM_BOT_TOKEN
   });
   console.log(`Telegram: JOEL started successfully \u{2705}`);
 

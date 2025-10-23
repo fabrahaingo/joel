@@ -3,6 +3,7 @@ import { MessageApp } from "../types";
 import { TELEGRAM_MESSAGE_CHAR_LIMIT } from "../entities/TelegramSession.ts";
 import { WHATSAPP_MESSAGE_CHAR_LIMIT } from "../entities/WhatsAppSession.ts";
 import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
+import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
 
 export function splitText(text: string, max: number): string[] {
   if (!Number.isFinite(max) || max <= 0) return [text];
@@ -61,10 +62,12 @@ export function splitText(text: string, max: number): string[] {
 
 export function getSplitTextMessageSize(text: string, app: MessageApp): number {
   switch (app) {
+    case "Matrix":
+      return splitText(text, MATRIX_MESSAGE_CHAR_LIMIT).length;
+
     case "Telegram":
       return splitText(text, TELEGRAM_MESSAGE_CHAR_LIMIT).length;
-    //case "Matrix":
-    //    return splitText(text,MATRIX_CHAR_LIMIT).length;
+
     case "WhatsApp":
       return splitText(text, WHATSAPP_MESSAGE_CHAR_LIMIT).length;
 
@@ -72,7 +75,7 @@ export function getSplitTextMessageSize(text: string, app: MessageApp): number {
       return splitText(text, SIGNAL_MESSAGE_CHAR_LIMIT).length;
 
     default:
-      return -1;
+      throw new Error("Unknown message app");
   }
 }
 
