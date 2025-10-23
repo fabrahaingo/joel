@@ -16,7 +16,7 @@
   <a href="./img/logo.png">
     <img src="img/logo.png" alt="Logo" width="100" height="100">
   </a>
-  <h3 align="center">Restez informé des nominations au JO de votre réseau	</h3>
+  <h3 align="center">Restez informé·e des nominations au JO de votre réseau, où que vous chattiez 💬</h3>
 </p>
 
 <!-- TABLE OF CONTENTS -->
@@ -47,14 +47,19 @@
 
 ## A propos de ce projet
 
-On en avait marre de passer à côté de certaines nominations au Journal officiel de nos amis et collègues. </br></br>
+On en avait marre de passer à côté de certaines nominations au Journal officiel de nos amis, collègues et organisations favorites.
+</br></br>
 
-Du coup, on a développé JOEL, un outil qui nous permet d'être informés des nominations au JO qui nous intéressent 👇 </br></br>
+Du coup, on a développé JOEL, un compagnon de veille qui nous chuchote les nominations importantes directement là où nous discutons déjà 👇
+</br></br>
 
 En effet, à l’heure actuelle, la version électronique du JO ne permet pas de faire une veille personnalisée des nominations. 🤷‍♂️
 </br></br>
-On a donc créé un bot sur Télégram pour être tenus au courant quotidiennement des mentions au JO des personnes qu’on voulait suivre. 
-</br></br>
+On a donc commencer par un bot Télégram pour être tenus au courant quotidiennement des mentions au JO des personnes qu’on voulait suivre.
+</br>
+
+EL parle désormais couramment **Telegram**, **WhatsApp** et **Matrix**, et son accent s’adapte à toute autre messagerie grâce à une interface d’intégration unique. Si votre équipe traîne ailleurs (Signal, Mattermost, IRC, tam-tam codé…), il suffit de brancher un nouveau connecteur et JOEL débarque !
+</br>
 
 JOEL c’est aussi:
 
@@ -65,21 +70,21 @@ JOEL c’est aussi:
 </br> 🤔 Et pourquoi « JOEL »? 
 En hommage au <a href="https://fr.wikipedia.org/wiki/Fichier:Publicit%C3%A9_3615_JOEL.png">3615 JOEL</a>, qui permettait de consulter le <b>J</b>ournal <b>O</b>fficiel <b>EL</b>ectronique sur Minitel 😉 </br>
 
-### Built With
+## Built With
 
-JOEL se base sur le travail de <a href="https://github.com/nathanncohen">Nathann Cohen</a> qui a développé l'outil <a href="https://jorfsearch.steinertriples.ch/">JORFSearch</a> qui permet, entre autres, de faire des recherches nominatives sur le JO.</br>
-
-<!-- Démarrer -->
+JOEL se base sur l'outil l'outil <a href="https://jorfsearch.steinertriples.ch/">JORFSearch</a> développé par <a href="https://github.com/nathanncohen">Nathann Cohen</a> et permettant de faire de chercher les nominations au JO.
 
 ## Démarrer
 
 ### Prérequis
 
-JOEL requiert d'avoir téléchargé l'application Telegram.
+JOEL requiert d'avoir téléchargé au moins une des applications compatibles (Telegram, WhatsApp, Matrix… ou la messagerie que vous brancherez vous-même 😎).
 
 ### Installation
 
-Suivez le lien <a href="https://t.me/JOEL_hellofabot">https://t.me/JOEL_hellofabot</a>.
+- Telegram : <a href="https://t.me/JOEL_hellofabot">Par içi !</a>
+- WhatsApp : <a href="https://wa.me/33769441915?text=Bonjour%20JOEL%20!">Par là !</a>
+- Matrix : <a href="https://matrix.to/#/@JOEL_bot:matrix.org">Ici encore !</a>
 
 ### Utilisation
 
@@ -93,36 +98,33 @@ Pour rechercher une personne, vous pouvez cliquer sur le bouton "🔍 Rechercher
   </a>
 </p>
 
-#### Ajouter un contact
 
-Pour ajouter un contact, cliquez sur le bouton 🏃‍♀️ puis insérer le prénom et le nom de la personne que vous souhaitez suivre.
-JOEL vous demandera une confirmation du profil que vous souhaitez suivre. Si vous répondez oui, vous suivez désormais cette personne.
+Vous avez repéré une personne à ne pas lâcher des yeux ? Cliquez sur 🏃‍♀️ et laissez-vous guider. Vous pouvez :
 
-<p align="center">
-  <a href="./img/tuto/add1.png">
-    <img src="img/tuto/add1.png" alt="Logo" width=40% height=40%>
-    <img src="img/tuto/add2.png" alt="Logo" width=40% height=40%>
-  </a>
-<p>
+- 🧑 Ajouter une personne individuellement (prénom + nom)
+- 🎓 Importer toute une promotion ENA/INSP en un clin d'œil
+- 📰 Coller un extrait du JO (JORF) pour extraire automatiquement les noms à suivre
 
-#### Supprimer un contact
 
-Si vous souhaitez supprimer un contact, cliquez sur le bouton "🤚 Supprimer un contact".
-La liste de vos contacts apparaît, il vous suffit alors d'entrer le numéro associé au contact à supprimer dans la liste.
+#### Suivre des organisations et des fonctions
 
-#### Lister mes contacts
+Les nominations ne concernent pas que des personnes :
 
-Pour lister vos contacts, cliquez sur le bouton "🧐 Lister mes contacts".
+- 🏢 Ajoutez des organisations entières pour être alerté quand elles bougent: Conseil d'Etat, Commission parlementaires, ANR ...
+- 🪑 Suivez des intitulés de postes ou de fonctions pour traquer les nouveaux arrivants: Ambassadeurs, (sous-)-Préfets, Juges ...
 
-<p align="center">
-  <a href="./img/tuto/list-delete.png">
-    <img src="img/tuto/list-delete.png" alt="Logo" width=40% height=40%>
-  </a>
-</p>
+
+## Fonctionnalités clés
+
+- 🔔 Notifications quotidiennes ou à la demande selon votre canal favori
+- 🗂 Gestion multi-listes pour séparer vos veilles (par équipe, par sujet, par curiosité malsaine)
+- 🧠 Normalisation intelligente des noms pour éviter les doublons et les homonymes malicieux
+- 🛠 Interface d’intégration pour brancher rapidement une nouvelle messagerie ou un workflow interne
+- 📊 Historique des alertes pour ne rien oublier (et prouver à votre hiérarchie que vous étiez au courant avant tout le monde)
 
 ## Bug
 
-En cas de bug, contactez @hellofabien ou hellofabien@pm.me en mentionnant votre identifiant Telegram (obtenu en cliquant sur le bouton "🐞")
+En cas de bug, contactez hellofabien@pm.me en mentionnant votre identifiant personnel (obtenu en cliquant sur le bouton "🐞")
 
 ## Confidentialité
 
