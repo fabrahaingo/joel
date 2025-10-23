@@ -67,6 +67,7 @@ interface MatrixRoomEvent {
       key?: string;
       "m.in_reply_to"?: { event_id: string };
     };
+    membership?: string;
     "org.matrix.msc3381.poll.response": { answers: string[] };
   };
 }
@@ -91,6 +92,13 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         const eventId = event.content["m.relates_to"]?.event_id;
         if (eventId != null) await closePollMenu(matrixClient, roomId, eventId);
         msgText = event.content["org.matrix.msc3381.poll.response"].answers[0];
+        break;
+      }
+
+      case "m.room.member": {
+        if (event.content.membership !== "join") return;
+        msgText = "/start";
+        break;
       }
     }
     if (msgText == null) return;
