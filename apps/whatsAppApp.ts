@@ -19,6 +19,29 @@ import { processMessage } from "../commands/Commands.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
 const MAX_AGE_SEC = 5 * 60;
+const DUPLICATE_MESSAGE_TTL_MS = MAX_AGE_SEC * 1000;
+
+const processedMessageIds = new Map<string, number>();
+
+function rememberInboundMessage(id: string | undefined): boolean {
+  if (id == null) return false;
+
+  const now = Date.now();
+
+  // prune entries older than the TTL to avoid unbounded growth
+  for (const [knownId, timestamp] of Array.from(processedMessageIds)) {
+    if (now - timestamp > DUPLICATE_MESSAGE_TTL_MS) {
+      processedMessageIds.delete(knownId);
+    }
+  }
+
+  if (processedMessageIds.has(id)) {
+    return true;
+  }
+
+  processedMessageIds.set(id, now);
+  return false;
+}
 
 const {
   WHATSAPP_USER_TOKEN,
@@ -200,6 +223,11 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
     return;
   }
   if (msgText == null) return;
+
+  if (rememberInboundMessage(message.id)) {
+    await umami.log("/message-received-echo-refused", "WhatsApp");
+    return;
+  }
 
   try {
     await umami.log("/message-received", "WhatsApp");
