@@ -98,13 +98,11 @@ Pour rechercher une personne, vous pouvez cliquer sur le bouton "🔍 Rechercher
   </a>
 </p>
 
-
 Vous avez repéré une personne à ne pas lâcher des yeux ? Cliquez sur 🏃‍♀️ et laissez-vous guider. Vous pouvez :
 
 - 🧑 Ajouter une personne individuellement (prénom + nom)
 - 🎓 Importer toute une promotion ENA/INSP en un clin d'œil
 - 📰 Coller un extrait du JO (JORF) pour extraire automatiquement les noms à suivre
-
 
 #### Suivre des organisations et des fonctions
 
@@ -112,7 +110,6 @@ Les nominations ne concernent pas que des personnes :
 
 - 🏢 Ajoutez des organisations entières pour être alerté quand elles bougent: Conseil d'Etat, Commission parlementaires, ANR ...
 - 🪑 Suivez des intitulés de postes ou de fonctions pour traquer les nouveaux arrivants: Ambassadeurs, (sous-)-Préfets, Juges ...
-
 
 ## Fonctionnalités clés
 
