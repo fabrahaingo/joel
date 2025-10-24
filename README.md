@@ -84,7 +84,7 @@ JOEL requiert d'avoir téléchargé au moins une des applications compatibles (T
 
 - Telegram : <a href="https://t.me/JOEL_hellofabot">Par içi !</a>
 - WhatsApp : <a href="https://wa.me/33769441915?text=Bonjour%20JOEL%20!">Par là !</a>
-- Matrix : <a href="https://matrix.to/#/@JOEL_bot:matrix.org">Ici encore !</a>
+- Matrix : <a href="https://matrix.to/#/@joel_bot:matrix.org">Ici encore !</a>
 
 ### Utilisation
 
@@ -113,11 +113,9 @@ Les nominations ne concernent pas que des personnes :
 
 ## Fonctionnalités clés
 
-- 🔔 Notifications quotidiennes ou à la demande selon votre canal favori
+- 🔔 Notifications quotidiennes ou à la demande selon votre canal favori (pour prouver à votre hiérarchie que vous étiez au courant avant tout le monde)
 - 🗂 Gestion multi-listes pour séparer vos veilles (par équipe, par sujet, par curiosité malsaine)
-- 🧠 Normalisation intelligente des noms pour éviter les doublons et les homonymes malicieux
 - 🛠 Interface d’intégration pour brancher rapidement une nouvelle messagerie ou un workflow interne
-- 📊 Historique des alertes pour ne rien oublier (et prouver à votre hiérarchie que vous étiez au courant avant tout le monde)
 
 ## Bug
 
