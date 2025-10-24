@@ -5,12 +5,12 @@ import { mongodbConnect } from "../db.ts";
 import { SignalSession } from "../entities/SignalSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
+import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
 const { SIGNAL_PHONE_NUMBER, SIGNAL_BAT_PATH } = process.env;
 
 if (SIGNAL_PHONE_NUMBER === undefined) {
-  console.log("SIGNAL_PHONE_NUMBER env variable not set");
-  console.log("Shutting down JOEL Signal bot... \u{1F6A9}");
+  console.log("Signal: env is not set, bot did not start \u{1F6A9}");
   process.exit(0);
 }
 
@@ -48,19 +48,10 @@ await (async () => {
 
           await umami.log("/message-received", "Signal");
 
-          const userChatId = parseInt(message.envelope.sourceNumber);
-          if (isNaN(userChatId)) {
-            console.log(
-              "Signal: Invalid userChatId : ",
-              message.envelope.sourceNumber
-            );
-            return;
-          }
-
           const signalSession = new SignalSession(
             signalCli,
             SIGNAL_PHONE_NUMBER,
-            userChatId,
+            message.envelope.sourceNumber,
             "fr"
           );
           await signalSession.loadUser();
@@ -75,6 +66,7 @@ await (async () => {
       })();
     });
 
+    startDailyNotificationJobs(["Signal"], { signalCli: signalCli });
     console.log(`Signal: JOEL started successfully \u{2705}`);
 
     // Graceful shutdown

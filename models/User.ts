@@ -7,12 +7,12 @@ import { loadUser } from "../entities/Session.ts";
 import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
 import { getISOWeek } from "../utils/date.utils.ts";
 
-export const USER_SCHEMA_VERSION = 2;
+export const USER_SCHEMA_VERSION = 3;
 
 const UserSchema = new Schema<IUser, UserModel>(
   {
     chatId: {
-      type: Number,
+      type: String,
       required: true
     },
     messageApp: {
