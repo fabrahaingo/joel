@@ -94,7 +94,7 @@ export class WhatsAppSession implements ISession {
   messageApp = WhatsAppMessageApp;
   whatsAppAPI: WhatsAppAPI;
   language_code: string;
-  chatId: number;
+  chatId: string;
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
@@ -102,7 +102,7 @@ export class WhatsAppSession implements ISession {
   constructor(
     whatsAppAPI: WhatsAppAPI,
     botPhoneID: string,
-    userPhoneId: number,
+    userPhoneId: string,
     language_code: string
   ) {
     this.whatsAppAPI = whatsAppAPI;
@@ -170,7 +170,7 @@ const { WHATSAPP_PHONE_ID } = process.env;
 
 export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
-  userPhoneId: number,
+  userPhoneIdStr: string,
   message: string,
   options?: MessageSendingOptionsInternal,
   retryNumber = 0
@@ -210,10 +210,9 @@ export async function sendWhatsAppMessage(
     const buttons = keyboardFlat.map(
       (u, idx) => new Button(`reply_${String(idx)}`, u.text)
     );
+    // @ts-expect-error Typescript does not account for the spread operator
     interactiveKeyboard = new ActionButtons(...buttons);
   }
-
-  const userPhoneIdStr = String(userPhoneId);
 
   let resp: ServerMessageResponse;
   try {
@@ -264,7 +263,7 @@ export async function sendWhatsAppMessage(
             );
             return await sendWhatsAppMessage(
               whatsAppAPI,
-              userPhoneId,
+              userPhoneIdStr,
               mArr.slice(i).join("\n"),
               options,
               retryNumber + 1
@@ -273,7 +272,7 @@ export async function sendWhatsAppMessage(
           case 131008: // user blocked the bot
             await umami.log("/user-blocked-joel", "WhatsApp");
             await User.updateOne(
-              { messageApp: "WhatsApp", chatId: userPhoneId },
+              { messageApp: "WhatsApp", chatId: userPhoneIdStr },
               { $set: { status: "blocked" } }
             );
             break;
@@ -282,7 +281,7 @@ export async function sendWhatsAppMessage(
             await umami.log("/user-deactivated", "WhatsApp");
             await User.deleteOne({
               messageApp: "WhatsApp",
-              chatId: userPhoneId
+              chatId: userPhoneIdStr
             });
             break;
           default:
@@ -339,7 +338,7 @@ export async function sendWhatsAppMessage(
     console.log(error);
     return false;
   }
-  await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneId);
+  await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneIdStr);
   return true;
 }
 

@@ -5,6 +5,7 @@ import { SIGNAL_API_SENDING_CONCURRENCY } from "../entities/SignalSession.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { Types } from "mongoose";
 import pLimit from "p-limit";
+import { MATRIX_API_SENDING_CONCURRENCY } from "../entities/MatrixSession.ts";
 
 /**
  * Schedules the sendMessage to respect per-app throttling rules.
@@ -26,7 +27,7 @@ export async function dispatchTasksToMessageApps<T>(
 
   const concurrencyLimitByMessageApp = new Map<MessageApp, number>();
 
-  //concurrencyLimitByMessageApp.set("Matrix", MATRIX_API_SENDING_CONCURRENCY);
+  concurrencyLimitByMessageApp.set("Matrix", MATRIX_API_SENDING_CONCURRENCY);
   concurrencyLimitByMessageApp.set(
     "Telegram",
     TELEGRAM_API_SENDING_CONCURRENCY

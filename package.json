@@ -1,12 +1,12 @@
 {
   "type": "module",
   "scripts": {
-    "start": "concurrently \"npm run start-tg\" \"npm run start-wh\"",
+    "start": "concurrently \"npm run start-tg\" \"npm run start-wh\" \"npm run start-mx\"",
+    "start-mx": "tsx apps/matrixApp.ts",
     "start-tg": "tsx apps/telegramApp.ts",
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
     "lint": "eslint .",
-    "notify": "tsx notifications/notifyUsers.ts",
     "lint:fix": "eslint . --fix",
     "test": "jest --config=jest.config.js"
   },
@@ -18,6 +18,7 @@
     "dotenv": "^17.2.3",
     "emoji-regex": "^10.6.0",
     "express": "^5.1.0",
+    "matrix-bot-sdk": "^0.7.1",
     "mongodb": "^6.20.0",
     "mongoose": "^8.19.1",
     "nodemon": "^3.1.10",

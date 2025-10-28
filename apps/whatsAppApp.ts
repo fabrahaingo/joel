@@ -16,8 +16,32 @@ import {
   WhatsAppSession
 } from "../entities/WhatsAppSession.ts";
 import { processMessage } from "../commands/Commands.ts";
+import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
 const MAX_AGE_SEC = 5 * 60;
+const DUPLICATE_MESSAGE_TTL_MS = MAX_AGE_SEC * 1000;
+
+const processedMessageIds = new Map<string, number>();
+
+function rememberInboundMessage(id: string | undefined): boolean {
+  if (id == null) return false;
+
+  const now = Date.now();
+
+  // prune entries older than the TTL to avoid unbounded growth
+  for (const [knownId, timestamp] of Array.from(processedMessageIds)) {
+    if (now - timestamp > DUPLICATE_MESSAGE_TTL_MS) {
+      processedMessageIds.delete(knownId);
+    }
+  }
+
+  if (processedMessageIds.has(id)) {
+    return true;
+  }
+
+  processedMessageIds.set(id, now);
+  return false;
+}
 
 const {
   WHATSAPP_USER_TOKEN,
@@ -33,7 +57,7 @@ export function getWhatsAppAPI(): WhatsAppAPI {
     WHATSAPP_APP_SECRET === undefined ||
     WHATSAPP_PHONE_ID === undefined
   ) {
-    console.log("Shutting down JOEL WhatsApp bot... \u{1F6A9}");
+    console.log("WhatsApp: env is not set, bot did not start \u{1F6A9}");
     process.exit(0);
   }
 
@@ -200,23 +224,17 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   }
   if (msgText == null) return;
 
+  if (rememberInboundMessage(message.id)) {
+    await umami.log("/message-received-echo-refused", "WhatsApp");
+    return;
+  }
+
   try {
     await umami.log("/message-received", "WhatsApp");
 
     await whatsAppAPI.markAsRead(phoneID, message.id);
 
-    const userChatId = parseInt(from);
-    if (isNaN(userChatId)) {
-      console.log("WhatsApp: Invalid userChatId : ", from);
-      return;
-    }
-
-    const WHSession = new WhatsAppSession(
-      whatsAppAPI,
-      phoneID,
-      userChatId,
-      "fr"
-    );
+    const WHSession = new WhatsAppSession(whatsAppAPI, phoneID, from, "fr");
     await WHSession.loadUser();
 
     if (WHSession.user != null) await WHSession.user.updateInteractionMetrics();
@@ -242,6 +260,7 @@ server = app.listen(WHATSAPP_APP_PORT, function () {
 await (async function () {
   await mongodbConnect();
 
+  startDailyNotificationJobs(["WhatsApp"], { whatsAppAPI: whatsAppAPI });
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
 
