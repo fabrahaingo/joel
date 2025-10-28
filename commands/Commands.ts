@@ -44,7 +44,11 @@ export async function processMessage(
     const buttonText = keyboardKey.key.text;
 
     if (firstLine === buttonText) {
-      clearFollowUp(session);
+      if (
+        keyboardKey.keepFollowUpAlive == null ||
+        !keyboardKey.keepFollowUpAlive
+      )
+        clearFollowUp(session);
       if (keyboardKey.action === undefined) continue;
       await keyboardKey.action(session, cleanMsg);
       return;
