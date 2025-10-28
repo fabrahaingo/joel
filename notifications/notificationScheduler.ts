@@ -83,7 +83,7 @@ export function startDailyNotificationJobs(
     }, delay);
 
     console.log(
-      `${appsToString}: next notification process scheduled for ${nextRun.toISOString()} (in ${formatDuration(delay)}ms)`
+      `${appsToString}: next notification process scheduled for ${nextRun.toISOString()} (in ${formatDuration(delay)})`
     );
   };
 
