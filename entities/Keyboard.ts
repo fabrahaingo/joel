@@ -11,6 +11,7 @@ export const KEYBOARD_KEYS: Record<
   {
     key: KeyboardKey;
     action?: (session: ISession, msg?: string) => Promise<void>;
+    keepFollowUpAlive?: boolean;
   }
 > = {
   MAIN_MENU: {
@@ -134,12 +135,15 @@ export const KEYBOARD_KEYS: Record<
     }
   },
   FOLLOW_UP_FOLLOW: {
-    key: { text: "🔎 Suivre" }
+    key: { text: "🔎 Suivre" },
+    keepFollowUpAlive: true
   },
   FOLLOW_UP_FOLLOW_MANUAL: {
-    key: { text: "🕵️ Suivi manuel" }
+    key: { text: "🕵️ Suivi manuel" },
+    keepFollowUpAlive: true
   },
   FOLLOW_UP_HISTORY: {
-    key: { text: "📖 Historique" }
+    key: { text: "📖 Historique" },
+    keepFollowUpAlive: true
   }
 };
