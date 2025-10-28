@@ -52,6 +52,13 @@ async function handleSearchAnswer(
     return true;
   }
 
+  switch (trimmedAnswer) {
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key.text:
+    case KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key.text:
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key.text:
+      return false;
+  }
+
   if (trimmedAnswer.startsWith("/")) {
     return false;
   }
@@ -65,15 +72,7 @@ async function handleSearchAnswer(
   }
 
   await session.sendTypingAction();
-  const searchSucceeded = await searchPersonHistory(
-    session,
-    "Historique " + trimmedAnswer,
-    "latest"
-  );
-
-  if (!searchSucceeded) {
-    await askSearchQuestion(session);
-  }
+  await searchPersonHistory(session, "Historique " + trimmedAnswer, "latest");
 
   return true;
 }
@@ -113,7 +112,7 @@ export async function searchPersonHistory(
   historyType: "full" | "latest" = "latest",
   noSearch = false,
   fromFollow = false
-): Promise<boolean> {
+): Promise<void> {
   try {
     const personName = message.split(" ").slice(1).join(" ");
 
@@ -134,7 +133,7 @@ export async function searchPersonHistory(
           "Saisie incorrecte. Veuillez réessayer:\nFormat : *Rechercher Prénom Nom*",
           { keyboard: tempKeyboard }
         );
-        return false;
+        return;
       }
       const prenomNom = personNameSplit.join(" ");
       const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
@@ -142,7 +141,7 @@ export async function searchPersonHistory(
       if (session.user?.checkFollowedName(nomPrenom)) {
         const text = `Vous suivez manuellement *${prenomNom}* ✅`;
         await session.sendMessage(text);
-        return false;
+        return;
       }
 
       const text = `*${personName}* est introuvable au JO !\n\nAssurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.\n\nUtilisez le bouton ci-dessous pour forcer le suivi sur les nominations à venir.`;
@@ -157,7 +156,7 @@ export async function searchPersonHistory(
           keyboard: tempKeyboard
         }
       });
-      return false;
+      return;
     }
     const tempKeyboard: Keyboard = [];
 
@@ -247,11 +246,11 @@ export async function searchPersonHistory(
       }
     });
 
-    return true;
+    return;
   } catch (error) {
     console.log(error);
   }
-  return false;
+  return;
 }
 
 interface SearchFollowUpContext {
@@ -306,14 +305,14 @@ export const followCommand = async (
     const JORFRes = await callJORFSearchPeople(personName);
     if (JORFRes.length == 0) {
       // redirect to manual follow
-      const latestResult = await searchPersonHistory(
+      await searchPersonHistory(
         session,
         "Historique " + personName,
         "latest",
         false,
         true
       );
-      if (!latestResult) return;
+      return;
     }
 
     session.user ??= await User.findOrCreate(session);

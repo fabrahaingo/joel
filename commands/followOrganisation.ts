@@ -120,6 +120,13 @@ async function handleOrganisationSearchAnswer(
     return true;
   }
 
+  switch (trimmedAnswer) {
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key.text:
+    case KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key.text:
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key.text:
+      return false;
+  }
+
   if (trimmedAnswer.startsWith("/")) {
     return false;
   }

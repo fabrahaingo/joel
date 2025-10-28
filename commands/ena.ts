@@ -114,6 +114,13 @@ async function handlePromoAnswer(
     return true;
   }
 
+  switch (trimmedAnswer) {
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key.text:
+    case KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key.text:
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key.text:
+      return false;
+  }
+
   const promoInfo = findENAINSPPromo(trimmedAnswer);
 
   if (promoInfo && !promoInfo.onJORF) {
@@ -339,6 +346,13 @@ async function handleReferenceAnswer(
     );
     await askReferenceQuestion(session);
     return true;
+  }
+
+  switch (trimmedAnswer) {
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key.text:
+    case KEYBOARD_KEYS.FOLLOW_UP_HISTORY.key.text:
+    case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key.text:
+      return false;
   }
 
   if (trimmedAnswer.startsWith("/")) {

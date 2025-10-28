@@ -91,7 +91,6 @@ export function buildFollowsListMessage(
       if (userFollows.organisations.length < 10) text += `\n`;
       index++;
     });
-    text += `\n`;
   }
 
   if (userFollows.peopleAndNames.length > 0) {
