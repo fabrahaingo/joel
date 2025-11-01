@@ -318,6 +318,10 @@ export async function sendWhatsAppMessage(
           new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
         );
       }
+      if (resp.error) {
+        console.log(resp.error);
+        return false;
+      }
       numberMessageBurst += 1;
       await umami.log("/message-sent", "WhatsApp");
     }
