@@ -45,7 +45,7 @@ export async function callJORFSearchPeople(
             )
             .then(async (res2: AxiosResponse<JORFSearchResponse>) => {
               if (res2.data === null || typeof res2.data === "string") {
-                await umami.log("/jorfsearch-request-failure");
+                await umami.log("/jorfsearch-error");
                 return null;
               }
               return cleanJORFItems(res2.data);
@@ -74,7 +74,7 @@ export async function callJORFSearchDay(
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
-          await umami.log("/jorfsearch-request-failure");
+          await umami.log("/jorfsearch-error");
           return null;
         }
         return cleanJORFItems(res.data);
@@ -97,7 +97,7 @@ export async function callJORFSearchTag(
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
-          await umami.log("/jorfsearch-request-failure");
+          await umami.log("/jorfsearch-error");
           return null;
         }
         return cleanJORFItems(res.data);
@@ -121,7 +121,7 @@ export async function callJORFSearchOrganisation(
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
-          await umami.log("/jorfsearch-request-failure");
+          await umami.log("/jorfsearch-error");
           return null;
         }
         return cleanJORFItems(res.data);
@@ -170,7 +170,7 @@ export async function searchOrganisationWikidataId(
       >(encodeURI(`https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`))
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
-          await umami.log("/jorfsearch-request-failure");
+          await umami.log("/jorfsearch-error");
           return null;
         }
         return res.data.map((o) => ({
@@ -197,7 +197,7 @@ export async function callJORFSearchReference(
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
-          await umami.log("/jorfsearch-request-failure");
+          await umami.log("/jorfsearch-error");
           return null;
         }
         return cleanJORFItems(res.data);
@@ -221,7 +221,7 @@ async function JORFSearchCallPublications(
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
-          await umami.log("/jorfsearch-request-failure");
+          await umami.log("/jorfsearch-error");
           return null;
         }
         return cleanJORFPublication(res.data);
