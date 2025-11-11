@@ -101,7 +101,7 @@ export function formatSearchResult(
 
     const numberFollowStr =
       options?.numberUserFollowing && options.numberUserFollowing > 0
-        ? ` (suivi par ${String(options.numberUserFollowing)} utilisateur${options.numberUserFollowing > 1 ? "s" : ""})`
+        ? ` (${String(options.numberUserFollowing)} abonné${options.numberUserFollowing > 1 ? "s" : ""})`
         : "";
 
     const prenomNomLinkWithFollowers = markdownLink
