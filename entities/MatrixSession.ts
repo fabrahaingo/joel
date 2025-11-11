@@ -50,7 +50,7 @@ export class MatrixSession implements ISession {
     roomId: string,
     language_code: string
   ) {
-    if (["Matrix", "Tchap"].some((m) => m !== messageApp))
+    if (!["Matrix", "Tchap"].some((m) => m === messageApp))
       throw new Error(
         "Only Matrix and Tchap modes are allowed for matrix apps"
       );
