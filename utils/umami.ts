@@ -74,6 +74,7 @@ export type UmamiEvent =
   | "/stats"
   | "/list"
   | "/delete-profile"
+  | "/jorfsearch-error"
   | "/jorfsearch-request-people"
   | "/jorfsearch-request-people-formatted"
   | "/jorfsearch-request-tag"

@@ -164,7 +164,7 @@ async function sendNameMentionUpdates(
 
   const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
 
-  const markdownLinkEnabled = messageApp !== "Telegram";
+  const markdownLinkEnabled = messageApp !== "WhatsApp";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
 

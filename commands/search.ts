@@ -116,11 +116,11 @@ export async function searchPersonHistory(
   try {
     const personName = message.split(" ").slice(1).join(" ");
 
-    let JORFRes_data: JORFSearchItem[] = [];
+    let JORFRes_data: JORFSearchItem[] | null = [];
     if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
-    const nbRecords = JORFRes_data.length;
+    const nbRecords = JORFRes_data?.length ?? 0;
 
-    if (nbRecords == 0) {
+    if (nbRecords == 0 || JORFRes_data == null) {
       const tempKeyboard: Keyboard = [
         [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
         [KEYBOARD_KEYS.MAIN_MENU.key]
@@ -144,13 +144,20 @@ export async function searchPersonHistory(
         return;
       }
 
-      const text = `*${personName}* est introuvable au JO !\n\nAssurez vous d'avoir bien tapé le prénom et le nom correctement !\\splitSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.\n\nUtilisez le bouton ci-dessous pour forcer le suivi sur les nominations à venir.`;
+      let text: string;
+      if (JORFRes_data == null) {
+        text =
+          "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement:\n\nVous pouvez utiliser le bouton ci-dessous pour forcer un suivi manuel.";
+      } else {
+        text = `*${personName}* est introuvable au JO !\n\nAssurez vous d'avoir bien tapé le prénom et le nom correctement !\\splitSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.\n\nUtilisez le bouton ci-dessous pour forcer le suivi sur les nominations à venir.`;
+      }
 
       tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key]);
 
       await askFollowUpQuestion(session, text, handleSearchFollowUp, {
         context: {
-          prenomNom
+          prenomNom,
+          JORFOffline: JORFRes_data == null
         },
         messageOptions: {
           keyboard: tempKeyboard
@@ -160,11 +167,35 @@ export async function searchPersonHistory(
     }
     const tempKeyboard: Keyboard = [];
 
-    const peopleFromDB: IPeople | null = await People.findOne({
+    let peopleFromDB: IPeople | null = null;
+
+    const nomPrenom = JORFRes_data[0].nom + " " + JORFRes_data[0].prenom;
+    const prenomNom = JORFRes_data[0].prenom + " " + JORFRes_data[0].nom;
+
+    // Transform manual follow into strong follow
+    if (session.user != null && session.user.checkFollowedName(nomPrenom)) {
+      const text = `Vous suivez manuellement *${prenomNom}* ✅`;
+      await session.sendMessage(text);
+
+      peopleFromDB = await People.findOrCreate({
+        nom: JORFRes_data[0].nom,
+        prenom: JORFRes_data[0].prenom
+      });
+      await session.user.addFollowedPeople(peopleFromDB);
+      await session.user.removeFollowedName(nomPrenom);
+      await session.user.save();
+
+      await session.sendMessage(
+        `*${prenomNom}* a été ajouté vos suivis manuels`,
+        { forceNoKeyboard: true }
+      );
+    }
+    let numberFollowers: number | undefined;
+
+    peopleFromDB ??= await People.findOne({
       nom: JORFRes_data[0].nom,
       prenom: JORFRes_data[0].prenom
     });
-    let numberFollowers: number | undefined;
     if (peopleFromDB != null) {
       numberFollowers = await User.countDocuments({
         followedPeople: { $elemMatch: { peopleId: peopleFromDB._id } }
@@ -208,8 +239,6 @@ export async function searchPersonHistory(
         !isPersonAlreadyFollowed(people, session.user.followedPeople)
       );
     }
-
-    const prenomNom = `${JORFRes_data[0].prenom} ${JORFRes_data[0].nom}`;
 
     if (nbRecords > 2 || !isUserFollowingPerson) {
       if (historyType === "latest" && nbRecords > 2) {
@@ -255,6 +284,7 @@ export async function searchPersonHistory(
 
 interface SearchFollowUpContext {
   prenomNom: string;
+  JORFOffline?: boolean;
 }
 
 async function handleSearchFollowUp(
@@ -303,7 +333,7 @@ export const followCommand = async (
     await session.sendTypingAction();
 
     const JORFRes = await callJORFSearchPeople(personName);
-    if (JORFRes.length == 0) {
+    if (JORFRes == null || JORFRes.length == 0) {
       // redirect to manual follow
       await searchPersonHistory(
         session,
@@ -364,7 +394,14 @@ export const manualFollowCommand = async (
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
-  if ((await callJORFSearchPeople(prenomNom)).length > 0) {
+  const JORFResult = await callJORFSearchPeople(prenomNom);
+  if (JORFResult == null) {
+    await session.sendMessage(
+      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
+    );
+    return;
+  }
+  if (JORFResult.length > 0) {
     await followCommand(session, "Suivre " + prenomNom);
     return;
   }
