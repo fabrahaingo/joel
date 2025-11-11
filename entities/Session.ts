@@ -13,6 +13,7 @@ import { sendMatrixMessage } from "./MatrixSession.ts";
 
 export interface ExternalMessageOptions {
   matrixClient?: MatrixClient;
+  tchapClient?: MatrixClient;
   signalCli?: SignalCli;
   telegramBotToken?: string;
   whatsAppAPI?: WhatsAppAPI;
@@ -84,6 +85,7 @@ export interface MessageSendingOptionsInternal {
 export interface MessageSendingOptionsExternal {
   telegramBotToken?: string;
   matrixClient?: MatrixClient;
+  tchapClient?: MatrixClient;
   signalCli?: SignalCli;
   whatsAppAPI?: WhatsAppAPI;
   forceNoKeyboard?: boolean;
@@ -103,6 +105,16 @@ export async function sendMessage(
         throw new Error("matrixClient is required");
       return await sendMatrixMessage(
         options.matrixClient,
+        chatId,
+        message,
+        options
+      );
+
+    case "Tchap":
+      if (options?.tchapClient == null)
+        throw new Error("tchapClient is required");
+      return await sendMatrixMessage(
+        options.tchapClient,
         chatId,
         message,
         options
