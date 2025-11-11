@@ -1,10 +1,11 @@
-import umami from "../utils/umami.ts";
 import Organisation from "../models/Organisation.ts";
 import User from "../models/User.ts";
 import { IOrganisation, ISession, IUser, WikidataId } from "../types.ts";
-import axios from "axios";
 import { parseIntAnswers } from "../utils/text.utils.ts";
-import { getJORFSearchLinkOrganisation } from "../utils/JORFSearch.utils.ts";
+import {
+  getJORFSearchLinkOrganisation,
+  searchOrganisationWikidataId
+} from "../utils/JORFSearch.utils.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 
@@ -15,49 +16,7 @@ const isOrganisationAlreadyFollowed = (
   return user.followedOrganisations.some((o) => o.wikidataId === wikidataId);
 };
 
-interface WikiDataAPIResponse {
-  success: number;
-  search: {
-    id: WikidataId;
-  }[];
-}
-
 const FULL_COMMAND_PROMPT = `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
-
-async function searchOrganisationWikidataId(
-  org_name: string
-): Promise<{ nom: string; wikidataId: WikidataId }[]> {
-  try {
-    if (org_name.length == 0) return [];
-
-    await umami.log("/jorfsearch-request-wikidata-names");
-
-    const wikidataIds_raw: WikidataId[] = await axios
-      .get<WikiDataAPIResponse>(
-        encodeURI(
-          `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`
-        )
-      )
-      .then((r) => {
-        return r.data.search.map((o) => o.id);
-      });
-    if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
-
-    return (
-      await axios
-        .get<
-          { name: string; id: WikidataId }[]
-        >(encodeURI(`https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`))
-        .then((r) => r.data)
-    ).map((o) => ({
-      nom: o.name,
-      wikidataId: o.id
-    }));
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
-}
 
 const ORGANISATION_SEARCH_PROMPT =
   "Entrez le nom ou l'identifiant Wikidata de l'organisation que vous souhaitez suivre:\n" +
@@ -144,6 +103,12 @@ async function processOrganisationSearch(
   if (triggerUmami) await session.log({ event: "/follow-organisation" });
 
   const orgResults = await searchOrganisationWikidataId(orgName);
+  if (orgResults == null) {
+    await session.sendMessage(
+      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
+    );
+    return;
+  }
 
   if (orgResults.length == 0) {
     let text = `Votre recherche n'a donné aucun résultat. 👎\nVeuillez essayer de nouveau la commande.`;
@@ -375,6 +340,14 @@ export const followOrganisationsFromWikidataIdStr = async (
         orgResults.push(orgFromDb);
       } else {
         const orgInfoFromJORF = await searchOrganisationWikidataId(id);
+
+        if (orgInfoFromJORF == null) {
+          await session.sendMessage(
+            "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
+          );
+          return;
+        }
+
         if (orgInfoFromJORF.length > 0) {
           const newOrg: IOrganisation = await Organisation.findOrCreate({
             nom: orgInfoFromJORF[0].nom,
