@@ -23,7 +23,7 @@ if (
 
 if (["Matrix", "Tchap"].some((m) => m !== MATRIX_BOT_TYPE)) {
   console.log(
-    "Matrix: Only Matrix and Tchap modes are allowed for matrix apps"
+    `Matrix: MATRIX_BOT_TYPE set to ${MATRIX_BOT_TYPE} ! Only Matrix and Tchap modes are allowed for matrix apps`
   );
   process.exit(1);
 }
