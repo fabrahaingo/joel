@@ -22,14 +22,14 @@ interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
 
 export async function callJORFSearchPeople(
   peopleName: string
-): Promise<JORFSearchItem[]> {
+): Promise<JORFSearchItem[] | null> {
   try {
     await umami.log("/jorfsearch-request-people");
     return await axios
       .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true))
       .then(async (res1: AxiosResponse<JORFSearchResponse>) => {
-        if (res1.data === null) return []; // If an error occurred
-        if (typeof res1.data !== "string") return res1.data; // If it worked
+        if (res1.data === null) return null; // If an error occurred
+        if (typeof res1.data !== "string") return cleanJORFItems(res1.data); // If it worked
 
         const request = res1.request as CustomInternalAxiosRequestConfig;
 
@@ -43,19 +43,19 @@ export async function callJORFSearchPeople(
                 ? request.res.responseUrl
                 : `${request.res.responseUrl}?format=JSON`
             )
-            .then((res2: AxiosResponse<JORFSearchResponse>) => {
+            .then(async (res2: AxiosResponse<JORFSearchResponse>) => {
               if (res2.data === null || typeof res2.data === "string") {
-                return [];
+                await umami.log("/jorfsearch-request-failure");
+                return null;
               }
-              return res2.data;
+              return cleanJORFItems(res2.data);
             });
         }
-        return [];
-      })
-      .then((res) => cleanJORFItems(res));
+        return null;
+      });
   } catch (error) {
     console.log(error);
-    return [];
+    return null;
   }
 }
 
@@ -72,8 +72,11 @@ export async function callJORFSearchDay(
           }?format=JSON`
         )
       )
-      .then((res) => {
-        if (res.data === null || typeof res.data === "string") return [];
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await umami.log("/jorfsearch-request-failure");
+          return null;
+        }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
@@ -85,26 +88,29 @@ export async function callJORFSearchDay(
 export async function callJORFSearchTag(
   tag: FunctionTags,
   tagValue?: string
-): Promise<JORFSearchItem[]> {
+): Promise<JORFSearchItem[] | null> {
   try {
     await umami.log("/jorfsearch-request-tag");
     return await axios
       .get<JORFSearchResponse>(
         getJORFSearchLinkFunctionTag(tag, true, tagValue)
       )
-      .then((res) => {
-        if (res.data === null || typeof res.data === "string") return [];
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await umami.log("/jorfsearch-request-failure");
+          return null;
+        }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
     console.log(error);
   }
-  return [];
+  return null;
 }
 
 export async function callJORFSearchOrganisation(
   wikiId: WikidataId
-): Promise<JORFSearchItem[]> {
+): Promise<JORFSearchItem[] | null> {
   try {
     await umami.log("/jorfsearch-request-organisation");
     return await axios
@@ -113,19 +119,74 @@ export async function callJORFSearchOrganisation(
           `https://jorfsearch.steinertriples.ch/${wikiId.toUpperCase()}?format=JSON`
         )
       )
-      .then((res) => {
-        if (res.data === null || typeof res.data === "string") return [];
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await umami.log("/jorfsearch-request-failure");
+          return null;
+        }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
     console.log(error);
   }
-  return [];
+  return null;
+}
+
+interface WikiDataAPIResponse {
+  success: number;
+  search: {
+    id: WikidataId;
+  }[];
+}
+
+export async function searchOrganisationWikidataId(
+  org_name: string
+): Promise<{ nom: string; wikidataId: WikidataId }[] | null> {
+  if (org_name.length == 0) throw new Error("Empty org_name");
+
+  try {
+    await umami.log("/jorfsearch-request-wikidata-names");
+
+    const wikidataIds_raw: WikidataId[] | null = await axios
+      .get<
+        string | null | WikiDataAPIResponse
+      >(encodeURI(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`))
+      .then((r) => {
+        if (r.data === null || typeof r.data === "string") {
+          console.log(
+            "Wikidata API error when fetching organisation: ",
+            org_name
+          );
+          return null;
+        }
+        return r.data.search.map((o) => o.id);
+      });
+    if (wikidataIds_raw === null) return null;
+    if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
+
+    return await axios
+      .get<
+        { name: string; id: WikidataId }[] | null
+      >(encodeURI(`https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`))
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await umami.log("/jorfsearch-request-failure");
+          return null;
+        }
+        return res.data.map((o) => ({
+          nom: o.name,
+          wikidataId: o.id
+        }));
+      });
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
 }
 
 export async function callJORFSearchReference(
   reference: string
-): Promise<JORFSearchItem[]> {
+): Promise<JORFSearchItem[] | null> {
   try {
     await umami.log("/jorfsearch-request-reference");
     return await axios
@@ -134,37 +195,41 @@ export async function callJORFSearchReference(
           `https://jorfsearch.steinertriples.ch/doc/${reference.toUpperCase()}?format=JSON`
         )
       )
-      .then((res) => {
-        if (res.data === null || typeof res.data === "string") return [];
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await umami.log("/jorfsearch-request-failure");
+          return null;
+        }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
     console.log(error);
   }
-  return [];
+  return null;
 }
 
 // not used for now
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function JORFSearchCallPublications(
   currentDay: string
-): Promise<JORFSearchPublication[]> {
+): Promise<JORFSearchPublication[] | null> {
   try {
     await umami.log("/jorfsearch-request-meta");
     return await axios
       .get<JORFSearchResponseMeta>(
         `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`
       )
-      .then((res) => {
+      .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
-          return [];
+          await umami.log("/jorfsearch-request-failure");
+          return null;
         }
         return cleanJORFPublication(res.data);
       });
   } catch (error) {
     console.log(error);
   }
-  return [];
+  return null;
 }
 
 // Format a string to match the expected search format on JORFSearch: first letter capitalised and no accent

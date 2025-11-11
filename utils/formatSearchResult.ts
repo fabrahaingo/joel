@@ -152,10 +152,9 @@ export function formatSearchResult(
     }
     if (!options?.omitReference && elem.source_id && elem.source_date) {
       message += `🔗 _${elem.source_name} du ${dateToFrenchString(elem.source_date)}_: `;
-      if (markdownLink)
-        message += `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}/redirect)\n`;
-      else
-        message += `\nhttps://bodata.steinertriples.ch/${elem.source_id}/redirect\n`;
+      const source_url = `[cliquez ici](https://bodata.steinertriples.ch/${elem.source_id}/redirect)\n`;
+      if (markdownLink) message += `[cliquez ici](${source_url})\n`;
+      else message += `\n${source_url})\n`;
     }
 
     if (i < result.length - 1) message += "\n";

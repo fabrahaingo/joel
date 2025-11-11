@@ -46,12 +46,8 @@ function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
 }
 
 async function getJORFPromoSearchResult(
-  promo: Promo_ENA_INSP | null
-): Promise<JORFSearchItem[]> {
-  if (promo === null) {
-    return [];
-  }
-
+  promo: Promo_ENA_INSP
+): Promise<JORFSearchItem[] | null> {
   switch (promo.school) {
     case "ENA": // If ENA, we can use the associated tag with the year as value
       return callJORFSearchTag("eleve_ena" as FunctionTags, promo.period);
@@ -60,7 +56,8 @@ async function getJORFPromoSearchResult(
       return (
         (await callJORFSearchOrganisation(inspId))
           // We filter to keep admissions to the INSP organisation from the relevant year
-          .filter((publication) => publication.eleve_ena === promo.period)
+          ?.filter((publication) => publication.eleve_ena === promo.period) ??
+        null
       );
     default:
       return [];
@@ -136,18 +133,21 @@ async function handlePromoAnswer(
     return true;
   }
 
-  let promoJORFList: JORFSearchItem[] = [];
-  if (promoInfo !== null) {
-    promoJORFList = await getJORFPromoSearchResult(promoInfo);
-  }
-
-  if (promoInfo == null || promoJORFList.length === 0) {
+  if (promoInfo == null) {
     let text = `La promotion n'a pas été reconnue.👎`;
     if (session.messageApp === "Signal")
       text +=
         "\nUtilisez la commande /promos pour consulter la liste des promotions INSP et ENA disponibles.";
     await session.sendMessage(text, { forceNoKeyboard: true });
     await askPromoQuestion(session);
+    return true;
+  }
+
+  const promoJORFList = await getJORFPromoSearchResult(promoInfo);
+  if (promoJORFList == null) {
+    await session.sendMessage(
+      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
+    );
     return true;
   }
 
@@ -363,7 +363,12 @@ async function handleReferenceAnswer(
   await session.sendTypingAction();
 
   const JORFResult = await callJORFSearchReference(reference);
-
+  if (JORFResult == null) {
+    await session.sendMessage(
+      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
+    );
+    return true;
+  }
   if (JORFResult.length === 0) {
     await session.sendMessage(
       `La référence n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
