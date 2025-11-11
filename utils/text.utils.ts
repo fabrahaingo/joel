@@ -9,39 +9,25 @@ export function splitText(text: string, max: number): string[] {
   if (!Number.isFinite(max) || max <= 0) return [text];
 
   const chunks: string[] = [];
-  const n = text.length;
-  let i = 0;
+  const FORCE_SPLIT = "\\split";
+  const segments: string[] = [];
 
-  while (i < n) {
-    // Skip leading newlines
-    while (i < n && (text[i] === "\n" || text[i] === "\r")) i++;
-    if (i >= n) break;
-
-    let end = Math.min(i + max, n);
-
-    if (end < n) {
-      // 1) Prefer a newline within [i, end)
-      const nl = Math.max(
-        text.lastIndexOf("\n", end - 1),
-        text.lastIndexOf("\r", end - 1)
-      );
-      if (nl >= i) {
-        end = nl;
-      } else {
-        // 2) Otherwise prefer last whitespace within [i, end)
-        let j = end;
-        while (j > i && !isSpace(text.charCodeAt(j - 1))) j--;
-        if (j > i) end = j;
-      }
+  let start = 0;
+  while (true) {
+    const idx = text.indexOf(FORCE_SPLIT, start);
+    if (idx === -1) {
+      segments.push(text.slice(start));
+      break;
     }
 
-    // 3) If we couldn't find a better break, hard-cut at max to ensure progress
-    if (end === i) end = Math.min(i + max, n);
+    segments.push(text.slice(start, idx));
+    start = idx + FORCE_SPLIT.length;
+  }
 
-    const chunk = trimEdgeNewlines(text.slice(i, end));
-    if (chunk.length) chunks.push(chunk);
-
-    i = end;
+  for (const segment of segments) {
+    appendSegment(segment);
+    // Processing each segment independently automatically enforces the
+    // explicit split markers—no extra state required here.
   }
 
   return chunks;
@@ -57,6 +43,43 @@ export function splitText(text: string, max: number): string[] {
     while (b > a && (s.charCodeAt(b - 1) === 10 || s.charCodeAt(b - 1) === 13))
       b--;
     return s.slice(a, b);
+  }
+
+  function appendSegment(segmentText: string): void {
+    const n = segmentText.length;
+    let i = 0;
+
+    while (i < n) {
+      // Skip leading newlines
+      while (i < n && (segmentText[i] === "\n" || segmentText[i] === "\r")) i++;
+      if (i >= n) break;
+
+      let end = Math.min(i + max, n);
+
+      if (end < n) {
+        // 1) Prefer a newline within [i, end)
+        const nl = Math.max(
+          segmentText.lastIndexOf("\n", end - 1),
+          segmentText.lastIndexOf("\r", end - 1)
+        );
+        if (nl >= i) {
+          end = nl;
+        } else {
+          // 2) Otherwise prefer last whitespace within [i, end)
+          let j = end;
+          while (j > i && !isSpace(segmentText.charCodeAt(j - 1))) j--;
+          if (j > i) end = j;
+        }
+      }
+
+      // 3) If we couldn't find a better break, hard-cut at max to ensure progress
+      if (end === i) end = Math.min(i + max, n);
+
+      const chunk = trimEdgeNewlines(segmentText.slice(i, end));
+      if (chunk.length) chunks.push(chunk);
+
+      i = end;
+    }
   }
 }
 
