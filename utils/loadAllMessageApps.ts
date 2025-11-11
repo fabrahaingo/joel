@@ -35,8 +35,8 @@ export async function loadAllMessageApps(): Promise<{
       v: WHATSAPP_API_VERSION
     });
     resolved.whatsAppAPI.on.sent = ({ phoneID, to }) => {
-          //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
-      };
+      //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
+    };
     enabledApps.push("WhatsApp");
   }
 
