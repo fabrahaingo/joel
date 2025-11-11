@@ -28,6 +28,7 @@ export async function dispatchTasksToMessageApps<T>(
   const concurrencyLimitByMessageApp = new Map<MessageApp, number>();
 
   concurrencyLimitByMessageApp.set("Matrix", MATRIX_API_SENDING_CONCURRENCY);
+  concurrencyLimitByMessageApp.set("Tchap", MATRIX_API_SENDING_CONCURRENCY);
   concurrencyLimitByMessageApp.set(
     "Telegram",
     TELEGRAM_API_SENDING_CONCURRENCY
@@ -52,10 +53,21 @@ export async function dispatchTasksToMessageApps<T>(
     // this ensures coherent size within batches, so they don't wait too much for each other
     appTasks.sort((a, b) => b.recordCount - a.recordCount);
 
-    const limit = pLimit(concurrencyLimitByMessageApp.get(messageApp) ?? 1);
+    const app_concurrency_limit =
+      concurrencyLimitByMessageApp.get(messageApp) ?? 1;
+    if (app_concurrency_limit > 1) {
+      const limit = pLimit(concurrencyLimitByMessageApp.get(messageApp) ?? 1);
 
-    // Wrap each delivery in the limiter
-    await Promise.all(appTasks.map((task) => limit(() => taskFunction(task))));
+      // Wrap each delivery in the limiter
+      await Promise.all(
+        appTasks.map((task) => limit(() => taskFunction(task)))
+      );
+    } else {
+      // if appLimit is 1, just run the taskFunction directly
+      for (const task of appTasks) {
+        await taskFunction(task);
+      }
+    }
   });
 
   await Promise.all(appPromises);

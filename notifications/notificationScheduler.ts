@@ -59,27 +59,29 @@ export function startDailyNotificationJobs(
     const nextRun = computeNextOccurrence(parsedTime);
     const delay = nextRun.getTime() - Date.now();
 
-    setTimeout(async () => {
-      if (running) {
-        console.warn(
-          `${appsToString}: notification process is still running when the next schedule fired. Skipping this cycle.`
-        );
-        scheduleNextRun();
-        return;
-      }
+    setTimeout(() => {
+      void (async () => {
+        if (running) {
+          console.warn(
+            `${appsToString}: notification process is still running when the next schedule fired. Skipping this cycle.`
+          );
+          scheduleNextRun();
+          return;
+        }
 
-      running = true;
-      try {
-        await runNotificationProcess(messageApps, messageOptions);
-      } catch (error) {
-        console.error(
-          `${appsToString}: error during notification process`,
-          error
-        );
-      } finally {
-        running = false;
-        scheduleNextRun();
-      }
+        running = true;
+        try {
+          await runNotificationProcess(messageApps, messageOptions);
+        } catch (error) {
+          console.error(
+            `${appsToString}: error during notification process`,
+            error
+          );
+        } finally {
+          running = false;
+          scheduleNextRun();
+        }
+      })();
     }, delay);
 
     console.log(

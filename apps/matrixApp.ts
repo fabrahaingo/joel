@@ -10,32 +10,44 @@ import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
+const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
 
-const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN } = process.env;
-if (MATRIX_HOME_URL == undefined || MATRIX_BOT_TOKEN == undefined) {
-  console.log("Matrix: env is not set, bot did not start \u{1F6A9}");
+if (
+  MATRIX_HOME_URL == undefined ||
+  MATRIX_BOT_TOKEN == undefined ||
+  MATRIX_BOT_TYPE == undefined
+) {
+  console.log(`Matrix: env is not set, bot did not start \u{1F6A9}`);
   process.exit(0);
 }
+
+if (["Matrix", "Tchap"].some((m) => m !== MATRIX_BOT_TYPE)) {
+  console.log(
+    "Matrix: Only Matrix and Tchap modes are allowed for matrix apps"
+  );
+  process.exit(1);
+}
+const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 
 // Persist sync token + crypto state
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
 const cryptoProvider = new RustSdkCryptoStorageProvider("matrix/matrix-crypto");
 
 // Use the access token you got from login or registration above.
-const matrixClient = new MatrixClient(
+const client = new MatrixClient(
   "https://" + MATRIX_HOME_URL,
   MATRIX_BOT_TOKEN,
   storageProvider,
   cryptoProvider
 );
 // Auto-join rooms when invited (required for DMs)
-AutojoinRoomsMixin.setupOnClient(matrixClient);
+AutojoinRoomsMixin.setupOnClient(client);
 
 // Before we start the bot, register our command handler
-matrixClient.on("room.event", handleCommand);
+client.on("room.event", handleCommand);
 
 /*
-matrixClient.on("room.join", (_roomId: string, _event: unknown) => {
+client.on("room.join", (_roomId: string, _event: unknown) => {
   // The client has been invited to `roomId`
   // if only another person in the room: send a welcome message
 });
@@ -47,10 +59,13 @@ await (async function () {
   await mongodbConnect();
 
   // Now that everything is set up, start the bot. This will start the sync loop and run until killed.
-  await matrixClient.start();
-  serverUserId = await matrixClient.getUserId();
+  await client.start();
+  serverUserId = await client.getUserId();
 
-  startDailyNotificationJobs(["Matrix"], { matrixClient: matrixClient });
+  const messageOptions =
+    matrixApp === "Matrix" ? { matrixClient: client } : { tchapClient: client };
+
+  startDailyNotificationJobs([matrixApp], messageOptions);
 })().then(() => {
   console.log(`Matrix: JOEL started successfully \u{2705}`);
 });
@@ -90,7 +105,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
 
       case "org.matrix.msc3381.poll.response": {
         const eventId = event.content["m.relates_to"]?.event_id;
-        if (eventId != null) await closePollMenu(matrixClient, roomId, eventId);
+        if (eventId != null) await closePollMenu(client, roomId, eventId);
         msgText = event.content["org.matrix.msc3381.poll.response"].answers[0];
         break;
       }
@@ -107,17 +122,18 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     if (/^@_?server:/.test(event.sender)) {
       console.log("Matrix: message from the server");
       console.log(msgText);
-      await matrixClient.sendReadReceipt(roomId, event.event_id);
+      await client.sendReadReceipt(roomId, event.event_id);
       return;
     }
 
     try {
       await umami.log("/message-received", "Matrix");
 
-      await matrixClient.sendReadReceipt(roomId, event.event_id);
+      await client.sendReadReceipt(roomId, event.event_id);
 
       const matrixSession = new MatrixSession(
-        matrixClient,
+        matrixApp,
+        client,
         event.sender,
         roomId,
         "fr"
@@ -131,8 +147,5 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     } catch (error) {
       console.log(error);
     }
-
-    // Now that we've passed all the checks, we can actually act upon the command
-    //await client.replyNotice(roomId, event, "Hello world!");
   })();
 }

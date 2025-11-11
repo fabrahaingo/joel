@@ -3,8 +3,15 @@ import { runNotificationProcess } from "../notifications/runNotificationProcess.
 import { loadAllMessageApps } from "../utils/loadAllMessageApps.ts";
 
 await (async () => {
-  const { messageApps, messageAppOptions } = await loadAllMessageApps();
-  await runNotificationProcess(messageApps, messageAppOptions);
+  try {
+    const { messageApps, messageAppOptions } = await loadAllMessageApps();
+    await runNotificationProcess(messageApps, messageAppOptions);
 
-  console.log("Notification process completed");
+    console.log("Notification process completed");
+
+    process.exit(0);
+  } catch (error) {
+    console.error("Notification failed:", error);
+    process.exit(1);
+  }
 })();

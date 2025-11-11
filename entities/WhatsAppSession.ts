@@ -26,7 +26,7 @@ import Umami from "../utils/umami.ts";
 
 export const WHATSAPP_API_VERSION = "v23.0";
 
-export const WHATSAPP_MESSAGE_CHAR_LIMIT = 1023;
+export const WHATSAPP_MESSAGE_CHAR_LIMIT = 900;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the same user, but we'll take 1 here
 const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages in burst mode
 
@@ -248,6 +248,11 @@ export async function sendWhatsAppMessage(
           userPhoneIdStr,
           new Text(mArr[i])
         );
+        await whatsAppAPI.sendMessage(
+          WHATSAPP_PHONE_ID,
+          userPhoneIdStr,
+          new Text("Test " + i.toString())
+        );
       }
       if (resp.error) {
         switch (resp.error.code) {
@@ -317,6 +322,10 @@ export async function sendWhatsAppMessage(
           userPhoneIdStr,
           new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
         );
+      }
+      if (resp.error) {
+        console.log(resp.error);
+        return false;
       }
       numberMessageBurst += 1;
       await umami.log("/message-sent", "WhatsApp");
