@@ -28,6 +28,7 @@ export async function dispatchTasksToMessageApps<T>(
   const concurrencyLimitByMessageApp = new Map<MessageApp, number>();
 
   concurrencyLimitByMessageApp.set("Matrix", MATRIX_API_SENDING_CONCURRENCY);
+  concurrencyLimitByMessageApp.set("Tchap", MATRIX_API_SENDING_CONCURRENCY);
   concurrencyLimitByMessageApp.set(
     "Telegram",
     TELEGRAM_API_SENDING_CONCURRENCY

@@ -33,11 +33,9 @@ const fullMenuKeyboard: KeyboardKey[] = [
   KEYBOARD_KEYS.HELP.key
 ];
 
-const MatrixMessageApp: MessageApp = "Matrix";
-
 export class MatrixSession implements ISession {
-  messageApp = MatrixMessageApp;
-  matrixClient: MatrixClient;
+  messageApp: MessageApp;
+  client: MatrixClient;
   language_code: string;
   chatId: string;
   roomId: string;
@@ -46,12 +44,19 @@ export class MatrixSession implements ISession {
   mainMenuKeyboard: Keyboard;
 
   constructor(
-    matrixClient: MatrixClient,
+    messageApp: "Matrix" | "Tchap",
+    client: MatrixClient,
     chatId: string,
     roomId: string,
     language_code: string
   ) {
-    this.matrixClient = matrixClient;
+    if (["Matrix", "Tchap"].some((m) => m !== messageApp))
+      throw new Error(
+        "Only Matrix and Tchap modes are allowed for matrix apps"
+      );
+
+    this.messageApp = messageApp;
+    this.client = client;
     this.chatId = chatId;
     this.roomId = roomId;
     this.language_code = language_code;
@@ -81,7 +86,7 @@ export class MatrixSession implements ISession {
     options?: MessageSendingOptionsInternal
   ): Promise<void> {
     await sendMatrixMessage(
-      this.matrixClient,
+      this.client,
       this.chatId,
       formattedData,
       options,
@@ -91,7 +96,7 @@ export class MatrixSession implements ISession {
 }
 
 export async function sendMatrixMessage(
-  matrixClient: MatrixClient,
+  client: MatrixClient,
   chatId: string,
   message: string,
   options?: MessageSendingOptionsInternal,
@@ -108,14 +113,14 @@ export async function sendMatrixMessage(
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
   try {
-    roomId ??= await findUserDMRoomId(matrixClient, chatId);
+    roomId ??= await findUserDMRoomId(client, chatId);
     if (!roomId) {
       console.log("Could not find DM room for user " + chatId);
       return false;
     }
     let promptId = "";
     for (; i < mArr.length; i++) {
-      promptId = await matrixClient.sendMessage(roomId, {
+      promptId = await client.sendMessage(roomId, {
         msgtype: "m.text",
         body: markdown2plainText(mArr[i]),
         format: "org.matrix.custom.html",
@@ -130,13 +135,13 @@ export async function sendMatrixMessage(
       );
     }
     if (options?.separateMenuMessage)
-      await sendPollMenu(matrixClient, roomId, {
+      await sendPollMenu(client, roomId, {
         title: KEYBOARD_KEYS.MAIN_MENU.key.text,
         options: fullMenuKeyboard.map((k) => ({ text: k.text }))
       });
     else if (keyboard != null)
       await sendMatrixReactions(
-        matrixClient,
+        client,
         chatId,
         keyboard.flat().map((k) => k.text),
         promptId,
@@ -153,7 +158,7 @@ export async function sendMatrixMessage(
           setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
         );
         return sendMatrixMessage(
-          matrixClient,
+          client,
           chatId,
           mArr.slice(i).join("\n"),
           options,
@@ -184,7 +189,7 @@ interface PollMenu {
 }
 
 export async function sendPollMenu(
-  matrixClient: MatrixClient,
+  client: MatrixClient,
   roomId: string,
   pollMenu: PollMenu
 ): Promise<boolean> {
@@ -205,11 +210,7 @@ export async function sendPollMenu(
     }
   };
 
-  await matrixClient.sendEvent(
-    roomId,
-    "org.matrix.msc3381.poll.start",
-    content
-  );
+  await client.sendEvent(roomId, "org.matrix.msc3381.poll.start", content);
   await umami.log("/message-sent", "Matrix");
 
   return true;
@@ -308,7 +309,7 @@ export async function extractMatrixSession(
   session: ISession,
   userFacingError?: boolean
 ): Promise<MatrixSession | undefined> {
-  if (session.messageApp !== "Matrix") {
+  if (["Matrix", "Tchap"].some((m) => m !== session.messageApp)) {
     console.log("Session is not a MatrixSession");
     if (userFacingError) {
       await session.sendMessage(
