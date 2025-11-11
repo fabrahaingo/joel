@@ -149,7 +149,7 @@ export async function searchPersonHistory(
         text =
           "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement:\n\nVous pouvez utiliser le bouton ci-dessous pour forcer un suivi manuel.";
       } else {
-        text = `*${personName}* est introuvable au JO !\n\nAssurez vous d'avoir bien tapé le prénom et le nom correctement !\n\nSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.\n\nUtilisez le bouton ci-dessous pour forcer le suivi sur les nominations à venir.`;
+        text = `*${personName}* est introuvable au JO !\n\nAssurez vous d'avoir bien tapé le prénom et le nom correctement !\\splitSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.\n\nUtilisez le bouton ci-dessous pour forcer le suivi sur les nominations à venir.`;
       }
 
       tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW_MANUAL.key]);
