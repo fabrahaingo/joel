@@ -28,6 +28,8 @@ if (!["Matrix", "Tchap"].some((m) => m === MATRIX_BOT_TYPE)) {
 const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 
 // Persist sync token + crypto state
+import fs from "node:fs";
+fs.mkdirSync("matrix", { recursive: true });
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
 const cryptoProvider = new RustSdkCryptoStorageProvider("matrix/matrix-crypto");
 
