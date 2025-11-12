@@ -86,6 +86,7 @@ export function splitText(text: string, max: number): string[] {
 export function getSplitTextMessageSize(text: string, app: MessageApp): number {
   switch (app) {
     case "Matrix":
+    case "Tchap":
       return splitText(text, MATRIX_MESSAGE_CHAR_LIMIT).length;
 
     case "Telegram":

@@ -1,4 +1,8 @@
-import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
+import {
+  ExternalMessageOptions,
+  MiniUserInfo,
+  sendMessage
+} from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { IOrganisation, IUser, MessageApp, WikidataId } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
@@ -78,6 +82,7 @@ export async function notifyOrganisationsUpdates(
     {
       _id: 1,
       chatId: 1,
+      roomId: 1,
       messageApp: 1,
       followedOrganisations: { wikidataId: 1, lastUpdate: 1 },
       schemaVersion: 1
@@ -143,8 +148,11 @@ export async function notifyOrganisationsUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
-        messageApp: user.messageApp,
-        chatId: user.chatId,
+        userInfo: {
+          messageApp: user.messageApp,
+          chatId: user.chatId,
+          roomId: user.roomId
+        },
         updatedRecordsMap: newUserOrganisationsUpdates,
         recordCount: totalUserRecordsCount
       });
@@ -156,8 +164,7 @@ export async function notifyOrganisationsUpdates(
     userUpdateTasks,
     async (task) => {
       const messageSent = await sendOrganisationUpdate(
-        task.messageApp,
-        task.chatId,
+        task.userInfo,
         task.updatedRecordsMap,
         orgNameById,
         messageAppsOptions
@@ -188,8 +195,7 @@ export async function notifyOrganisationsUpdates(
 }
 
 async function sendOrganisationUpdate(
-  messageApp: MessageApp,
-  chatId: IUser["chatId"],
+  userInfo: MiniUserInfo,
   organisationsUpdateRecordsMap: Map<WikidataId, JORFSearchItem[]>,
   orgNameById: Map<WikidataId, string>,
   messageAppsOptions: ExternalMessageOptions
@@ -199,7 +205,7 @@ async function sendOrganisationUpdate(
   let notification_text =
     "📢 Nouvelles publications parmi les organisations que suivez :\n\n";
 
-  const markdownLinkEnabled = messageApp !== "WhatsApp";
+  const markdownLinkEnabled = userInfo.messageApp !== "WhatsApp";
 
   const keys = Array.from(organisationsUpdateRecordsMap.keys());
   const lastKey = keys[keys.length - 1];
@@ -253,25 +259,28 @@ async function sendOrganisationUpdate(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: messageApp === "WhatsApp"
+    separateMenuMessage: userInfo.messageApp === "WhatsApp"
   };
 
   const messageSent = await sendMessage(
-    messageApp,
-    chatId,
+    userInfo,
     notification_text,
     messageAppsOptionsApp
   );
   if (!messageSent) return false;
 
   const notifData: UmamiNotificationData = {
-    message_nb: getSplitTextMessageSize(notification_text, messageApp),
+    message_nb: getSplitTextMessageSize(notification_text, userInfo.messageApp),
     updated_follows_nb: organisationsUpdateRecordsMap.size,
     total_records_nb: organisationsUpdateRecordsMap
       .values()
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  await umami.log("/notification-update-organisation", messageApp, notifData);
+  await umami.log(
+    "/notification-update-organisation",
+    userInfo.messageApp,
+    notifData
+  );
   return true;
 }

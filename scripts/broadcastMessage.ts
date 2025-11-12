@@ -40,8 +40,11 @@ export async function broadcastMessage(
 
   for (const recipient of recipients) {
     const success = await sendMessage(
-      recipient.messageApp,
-      recipient.chatId,
+      {
+        messageApp: recipient.messageApp,
+        chatId: recipient.chatId,
+        roomId: recipient.roomId
+      },
       message,
       messageAppOptions
     );

@@ -19,6 +19,9 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: String,
       required: true
     },
+    roomId: {
+      type: String
+    },
     language_code: {
       type: String,
       required: true,
@@ -127,13 +130,20 @@ UserSchema.static(
     if (session.user != null) return session.user;
 
     const user: IUser | null = await loadUser(session);
-
-    if (user != null) return user;
+    if (user != null) {
+      // If the roomId has changed, update the user's roomId'
+      if (session.roomId != null && user.roomId !== session.roomId) {
+        user.roomId = session.roomId;
+        await user.save();
+      }
+      return user;
+    }
 
     await umami.log("/new-user", session.messageApp);
     return await this.create({
       chatId: session.chatId,
       messageApp: session.messageApp,
+      roomId: session.roomId,
       language_code: session.language_code,
       schemaVersion: USER_SCHEMA_VERSION
     });

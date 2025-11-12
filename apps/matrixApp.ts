@@ -2,8 +2,7 @@ import "dotenv/config";
 import {
   MatrixClient,
   SimpleFsStorageProvider,
-  RustSdkCryptoStorageProvider,
-  AutojoinRoomsMixin
+  RustSdkCryptoStorageProvider
 } from "matrix-bot-sdk";
 import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
 import { processMessage } from "../commands/Commands.ts";
@@ -11,7 +10,6 @@ import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
-
 if (
   MATRIX_HOME_URL == undefined ||
   MATRIX_BOT_TOKEN == undefined ||
@@ -40,11 +38,9 @@ const client = new MatrixClient(
   storageProvider,
   cryptoProvider
 );
-// Auto-join rooms when invited (required for DMs)
-AutojoinRoomsMixin.setupOnClient(client);
-
 // Before we start the bot, register our command handler
 client.on("room.event", handleCommand);
+client.on("room.invite", handleInvite);
 
 /*
 client.on("room.join", (_roomId: string, _event: unknown) => {
@@ -54,6 +50,59 @@ client.on("room.join", (_roomId: string, _event: unknown) => {
  */
 
 let serverUserId: string | undefined;
+
+async function ensureServerUserId() {
+  serverUserId ??= await client.getUserId();
+  return serverUserId;
+}
+
+async function getOtherMemberCount(roomId: string) {
+  const stateEvents = await client.getRoomState(roomId);
+  const otherMembers = new Set<string>();
+  const currentUserId = await ensureServerUserId();
+
+  for (const event of stateEvents as {
+    type?: string;
+    state_key?: string;
+    content?: { membership?: string };
+  }[]) {
+    if (event.type !== "m.room.member") continue;
+    const membership = event.content?.membership;
+    if (membership !== "join" && membership !== "invite") continue;
+    const memberId = event.state_key;
+    if (memberId == null || memberId === currentUserId) continue;
+    otherMembers.add(memberId);
+  }
+
+  return otherMembers.size;
+}
+
+function handleInvite(roomId: string) {
+  void (async () => {
+    const otherMemberCount = await (async () => {
+      try {
+        return await getOtherMemberCount(roomId);
+      } catch {
+        return undefined; // room preview is disabled
+      }
+    })();
+
+    if (otherMemberCount != null && otherMemberCount > 1) {
+      try {
+        await client.leaveRoom(roomId);
+      } catch (error) {
+        console.log(`Matrix: failed to decline invite for ${roomId}`, error);
+      }
+      return;
+    }
+
+    try {
+      await client.joinRoom(roomId);
+    } catch (error) {
+      console.log(`Matrix: failed to join invited room ${roomId}`, error);
+    }
+  })();
+}
 
 await (async function () {
   await mongodbConnect();
@@ -112,6 +161,30 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
 
       case "m.room.member": {
         if (event.content.membership !== "join") return;
+
+        // leave non-direct rooms when a new member joins
+        try {
+          const otherMemberCount = await getOtherMemberCount(roomId);
+          if (otherMemberCount > 1) {
+            console.log(
+              `${matrixApp}: leaving room ${roomId} because it has ${String(otherMemberCount)} members besides the bot`
+            );
+            await client.sendMessage(roomId, {
+              msgtype: "m.text",
+              body: "JOEL ne permet pas de rejoindre des salons multi-personnes."
+            });
+            await client.leaveRoom(roomId);
+            return false;
+          }
+        } catch (error) {
+          console.log(
+            `Matrix: unable to inspect room ${roomId} membership`,
+            error
+          );
+          return false;
+        }
+
+        // Send welcome message to new members
         msgText = "/start";
         break;
       }
@@ -120,14 +193,14 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
 
     // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
     if (/^@_?server:/.test(event.sender)) {
-      console.log("Matrix: message from the server");
+      console.log(`${matrixApp}: message from the server`);
       console.log(msgText);
       await client.sendReadReceipt(roomId, event.event_id);
       return;
     }
 
     try {
-      await umami.log("/message-received", "Matrix");
+      await umami.log("/message-received", matrixApp);
 
       await client.sendReadReceipt(roomId, event.event_id);
 

@@ -3,6 +3,7 @@ import User from "../models/User.ts";
 import {
   loadUser,
   MessageSendingOptionsInternal,
+  MiniUserInfo,
   recordSuccessfulDelivery
 } from "./Session.ts";
 import umami, { UmamiEvent } from "../utils/umami.ts";
@@ -33,9 +34,14 @@ const fullMenuKeyboard: KeyboardKey[] = [
   KEYBOARD_KEYS.HELP.key
 ];
 
+interface ExtendedMatrixClient {
+  matrix: MatrixClient;
+  messageApp: MessageApp;
+}
+
 export class MatrixSession implements ISession {
   messageApp: MessageApp;
-  client: MatrixClient;
+  client: ExtendedMatrixClient;
   language_code: string;
   chatId: string;
   roomId: string;
@@ -56,7 +62,7 @@ export class MatrixSession implements ISession {
       );
 
     this.messageApp = messageApp;
-    this.client = client;
+    this.client = { matrix: client, messageApp };
     this.chatId = chatId;
     this.roomId = roomId;
     this.language_code = language_code;
@@ -66,6 +72,11 @@ export class MatrixSession implements ISession {
   // try to fetch user from db
   async loadUser(): Promise<void> {
     this.user = await loadUser(this);
+    // If the roomId has changed, update the user's roomId'
+    if (this.user && this.user.roomId !== this.roomId) {
+      this.user.roomId = this.roomId;
+      await this.user.save();
+    }
   }
 
   // Force create a user record
@@ -87,24 +98,25 @@ export class MatrixSession implements ISession {
   ): Promise<void> {
     await sendMatrixMessage(
       this.client,
-      this.chatId,
+      { messageApp: this.messageApp, chatId: this.chatId, roomId: this.roomId },
       formattedData,
-      options,
-      this.roomId
+      options
     );
   }
 }
 
 export async function sendMatrixMessage(
-  client: MatrixClient,
-  chatId: string,
+  client: ExtendedMatrixClient,
+  userInfo: MiniUserInfo,
   message: string,
   options?: MessageSendingOptionsInternal,
-  roomId?: string,
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log("/message-fail-too-many-requests-aborted", "Matrix");
+    await umami.log(
+      "/message-fail-too-many-requests-aborted",
+      client.messageApp
+    );
     return false;
   } // give up after 5 retries
   let keyboard = options?.keyboard;
@@ -113,21 +125,21 @@ export async function sendMatrixMessage(
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
   try {
-    roomId ??= await findUserDMRoomId(client, chatId);
-    if (!roomId) {
-      console.log("Could not find DM room for user " + chatId);
+    userInfo.roomId ??= await findUserDMRoomId(client.matrix, userInfo.chatId);
+    if (!userInfo.roomId) {
+      console.log("Could not find DM room for user " + userInfo.chatId);
       return false;
     }
     let promptId = "";
     for (; i < mArr.length; i++) {
-      promptId = await client.sendMessage(roomId, {
+      promptId = await client.matrix.sendMessage(userInfo.roomId, {
         msgtype: "m.text",
         body: markdown2plainText(mArr[i]),
         format: "org.matrix.custom.html",
         formatted_body: markdown2html(mArr[i])
       });
 
-      await umami.log("/message-sent", "Matrix");
+      await umami.log("/message-sent", client.messageApp);
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
@@ -135,23 +147,22 @@ export async function sendMatrixMessage(
       );
     }
     if (options?.separateMenuMessage)
-      await sendPollMenu(client, roomId, {
+      await sendPollMenu(client, userInfo.roomId, {
         title: KEYBOARD_KEYS.MAIN_MENU.key.text,
         options: fullMenuKeyboard.map((k) => ({ text: k.text }))
       });
     else if (keyboard != null)
       await sendMatrixReactions(
         client,
-        chatId,
+        userInfo,
         keyboard.flat().map((k) => k.text),
-        promptId,
-        roomId
+        promptId
       );
   } catch (error) {
     const mError = error as MatrixError;
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
-        await umami.log("/message-fail-too-many-requests", "Matrix");
+        await umami.log("/message-fail-too-many-requests", client.messageApp);
         const retryAfterMs =
           mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
         await new Promise((resolve) =>
@@ -159,17 +170,16 @@ export async function sendMatrixMessage(
         );
         return sendMatrixMessage(
           client,
-          chatId,
+          userInfo,
           mArr.slice(i).join("\n"),
           options,
-          roomId,
           retryNumber + 1
         );
       }
-      case "M_FORBIDDEN":
-        await umami.log("/user-blocked-joel", "Matrix");
+      case "M_FORBIDDEN": // user blocked the bot, user left the room ...
+        await umami.log("/user-blocked-joel", client.messageApp);
         await User.updateOne(
-          { messageApp: "Matrix", chatId: chatId },
+          { messageApp: client.messageApp, chatId: userInfo.chatId },
           { $set: { status: "blocked" } }
         );
         break;
@@ -178,7 +188,7 @@ export async function sendMatrixMessage(
     }
     return false;
   }
-  await recordSuccessfulDelivery("Matrix", chatId);
+  await recordSuccessfulDelivery(client.messageApp, userInfo.chatId);
 
   return true;
 }
@@ -189,7 +199,7 @@ interface PollMenu {
 }
 
 export async function sendPollMenu(
-  client: MatrixClient,
+  client: ExtendedMatrixClient,
   roomId: string,
   pollMenu: PollMenu
 ): Promise<boolean> {
@@ -210,8 +220,12 @@ export async function sendPollMenu(
     }
   };
 
-  await client.sendEvent(roomId, "org.matrix.msc3381.poll.start", content);
-  await umami.log("/message-sent", "Matrix");
+  await client.matrix.sendEvent(
+    roomId,
+    "org.matrix.msc3381.poll.start",
+    content
+  );
+  await umami.log("/message-sent", client.messageApp);
 
   return true;
 }
@@ -235,23 +249,25 @@ export async function closePollMenu(
 }
 
 async function sendMatrixReactions(
-  matrixClient: MatrixClient,
-  chatId: string,
+  client: ExtendedMatrixClient,
+  userInfo: MiniUserInfo,
   reactions: string[],
   eventId: string,
-  roomId?: string,
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log("/message-fail-too-many-requests-aborted", "Matrix");
+    await umami.log(
+      "/message-fail-too-many-requests-aborted",
+      client.messageApp
+    );
     return false;
   }
 
   let i = 0;
   try {
-    roomId ??= await findUserDMRoomId(matrixClient, chatId);
-    if (!roomId) {
-      console.log("Could not find DM room for user " + chatId);
+    userInfo.roomId ??= await findUserDMRoomId(client.matrix, userInfo.chatId);
+    if (!userInfo.roomId) {
+      console.log("Could not find DM room for user " + userInfo.chatId);
       return false;
     }
 
@@ -263,24 +279,23 @@ async function sendMatrixReactions(
           key: reactions[i]
         }
       };
-      await matrixClient.sendEvent(roomId, "m.reaction", content);
+      await client.matrix.sendEvent(userInfo.roomId, "m.reaction", content);
     }
   } catch (error) {
     const mError = error as MatrixError;
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
-        await umami.log("/message-fail-too-many-requests", "Matrix");
+        await umami.log("/message-fail-too-many-requests", client.messageApp);
         const retryAfterMs =
           mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
         );
         return await sendMatrixReactions(
-          matrixClient,
-          chatId,
+          client,
+          userInfo,
           reactions.slice(i),
           eventId,
-          roomId,
           retryNumber + 1
         );
       }
