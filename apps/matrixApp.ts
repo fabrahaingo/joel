@@ -106,8 +106,8 @@ await (async function () {
   await mongodbConnect();
 
   // Now that everything is set up, start the bot. This will start the sync loop and run until killed.
-  await client.start();
   serverUserId = await client.getUserId();
+  await client.start();
 
   const messageOptions =
     matrixApp === "Matrix" ? { matrixClient: client } : { tchapClient: client };
