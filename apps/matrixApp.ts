@@ -2,7 +2,9 @@ import "dotenv/config";
 import {
   MatrixClient,
   SimpleFsStorageProvider,
-  RustSdkCryptoStorageProvider
+  RustSdkCryptoStorageProvider,
+  AutojoinUpgradedRoomsMixin,
+  AutojoinRoomsMixin
 } from "matrix-bot-sdk";
 import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
 import { processMessage } from "../commands/Commands.ts";
@@ -40,10 +42,31 @@ const client = new MatrixClient(
   storageProvider,
   cryptoProvider
 );
+
+AutojoinRoomsMixin.setupOnClient(client);
+AutojoinUpgradedRoomsMixin.setupOnClient(client); // optional but nice to have
+
 // Before we start the bot, register our command handler
 client.on("room.event", handleCommand);
 client.on("room.invite", handleInvite);
 
+// Migrate your per-room state when the upgrade completes
+client.on(
+  "room.upgraded",
+  (
+    newRoomId: string,
+    createEvent: { content?: { predecessor?: { room_id?: string } } }
+  ) =>
+    void (async () => {
+      const oldRoomId = createEvent.content?.predecessor?.room_id;
+      if (!oldRoomId) return;
+
+      await User.updateMany(
+        { roomId: oldRoomId },
+        { $set: { roomId: newRoomId } }
+      );
+    })()
+);
 /*
 client.on("room.join", (_roomId: string, _event: unknown) => {
   // The client has been invited to `roomId`
@@ -77,33 +100,6 @@ async function getOtherMemberCount(roomId: string) {
   }
 
   return otherMembers.size;
-}
-
-function handleInvite(roomId: string) {
-  void (async () => {
-    const otherMemberCount = await (async () => {
-      try {
-        return await getOtherMemberCount(roomId);
-      } catch {
-        return undefined; // room preview is disabled
-      }
-    })();
-
-    if (otherMemberCount != null && otherMemberCount > 1) {
-      try {
-        await client.leaveRoom(roomId);
-      } catch (error) {
-        console.log(`Matrix: failed to decline invite for ${roomId}`, error);
-      }
-      return;
-    }
-
-    try {
-      await client.joinRoom(roomId);
-    } catch (error) {
-      console.log(`Matrix: failed to join invited room ${roomId}`, error);
-    }
-  })();
 }
 
 await (async function () {
