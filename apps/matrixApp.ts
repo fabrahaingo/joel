@@ -144,6 +144,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     let msgText: string | undefined;
     switch (event.type) {
       case "m.room.message":
+        await client.sendReadReceipt(roomId, event.event_id);
         msgText = event.content.body;
         break;
 
@@ -198,14 +199,13 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     if (/^@_?server:/.test(event.sender)) {
       console.log(`${matrixApp}: message from the server`);
       console.log(msgText);
-      await client.sendReadReceipt(roomId, event.event_id);
+      if (event.type === "m.room.message")
+        await client.sendReadReceipt(roomId, event.event_id);
       return;
     }
 
     try {
       await umami.log("/message-received", matrixApp);
-
-      await client.sendReadReceipt(roomId, event.event_id);
 
       const matrixSession = new MatrixSession(
         matrixApp,
