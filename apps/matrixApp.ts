@@ -132,7 +132,8 @@ interface MatrixRoomEvent {
       "m.in_reply_to"?: { event_id: string };
     };
     membership?: string;
-    "org.matrix.msc3381.poll.response": { answers: string[] };
+    "org.matrix.msc3381.poll.response"?: { answers?: string[] };
+    "m.poll.response"?: { answers?: string[] };
   };
 }
 
@@ -152,10 +153,14 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         msgText = event.content["m.relates_to"]?.key;
         break;
 
+      case "m.poll.response":
       case "org.matrix.msc3381.poll.response": {
         const eventId = event.content["m.relates_to"]?.event_id;
         if (eventId != null) await closePollMenu(client, roomId, eventId);
-        msgText = event.content["org.matrix.msc3381.poll.response"].answers[0];
+        const payload =
+          event.content["m.poll.response"] ??
+          event.content["org.matrix.msc3381.poll.response"];
+        msgText = payload?.answers?.[0];
         break;
       }
 
