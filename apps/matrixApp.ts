@@ -11,6 +11,9 @@ import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
+import User from "../models/User.ts";
+import { IUser } from "../types";
+import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
 if (
   MATRIX_HOME_URL == undefined ||
@@ -48,7 +51,6 @@ AutojoinUpgradedRoomsMixin.setupOnClient(client); // optional but nice to have
 
 // Before we start the bot, register our command handler
 client.on("room.event", handleCommand);
-client.on("room.invite", handleInvite);
 
 // Migrate your per-room state when the upgrade completes
 client.on(
@@ -164,33 +166,60 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
       }
 
       case "m.room.member": {
-        if (event.content.membership !== "join") return;
-
-        // leave non-direct rooms when a new member joins
-        try {
-          const otherMemberCount = await getOtherMemberCount(roomId);
-          if (otherMemberCount > 1) {
-            console.log(
-              `${matrixApp}: leaving room ${roomId} because it has ${String(otherMemberCount)} members besides the bot`
+        if (event.content.membership === "leave") {
+          const user: IUser | null = await User.findOne({
+            messageApp: matrixApp,
+            roomId: roomId,
+            chatId: event.sender
+          });
+          if (user != null) {
+            // If a user has left the room, mark him as blocked
+            await User.updateOne(
+              { _id: user._id },
+              { $set: { status: "active" }, $unset: { roomId: 1 } },
+              { runValidators: true }
             );
-            await client.sendMessage(roomId, {
-              msgtype: "m.text",
-              body: "JOEL ne permet pas de rejoindre des salons multi-personnes."
-            });
-            await client.leaveRoom(roomId);
-            return false;
+            await umami.log("/user-blocked-joel", matrixApp);
           }
-        } catch (error) {
-          console.log(
-            `Matrix: unable to inspect room ${roomId} membership`,
-            error
-          );
-          return false;
-        }
-
-        // Send welcome message to new members
-        msgText = "/start";
-        break;
+          return;
+        } else if (event.content.membership === "join") {
+          // leave non-direct rooms when a new member joins
+          try {
+            const otherMemberCount = await getOtherMemberCount(roomId);
+            if (otherMemberCount > 1) {
+              console.log(
+                `${matrixApp}: leaving room ${roomId} because it has ${String(otherMemberCount)} members besides the bot`
+              );
+              await client.sendMessage(roomId, {
+                msgtype: "m.text",
+                body: "JOEL ne permet pas de rejoindre des salons multi-personnes."
+              });
+              await client.leaveRoom(roomId);
+              return;
+            } else {
+              // only 1 other person in the room
+              const previousUser: IUser | null = await User.findOne({
+                messageApp: matrixApp,
+                chatId: event.sender
+              });
+              if (previousUser != null) {
+                // If a user has left the room, mark him as blocked
+                await User.updateOne(
+                  { _id: previousUser._id },
+                  { $set: { status: "active", roomId: roomId } }
+                );
+                await umami.log("/user-unblocked-joel", matrixApp);
+                if (!previousUser.followsNothing())
+                  msgText = KEYBOARD_KEYS.FOLLOWS_LIST.key.text;
+                else msgText = "/start";
+              } else msgText = "/start"; // Send the welcome message to the new member
+              break;
+            }
+          } catch {
+            // unable to inspect room membership
+            return;
+          }
+        } else return;
       }
     }
     if (msgText == null) return;
