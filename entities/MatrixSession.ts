@@ -125,9 +125,57 @@ export async function sendMatrixMessage(
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
   try {
-    userInfo.roomId ??= await findUserDMRoomId(client.matrix, userInfo.chatId);
+    const joinedRoomIds = new Set(
+      await client.matrix.getJoinedRooms().catch(() => [] as string[])
+    );
+
+    if (userInfo.roomId && !joinedRoomIds.has(userInfo.roomId)) {
+      try {
+        await User.updateOne(
+          { messageApp: client.messageApp, chatId: userInfo.chatId },
+          { $unset: { roomId: 1 } }
+        );
+      } catch (updateError) {
+        console.log(
+          `${userInfo.messageApp}: failed to unset stored room for ${userInfo.chatId}`,
+          updateError
+        );
+      }
+
+      userInfo.roomId = undefined;
+    }
+
     if (!userInfo.roomId) {
-      console.log("Could not find DM room for user " + userInfo.chatId);
+      const dmRoomId = await findUserDMRoomId(
+        client.matrix,
+        userInfo.chatId,
+        joinedRoomIds
+      );
+
+      if (dmRoomId) {
+        try {
+          await User.updateOne(
+            { messageApp: client.messageApp, chatId: userInfo.chatId },
+            { $set: { roomId: dmRoomId } }
+          );
+        } catch (updateError) {
+          console.log(
+            `${userInfo.messageApp}: failed to persist DM room for ${userInfo.chatId}`,
+            updateError
+          );
+        }
+        userInfo.roomId = dmRoomId;
+      }
+    }
+
+    if (!userInfo.roomId) {
+      console.log(
+        `${userInfo.messageApp}: Could not find DM room for user ${userInfo.chatId}`
+      );
+      await User.updateOne({
+        messageApp: userInfo.messageApp,
+        chatId: userInfo.chatId
+      });
       return false;
     }
     let promptId = "";
@@ -311,15 +359,22 @@ type DirectRoomData = Record<string, string[]>;
 
 async function findUserDMRoomId(
   client: MatrixClient,
-  userId: string
+  userId: string,
+  joinedRoomIds?: Set<string>
 ): Promise<string | undefined> {
   const data = (await client
     .getAccountData("m.direct")
     .catch(() => ({}) as DirectRoomData)) as DirectRoomData;
   const rooms = Array.isArray(data[userId]) ? data[userId] : [];
-  return rooms.length ? rooms[0] : undefined; // or validate with is1to1()
-}
+  if (!rooms.length) return undefined;
 
+  let joinedRooms = joinedRoomIds;
+  joinedRooms ??= new Set(
+    await client.getJoinedRooms().catch(() => [] as string[])
+  );
+
+  return rooms.find((roomId) => joinedRooms.has(roomId));
+}
 export async function extractMatrixSession(
   session: ISession,
   userFacingError?: boolean
