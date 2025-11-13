@@ -189,8 +189,8 @@ export async function searchOrganisationWikidataId(
       });
   } catch (error) {
     console.log(error);
-    return [];
   }
+  return null;
 }
 
 export async function callJORFSearchReference(
