@@ -18,6 +18,7 @@ export type MessageApp =
 export interface ISession {
   messageApp: MessageApp;
   chatId: string;
+  roomId?: string;
   language_code: string;
   user: IUser | null | undefined;
   isReply: boolean | undefined;
@@ -36,6 +37,7 @@ export interface ISession {
 export interface IUser {
   _id: Types.ObjectId;
   messageApp: MessageApp;
+  roomId?: string;
   chatId: string;
   language_code: string;
   status: "active" | "blocked";

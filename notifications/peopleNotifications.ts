@@ -1,5 +1,9 @@
 import { Types } from "mongoose";
-import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
+import {
+  ExternalMessageOptions,
+  MiniUserInfo,
+  sendMessage
+} from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { IPeople, IUser, MessageApp } from "../types.ts";
 import People from "../models/People.ts";
@@ -71,6 +75,7 @@ export async function notifyPeopleUpdates(
       _id: 1,
       messageApp: 1,
       chatId: 1,
+      roomId: 1,
       followedPeople: { peopleId: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
@@ -141,8 +146,11 @@ export async function notifyPeopleUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
-        messageApp: user.messageApp,
-        chatId: user.chatId,
+        userInfo: {
+          messageApp: user.messageApp,
+          chatId: user.chatId,
+          roomId: user.roomId
+        },
         updatedRecordsMap: newUserPeopleUpdates,
         recordCount: totalUserRecordsCount
       });
@@ -152,8 +160,7 @@ export async function notifyPeopleUpdates(
 
   await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
     const messageSent = await sendPeopleUpdate(
-      task.messageApp,
-      task.chatId,
+      task.userInfo,
       task.updatedRecordsMap,
       messageAppsOptions
     );
@@ -192,8 +199,7 @@ export async function notifyPeopleUpdates(
 }
 
 async function sendPeopleUpdate(
-  messageApp: MessageApp,
-  chatId: IUser["chatId"],
+  userInfo: MiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions
 ) {
@@ -201,7 +207,7 @@ async function sendPeopleUpdate(
 
   const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
 
-  const markdownLinkEnabled = messageApp !== "WhatsApp";
+  const markdownLinkEnabled = userInfo.messageApp !== "WhatsApp";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les personnes que vous suivez :\n\n`;
 
@@ -239,25 +245,28 @@ async function sendPeopleUpdate(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: messageApp === "WhatsApp"
+    separateMenuMessage: userInfo.messageApp === "WhatsApp"
   };
 
   const messageSent = await sendMessage(
-    messageApp,
-    chatId,
+    userInfo,
     notification_text,
     messageAppsOptionsApp
   );
   if (!messageSent) return false;
 
   const notifData: UmamiNotificationData = {
-    message_nb: getSplitTextMessageSize(notification_text, messageApp),
+    message_nb: getSplitTextMessageSize(notification_text, userInfo.messageApp),
     updated_follows_nb: updatedRecordMap.size,
     total_records_nb: updatedRecordMap
       .values()
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  await umami.log("/notification-update-people", messageApp, notifData);
+  await umami.log(
+    "/notification-update-people",
+    userInfo.messageApp,
+    notifData
+  );
   return true;
 }

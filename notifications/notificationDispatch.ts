@@ -1,4 +1,4 @@
-import { IUser, MessageApp } from "../types.ts";
+import { MessageApp } from "../types.ts";
 import { TELEGRAM_API_SENDING_CONCURRENCY } from "../entities/TelegramSession.ts";
 import { WHATSAPP_API_SENDING_CONCURRENCY } from "../entities/WhatsAppSession.ts";
 import { SIGNAL_API_SENDING_CONCURRENCY } from "../entities/SignalSession.ts";
@@ -6,6 +6,7 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { Types } from "mongoose";
 import pLimit from "p-limit";
 import { MATRIX_API_SENDING_CONCURRENCY } from "../entities/MatrixSession.ts";
+import { MiniUserInfo } from "../entities/Session.ts";
 
 /**
  * Schedules the sendMessage to respect per-app throttling rules.
@@ -13,8 +14,7 @@ import { MATRIX_API_SENDING_CONCURRENCY } from "../entities/MatrixSession.ts";
  */
 export interface NotificationTask<T> {
   userId: Types.ObjectId;
-  messageApp: MessageApp;
-  chatId: IUser["chatId"];
+  userInfo: MiniUserInfo;
   updatedRecordsMap: Map<T, JORFSearchItem[]>;
   recordCount: number;
 }
@@ -42,8 +42,8 @@ export async function dispatchTasksToMessageApps<T>(
   const tasksByMessageApp = new Map<MessageApp, NotificationTask<T>[]>();
   taskList.forEach((task) => {
     tasksByMessageApp.set(
-      task.messageApp,
-      (tasksByMessageApp.get(task.messageApp) ?? []).concat(task)
+      task.userInfo.messageApp,
+      (tasksByMessageApp.get(task.userInfo.messageApp) ?? []).concat(task)
     );
   });
 

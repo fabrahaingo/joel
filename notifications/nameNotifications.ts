@@ -1,5 +1,9 @@
 import { Types } from "mongoose";
-import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
+import {
+  ExternalMessageOptions,
+  MiniUserInfo,
+  sendMessage
+} from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
@@ -33,6 +37,7 @@ export async function notifyNameMentionUpdates(
       _id: 1,
       messageApp: 1,
       chatId: 1,
+      roomId: 1,
       followedNames: 1,
       followedPeople: { peopleId: 1, lastUpdate: 1 },
       schemaVersion: 1
@@ -94,8 +99,11 @@ export async function notifyNameMentionUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
-        messageApp: user.messageApp,
-        chatId: user.chatId,
+        userInfo: {
+          messageApp: user.messageApp,
+          chatId: user.chatId,
+          roomId: user.roomId
+        },
         updatedRecordsMap: newUserTagsUpdates,
         recordCount: totalUserRecordsCount
       });
@@ -105,8 +113,7 @@ export async function notifyNameMentionUpdates(
 
   await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
     await sendNameMentionUpdates(
-      task.messageApp,
-      task.chatId,
+      task.userInfo,
       task.updatedRecordsMap,
       messageAppsOptions
     );
@@ -155,8 +162,7 @@ export async function notifyNameMentionUpdates(
 }
 
 async function sendNameMentionUpdates(
-  messageApp: MessageApp,
-  chatId: IUser["chatId"],
+  userInfo: MiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions
 ): Promise<boolean> {
@@ -164,7 +170,7 @@ async function sendNameMentionUpdates(
 
   const pluralHandler = updatedRecordMap.size > 1 ? "s" : "";
 
-  const markdownLinkEnabled = messageApp !== "WhatsApp";
+  const markdownLinkEnabled = userInfo.messageApp !== "WhatsApp";
 
   let notification_text = `📢 Nouvelle${pluralHandler} publication${pluralHandler} parmi les noms que vous suivez manuellement:\n\n`;
 
@@ -199,25 +205,24 @@ async function sendNameMentionUpdates(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: messageApp === "WhatsApp"
+    separateMenuMessage: userInfo.messageApp === "WhatsApp"
   };
 
   const messageSent = await sendMessage(
-    messageApp,
-    chatId,
+    userInfo,
     notification_text,
     messageAppsOptionsApp
   );
   if (!messageSent) return false;
 
   const notifData: UmamiNotificationData = {
-    message_nb: getSplitTextMessageSize(notification_text, messageApp),
+    message_nb: getSplitTextMessageSize(notification_text, userInfo.messageApp),
     updated_follows_nb: updatedRecordMap.size,
     total_records_nb: updatedRecordMap
       .values()
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  await umami.log("/notification-update-name", messageApp, notifData);
+  await umami.log("/notification-update-name", userInfo.messageApp, notifData);
   return true;
 }

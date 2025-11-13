@@ -10,7 +10,7 @@ En utilisant ce service, vous acceptez:
 📄 {LINK_GCU}
 
 🤔 Des questions ? Un bug ?
-➡️  ️️Contactez ses créateurs à l'adresse *hellofabien@pm.me* en mentionnant votre id {MESSAGE_APP} *{CHAT_ID}*:
+➡️  ️️Contactez ses créateurs à l'adresse *contact@joel-officiel.fr* en mentionnant votre id {MESSAGE_APP} *{CHAT_ID}*:
 
  - [Fabien](https://www.linkedin.com/in/fabien-rahaingomanana/)
  - [Philémon](https://www.linkedin.com/in/philemon-perrot/)

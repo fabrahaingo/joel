@@ -1,6 +1,10 @@
-import { ISession, IUser, MessageApp } from "../types.ts";
+import { ISession } from "../types.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
-import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
+import {
+  ExternalMessageOptions,
+  MiniUserInfo,
+  sendMessage
+} from "../entities/Session.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
@@ -18,12 +22,18 @@ export const MAIN_MENU_MESSAGE = "Utilisez le clavier ci-dessous.";
 
 export const mainMenuCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/main-menu-message" });
-  await sendMainMenu(session.messageApp, session.chatId, { session });
+  await sendMainMenu(
+    {
+      messageApp: session.messageApp,
+      chatId: session.chatId,
+      roomId: session.roomId
+    },
+    { session }
+  );
 };
 
 export async function sendMainMenu(
-  messageApp: MessageApp,
-  chatId: IUser["chatId"],
+  userInfo: MiniUserInfo,
   options: {
     externalOptions?: ExternalMessageOptions;
     session?: ISession;
@@ -37,7 +47,8 @@ export async function sendMainMenu(
     let separateMenuMessage = undefined;
 
     let keyboard: Keyboard | undefined = undefined;
-    switch (messageApp) {
+    switch (userInfo.messageApp) {
+      case "Tchap":
       case "Matrix":
         separateMenuMessage = true;
         break;
@@ -60,7 +71,7 @@ export async function sendMainMenu(
         separateMenuMessage
       });
     else if (options.externalOptions != null)
-      await sendMessage(messageApp, chatId, message, {
+      await sendMessage(userInfo, message, {
         ...options.externalOptions,
         keyboard,
         separateMenuMessage
