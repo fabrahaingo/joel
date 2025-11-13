@@ -32,6 +32,8 @@ const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst
 
 export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
 
+export const WHATSAPP_API_VERSION = "v23.0";
+
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
 const fullMenuKeyboard: ActionList = new ActionList(

@@ -8,6 +8,7 @@ import { ExternalMessageOptions } from "../entities/Session.ts";
 import { MessageApp } from "../types.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { SignalCli } from "signal-sdk";
+import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 
 // Load all message apps and their options from environment variables
 export async function loadAllMessageApps(): Promise<{
@@ -30,7 +31,8 @@ export async function loadAllMessageApps(): Promise<{
     resolved.whatsAppAPI = new WhatsAppAPI({
       token: WHATSAPP_USER_TOKEN,
       appSecret: WHATSAPP_APP_SECRET,
-      webhookVerifyToken: WHATSAPP_VERIFY_TOKEN
+      webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
+      v: WHATSAPP_API_VERSION
     });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     resolved.whatsAppAPI.on.sent = ({ phoneID, to }) => {

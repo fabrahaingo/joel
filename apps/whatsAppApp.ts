@@ -11,7 +11,10 @@ import { PostData, ServerMessage } from "whatsapp-api-js/types";
 
 import { mongodbConnect } from "../db.ts";
 import umami from "../utils/umami.ts";
-import { WhatsAppSession } from "../entities/WhatsAppSession.ts";
+import {
+  WHATSAPP_API_VERSION,
+  WhatsAppSession
+} from "../entities/WhatsAppSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
@@ -61,7 +64,8 @@ export function getWhatsAppAPI(): WhatsAppAPI {
   return new WhatsAppAPI({
     token: WHATSAPP_USER_TOKEN,
     appSecret: WHATSAPP_APP_SECRET,
-    webhookVerifyToken: WHATSAPP_VERIFY_TOKEN
+    webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
+    v: WHATSAPP_API_VERSION
   });
 }
 
