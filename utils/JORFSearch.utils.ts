@@ -148,9 +148,17 @@ export async function searchOrganisationWikidataId(
     await umami.log("/jorfsearch-request-wikidata-names");
 
     const wikidataIds_raw: WikidataId[] | null = await axios
-      .get<
-        string | null | WikiDataAPIResponse
-      >(encodeURI(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`))
+      .get<string | null | WikiDataAPIResponse>(
+        encodeURI(
+          `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`
+        ),
+        {
+          // Per Wikimedia policy, provide a descriptive agent with contact info.
+          headers: {
+            "User-Agent": "JOEL/1.0 (contact@joel-officiel.fr)"
+          }
+        }
+      )
       .then((r) => {
         if (r.data === null || typeof r.data === "string") {
           console.log(
@@ -161,6 +169,7 @@ export async function searchOrganisationWikidataId(
         }
         return r.data.search.map((o) => o.id);
       });
+
     if (wikidataIds_raw === null) return null;
     if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
 
@@ -180,8 +189,8 @@ export async function searchOrganisationWikidataId(
       });
   } catch (error) {
     console.log(error);
-    return [];
   }
+  return null;
 }
 
 export async function callJORFSearchReference(

@@ -24,8 +24,6 @@ import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
 import Umami from "../utils/umami.ts";
 
-export const WHATSAPP_API_VERSION = "v23.0";
-
 export const WHATSAPP_MESSAGE_CHAR_LIMIT = 900;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the same user, but we'll take 1 here
 const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages in burst mode
@@ -33,6 +31,8 @@ const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages
 const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst mode, before switching to full cooldown
 
 export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
+
+export const WHATSAPP_API_VERSION = "v23.0";
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
@@ -247,11 +247,6 @@ export async function sendWhatsAppMessage(
           WHATSAPP_PHONE_ID,
           userPhoneIdStr,
           new Text(mArr[i])
-        );
-        await whatsAppAPI.sendMessage(
-          WHATSAPP_PHONE_ID,
-          userPhoneIdStr,
-          new Text("Test " + i.toString())
         );
       }
       if (resp.error) {

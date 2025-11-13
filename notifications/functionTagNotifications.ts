@@ -1,6 +1,10 @@
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
-import { ExternalMessageOptions, sendMessage } from "../entities/Session.ts";
+import {
+  ExternalMessageOptions,
+  MiniUserInfo,
+  sendMessage
+} from "../entities/Session.ts";
 import { IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
@@ -106,6 +110,7 @@ export async function notifyFunctionTagsUpdates(
       _id: 1,
       messageApp: 1,
       chatId: 1,
+      roomId: 1,
       followedFunctions: { functionTag: 1, lastUpdate: 1 },
       schemaVersion: 1
     }
@@ -144,8 +149,11 @@ export async function notifyFunctionTagsUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
-        messageApp: user.messageApp,
-        chatId: user.chatId,
+        userInfo: {
+          messageApp: user.messageApp,
+          chatId: user.chatId,
+          roomId: user.roomId
+        },
         updatedRecordsMap: newUserTagsUpdates,
         recordCount: totalUserRecordsCount
       });
@@ -157,8 +165,7 @@ export async function notifyFunctionTagsUpdates(
     userUpdateTasks,
     async (task) => {
       const messageSent = await sendTagUpdates(
-        task.messageApp,
-        task.chatId,
+        task.userInfo,
         task.updatedRecordsMap,
         messageAppsOptions
       );
@@ -186,8 +193,7 @@ export async function notifyFunctionTagsUpdates(
 }
 
 async function sendTagUpdates(
-  messageApp: MessageApp,
-  chatId: IUser["chatId"],
+  userInfo: MiniUserInfo,
   tagMap: Map<FunctionTags, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions
 ): Promise<boolean> {
@@ -198,7 +204,7 @@ async function sendTagUpdates(
   let notification_text =
     "📢 Nouvelles publications parmi les fonctions que suivez :\n\n";
 
-  const markdownLinkEnabled = messageApp !== "WhatsApp";
+  const markdownLinkEnabled = userInfo.messageApp !== "WhatsApp";
 
   const tagOrder = Array.from(tagMap.keys());
   const lastTag = tagOrder[tagOrder.length - 1];
@@ -245,25 +251,28 @@ async function sendTagUpdates(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: messageApp === "WhatsApp"
+    separateMenuMessage: userInfo.messageApp === "WhatsApp"
   };
 
   const messageSent = await sendMessage(
-    messageApp,
-    chatId,
+    userInfo,
     notification_text,
     messageAppsOptionsApp
   );
   if (!messageSent) return false;
 
   const notifData: UmamiNotificationData = {
-    message_nb: getSplitTextMessageSize(notification_text, messageApp),
+    message_nb: getSplitTextMessageSize(notification_text, userInfo.messageApp),
     updated_follows_nb: tagMap.size,
     total_records_nb: tagMap
       .values()
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  await umami.log("/notification-update-function", messageApp, notifData);
+  await umami.log(
+    "/notification-update-function",
+    userInfo.messageApp,
+    notifData
+  );
   return true;
 }

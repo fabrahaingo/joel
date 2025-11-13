@@ -24,7 +24,8 @@ export const statsCommand = async (session: ISession): Promise<void> => {
       { app: "WhatsApp", count: WHCount },
       { app: "Signal", count: signalCount },
       { app: "Telegram", count: telegramCount },
-      { app: "Matrix", count: matrixCount }
+      { app: "Matrix", count: matrixCount },
+      { app: "Tchap", count: matrixCount }
     ].sort((a, b) => b.count - a.count);
 
     let msg = `📈 JOEL aujourd'hui c'est\n👨‍💻 ${String(usersCount)} utilisateurs\n`;

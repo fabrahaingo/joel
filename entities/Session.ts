@@ -93,19 +93,24 @@ export interface MessageSendingOptionsExternal {
   separateMenuMessage?: boolean;
 }
 
+export interface MiniUserInfo {
+  messageApp: MessageApp;
+  chatId: string;
+  roomId?: string;
+}
+
 export async function sendMessage(
-  messageApp: MessageApp,
-  chatId: string,
+  userInfo: MiniUserInfo,
   message: string,
   options?: MessageSendingOptionsExternal
 ): Promise<boolean> {
-  switch (messageApp) {
+  switch (userInfo.messageApp) {
     case "Matrix":
       if (options?.matrixClient == null)
         throw new Error("matrixClient is required");
       return await sendMatrixMessage(
-        options.matrixClient,
-        chatId,
+        { matrix: options.matrixClient, messageApp: "Matrix" },
+        userInfo,
         message,
         options
       );
@@ -114,22 +119,26 @@ export async function sendMessage(
       if (options?.tchapClient == null)
         throw new Error("tchapClient is required");
       return await sendMatrixMessage(
-        options.tchapClient,
-        chatId,
+        { matrix: options.tchapClient, messageApp: "Tchap" },
+        userInfo,
         message,
         options
       );
 
     case "Signal":
       if (options?.signalCli == null) throw new Error("signalCli is required");
-      return await sendSignalAppMessage(options.signalCli, chatId, message);
+      return await sendSignalAppMessage(
+        options.signalCli,
+        userInfo.chatId,
+        message
+      );
 
     case "Telegram":
       if (options?.telegramBotToken == null)
         throw new Error("telegramBotToken is required");
       return await sendTelegramMessage(
         options.telegramBotToken,
-        chatId,
+        userInfo.chatId,
         message,
         options.keyboard
       );
@@ -139,10 +148,10 @@ export async function sendMessage(
         throw new Error("WhatsAppAPI is required");
       return await sendWhatsAppMessage(
         options.whatsAppAPI,
-        chatId,
+        userInfo.chatId,
         message,
         options
       );
   }
-  throw new Error("Unknown messageApp : ", messageApp);
+  throw new Error("Unknown messageApp : ", userInfo.messageApp);
 }

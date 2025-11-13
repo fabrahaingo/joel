@@ -1,10 +1,6 @@
 import "dotenv/config";
 
 import express from "express";
-import type { Server } from "http";
-
-let server: Server | null = null;
-let shuttingDown = false;
 
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { PostData, ServerMessage } from "whatsapp-api-js/types";
@@ -251,9 +247,7 @@ whatsAppAPI.on.sent = ({ phoneID, to }) => {
   //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
 };
 
-installSignalHandlers();
-
-server = app.listen(WHATSAPP_APP_PORT, function () {
+app.listen(WHATSAPP_APP_PORT, function () {
   //console.log(`Example WhatsApp listening at ${String(WHATSAPP_APP_PORT)}`);
 });
 
@@ -289,45 +283,4 @@ function newestTimestampSec(data: PostData): number | null {
     }
   }
   return newest;
-}
-
-async function gracefulShutdown(code = 0) {
-  if (shuttingDown) return;
-  shuttingDown = true;
-
-  try {
-    if (server)
-      await new Promise<void>((r) =>
-        server.close(() => {
-          r();
-        })
-      );
-  } catch {
-    /* empty */
-  }
-
-  console.log(`WhatsApp: Graceful shutdown complete with code ${code}`);
-  process.exit(code);
-}
-
-function installSignalHandlers() {
-  const handler = (sig: NodeJS.Signals) => () => gracefulShutdown(0);
-  ["SIGINT", "SIGTERM", "SIGQUIT", "SIGHUP"].forEach((s) =>
-    process.on(s as NodeJS.Signals, handler(s as NodeJS.Signals))
-  );
-
-  process.on("uncaughtException", async (err) => {
-    console.error(err);
-    await gracefulShutdown(1);
-  });
-  process.on("unhandledRejection", async (reason) => {
-    console.error(reason);
-    await gracefulShutdown(1);
-  });
-
-  // Nodemon restarts
-  process.once("SIGUSR2", async () => {
-    await gracefulShutdown(0);
-    process.kill(process.pid, "SIGUSR2");
-  });
 }

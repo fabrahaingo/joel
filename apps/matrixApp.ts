@@ -3,6 +3,7 @@ import {
   MatrixClient,
   SimpleFsStorageProvider,
   RustSdkCryptoStorageProvider,
+  AutojoinUpgradedRoomsMixin,
   AutojoinRoomsMixin
 } from "matrix-bot-sdk";
 import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
@@ -10,8 +11,10 @@ import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
+import User from "../models/User.ts";
+import { IUser } from "../types";
+import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
-
 if (
   MATRIX_HOME_URL == undefined ||
   MATRIX_BOT_TOKEN == undefined ||
@@ -21,15 +24,17 @@ if (
   process.exit(0);
 }
 
-if (["Matrix", "Tchap"].some((m) => m !== MATRIX_BOT_TYPE)) {
+if (!["Matrix", "Tchap"].some((m) => m === MATRIX_BOT_TYPE)) {
   console.log(
-    "Matrix: Only Matrix and Tchap modes are allowed for matrix apps"
+    `Matrix: MATRIX_BOT_TYPE set to ${MATRIX_BOT_TYPE} ! Only Matrix and Tchap modes are allowed for matrix apps`
   );
   process.exit(1);
 }
 const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 
 // Persist sync token + crypto state
+import fs from "node:fs";
+fs.mkdirSync("matrix", { recursive: true });
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
 const cryptoProvider = new RustSdkCryptoStorageProvider("matrix/matrix-crypto");
 
@@ -40,12 +45,30 @@ const client = new MatrixClient(
   storageProvider,
   cryptoProvider
 );
-// Auto-join rooms when invited (required for DMs)
+
 AutojoinRoomsMixin.setupOnClient(client);
+AutojoinUpgradedRoomsMixin.setupOnClient(client); // optional but nice to have
 
 // Before we start the bot, register our command handler
 client.on("room.event", handleCommand);
 
+// Migrate your per-room state when the upgrade completes
+client.on(
+  "room.upgraded",
+  (
+    newRoomId: string,
+    createEvent: { content?: { predecessor?: { room_id?: string } } }
+  ) =>
+    void (async () => {
+      const oldRoomId = createEvent.content?.predecessor?.room_id;
+      if (!oldRoomId) return;
+
+      await User.updateMany(
+        { roomId: oldRoomId },
+        { $set: { roomId: newRoomId } }
+      );
+    })()
+);
 /*
 client.on("room.join", (_roomId: string, _event: unknown) => {
   // The client has been invited to `roomId`
@@ -55,12 +78,38 @@ client.on("room.join", (_roomId: string, _event: unknown) => {
 
 let serverUserId: string | undefined;
 
+async function ensureServerUserId() {
+  serverUserId ??= await client.getUserId();
+  return serverUserId;
+}
+
+async function getOtherMemberCount(roomId: string) {
+  const stateEvents = await client.getRoomState(roomId);
+  const otherMembers = new Set<string>();
+  const currentUserId = await ensureServerUserId();
+
+  for (const event of stateEvents as {
+    type?: string;
+    state_key?: string;
+    content?: { membership?: string };
+  }[]) {
+    if (event.type !== "m.room.member") continue;
+    const membership = event.content?.membership;
+    if (membership !== "join" && membership !== "invite") continue;
+    const memberId = event.state_key;
+    if (memberId == null || memberId === currentUserId) continue;
+    otherMembers.add(memberId);
+  }
+
+  return otherMembers.size;
+}
+
 await (async function () {
   await mongodbConnect();
 
   // Now that everything is set up, start the bot. This will start the sync loop and run until killed.
-  await client.start();
   serverUserId = await client.getUserId();
+  await client.start();
 
   const messageOptions =
     matrixApp === "Matrix" ? { matrixClient: client } : { tchapClient: client };
@@ -83,7 +132,8 @@ interface MatrixRoomEvent {
       "m.in_reply_to"?: { event_id: string };
     };
     membership?: string;
-    "org.matrix.msc3381.poll.response": { answers: string[] };
+    "org.matrix.msc3381.poll.response"?: { answers?: string[] };
+    "m.poll.response"?: { answers?: string[] };
   };
 }
 
@@ -96,6 +146,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     let msgText: string | undefined;
     switch (event.type) {
       case "m.room.message":
+        await client.sendReadReceipt(roomId, event.event_id);
         msgText = event.content.body;
         break;
 
@@ -103,33 +154,87 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         msgText = event.content["m.relates_to"]?.key;
         break;
 
+      case "m.poll.response":
       case "org.matrix.msc3381.poll.response": {
         const eventId = event.content["m.relates_to"]?.event_id;
         if (eventId != null) await closePollMenu(client, roomId, eventId);
-        msgText = event.content["org.matrix.msc3381.poll.response"].answers[0];
+        const payload =
+          event.content["m.poll.response"] ??
+          event.content["org.matrix.msc3381.poll.response"];
+        msgText = payload?.answers?.[0];
         break;
       }
 
       case "m.room.member": {
-        if (event.content.membership !== "join") return;
-        msgText = "/start";
-        break;
+        if (event.content.membership === "leave") {
+          const user: IUser | null = await User.findOne({
+            messageApp: matrixApp,
+            roomId: roomId,
+            chatId: event.sender
+          });
+          if (user != null) {
+            // If a user has left the room, mark him as blocked
+            await User.updateOne(
+              { _id: user._id },
+              { $set: { status: "active" }, $unset: { roomId: 1 } },
+              { runValidators: true }
+            );
+            await umami.log("/user-blocked-joel", matrixApp);
+          }
+          return;
+        } else if (event.content.membership === "join") {
+          // leave non-direct rooms when a new member joins
+          try {
+            const otherMemberCount = await getOtherMemberCount(roomId);
+            if (otherMemberCount > 1) {
+              console.log(
+                `${matrixApp}: leaving room ${roomId} because it has ${String(otherMemberCount)} members besides the bot`
+              );
+              await client.sendMessage(roomId, {
+                msgtype: "m.text",
+                body: "JOEL ne permet pas de rejoindre des salons multi-personnes."
+              });
+              await client.leaveRoom(roomId);
+              return;
+            } else {
+              // only 1 other person in the room
+              const previousUser: IUser | null = await User.findOne({
+                messageApp: matrixApp,
+                chatId: event.sender
+              });
+              if (previousUser != null) {
+                // If a user has left the room, mark him as blocked
+                await User.updateOne(
+                  { _id: previousUser._id },
+                  { $set: { status: "active", roomId: roomId } }
+                );
+                await umami.log("/user-unblocked-joel", matrixApp);
+                if (!previousUser.followsNothing())
+                  msgText = KEYBOARD_KEYS.FOLLOWS_LIST.key.text;
+                else msgText = "/start";
+              } else msgText = "/start"; // Send the welcome message to the new member
+              break;
+            }
+          } catch {
+            // unable to inspect room membership
+            return;
+          }
+        } else return;
       }
     }
     if (msgText == null) return;
 
     // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
     if (/^@_?server:/.test(event.sender)) {
-      console.log("Matrix: message from the server");
+      console.log(`${matrixApp}: message from the server`);
       console.log(msgText);
-      await client.sendReadReceipt(roomId, event.event_id);
+      if (event.type === "m.room.message")
+        await client.sendReadReceipt(roomId, event.event_id);
       return;
     }
 
     try {
-      await umami.log("/message-received", "Matrix");
-
-      await client.sendReadReceipt(roomId, event.event_id);
+      await umami.log("/message-received", matrixApp);
 
       const matrixSession = new MatrixSession(
         matrixApp,
