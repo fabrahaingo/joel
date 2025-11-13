@@ -5,7 +5,6 @@ import {
   RustSdkCryptoStorageProvider
 } from "matrix-bot-sdk";
 import { ExternalMessageOptions } from "../entities/Session.ts";
-import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { MessageApp } from "../types.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { SignalCli } from "signal-sdk";
@@ -31,9 +30,9 @@ export async function loadAllMessageApps(): Promise<{
     resolved.whatsAppAPI = new WhatsAppAPI({
       token: WHATSAPP_USER_TOKEN,
       appSecret: WHATSAPP_APP_SECRET,
-      webhookVerifyToken: WHATSAPP_VERIFY_TOKEN,
-      v: WHATSAPP_API_VERSION
+      webhookVerifyToken: WHATSAPP_VERIFY_TOKEN
     });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     resolved.whatsAppAPI.on.sent = ({ phoneID, to }) => {
       //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
     };
