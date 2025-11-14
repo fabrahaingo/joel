@@ -111,6 +111,9 @@ await (async function () {
   serverUserId = await client.getUserId();
   await client.start();
 
+  console.log("Bot device ID:", client.crypto.clientDeviceId);
+  console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
+
   const messageOptions =
     matrixApp === "Matrix" ? { matrixClient: client } : { tchapClient: client };
 
