@@ -3,7 +3,7 @@ import {
   JORFSearchItem,
   JORFSearchResponse
 } from "../entities/JORFSearchResponse.ts";
-import { WikidataId } from "../types.ts";
+import { MessageApp, WikidataId } from "../types.ts";
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import umami from "./umami.ts";
 import {
@@ -12,6 +12,9 @@ import {
   JORFSearchResponseMeta
 } from "../entities/JORFSearchResponseMeta.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
+
+// Per Wikimedia policy, provide a descriptive agent with contact info.
+const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -37,7 +40,11 @@ export async function callJORFSearchPeople(
       messageApp
     });
     return await axios
-      .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true))
+      .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true), {
+        headers: {
+          "User-Agent": USER_AGENT
+        }
+      })
       .then(async (res1: AxiosResponse<JORFSearchResponse>) => {
         if (res1.data === null) {
           await logError();
@@ -58,7 +65,12 @@ export async function callJORFSearchPeople(
             .get<JORFSearchResponse>(
               request.res.responseUrl.endsWith("?format=JSON")
                 ? request.res.responseUrl
-                : `${request.res.responseUrl}?format=JSON`
+                : `${request.res.responseUrl}?format=JSON`,
+              {
+                headers: {
+                  "User-Agent": USER_AGENT
+                }
+              }
             )
             .then(async (res2: AxiosResponse<JORFSearchResponse>) => {
               if (res2.data === null || typeof res2.data === "string") {
@@ -90,7 +102,12 @@ export async function callJORFSearchDay(
           `https://jorfsearch.steinertriples.ch/${
             day.toLocaleDateString("fr-FR").split("/").join("-") // format day = "18-02-2024";
           }?format=JSON`
-        )
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -121,7 +138,12 @@ export async function callJORFSearchTag(
     await umami.log({ event: "/jorfsearch-request-tag", messageApp });
     return await axios
       .get<JORFSearchResponse>(
-        getJORFSearchLinkFunctionTag(tag, true, tagValue)
+        getJORFSearchLinkFunctionTag(tag, true, tagValue),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -155,7 +177,12 @@ export async function callJORFSearchOrganisation(
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/${wikiId.toUpperCase()}?format=JSON`
-        )
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -204,7 +231,6 @@ export async function searchOrganisationWikidataId(
           `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`
         ),
         {
-          // Per Wikimedia policy, provide a descriptive agent with contact info.
           headers: {
             "User-Agent": USER_AGENT
           }
@@ -225,9 +251,16 @@ export async function searchOrganisationWikidataId(
     if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
 
     return await axios
-      .get<
-        { name: string; id: WikidataId }[] | null
-      >(encodeURI(`https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`))
+      .get<{ name: string; id: WikidataId }[] | null>(
+        encodeURI(
+          `https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
+      )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
           await umami.log({
@@ -263,7 +296,12 @@ export async function callJORFSearchReference(
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/doc/${reference.toUpperCase()}?format=JSON`
-        )
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -297,7 +335,12 @@ async function JORFSearchCallPublications(
     await umami.log({ event: "/jorfsearch-request-meta", messageApp });
     return await axios
       .get<JORFSearchResponseMeta>(
-        `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`
+        `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`,
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
       .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
