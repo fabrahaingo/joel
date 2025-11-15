@@ -36,7 +36,7 @@ PeopleSchema.static(
     let people: IPeople | null = await query.exec();
 
     if (people == null) {
-      await umami.log("/person-added");
+      await umami.log({ event: "/person-added" });
       people = await this.create({
         nom: peopleInfo.nom,
         prenom: peopleInfo.prenom

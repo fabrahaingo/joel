@@ -46,7 +46,7 @@ await (async () => {
           const msgText = message.envelope.dataMessage?.message;
           if (msgText === undefined) return;
 
-          await umami.log("/message-received", "Signal");
+          await umami.log({ event: "/message-received", messageApp: "Signal" });
 
           const signalSession = new SignalSession(
             signalCli,

@@ -49,8 +49,12 @@ export class SignalSession implements ISession {
     // TODO: check implementation in Signal
   }
 
-  async log(args: { event: UmamiEvent }) {
-    await Umami.log(args.event, this.messageApp);
+  async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
+    await Umami.log({
+      event: args.event,
+      messageApp: this.messageApp,
+      payload: args.payload
+    });
   }
 
   async sendMessage(formattedData: string): Promise<void> {
@@ -95,7 +99,7 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
-      await umami.log("/message-sent", "Signal");
+      await umami.log({ event: "/message-sent", messageApp: "Signal" });
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>

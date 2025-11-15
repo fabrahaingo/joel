@@ -34,7 +34,7 @@ OrganisationSchema.static(
     let organisation: IOrganisation | null = await query.exec();
 
     if (organisation === null) {
-      await umami.log("/new-organisation");
+      await umami.log({ event: "/new-organisation" });
       organisation = await this.create({
         nom: args.nom,
         wikidataId: args.wikidataId.toUpperCase()

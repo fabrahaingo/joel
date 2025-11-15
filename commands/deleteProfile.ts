@@ -36,7 +36,7 @@ async function handleDeleteProfileAnswer(
 
   if (session.user == null) {
     await session.sendMessage(
-      `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`
+      `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`
     );
     return true;
   }
@@ -47,7 +47,7 @@ async function handleDeleteProfileAnswer(
     });
     session.user = null;
     await session.sendMessage(
-      `🗑 Votre profil a bien été supprimé ! 👋\nUn profil vierge sera créé lors de l'ajout du prochain suivi ⚠️`
+      `🗑 Votre profil a bien été supprimé ! 👋\\splitUn profil vierge sera créé lors de l'ajout du prochain suivi ⚠️`
     );
     await session.log({ event: "/user-deletion-self" });
   } else {
@@ -64,7 +64,7 @@ export const deleteProfileCommand = async (
   try {
     if (session.user == null) {
       await session.sendMessage(
-        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${String(session.chatId)}`
+        `Aucun profil utilisateur n'est actuellement associé à votre identifiant ${session.chatId}`
       );
       return;
     }

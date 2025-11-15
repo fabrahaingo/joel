@@ -23,7 +23,7 @@ await (async () => {
       const tgUser = ctx.from;
       if (tgUser.is_bot) return;
 
-      await umami.log("/message-received", "Telegram");
+      await umami.log({ event: "/message-received", messageApp: "Telegram" });
 
       const tgSession = new TelegramSession(
         TELEGRAM_BOT_TOKEN,
