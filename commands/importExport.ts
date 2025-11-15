@@ -10,11 +10,12 @@ import {
   getUserFollowsTotal
 } from "./list.ts";
 import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
+import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 
 const EXPORT_CODE_VALIDITY_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 const IMPORTER_CODE_PROMPT =
-  "Merci d'envoyer le code d'export que vous avez reçu (valable 4 heures).";
+  "Saisir le code d'import que vous avez reçu (valable 4 heures).";
 const IMPORTER_CONFIRMATION_PROMPT =
   "Confirmez-vous l'import de ces suivis ? (Oui/Non).";
 
@@ -49,7 +50,11 @@ export const importCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/data-import" });
   await session.sendTypingAction();
 
-  await askFollowUpQuestion(session, IMPORTER_CODE_PROMPT, handleImporterCode);
+  await askFollowUpQuestion(session, IMPORTER_CODE_PROMPT, handleImporterCode, {
+    messageOptions: {
+      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+    }
+  });
 };
 
 async function handleImporterCode(
@@ -68,7 +73,12 @@ async function handleImporterCode(
     await askFollowUpQuestion(
       session,
       IMPORTER_CODE_PROMPT,
-      handleImporterCode
+      handleImporterCode,
+      {
+        messageOptions: {
+          keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+        }
+      }
     );
     return true;
   }
@@ -124,7 +134,8 @@ async function handleImporterCode(
     IMPORTER_CONFIRMATION_PROMPT,
     handleImporterConfirmation,
     {
-      context: { sourceUserId: sourceUser._id, code }
+      context: { sourceUserId: sourceUser._id, code },
+      messageOptions: { forceNoKeyboard: true }
     }
   );
 
