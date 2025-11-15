@@ -56,7 +56,10 @@ async function handleImporterCode(
   session: ISession,
   message: string
 ): Promise<boolean> {
-  const code = message.trim().toUpperCase();
+  const code = message
+    .normalize("NFKC") // unify look-alike Unicode chars (e.g., fancy dashes)
+    .replace(/[-_*\s]+/g, "") // drop -, _, *, and all whitespace (\s covers space, \n, \r, tabs)
+    .toUpperCase();
 
   if (code.length === 0) {
     await session.sendMessage(

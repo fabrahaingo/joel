@@ -35,7 +35,11 @@ export async function processMessage(
   msg: string
 ): Promise<void> {
   // remove all spaces and replace them with a single space
-  const cleanMsg = msg.trim().replace(/ +/g, " ");
+  const cleanMsg = msg
+    .trim()
+    .normalize("NFKC")
+    .replace(/ +/g, " ")
+    .replace(/[\\~*_\r\n]+/g, ""); // replace all markdown artefacts
 
   const firstLine = cleanMsg.split("\n")[0];
 
