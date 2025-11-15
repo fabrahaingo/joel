@@ -16,6 +16,9 @@ export const statsCommand = async (session: ISession): Promise<void> => {
     const matrixCount = await Users.countDocuments({
       messageApp: "Matrix"
     });
+    const tchapCount = await Users.countDocuments({
+      messageApp: "Tchap"
+    });
 
     const peopleCount = await People.countDocuments();
     const orgCount = await Organisation.countDocuments();
@@ -25,7 +28,7 @@ export const statsCommand = async (session: ISession): Promise<void> => {
       { app: "Signal", count: signalCount },
       { app: "Telegram", count: telegramCount },
       { app: "Matrix", count: matrixCount },
-      { app: "Tchap", count: matrixCount }
+      { app: "Tchap", count: tchapCount }
     ].sort((a, b) => b.count - a.count);
 
     let msg = `📈 JOEL aujourd'hui c'est\n👨‍💻 ${String(usersCount)} utilisateurs\n`;

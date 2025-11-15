@@ -155,10 +155,7 @@ async function handlePromoAnswer(
     ? `${promoInfo.name} (${promoInfo.period})`
     : promoInfo.period;
 
-  await session.sendMessage(
-    `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:`,
-    { separateMenuMessage: true }
-  );
+  let text = `La promotion *${promoStr}* contient *${String(promoJORFList.length)} élèves*:\\split`;
 
   promoJORFList.sort((a, b) =>
     a.nom.toUpperCase().localeCompare(b.nom.toUpperCase())
@@ -168,8 +165,8 @@ async function handlePromoAnswer(
     return `${contact.nom} ${contact.prenom}`;
   });
 
-  let text = contacts.join("\n");
-  text += "\n\n" + PROMO_CONFIRM_TEXT;
+  text += contacts.join("\n");
+  text += "\\split" + PROMO_CONFIRM_TEXT;
 
   await askFollowUpQuestion(session, text, handlePromoConfirmation, {
     context: {
