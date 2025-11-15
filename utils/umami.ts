@@ -7,34 +7,36 @@ export interface UmamiNotificationData {
   total_records_nb: number;
 }
 
-export const log = async (
-  event: UmamiEvent,
-  messageApp?: MessageApp,
-  notificationData?: UmamiNotificationData
-) => {
+export const log = async (args: {
+  event: UmamiEvent;
+  messageApp?: MessageApp;
+  notificationData?: UmamiNotificationData;
+  payload?: Record<string, unknown>;
+}) => {
   if (process.env.NODE_ENV === "development") {
     console.log(
-      `Umami event ${messageApp ? " (" + messageApp + ")" : ""}: ${event}`
+      `Umami event ${args.messageApp ? " (" + args.messageApp + ")" : ""}: ${args.event}`
     );
-    if (notificationData != null) console.log(notificationData);
+    if (args.notificationData != null) console.log(args.notificationData);
     return;
   }
 
-  const extra_data: Record<string, unknown> = {};
-  if (messageApp) {
-    extra_data.messageApp = messageApp;
+  const extra_data: Record<string, unknown> = args.payload ?? {};
+  if (args.messageApp) {
+    extra_data.messageApp = args.messageApp;
   }
-  if (notificationData != null) {
-    extra_data.message_nb = notificationData.message_nb;
-    extra_data.updated_follows_nb = notificationData.updated_follows_nb;
-    extra_data.total_records_nb = notificationData.total_records_nb;
+
+  if (args.notificationData != null) {
+    extra_data.message_nb = args.notificationData.message_nb;
+    extra_data.updated_follows_nb = args.notificationData.updated_follows_nb;
+    extra_data.total_records_nb = args.notificationData.total_records_nb;
   }
   const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;
   const payload = {
     payload: {
       hostname: process.env.UMAMI_HOST,
       website: process.env.UMAMI_ID,
-      name: event,
+      name: args.event,
       data: extra_data
     },
     type: "event"

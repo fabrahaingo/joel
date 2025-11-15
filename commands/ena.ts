@@ -1,6 +1,6 @@
 import User from "../models/User.ts";
 import People from "../models/People.ts";
-import { IPeople, ISession, WikidataId } from "../types.ts";
+import { IPeople, ISession, MessageApp, WikidataId } from "../types.ts";
 import {
   List_Promos_INSP_ENA,
   Promo_ENA_INSP
@@ -46,15 +46,20 @@ function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
 }
 
 async function getJORFPromoSearchResult(
-  promo: Promo_ENA_INSP
+  promo: Promo_ENA_INSP,
+  messageApp: MessageApp
 ): Promise<JORFSearchItem[] | null> {
   switch (promo.school) {
     case "ENA": // If ENA, we can use the associated tag with the year as value
-      return callJORFSearchTag("eleve_ena" as FunctionTags, promo.period);
+      return callJORFSearchTag(
+        "eleve_ena" as FunctionTags,
+        messageApp,
+        promo.period
+      );
 
     case "INSP": // If INSP, we can rely on the associated organisation
       return (
-        (await callJORFSearchOrganisation(inspId))
+        (await callJORFSearchOrganisation(inspId, messageApp))
           // We filter to keep admissions to the INSP organisation from the relevant year
           ?.filter((publication) => publication.eleve_ena === promo.period) ??
         null
@@ -143,7 +148,10 @@ async function handlePromoAnswer(
     return true;
   }
 
-  const promoJORFList = await getJORFPromoSearchResult(promoInfo);
+  const promoJORFList = await getJORFPromoSearchResult(
+    promoInfo,
+    session.messageApp
+  );
   if (promoJORFList == null) {
     await session.sendMessage(
       "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
@@ -359,7 +367,10 @@ async function handleReferenceAnswer(
   const reference = extractJORFTextId(trimmedAnswer).toUpperCase();
   await session.sendTypingAction();
 
-  const JORFResult = await callJORFSearchReference(reference);
+  const JORFResult = await callJORFSearchReference(
+    reference,
+    session.messageApp
+  );
   if (JORFResult == null) {
     await session.sendMessage(
       "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."

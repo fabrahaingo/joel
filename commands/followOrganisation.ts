@@ -102,7 +102,10 @@ async function processOrganisationSearch(
 ): Promise<void> {
   if (triggerUmami) await session.log({ event: "/follow-organisation" });
 
-  const orgResults = await searchOrganisationWikidataId(orgName);
+  const orgResults = await searchOrganisationWikidataId(
+    orgName,
+    session.messageApp
+  );
   if (orgResults == null) {
     await session.sendMessage(
       "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
@@ -339,7 +342,10 @@ export const followOrganisationsFromWikidataIdStr = async (
       if (orgFromDb != undefined) {
         orgResults.push(orgFromDb);
       } else {
-        const orgInfoFromJORF = await searchOrganisationWikidataId(id);
+        const orgInfoFromJORF = await searchOrganisationWikidataId(
+          id,
+          session.messageApp
+        );
 
         if (orgInfoFromJORF == null) {
           await session.sendMessage(

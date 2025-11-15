@@ -269,10 +269,10 @@ async function sendTagUpdates(
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  await umami.log(
-    "/notification-update-function",
-    userInfo.messageApp,
-    notifData
-  );
+  await umami.log({
+    event: "/notification-update-function",
+    messageApp: userInfo.messageApp,
+    notificationData: notifData
+  });
   return true;
 }

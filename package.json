@@ -19,9 +19,9 @@
     "emoji-regex": "^10.6.0",
     "express": "^5.1.0",
     "matrix-bot-sdk": "^0.7.1",
-    "mongodb": "^6.20.0",
-    "mongoose": "^8.19.3",
-    "nodemon": "^3.1.10",
+    "mongodb": "^6.21.0",
+    "mongoose": "^8.19.4",
+    "nodemon": "^3.1.11",
     "p-limit": "^6.2.0",
     "signal-sdk": "^0.0.6",
     "telegraf": "^4.16.3",
@@ -32,7 +32,7 @@
     "@eslint/js": "^9.32.0",
     "@jest/globals": "^30.0.5",
     "@telegraf/types": "^9.2.1",
-    "@tsconfig/node24": "^24.0.1",
+    "@tsconfig/node24": "^24.0.2",
     "@types/express": "^5.0.5",
     "@types/jest": "^30.0.0",
     "eslint": "^9.39.1",
@@ -43,6 +43,6 @@
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.5",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.3"
+    "typescript-eslint": "^8.46.4"
   }
 }

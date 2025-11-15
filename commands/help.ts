@@ -21,7 +21,7 @@ export const helpCommand = async (session: ISession): Promise<void> => {
 };
 
 export const getHelpText = (session: ISession): string => {
-  let helpText = BotMessages.HELP.replace("{CHAT_ID}", String(session.chatId))
+  let helpText = BotMessages.HELP.replace("{CHAT_ID}", session.chatId)
     .replace("{MESSAGE_APP}", session.messageApp)
     .replace(
       "{LINK_PRIVACY_POLICY}",
