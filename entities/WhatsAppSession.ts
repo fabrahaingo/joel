@@ -197,8 +197,11 @@ export async function sendWhatsAppMessage(
     const keyboardFlat = replaceWHButtons(options.keyboard).flat();
     if (keyboardFlat.length > 3) {
       console.log(
-        `WhatsApp keyboard length for buttons is ${String(keyboardFlat.length)}>3`
+        `WhatsApp keyboard length for buttons is ${String(keyboardFlat.length)}>3 : `
       );
+      keyboardFlat.forEach((k) => {
+        console.log(k.text);
+      });
       return false;
     }
     for (const key of keyboardFlat) {
