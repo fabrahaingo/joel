@@ -76,8 +76,12 @@ export class TelegramSession implements ISession {
     await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
-  async log(args: { event: UmamiEvent }) {
-    await Umami.log(args.event, this.messageApp);
+  async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
+    await Umami.log({
+      event: args.event,
+      messageApp: this.messageApp,
+      payload: args.payload
+    });
   }
 
   async sendMessage(
@@ -172,7 +176,10 @@ export async function sendTelegramMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log("/message-fail-too-many-requests-aborted", "Telegram");
+    await umami.log({
+      event: "/message-fail-too-many-requests-aborted",
+      messageApp: "Telegram"
+    });
     return false;
   }
   const mArr = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
@@ -200,7 +207,7 @@ export async function sendTelegramMessage(
         `https://api.telegram.org/bot${botToken}/sendMessage`,
         payload
       );
-      await umami.log("/message-sent", "Telegram");
+      await umami.log({ event: "/message-sent", messageApp: "Telegram" });
 
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
@@ -212,21 +219,30 @@ export async function sendTelegramMessage(
       const error = err as AxiosError<TelegramAPIError>;
       switch (error.response?.data.description) {
         case "Forbidden: bot was blocked by the user":
-          await umami.log("/user-blocked-joel", "Telegram");
+          await umami.log({
+            event: "/user-blocked-joel",
+            messageApp: "Telegram"
+          });
           await User.updateOne(
             { messageApp: "Telegram", chatId: chatId },
             { $set: { status: "blocked" } }
           );
           break;
         case "Forbidden: user is deactivated":
-          await umami.log("/user-deactivated", "Telegram");
+          await umami.log({
+            event: "/user-deactivated",
+            messageApp: "Telegram"
+          });
           await User.deleteOne({
             messageApp: "Telegram",
             chatId: chatId
           });
           break;
         case "Too many requests":
-          await umami.log("/message-fail-too-many-requests", "Telegram");
+          await umami.log({
+            event: "/message-fail-too-many-requests",
+            messageApp: "Telegram"
+          });
           await new Promise((resolve) =>
             setTimeout(resolve, Math.pow(2, retryNumber) * 1000)
           );

@@ -117,7 +117,8 @@ export async function searchPersonHistory(
     const personName = message.split(" ").slice(1).join(" ");
 
     let JORFRes_data: JORFSearchItem[] | null = [];
-    if (!noSearch) JORFRes_data = await callJORFSearchPeople(personName);
+    if (!noSearch)
+      JORFRes_data = await callJORFSearchPeople(personName, session.messageApp);
     const nbRecords = JORFRes_data?.length ?? 0;
 
     if (nbRecords == 0 || JORFRes_data == null) {
@@ -173,7 +174,7 @@ export async function searchPersonHistory(
     const prenomNom = JORFRes_data[0].prenom + " " + JORFRes_data[0].nom;
 
     // Transform manual follow into strong follow
-    if (session.user != null && session.user.checkFollowedName(nomPrenom)) {
+    if (session.user?.checkFollowedName(nomPrenom)) {
       const text = `Vous suivez manuellement *${prenomNom}* ✅`;
       await session.sendMessage(text);
 
@@ -332,7 +333,7 @@ export const followCommand = async (
 
     await session.sendTypingAction();
 
-    const JORFRes = await callJORFSearchPeople(personName);
+    const JORFRes = await callJORFSearchPeople(personName, session.messageApp);
     if (JORFRes == null || JORFRes.length == 0) {
       // redirect to manual follow
       await searchPersonHistory(
@@ -394,7 +395,7 @@ export const manualFollowCommand = async (
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
-  const JORFResult = await callJORFSearchPeople(prenomNom);
+  const JORFResult = await callJORFSearchPeople(prenomNom, session.messageApp);
   if (JORFResult == null) {
     await session.sendMessage(
       "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."

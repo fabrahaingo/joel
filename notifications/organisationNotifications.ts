@@ -277,10 +277,10 @@ async function sendOrganisationUpdate(
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  await umami.log(
-    "/notification-update-organisation",
-    userInfo.messageApp,
-    notifData
-  );
+  await umami.log({
+    event: "/notification-update-organisation",
+    messageApp: userInfo.messageApp,
+    notificationData: notifData
+  });
   return true;
 }

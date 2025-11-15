@@ -112,6 +112,7 @@ await (async function () {
   await client.start();
 
   console.log("Bot device ID:", client.crypto.clientDeviceId);
+  // @ts-ignore
   console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
 
   const messageOptions =
@@ -119,7 +120,7 @@ await (async function () {
 
   startDailyNotificationJobs([matrixApp], messageOptions);
 })().then(() => {
-  console.log(`Matrix: JOEL started successfully \u{2705}`);
+  console.log(`${matrixApp}: JOEL started successfully \u{2705}`);
 });
 
 interface MatrixRoomEvent {
@@ -182,7 +183,10 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
               { $set: { status: "active" }, $unset: { roomId: 1 } },
               { runValidators: true }
             );
-            await umami.log("/user-blocked-joel", matrixApp);
+            await umami.log({
+              event: "/user-blocked-joel",
+              messageApp: matrixApp
+            });
           }
           return;
         } else if (event.content.membership === "join") {
@@ -211,7 +215,10 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
                   { _id: previousUser._id },
                   { $set: { status: "active", roomId: roomId } }
                 );
-                await umami.log("/user-unblocked-joel", matrixApp);
+                await umami.log({
+                  event: "/user-unblocked-joel",
+                  messageApp: matrixApp
+                });
                 if (!previousUser.followsNothing())
                   msgText = KEYBOARD_KEYS.FOLLOWS_LIST.key.text;
                 else msgText = "/start";
@@ -237,7 +244,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     }
 
     try {
-      await umami.log("/message-received", matrixApp);
+      await umami.log({ event: "/message-received", messageApp: matrixApp });
 
       const matrixSession = new MatrixSession(
         matrixApp,

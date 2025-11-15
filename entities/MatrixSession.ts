@@ -88,8 +88,12 @@ export class MatrixSession implements ISession {
     //await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
-  async log(args: { event: UmamiEvent }) {
-    await Umami.log(args.event, this.messageApp);
+  async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
+    await Umami.log({
+      event: args.event,
+      messageApp: this.messageApp,
+      payload: args.payload
+    });
   }
 
   async sendMessage(
@@ -113,10 +117,10 @@ export async function sendMatrixMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log(
-      "/message-fail-too-many-requests-aborted",
-      client.messageApp
-    );
+    await umami.log({
+      event: "/message-fail-too-many-requests-aborted",
+      messageApp: client.messageApp
+    });
     return false;
   } // give up after 5 retries
   let keyboard = options?.keyboard;
@@ -187,7 +191,10 @@ export async function sendMatrixMessage(
         formatted_body: markdown2html(mArr[i])
       });
 
-      await umami.log("/message-sent", client.messageApp);
+      await umami.log({
+        event: "/message-sent",
+        messageApp: client.messageApp
+      });
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
@@ -210,7 +217,10 @@ export async function sendMatrixMessage(
     const mError = error as MatrixError;
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
-        await umami.log("/message-fail-too-many-requests", client.messageApp);
+        await umami.log({
+          event: "/message-fail-too-many-requests",
+          messageApp: client.messageApp
+        });
         const retryAfterMs =
           mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
         await new Promise((resolve) =>
@@ -225,7 +235,10 @@ export async function sendMatrixMessage(
         );
       }
       case "M_FORBIDDEN": // user blocked the bot, user left the room ...
-        await umami.log("/user-blocked-joel", client.messageApp);
+        await umami.log({
+          event: "/user-blocked-joel",
+          messageApp: client.messageApp
+        });
         await User.updateOne(
           { messageApp: client.messageApp, chatId: userInfo.chatId },
           { $set: { status: "blocked" } }
@@ -273,7 +286,7 @@ export async function sendPollMenu(
     "org.matrix.msc3381.poll.start",
     content
   );
-  await umami.log("/message-sent", client.messageApp);
+  await umami.log({ event: "/message-sent", messageApp: client.messageApp });
 
   return true;
 }
@@ -304,10 +317,10 @@ async function sendMatrixReactions(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log(
-      "/message-fail-too-many-requests-aborted",
-      client.messageApp
-    );
+    await umami.log({
+      event: "/message-fail-too-many-requests-aborted",
+      messageApp: client.messageApp
+    });
     return false;
   }
 
@@ -333,7 +346,10 @@ async function sendMatrixReactions(
     const mError = error as MatrixError;
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
-        await umami.log("/message-fail-too-many-requests", client.messageApp);
+        await umami.log({
+          event: "/message-fail-too-many-requests",
+          messageApp: client.messageApp
+        });
         const retryAfterMs =
           mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
         await new Promise((resolve) =>

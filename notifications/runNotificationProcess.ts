@@ -132,6 +132,9 @@ export async function runNotificationProcess(
   );
 
   for (const appType of targetApps) {
-    await umami.log("/notification-process-completed", appType);
+    await umami.log({
+      event: "/notification-process-completed",
+      messageApp: appType
+    });
   }
 }
