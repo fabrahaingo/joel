@@ -2,6 +2,8 @@ import "dotenv/config";
 import { MessageApp } from "../types.ts";
 import { runNotificationProcess } from "./runNotificationProcess.ts";
 import { ExternalMessageOptions } from "../entities/Session.ts";
+import { session } from "telegraf";
+import umami from "../utils/umami.ts";
 
 interface DailyTime {
   hour: number;
@@ -65,6 +67,9 @@ export function startDailyNotificationJobs(
           console.warn(
             `${appsToString}: notification process is still running when the next schedule fired. Skipping this cycle.`
           );
+          for (const app of messageApps) {
+            await umami.log({ event: `/console-log`, messageApp: app });
+          }
           scheduleNextRun();
           return;
         }
@@ -77,6 +82,9 @@ export function startDailyNotificationJobs(
             `${appsToString}: error during notification process`,
             error
           );
+          for (const app of messageApps) {
+            await umami.log({ event: `/console-log`, messageApp: app });
+          }
         } finally {
           running = false;
           scheduleNextRun();

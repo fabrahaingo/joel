@@ -115,6 +115,7 @@ app.post("/webhook", async (req, res) => {
   } catch (error) {
     res.sendStatus(500);
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
   }
 });
 
@@ -244,6 +245,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
     await processMessage(WHSession, msgText);
   } catch (error) {
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
   }
   return;
 };

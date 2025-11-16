@@ -139,6 +139,7 @@ export async function extractTelegramSession(
 ): Promise<TelegramSession | undefined> {
   if (session.messageApp !== "Telegram") {
     console.log("Session is not a TelegramSession");
+    await session.log({ event: "/console-log" });
     if (userFacingError) {
       await session.sendMessage(
         `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
@@ -150,6 +151,7 @@ export async function extractTelegramSession(
     console.log(
       "Session messageApp is Telegram, but session is not a TelegramSession"
     );
+    await session.log({ event: "/console-log" });
     return undefined;
   }
 
@@ -256,6 +258,7 @@ export async function sendTelegramMessage(
           );
         default:
           console.log(err);
+          await umami.log({ event: "/console-log", messageApp: "Telegram" });
           break;
       }
     }

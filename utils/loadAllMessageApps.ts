@@ -9,6 +9,7 @@ import { MessageApp } from "../types.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { SignalCli } from "signal-sdk";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
+import umami from "./umami.ts";
 
 // Load all message apps and their options from environment variables
 export async function loadAllMessageApps(): Promise<{
@@ -84,6 +85,7 @@ export async function loadAllMessageApps(): Promise<{
       enabledApps.push("Matrix");
     } catch {
       console.log("Matrix: server is currently running, selection is skipped");
+      await umami.log({ event: "/console-log" });
     }
   }
 

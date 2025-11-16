@@ -265,6 +265,7 @@ export const enaCommand = async (session: ISession): Promise<void> => {
     await askPromoQuestion(session);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -304,6 +305,7 @@ export const promosCommand = async (session: ISession): Promise<void> => {
     });
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -481,5 +483,6 @@ export const suivreFromJOReference = async (
     await askReferenceQuestion(session);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };

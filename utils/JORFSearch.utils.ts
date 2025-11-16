@@ -33,6 +33,7 @@ export async function callJORFSearchPeople(
       messageApp,
       payload: { people: true }
     });
+    await umami.log({ event: "/console-log", messageApp: messageApp });
   }
   try {
     await umami.log({
@@ -125,6 +126,7 @@ export async function callJORFSearchDay(
       payload: { date: true }
     });
     console.log(error);
+    await umami.log({ event: "/console-log" });
   }
   return null;
 }
@@ -163,6 +165,7 @@ export async function callJORFSearchTag(
       payload: { function_tag: true }
     });
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: messageApp });
   }
   return null;
 }
@@ -202,6 +205,7 @@ export async function callJORFSearchOrganisation(
       payload: { organisation: true }
     });
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: messageApp });
   }
   return null;
 }
@@ -236,12 +240,13 @@ export async function searchOrganisationWikidataId(
           }
         }
       )
-      .then((r) => {
+      .then(async (r) => {
         if (r.data === null || typeof r.data === "string") {
           console.log(
             "Wikidata API error when fetching organisation: ",
             org_name
           );
+          await umami.log({ event: "/console-log", messageApp: messageApp });
           return null;
         }
         return r.data.search.map((o) => o.id);
@@ -282,6 +287,7 @@ export async function searchOrganisationWikidataId(
       payload: { wikidata_name: true }
     });
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: messageApp });
   }
   return null;
 }
@@ -321,6 +327,7 @@ export async function callJORFSearchReference(
       payload: { reference: true }
     });
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: messageApp });
   }
   return null;
 }
@@ -360,6 +367,7 @@ async function JORFSearchCallPublications(
       payload: { meta: true }
     });
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: messageApp });
   }
   return null;
 }

@@ -128,6 +128,7 @@ export const followFunctionCommand = async (
     await askFunctionQuestion(session);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -178,6 +179,7 @@ const followFunctionsCommand = async (
     await session.sendMessage(text);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -208,5 +210,6 @@ export const followFunctionFromStrCommand = async (
     await followFunctionsCommand(session, selectedFunctions);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };

@@ -272,6 +272,7 @@ export const searchOrganisation = async (session: ISession) => {
     await askOrganisationSearch(session);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -288,6 +289,7 @@ export const searchOrganisationFromStr = async (
     else await session.sendMessage(FULL_COMMAND_PROMPT);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -403,5 +405,6 @@ export const followOrganisationsFromWikidataIdStr = async (
     else await session.sendMessage(text);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };

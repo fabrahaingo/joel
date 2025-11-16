@@ -68,6 +68,7 @@ export async function extractSignalAppSession(
 ): Promise<SignalSession | undefined> {
   if (session.messageApp !== "Signal") {
     console.log("Session is not a SignalSession");
+    await session.log({ event: "/console-log" });
     if (userFacingError) {
       await session.sendMessage(
         `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
@@ -79,6 +80,7 @@ export async function extractSignalAppSession(
     console.log(
       "Session messageApp is Signal, but session is not a SignalSession"
     );
+    await session.log({ event: "/console-log" });
     return undefined;
   }
 
@@ -109,6 +111,7 @@ export async function sendSignalAppMessage(
     await recordSuccessfulDelivery(SignalMessageApp, userPhoneId);
   } catch (error) {
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: "Signal" });
     return false;
   }
   return true;
