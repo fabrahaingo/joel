@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { runNotificationProcess } from "../notifications/runNotificationProcess.ts";
 import { loadAllMessageApps } from "../utils/loadAllMessageApps.ts";
+import { session } from "telegraf";
+import umami from "../utils/umami.ts";
 
 await (async () => {
   try {
@@ -12,6 +14,7 @@ await (async () => {
     process.exit(0);
   } catch (error) {
     console.error("Notification failed:", error);
+    await umami.log({ event: "/console-log" });
     process.exit(1);
   }
 })();

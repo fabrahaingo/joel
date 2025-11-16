@@ -210,6 +210,7 @@ export const listCommand = async (session: ISession) => {
     await session.sendMessage(text, { keyboard: tempKeyboard });
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -271,6 +272,7 @@ export const unfollowCommand = async (session: ISession) => {
     await askUnfollowQuestion(session);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -481,6 +483,7 @@ export const unfollowFromStr = async (
     return true;
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
   return false;
 };

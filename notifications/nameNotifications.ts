@@ -181,6 +181,10 @@ async function sendNameMentionUpdates(
     const nameUpdates = updatedRecordMap.get(peopleId);
     if (nameUpdates === undefined || nameUpdates.length === 0) {
       console.log("FollowedName notification update sent with no records");
+      await umami.log({
+        event: "/console-log",
+        messageApp: userInfo.messageApp
+      });
       continue;
     }
 

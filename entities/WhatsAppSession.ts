@@ -153,6 +153,7 @@ export async function extractWhatsAppSession(
 ): Promise<WhatsAppSession | undefined> {
   if (session.messageApp !== "WhatsApp") {
     console.log("Session is not a WhatsAppSession");
+    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
     if (userFacingError) {
       await session.sendMessage(
         `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
@@ -164,6 +165,7 @@ export async function extractWhatsAppSession(
     console.log(
       "Session messageApp is WhatsApp, but session is not a WhatsAppSession"
     );
+    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
     return undefined;
   }
 
@@ -206,14 +208,17 @@ export async function sendWhatsAppMessage(
       console.log(
         `WhatsApp keyboard length for buttons is ${String(keyboardFlat.length)}>3 : `
       );
+      await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
       keyboardFlat.forEach((k) => {
         console.log(k.text);
       });
+      await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
       return false;
     }
     for (const key of keyboardFlat) {
       if (key.text.length > 20) {
         console.log(`WhatsApp keyboard text too long, aborting: ${key.text}`);
+        await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
         return false;
       }
     }
@@ -305,6 +310,7 @@ export async function sendWhatsAppMessage(
             break;
           default:
             console.log(resp.error);
+            await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
         }
         return false;
       }
@@ -339,6 +345,7 @@ export async function sendWhatsAppMessage(
       }
       if (resp.error) {
         console.log(resp.error);
+        await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
         return false;
       }
       numberMessageBurst += 1;
@@ -359,6 +366,7 @@ export async function sendWhatsAppMessage(
     }
   } catch (error) {
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
     return false;
   }
   await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneIdStr);

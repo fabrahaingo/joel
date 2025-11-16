@@ -90,6 +90,7 @@ export const fullHistoryCommand = async (
 
   if (msg == undefined) {
     console.log("/history command called without msg argument");
+    await session.log({ event: "/console-log" });
     return;
   }
 
@@ -279,6 +280,7 @@ export async function searchPersonHistory(
     return;
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
   return;
 }
@@ -369,6 +371,7 @@ export const followCommand = async (
     await session.sendMessage(text, { keyboard: SEARCH_PROMPT_KEYBOARD });
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 export const manualFollowCommand = async (

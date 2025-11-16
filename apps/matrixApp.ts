@@ -112,7 +112,7 @@ await (async function () {
   await client.start();
 
   console.log("Bot device ID:", client.crypto.clientDeviceId);
-  // @ts-ignore
+  // @ts-expect-error: clientEd25519 is not exported by the SDK
   console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
 
   const messageOptions =
@@ -238,6 +238,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     if (/^@_?server:/.test(event.sender)) {
       console.log(`${matrixApp}: message from the server`);
       console.log(msgText);
+      await umami.log({ event: "/console-log", messageApp: matrixApp });
       if (event.type === "m.room.message")
         await client.sendReadReceipt(roomId, event.event_id);
       return;
@@ -261,6 +262,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
       await processMessage(matrixSession, msgText);
     } catch (error) {
       console.log(error);
+      await umami.log({ event: "/console-log", messageApp: matrixApp });
     }
   })();
 }

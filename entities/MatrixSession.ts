@@ -144,6 +144,10 @@ export async function sendMatrixMessage(
           `${userInfo.messageApp}: failed to unset stored room for ${userInfo.chatId}`,
           updateError
         );
+        await umami.log({
+          event: "/console-log",
+          messageApp: userInfo.messageApp
+        });
       }
 
       userInfo.roomId = undefined;
@@ -167,6 +171,10 @@ export async function sendMatrixMessage(
             `${userInfo.messageApp}: failed to persist DM room for ${userInfo.chatId}`,
             updateError
           );
+          await umami.log({
+            event: "/console-log",
+            messageApp: userInfo.messageApp
+          });
         }
         userInfo.roomId = dmRoomId;
       }
@@ -176,6 +184,10 @@ export async function sendMatrixMessage(
       console.log(
         `${userInfo.messageApp}: Could not find DM room for user ${userInfo.chatId}`
       );
+      await umami.log({
+        event: "/console-log",
+        messageApp: userInfo.messageApp
+      });
       await User.updateOne({
         messageApp: userInfo.messageApp,
         chatId: userInfo.chatId
@@ -246,6 +258,10 @@ export async function sendMatrixMessage(
         break;
       default:
         console.log(error);
+        await umami.log({
+          event: "/console-log",
+          messageApp: userInfo.messageApp
+        });
     }
     return false;
   }
@@ -329,6 +345,10 @@ async function sendMatrixReactions(
     userInfo.roomId ??= await findUserDMRoomId(client.matrix, userInfo.chatId);
     if (!userInfo.roomId) {
       console.log("Could not find DM room for user " + userInfo.chatId);
+      await umami.log({
+        event: "/console-log",
+        messageApp: userInfo.messageApp
+      });
       return false;
     }
 
@@ -365,6 +385,10 @@ async function sendMatrixReactions(
       }
       default:
         console.log(error);
+        await umami.log({
+          event: "/console-log",
+          messageApp: userInfo.messageApp
+        });
     }
     return false;
   }
@@ -397,6 +421,7 @@ export async function extractMatrixSession(
 ): Promise<MatrixSession | undefined> {
   if (["Matrix", "Tchap"].some((m) => m !== session.messageApp)) {
     console.log("Session is not a MatrixSession");
+    await session.log({ event: "/console-log" });
     if (userFacingError) {
       await session.sendMessage(
         `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
@@ -408,6 +433,7 @@ export async function extractMatrixSession(
     console.log(
       "Session messageApp is Matrix, but session is not a MatrixSession"
     );
+    await session.log({ event: "/console-log" });
     return undefined;
   }
 
