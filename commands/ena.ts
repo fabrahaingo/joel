@@ -158,6 +158,14 @@ async function handlePromoAnswer(
     );
     return true;
   }
+  if (promoJORFList.length === 0) {
+    console.log("No JORFSearch result for promo", promoInfo);
+    await session.log({ event: "/console-log" });
+    await session.sendMessage(
+      "Une erreur est survenue et notre équipe a été avertie."
+    );
+    return true;
+  }
 
   const promoStr = promoInfo.name
     ? `${promoInfo.name} (${promoInfo.period})`
