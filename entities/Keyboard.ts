@@ -6,6 +6,10 @@ export interface KeyboardKey {
 }
 export type Keyboard = KeyboardKey[][];
 
+export function cloneKeyboard(keyboard: Keyboard): Keyboard {
+  return keyboard.map((row) => [...row]);
+}
+
 export const KEYBOARD_KEYS: Record<
   string,
   {
