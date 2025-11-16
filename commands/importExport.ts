@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { Types } from "mongoose";
 
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import User from "../models/User.ts";
@@ -16,8 +15,6 @@ const EXPORT_CODE_VALIDITY_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 const IMPORTER_CODE_PROMPT =
   "Saisir le code d'import que vous avez reçu (valable 4 heures).";
-const IMPORTER_CONFIRMATION_PROMPT =
-  "Confirmez-vous l'import de ces suivis ? (Oui/Non).";
 
 export const exportCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/data-export" });
@@ -40,11 +37,6 @@ export const exportCommand = async (session: ISession): Promise<void> => {
     { separateMenuMessage: true }
   );
 };
-
-interface ImportConfirmationContext {
-  sourceUserId: Types.ObjectId;
-  code: string;
-}
 
 export const importCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/data-import" });
@@ -125,74 +117,25 @@ async function handleImporterCode(
     perspective: "thirdParty"
   });
 
-  await session.sendMessage(
-    `Les éléments suivants seront copiés depuis le compte source :\n\n${summary}`
-  );
-
-  await askFollowUpQuestion(
-    session,
-    IMPORTER_CONFIRMATION_PROMPT,
-    handleImporterConfirmation,
-    {
-      context: { sourceUserId: sourceUser._id, code },
-      messageOptions: { forceNoKeyboard: true }
-    }
-  );
-
-  return true;
-}
-
-async function handleImporterConfirmation(
-  session: ISession,
-  message: string,
-  context: ImportConfirmationContext
-): Promise<boolean> {
-  const normalizedAnswer = message.trim().toLowerCase();
-  const positiveAnswers = new Set(["oui", "o", "yes", "y"]);
-  const negativeAnswers = new Set(["non", "n", "no"]);
-
-  if (positiveAnswers.has(normalizedAnswer)) {
-    if (session.user == null) await session.createUser();
-    if (session.user == null) {
-      await session.sendMessage(
-        "Une erreur est survenue lors de la création du compte destinataire. Merci de réessayer."
-      );
-      return true;
-    }
-
-    const sourceUser: IUser | null = await User.findOne({
-      _id: context.sourceUserId
-    });
-
-    if (
-      sourceUser?.transferData == null ||
-      new Date().getTime() > sourceUser.transferData.expiresAt.getTime()
-    ) {
-      await session.sendMessage(
-        "Le code n'est plus valide. Relancez la commande *Exporter* ou /export pour générer un nouveau code."
-      );
-      return true;
-    }
-
-    copyFollowData(session.user, sourceUser);
-    session.user = await session.user.save();
-
-    sourceUser.transferData = undefined;
-    await sourceUser.save();
-
-    await session.log({ event: "/data-import-confirmed" });
+  if (session.user == null) await session.createUser();
+  if (session.user == null) {
     await session.sendMessage(
-      "Import terminé ! Vos suivis ont été copiés sur ce compte."
+      "Une erreur est survenue lors de la création du compte destinataire. Merci de réessayer."
     );
     return true;
   }
 
-  if (negativeAnswers.has(normalizedAnswer)) {
-    await session.sendMessage("Import annulé.");
-    return true;
-  }
+  copyFollowData(session.user, sourceUser);
+  session.user = await session.user.save();
 
-  await session.sendMessage("Réponse non reconnue. Import annulé.");
+  sourceUser.transferData = undefined;
+  await sourceUser.save();
+
+  await session.log({ event: "/data-import-confirmed" });
+  await session.sendMessage(
+    `Les éléments suivants ont été copiés depuis le compte source :\n\n${summary}`
+  );
+
   return true;
 }
 
