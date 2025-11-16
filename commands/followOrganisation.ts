@@ -298,7 +298,7 @@ export const followOrganisationsFromWikidataIdStr = async (
 ) => {
   try {
     if (msg.trim().split(" ").length < 2) {
-      await searchOrganisationFromStr(session, msg);
+      await searchOrganisationFromStr(session, msg, false);
       return;
     }
     if (triggerUmami) await session.log({ event: "/follow-organisation" });
@@ -325,7 +325,8 @@ export const followOrganisationsFromWikidataIdStr = async (
     if (!/\d/.test(parameterString)) {
       await searchOrganisationFromStr(
         session,
-        "RechercherO " + parameterString
+        "RechercherO " + parameterString,
+        false
       );
       return;
     }
