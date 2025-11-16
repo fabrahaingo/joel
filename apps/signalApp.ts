@@ -73,5 +73,6 @@ await (async () => {
     //await signal.gracefulShutdown();
   } catch (error) {
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: "Signal" });
   }
 })();

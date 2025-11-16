@@ -5,6 +5,13 @@ import { WHATSAPP_MESSAGE_CHAR_LIMIT } from "../entities/WhatsAppSession.ts";
 import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
 import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
 
+const injectionCharacters = /[<>`{}\[\]\$]/g;
+const controlCharacters = /[\u0000-\u001F\u007F]+/g;
+
+export function sanitizeUserInput(input: string): string {
+  return input.replace(controlCharacters, "").replace(injectionCharacters, "");
+}
+
 export function splitText(text: string, max: number): string[] {
   if (!Number.isFinite(max) || max <= 0) return [text];
 

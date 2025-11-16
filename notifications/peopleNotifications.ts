@@ -218,6 +218,10 @@ async function sendPeopleUpdate(
     const peopleRecords = updatedRecordMap.get(peopleId);
     if (peopleRecords === undefined || peopleRecords.length === 0) {
       console.log("FollowedPeople notification update sent with no records");
+      await umami.log({
+        event: "/console-log",
+        messageApp: userInfo.messageApp
+      });
       continue;
     }
 

@@ -114,4 +114,5 @@ export type UmamiEvent =
   | "/notification-process-completed"
   | "/daily-active-user"
   | "/weekly-active-user"
-  | "/monthly-active-user";
+  | "/monthly-active-user"
+  | "/console-log";

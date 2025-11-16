@@ -45,5 +45,6 @@ export const statsCommand = async (session: ISession): Promise<void> => {
     await session.sendMessage(msg, { separateMenuMessage: true });
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };

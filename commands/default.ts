@@ -5,6 +5,7 @@ import {
   MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
+import umami from "../utils/umami.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
@@ -15,6 +16,7 @@ export const defaultCommand = async (session: ISession): Promise<void> => {
     });
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -78,6 +80,7 @@ export async function sendMainMenu(
       });
   } catch (error) {
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: userInfo.messageApp });
   }
 }
 

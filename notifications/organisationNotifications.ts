@@ -216,11 +216,19 @@ async function sendOrganisationUpdate(
       console.log(
         "Unable to find the name of the organisation with wikidataId " + orgId
       );
+      await umami.log({
+        event: "/console-log",
+        messageApp: userInfo.messageApp
+      });
       continue;
     }
     const orgRecords = organisationsUpdateRecordsMap.get(orgId);
     if (orgRecords === undefined || orgRecords.length === 0) {
       console.log("Organisation notification update sent with no records");
+      await umami.log({
+        event: "/console-log",
+        messageApp: userInfo.messageApp
+      });
       continue;
     }
 

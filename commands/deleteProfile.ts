@@ -72,5 +72,6 @@ export const deleteProfileCommand = async (
     await askDeleteProfileQuestion(session);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };

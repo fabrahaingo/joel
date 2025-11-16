@@ -1,5 +1,4 @@
 import { ISession } from "../types.ts";
-import { BotMessages } from "../entities/BotMessages.ts";
 import { processMessage } from "./Commands.ts";
 import { getHelpText } from "./help.ts";
 
@@ -44,5 +43,6 @@ export const startCommand = async (
     }
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };

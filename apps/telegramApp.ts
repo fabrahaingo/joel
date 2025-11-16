@@ -40,6 +40,7 @@ await (async () => {
       await processMessage(tgSession, ctx.message.text);
     } catch (error) {
       console.error("Telegram: Error processing command:", error);
+      await umami.log({ event: "/console-log", messageApp: "Telegram" });
     }
   });
 
