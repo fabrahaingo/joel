@@ -29,17 +29,20 @@ import {
 } from "../entities/FollowUpManager.ts";
 import { buildInfoCommand } from "./help.ts";
 import { exportCommand, importCommand } from "./importExport.ts";
+import { sanitizeUserInput } from "../utils/text.utils.ts";
 
 export async function processMessage(
   session: ISession,
   msg: string
 ): Promise<void> {
   // remove all spaces and replace them with a single space
-  const cleanMsg = msg
-    .trim()
-    .normalize("NFKC")
-    .replace(/ +/g, " ")
-    .replace(/[\\~*_\r\n]+/g, ""); // replace all markdown artefacts
+  const cleanMsg = sanitizeUserInput(
+    msg
+      .trim()
+      .normalize("NFKC")
+      .replace(/ +/g, " ")
+      .replace(/[\\~*_\r\n]+/g, "") // replace all markdown artefacts
+  );
 
   const firstLine = cleanMsg.split("\n")[0];
 
