@@ -9,7 +9,11 @@ import User from "../models/User.ts";
 import People from "../models/People.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { removeSpecialCharacters } from "../utils/text.utils.ts";
-import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import {
+  cloneKeyboard,
+  Keyboard,
+  KEYBOARD_KEYS
+} from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 
 const isPersonAlreadyFollowed = (
@@ -25,6 +29,11 @@ const SEARCH_PROMPT_TEXT =
   "Entrez le prénom et nom de la personne que vous souhaitez rechercher:";
 
 const SEARCH_PROMPT_KEYBOARD: Keyboard = [
+  [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
+  [KEYBOARD_KEYS.MAIN_MENU.key]
+];
+
+const SEARCH_RESULT_BASE_KEYBOARD: Keyboard = [
   [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
   [KEYBOARD_KEYS.MAIN_MENU.key]
 ];
@@ -123,10 +132,7 @@ export async function searchPersonHistory(
     const nbRecords = JORFRes_data?.length ?? 0;
 
     if (nbRecords == 0 || JORFRes_data == null) {
-      const tempKeyboard: Keyboard = [
-        [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
-        [KEYBOARD_KEYS.MAIN_MENU.key]
-      ];
+      const tempKeyboard: Keyboard = cloneKeyboard(SEARCH_RESULT_BASE_KEYBOARD);
 
       const personNameSplit = personName.split(" ");
       if (personNameSplit.length < 2) {
