@@ -70,8 +70,8 @@ async function getJORFPromoSearchResult(
 }
 
 const PROMO_PROMPT_TEXT =
-  "Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\n" +
-  "⚠️ Attention, un nombre important de suivis seront ajoutés en même temps, *les retirer peut ensuite prendre du temps* ⚠️\n" +
+  "Entrez le nom de votre promo (ENA ou INSP) et l'*intégralité de ses élèves* sera ajoutée à la liste de vos contacts.\\split" +
+  "⚠️ Attention, un nombre important de suivis seront ajoutés en même temps, *les retirer peut ensuite prendre du temps* ⚠️\\split" +
   "Formats acceptés:\nGeorges-Clemenceau\n2017-2018\n";
 
 const PROMO_SEARCH_KEYBOARD: Keyboard = [
@@ -155,6 +155,14 @@ async function handlePromoAnswer(
   if (promoJORFList == null) {
     await session.sendMessage(
       "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
+    );
+    return true;
+  }
+  if (promoJORFList.length === 0) {
+    console.log("No JORFSearch result for promo", promoInfo);
+    await session.log({ event: "/console-log" });
+    await session.sendMessage(
+      "Une erreur est survenue et notre équipe a été avertie."
     );
     return true;
   }
