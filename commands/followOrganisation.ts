@@ -6,7 +6,11 @@ import {
   getJORFSearchLinkOrganisation,
   searchOrganisationWikidataId
 } from "../utils/JORFSearch.utils.ts";
-import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import {
+  cloneKeyboard,
+  Keyboard,
+  KEYBOARD_KEYS
+} from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 
 const isOrganisationAlreadyFollowed = (
@@ -155,7 +159,7 @@ async function handleSingleOrganisationResult(
     await session.sendMessage(text, { keyboard: ORGANISATION_SEARCH_KEYBOARD });
     return;
   } else {
-    const tempKeyboard: Keyboard = ORGANISATION_SEARCH_KEYBOARD;
+    const tempKeyboard: Keyboard = cloneKeyboard(ORGANISATION_SEARCH_KEYBOARD);
     tempKeyboard.unshift([KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key]);
     await askFollowUpQuestion(
       session,

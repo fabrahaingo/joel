@@ -7,6 +7,7 @@ import umami from "../utils/umami.ts";
 import { loadAllMessageApps } from "../utils/loadAllMessageApps.ts";
 
 export interface BroadcastMessageOptions {
+  messageApps?: MessageApp[];
   includeBlockedUsers?: boolean;
   enabledAppsOverride?: MessageApp[];
   logger?: (message: string) => void;
@@ -26,7 +27,9 @@ export async function broadcastMessage(
   if (message.trim().length === 0) {
     throw new Error("Broadcast message cannot be empty");
   }
-  const { messageApps, messageAppOptions } = await loadAllMessageApps();
+  const { messageApps, messageAppOptions } = await loadAllMessageApps(
+    options?.messageApps
+  );
 
   const recipients = await User.find(
     {
@@ -69,13 +72,20 @@ export async function broadcastMessage(
 }
 
 await (async () => {
-  const message = "test message";
+  const message = `📢 L'équipe JOEL a le plaisir de t'annoncer son arrivée sur *Tchap*, *WhatsApp* et *Matrix* !
+Bien entendu nous restons sur Telegram !\\split  
+➡️  Tu peux exporter tes suivis JOEL avec la commande /export
+Rendez-vous sur notre site :\\split
+https://www.joel-officiel.fr/\\split  
+🤖 Bonne veille avec JOÉL !`;
   //const message = args.join(" ");
 
   try {
     await mongodbConnect();
     const result = await broadcastMessage(message, {
-      logger: console.log
+      logger: console.log,
+      includeBlockedUsers: true,
+      messageApps: ["Telegram"]
     });
     console.log(
       `Broadcast completed: ${String(result.succeeded)}/${String(result.attempted)} deliveries succeeded.`

@@ -256,7 +256,9 @@ export function cleanJORFItems(
       clean_item.organisations.length > 0 &&
       clean_item.organisations[0]?.wikidata_id === "Q109039648" &&
       clean_item.type_ordre === "nomination" &&
-      clean_item.date_debut !== undefined
+      clean_item.date_debut !== undefined &&
+      clean_item.date_fin === undefined &&
+      !clean_item.corps?.toLowerCase().includes("grade")
     ) {
       const year = parseInt(clean_item.date_debut.slice(0, 4));
       if (year != -1) {
