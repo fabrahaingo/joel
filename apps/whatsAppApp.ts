@@ -13,11 +13,52 @@ import {
 } from "../entities/WhatsAppSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
+import User from "../models/User.ts";
+import Organisation from "../models/Organisation.ts";
+import People from "../models/People.ts";
 
 const MAX_AGE_SEC = 5 * 60;
 const DUPLICATE_MESSAGE_TTL_MS = MAX_AGE_SEC * 1000;
 
+const STATS_REFRESH_RATE = 60 * 60 * 1000; // 1 hour
+
+interface StatsResult {
+  organisations: number;
+  people: number;
+  users: Record<string, number>;
+}
+
 const processedMessageIds = new Map<string, number>();
+let cachedStats: StatsResult | null = null;
+let cachedAt = 0;
+
+async function getCachedStats(): Promise<StatsResult> {
+  const now = Date.now();
+  if (cachedStats !== null && now - cachedAt < STATS_REFRESH_RATE) {
+    return cachedStats;
+  }
+
+  const [organisations, people, users] = await Promise.all([
+    Organisation.countDocuments().exec(),
+    People.countDocuments().exec(),
+    User.aggregate<{ _id: string; count: number }>([
+      {
+        $group: {
+          _id: "$messageApp",
+          count: { $sum: 1 }
+        }
+      }
+    ])
+  ]);
+
+  cachedStats = {
+    organisations,
+    people,
+    users: Object.fromEntries(users.map(({ _id, count }) => [_id, count]))
+  };
+  cachedAt = now;
+  return cachedStats;
+}
 
 function rememberInboundMessage(id: string | undefined): boolean {
   if (id == null) return false;
@@ -121,6 +162,16 @@ app.post("/webhook", async (req, res) => {
 
 app.get("/", (req, res) => {
   res.type("text/plain").send("JOEL WH server is running.");
+});
+
+app.get("/stats/", async (_req, res) => {
+  try {
+    const stats = await getCachedStats();
+    res.json(stats);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
 });
 
 app.get("/webhook", (req, res) => {
