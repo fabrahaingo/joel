@@ -1,7 +1,7 @@
 {
   "cron": [
     {
-      "command": "tsx ./scripts/notifyUsers.ts",
+      "command": "tsx ./notifications/notifyUsers.ts",
       "schedule": "0 9 * * *"
     }
   ]

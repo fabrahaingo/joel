@@ -7,17 +7,20 @@ import { loadUser } from "../entities/Session.ts";
 import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
 import { getISOWeek } from "../utils/date.utils.ts";
 
-export const USER_SCHEMA_VERSION = 2;
+export const USER_SCHEMA_VERSION = 3;
 
 const UserSchema = new Schema<IUser, UserModel>(
   {
     chatId: {
-      type: Number,
+      type: String,
       required: true
     },
     messageApp: {
       type: String,
       required: true
+    },
+    roomId: {
+      type: String
     },
     language_code: {
       type: String,
@@ -90,6 +93,14 @@ const UserSchema = new Schema<IUser, UserModel>(
       ],
       default: []
     },
+    transferData: {
+      code: {
+        type: String
+      },
+      expiresAt: {
+        type: Date
+      }
+    },
     schemaVersion: {
       type: Number,
       required: true
@@ -102,6 +113,9 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: Date
     },
     lastInteractionMonth: {
+      type: Date
+    },
+    lastMessageReceivedAt: {
       type: Date
     }
   },
@@ -116,13 +130,20 @@ UserSchema.static(
     if (session.user != null) return session.user;
 
     const user: IUser | null = await loadUser(session);
+    if (user != null) {
+      // If the roomId has changed, update the user's roomId'
+      if (session.roomId != null && user.roomId !== session.roomId) {
+        user.roomId = session.roomId;
+        await user.save();
+      }
+      return user;
+    }
 
-    if (user != null) return user;
-
-    await umami.log({ event: "/new-user" });
+    await umami.log({ event: "/new-user", messageApp: session.messageApp });
     return await this.create({
       chatId: session.chatId,
       messageApp: session.messageApp,
+      roomId: session.roomId,
       language_code: session.language_code,
       schemaVersion: USER_SCHEMA_VERSION
     });
@@ -135,7 +156,10 @@ UserSchema.method(
     let needSaving = false;
 
     if (this.status === "blocked") {
-      await umami.log({ event: "/user-unblocked-joel" });
+      await umami.log({
+        event: "/user-unblocked-joel",
+        messageApp: this.messageApp
+      });
       this.status = "active";
       needSaving = true;
     }
@@ -150,7 +174,10 @@ UserSchema.method(
       this.lastInteractionDay.toDateString() !== currentDay.toDateString()
     ) {
       this.lastInteractionDay = currentDay;
-      await umami.log({ event: "/daily-active-user" });
+      await umami.log({
+        event: "/daily-active-user",
+        messageApp: this.messageApp
+      });
       needSaving = true;
     }
 
@@ -164,7 +191,10 @@ UserSchema.method(
       thisWeek !== lastInteractionWeek
     ) {
       this.lastInteractionWeek = currentDay;
-      await umami.log({ event: "/weekly-active-user" });
+      await umami.log({
+        event: "/weekly-active-user",
+        messageApp: this.messageApp
+      });
       needSaving = true;
     }
 
@@ -177,7 +207,10 @@ UserSchema.method(
       const startMonth = new Date(currentDay);
       startMonth.setDate(1);
       this.lastInteractionMonth = startMonth;
-      await umami.log({ event: "/monthly-active-user" });
+      await umami.log({
+        event: "/monthly-active-user",
+        messageApp: this.messageApp
+      });
       needSaving = true;
     }
 
@@ -188,7 +221,9 @@ UserSchema.method(
 UserSchema.method(
   "checkFollowedPeople",
   function checkFollowedPeople(this: IUser, people: IPeople): boolean {
-    return this.followedPeople.some((person) => person.peopleId === people._id);
+    return this.followedPeople.some(
+      (person) => person.peopleId.toString() === people._id.toString()
+    );
   }
 );
 
@@ -225,7 +260,7 @@ UserSchema.method(
   async function removeFollowedPeople(this: IUser, peopleToUnfollow: IPeople) {
     if (!this.checkFollowedPeople(peopleToUnfollow)) return false;
     this.followedPeople = this.followedPeople.filter((elem) => {
-      return !(elem.peopleId.toString === peopleToUnfollow._id.toString);
+      return !(elem.peopleId.toString() === peopleToUnfollow._id.toString());
     });
     await this.save();
     return true;
@@ -288,7 +323,7 @@ UserSchema.method(
   async function removeFollowedName(this: IUser, name: string) {
     if (!this.checkFollowedName(name)) return false;
     this.followedNames = this.followedNames.filter((elem) => {
-      return elem !== name.toUpperCase();
+      return elem.toUpperCase() !== name.toUpperCase();
     });
     await this.save();
     return true;
@@ -312,5 +347,7 @@ UserSchema.method(
 UserSchema.index({ "followedPeople.peopleId": 1 });
 UserSchema.index({ "followedFunctions.functionTag": 1 });
 UserSchema.index({ "followedOrganisations.wikidataId": 1 });
+
+UserSchema.index({ "transferData.code": 1 });
 
 export default model<IUser, UserModel>("User", UserSchema);

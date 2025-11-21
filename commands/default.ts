@@ -1,41 +1,88 @@
-import { ISession, Keyboard } from "../types.ts";
+import { ISession } from "../types.ts";
+import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import {
+  ExternalMessageOptions,
+  MiniUserInfo,
+  sendMessage
+} from "../entities/Session.ts";
+import umami from "../utils/umami.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
     if (session.isReply) return;
     await session.log({ event: "/default-message" });
-    await session.sendMessage(
-      "Je n'ai pas compris votre message 🥺",
-      session.mainMenuKeyboard
-    );
+    await session.sendMessage("Je n'ai pas compris votre message 🥺", {
+      separateMenuMessage: true
+    });
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
+
+export const MAIN_MENU_MESSAGE = "Utilisez le clavier ci-dessous.";
 
 export const mainMenuCommand = async (session: ISession): Promise<void> => {
-  try {
-    await session.log({ event: "/main-menu-message" });
-    let message = "";
+  await session.log({ event: "/main-menu-message" });
+  await sendMainMenu(
+    {
+      messageApp: session.messageApp,
+      chatId: session.chatId,
+      roomId: session.roomId
+    },
+    { session }
+  );
+};
 
-    let keyboard: Keyboard = [];
-    if (session.messageApp === "Telegram") {
-      message +=
-        "Merci d'utiliser un des boutons ci-dessous pour interagir avec moi.";
-      keyboard = session.mainMenuKeyboard;
-    } else {
-      message += "\n\n" + TEXT_COMMANDS_MENU;
-      keyboard = [
-        [{ text: "🧐 Mes suivis" }],
-        [{ text: "👨‍💼 Ajout Fonction" }],
-        [{ text: "❓ Aide & Contact" }]
-      ];
+export async function sendMainMenu(
+  userInfo: MiniUserInfo,
+  options: {
+    externalOptions?: ExternalMessageOptions;
+    session?: ISession;
+  }
+): Promise<void> {
+  if (options.session == null && options.externalOptions == null)
+    throw new Error("session or externalOptions is required");
+
+  try {
+    let message = MAIN_MENU_MESSAGE;
+    let separateMenuMessage = undefined;
+
+    let keyboard: Keyboard | undefined = undefined;
+    switch (userInfo.messageApp) {
+      case "Tchap":
+      case "Matrix":
+        separateMenuMessage = true;
+        break;
+
+      case "Telegram":
+      case "WhatsApp":
+        break;
+
+      case "Signal":
+        keyboard = [
+          [KEYBOARD_KEYS.FOLLOWS_LIST.key],
+          [KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
+          [KEYBOARD_KEYS.HELP.key]
+        ];
+        message += "\n\n" + TEXT_COMMANDS_MENU;
     }
-    await session.sendMessage(message, keyboard);
+    if (options.session != null)
+      await options.session.sendMessage(message, {
+        keyboard,
+        separateMenuMessage
+      });
+    else if (options.externalOptions != null)
+      await sendMessage(userInfo, message, {
+        ...options.externalOptions,
+        keyboard,
+        separateMenuMessage
+      });
   } catch (error) {
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: userInfo.messageApp });
   }
-};
+}
 
 const TEXT_COMMANDS_MENU = `Utilisez une des commandes suivantes pour interagir avec moi:
 Format: *commande [arguments]*

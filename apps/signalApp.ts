@@ -3,17 +3,15 @@ import "dotenv/config";
 import { SignalCli } from "signal-sdk";
 import { mongodbConnect } from "../db.ts";
 import { SignalSession } from "../entities/SignalSession.ts";
-import { commands } from "../commands/Commands.ts";
+import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
+import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
-const { SIGNAL_PHONE_NUMBER, TEST_TARGET_PHONE_NUMBER, SIGNAL_BAT_PATH } =
-  process.env;
+const { SIGNAL_PHONE_NUMBER, SIGNAL_BAT_PATH } = process.env;
 
 if (SIGNAL_PHONE_NUMBER === undefined) {
-  throw new Error("SIGNAL_PHONE_NUMBER env variable not set");
-}
-if (TEST_TARGET_PHONE_NUMBER === undefined) {
-  throw new Error("TEST_TARGET_PHONE_NUMBER env variable not set");
+  console.log("Signal: env is not set, bot did not start \u{1F6A9}");
+  process.exit(0);
 }
 
 if (SIGNAL_BAT_PATH === undefined) {
@@ -42,36 +40,39 @@ await (async () => {
     // Listen for incoming messages
     signalCli.on("message", (message: ISignalMessage) => {
       void (async () => {
-        const msgText = message.envelope.dataMessage?.message;
-        if (msgText === undefined) return;
+        try {
+          if (message.envelope.sourceNumber === SIGNAL_PHONE_NUMBER) return;
 
-        await umami.log({ event: "/message-signal" });
+          const msgText = message.envelope.dataMessage?.message;
+          if (msgText === undefined) return;
 
-        const signalSession = new SignalSession(
-          signalCli,
-          SIGNAL_PHONE_NUMBER,
-          message.envelope.sourceNumber,
-          "fr"
-        );
-        await signalSession.loadUser();
+          await umami.log({ event: "/message-received", messageApp: "Signal" });
 
-        if (signalSession.user != null)
-          await signalSession.user.updateInteractionMetrics();
+          const signalSession = new SignalSession(
+            signalCli,
+            SIGNAL_PHONE_NUMBER,
+            message.envelope.sourceNumber,
+            "fr"
+          );
+          await signalSession.loadUser();
 
-        for (const command of commands) {
-          if (command.regex.test(msgText)) {
-            await command.action(signalSession, msgText.trim());
-            return;
-          }
+          if (signalSession.user != null)
+            await signalSession.user.updateInteractionMetrics();
+
+          await processMessage(signalSession, msgText);
+        } catch (error) {
+          console.error("Signal: Error processing command:", error);
         }
       })();
     });
 
+    startDailyNotificationJobs(["Signal"], { signalCli: signalCli });
     console.log(`Signal: JOEL started successfully \u{2705}`);
 
     // Graceful shutdown
     //await signal.gracefulShutdown();
   } catch (error) {
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: "Signal" });
   }
 })();

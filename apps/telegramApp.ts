@@ -1,52 +1,53 @@
 import "dotenv/config";
-import TelegramBot from "node-telegram-bot-api";
+import { Telegraf } from "telegraf";
+import { message } from "telegraf/filters";
 import { mongodbConnect } from "../db.ts";
 import { TelegramSession } from "../entities/TelegramSession.ts";
-import { commands } from "../commands/Commands.ts";
+import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
-import { ErrorMessages } from "../entities/ErrorMessages.ts";
+import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 
-const BOT_TOKEN = process.env.BOT_TOKEN;
-if (BOT_TOKEN === undefined)
-  throw new Error(ErrorMessages.TELEGRAM_BOT_TOKEN_NOT_SET);
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+if (TELEGRAM_BOT_TOKEN === undefined) {
+  console.log("Telegram: env is not set, bot did not start \u{1F6A9}");
+  process.exit(0);
+}
 
-const bot: TelegramBot = new TelegramBot(BOT_TOKEN, {
-  polling: true,
-  onlyFirstMatch: true
-});
+const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 
 await (async () => {
   await mongodbConnect();
 
-  commands.forEach((command) => {
-    bot.onText(command.regex, (tgMsg: TelegramBot.Message) => {
-      void (async () => {
-        await umami.log({ event: "/message-telegram" });
-        try {
-          // Check if the user is known
-          const tgUser: TelegramBot.User | undefined = tgMsg.from;
-          if (tgUser === undefined || tgUser.is_bot) return; // Ignore bots
-          if (tgMsg.text == undefined) return; // Ignore media messages without text
+  bot.on(message("text"), async (ctx): Promise<void> => {
+    try {
+      const tgUser = ctx.from;
+      if (tgUser.is_bot) return;
 
-          const tgSession = new TelegramSession(
-            bot,
-            tgMsg.chat.id,
-            tgUser.language_code ?? "fr"
-          );
-          await tgSession.loadUser();
-          tgSession.isReply = tgMsg.reply_to_message !== undefined;
+      await umami.log({ event: "/message-received", messageApp: "Telegram" });
 
-          if (tgSession.user != null)
-            await tgSession.user.updateInteractionMetrics();
+      const tgSession = new TelegramSession(
+        TELEGRAM_BOT_TOKEN,
+        bot.telegram,
+        ctx.chat.id.toString(),
+        tgUser.language_code ?? "fr"
+      );
+      await tgSession.loadUser();
+      tgSession.isReply = ctx.message.reply_to_message !== undefined;
 
-          // Process user message
-          await command.action(tgSession, tgMsg.text.trim());
-        } catch (error) {
-          console.error("Error processing command:", error);
-        }
-      })();
-    });
+      if (tgSession.user != null)
+        await tgSession.user.updateInteractionMetrics();
+
+      await processMessage(tgSession, ctx.message.text);
+    } catch (error) {
+      console.error("Telegram: Error processing command:", error);
+      await umami.log({ event: "/console-log", messageApp: "Telegram" });
+    }
   });
 
+  startDailyNotificationJobs(["Telegram"], {
+    telegramBotToken: TELEGRAM_BOT_TOKEN
+  });
   console.log(`Telegram: JOEL started successfully \u{2705}`);
+
+  await bot.launch();
 })();

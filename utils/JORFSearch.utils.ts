@@ -3,68 +3,136 @@ import {
   JORFSearchItem,
   JORFSearchResponse
 } from "../entities/JORFSearchResponse.ts";
-import { WikidataId } from "../types.ts";
-import axios, { AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { MessageApp, WikidataId } from "../types.ts";
+import axios, {
+  AxiosResponse,
+  InternalAxiosRequestConfig,
+  isAxiosError
+} from "axios";
 import umami from "./umami.ts";
 import {
   cleanJORFPublication,
   JORFSearchPublication,
   JORFSearchResponseMeta
 } from "../entities/JORFSearchResponseMeta.ts";
+import { FunctionTags } from "../entities/FunctionTags.ts";
+
+// Per Wikimedia policy, provide a descriptive agent with contact info.
+const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
+const RETRY_MAX = 3;
+const BASE_RETRY_DELAY_MS = 1000;
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
   res?: {
     responseUrl?: string;
   };
+  responseURL?: string;
+}
+
+function shouldRetry(e: unknown): boolean {
+  if (!isAxiosError(e)) return false;
+  const s = e.response?.status;
+  return !(s && s >= 400 && s < 500 && s !== 408 && s !== 429);
+}
+
+async function logJORFSearchError(
+  errorType:
+    | "people"
+    | "organisation"
+    | "function_tag"
+    | "date"
+    | "wikidata"
+    | "reference",
+  messageApp?: MessageApp
+) {
+  await umami.log({
+    event: "/jorfsearch-error",
+    messageApp,
+    payload: { [errorType]: true }
+  });
 }
 
 export async function callJORFSearchPeople(
-  peopleName: string
-): Promise<JORFSearchItem[]> {
+  peopleName: string,
+  messageApp: MessageApp,
+  retryNumber = 0
+): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-people" });
+    await umami.log({
+      event: "/jorfsearch-request-people",
+      messageApp
+    });
     return await axios
-      .get<JORFSearchResponse>(
-        encodeURI(
-          `https://jorfsearch.steinertriples.ch/name/${
-            cleanPeopleNameJORFURL(peopleName) // Cleaning the string reduces the number of calls to JORFSearch
-          }?format=JSON`
-        )
-      )
+      .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true), {
+        headers: {
+          "User-Agent": USER_AGENT
+        }
+      })
       .then(async (res1: AxiosResponse<JORFSearchResponse>) => {
-        if (res1.data === null) return []; // If an error occurred
-        if (typeof res1.data !== "string") return res1.data; // If it worked
-
-        const request = res1.request as CustomInternalAxiosRequestConfig;
+        if (res1.data === null) {
+          await logJORFSearchError("people", messageApp);
+          console.log("JORFSearch request for people returned null");
+          return null;
+        } // If an error occurred
+        if (typeof res1.data !== "string") return cleanJORFItems(res1.data); // If it worked
 
         // If the peopleName had nom/prenom inverted or bad formatting:
         // we need to call JORFSearch again with the response url in the correct format
-        if (request.res?.responseUrl) {
-          await umami.log({ event: "/jorfsearch-request-people-formatted" });
-          return await axios
-            .get<JORFSearchResponse>(
-              request.res.responseUrl.endsWith("?format=JSON")
-                ? request.res.responseUrl
-                : `${request.res.responseUrl}?format=JSON`
-            )
-            .then((res2: AxiosResponse<JORFSearchResponse>) => {
-              if (res2.data === null || typeof res2.data === "string") {
-                return [];
-              }
-              return res2.data;
-            });
+
+        const request = res1.request as CustomInternalAxiosRequestConfig;
+        const responseUrl = request.res?.responseUrl ?? request.responseURL; // Node (follow-redirects) // Browser
+
+        if (typeof responseUrl === "string" && responseUrl.length) {
+          // ensure ?format=JSON is present idempotently
+          const url = responseUrl.includes("?")
+            ? `${responseUrl}${/([?&])format=JSON\b/.test(responseUrl) ? "" : "&format=JSON"}`
+            : `${responseUrl}?format=JSON`;
+
+          await umami.log({
+            event: "/jorfsearch-request-people-formatted",
+            messageApp
+          });
+          const res2 = await axios.get<JORFSearchResponse>(url, {
+            headers: { "User-Agent": USER_AGENT }
+          });
+          if (res2.data && typeof res2.data !== "string")
+            return cleanJORFItems(res2.data);
+          await logJORFSearchError("people", messageApp);
+          return null;
         }
-        return [];
-      })
-      .then((res) => cleanJORFItems(res));
+        return null;
+      });
   } catch (error) {
-    console.log(error);
-    return [];
+    if (shouldRetry(error)) {
+      if (retryNumber < RETRY_MAX) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
+        );
+        return await callJORFSearchPeople(
+          peopleName,
+          messageApp,
+          retryNumber + 1
+        );
+      } else {
+        await logJORFSearchError("people", messageApp);
+        console.log(
+          `JORFSearch request for people aborted after ${String(RETRY_MAX)} tries`,
+          error
+        );
+      }
+    } else {
+      await umami.log({ event: "/console-log" });
+      console.log(error);
+    }
   }
+  return null;
 }
 
-export async function callJORFSearchDay(day: Date): Promise<JORFSearchItem[]> {
+export async function callJORFSearchDay(
+  day: Date,
+  retryNumber = 0
+): Promise<JORFSearchItem[] | null> {
   try {
     await umami.log({ event: "/jorfsearch-request-date" });
     return await axios
@@ -73,105 +141,301 @@ export async function callJORFSearchDay(day: Date): Promise<JORFSearchItem[]> {
           `https://jorfsearch.steinertriples.ch/${
             day.toLocaleDateString("fr-FR").split("/").join("-") // format day = "18-02-2024";
           }?format=JSON`
-        )
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
-      .then((res) => {
-        if (res.data === null || typeof res.data === "string") return [];
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await logJORFSearchError("date");
+          console.log("JORFSearch request for date returned null");
+          return null;
+        }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
-    console.log(error);
+    if (shouldRetry(error)) {
+      if (retryNumber < RETRY_MAX) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
+        );
+        return await callJORFSearchDay(day, retryNumber + 1);
+      } else {
+        await logJORFSearchError("date");
+        console.log(
+          `JORFSearch request for date aborted after ${String(RETRY_MAX)} tries`,
+          error
+        );
+      }
+    } else {
+      await umami.log({ event: "/console-log" });
+      console.log(error);
+    }
   }
-  return [];
+  return null;
 }
 
 export async function callJORFSearchTag(
-  tag: string,
-  tagValue?: string
-): Promise<JORFSearchItem[]> {
+  tag: FunctionTags,
+  messageApp: MessageApp,
+  tagValue?: string,
+  retryNumber = 0
+): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-tag" });
+    await umami.log({ event: "/jorfsearch-request-tag", messageApp });
     return await axios
       .get<JORFSearchResponse>(
-        encodeURI(
-          `https://jorfsearch.steinertriples.ch/tag/${tag}${
-            tagValue !== undefined ? `="${tagValue}"` : ``
-          }?format=JSON`
-        )
+        getJORFSearchLinkFunctionTag(tag, true, tagValue),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
-      .then((res) => {
-        if (res.data === null || typeof res.data === "string") return [];
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await logJORFSearchError("function_tag");
+          console.log("JORFSearch request for tag returned null");
+          return null;
+        }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
-    console.log(error);
+    if (shouldRetry(error)) {
+      if (retryNumber < RETRY_MAX) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
+        );
+        return await callJORFSearchTag(
+          tag,
+          messageApp,
+          tagValue,
+          retryNumber + 1
+        );
+      } else {
+        await logJORFSearchError("function_tag", messageApp);
+        console.log(
+          `JORFSearch request for function_tag aborted after ${String(RETRY_MAX)} tries`,
+          error
+        );
+      }
+    } else {
+      await umami.log({ event: "/console-log" });
+      console.log(error);
+    }
   }
-  return [];
+  return null;
 }
 
 export async function callJORFSearchOrganisation(
-  wikiId: WikidataId
-): Promise<JORFSearchItem[]> {
+  wikiId: WikidataId,
+  messageApp: MessageApp,
+  retryNumber = 0
+): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-organisation" });
+    await umami.log({ event: "/jorfsearch-request-organisation", messageApp });
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/${wikiId.toUpperCase()}?format=JSON`
-        )
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
-      .then((res) => {
-        if (res.data === null || typeof res.data === "string") return [];
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await logJORFSearchError("organisation");
+          console.log("JORFSearch request for organisation returned null");
+          return null;
+        }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
-    console.log(error);
+    if (shouldRetry(error)) {
+      if (retryNumber < RETRY_MAX) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
+        );
+        return await callJORFSearchOrganisation(
+          wikiId,
+          messageApp,
+          retryNumber + 1
+        );
+      } else {
+        await logJORFSearchError("organisation", messageApp);
+        console.log(
+          `JORFSearch request for organisation aborted after ${String(RETRY_MAX)} tries`,
+          error
+        );
+      }
+    } else {
+      await umami.log({ event: "/console-log" });
+      console.log(error);
+    }
   }
-  return [];
+  return null;
+}
+
+interface WikiDataAPIResponse {
+  success: number;
+  search: {
+    id: WikidataId;
+  }[];
+}
+
+export async function searchOrganisationWikidataId(
+  org_name: string,
+  messageApp: MessageApp
+): Promise<{ nom: string; wikidataId: WikidataId }[] | null> {
+  if (org_name.length == 0) throw new Error("Empty org_name");
+
+  try {
+    await umami.log({
+      event: "/jorfsearch-request-wikidata-names",
+      messageApp
+    });
+
+    const wikidataIds_raw: WikidataId[] | null = await axios
+      .get<string | null | WikiDataAPIResponse>(
+        encodeURI(
+          `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
+      )
+      .then(async (r) => {
+        if (r.data === null || typeof r.data === "string") {
+          console.log(
+            "Wikidata API error when fetching organisation: ",
+            org_name
+          );
+          await umami.log({ event: "/console-log", messageApp: messageApp });
+          return null;
+        }
+        return r.data.search.map((o) => o.id);
+      });
+
+    if (wikidataIds_raw === null) return null;
+    if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
+
+    return await axios
+      .get<{ name: string; id: WikidataId }[] | null>(
+        encodeURI(
+          `https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
+      )
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await logJORFSearchError("wikidata");
+          console.log("JORFSearch request for wikidata returned null");
+          return null;
+        }
+        return res.data.map((o) => ({
+          nom: o.name,
+          wikidataId: o.id
+        }));
+      });
+  } catch (error) {
+    await umami.log({
+      event: "/jorfsearch-error",
+      messageApp,
+      payload: { wikidata_name: true }
+    });
+    console.log(error);
+    await umami.log({ event: "/console-log", messageApp: messageApp });
+  }
+  return null;
 }
 
 export async function callJORFSearchReference(
-  reference: string
-): Promise<JORFSearchItem[]> {
+  reference: string,
+  messageApp: MessageApp
+): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-reference" });
+    await umami.log({ event: "/jorfsearch-request-reference", messageApp });
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/doc/${reference.toUpperCase()}?format=JSON`
-        )
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
-      .then((res) => {
-        if (res.data === null || typeof res.data === "string") return [];
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await logJORFSearchError("reference");
+          console.log("JORFSearch request for reference returned null");
+          return null;
+        }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
+    await umami.log({
+      event: "/jorfsearch-error",
+      messageApp,
+      payload: { reference: true }
+    });
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: messageApp });
   }
-  return [];
+  return null;
 }
 
 // not used for now
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function JORFSearchCallPublications(
-  currentDay: string
-): Promise<JORFSearchPublication[]> {
+  currentDay: string,
+  messageApp: MessageApp
+): Promise<JORFSearchPublication[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-meta" });
+    await umami.log({ event: "/jorfsearch-request-meta", messageApp });
     return await axios
       .get<JORFSearchResponseMeta>(
-        `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`
+        `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`,
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
       )
-      .then((res) => {
+      .then(async (res) => {
         if (res.data === null || typeof res.data === "string") {
-          return [];
+          await umami.log({
+            event: "/jorfsearch-error",
+            messageApp,
+            payload: { meta: true }
+          });
+          return null;
         }
         return cleanJORFPublication(res.data);
       });
   } catch (error) {
+    await umami.log({
+      event: "/jorfsearch-error",
+      messageApp,
+      payload: { meta: true }
+    });
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: messageApp });
   }
-  return [];
+  return null;
 }
 
 // Format a string to match the expected search format on JORFSearch: first letter capitalised and no accent
@@ -199,18 +463,78 @@ export function cleanPeopleName(input: string): string {
 
 export function cleanPeopleNameJORFURL(input: string): string {
   if (!input) return "";
-
-  // 1. Trim & lowercase
   let out = input.trim().toLowerCase();
-
-  // 2. Strip common Western diacritics in one shot
-  out = out.replace(/[\u0300-\u036f]/g, ""); // remove combining marks
-
-  // 3. Capitalise first letter after start, space, hyphen or apostrophe
-  //    - keeps the delimiter (p1) and upper-cases the following char (p2)
+  out = out.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // add normalize
   out = out.replace(/(^|[\s\-'])\p{L}/gu, (m) => m.toUpperCase());
-
   out = out.replace(/[()]/g, "");
-
   return out;
+}
+
+export function getJORFSearchLinkPeople(
+  prenomNom: string,
+  json = false
+): string {
+  const u = new URL(
+    "https://jorfsearch.steinertriples.ch/name/" +
+      cleanPeopleNameJORFURL(prenomNom)
+  );
+  if (json) u.searchParams.set("format", "JSON");
+  return u.toString();
+}
+export function getJORFSearchLinkFunctionTag(
+  fctTag: FunctionTags,
+  json = false,
+  tagValue?: string
+): string {
+  // JORF expects /tag/<tag>="<value>" exactly in the PATH.
+  // Safely percent-encode the value and quotes.
+  const base = `https://jorfsearch.steinertriples.ch/tag/${encodeURIComponent(fctTag)}`;
+  const path =
+    tagValue !== undefined
+      ? `${base}=%22${encodeURIComponent(tagValue)}%22`
+      : base;
+
+  const u = new URL(path);
+  if (json) u.searchParams.set("format", "JSON");
+  return u.toString();
+}
+
+export function getJORFSearchLinkOrganisation(
+  wikidataId: string,
+  json = false
+): string {
+  const u = new URL(
+    `https://jorfsearch.steinertriples.ch/${encodeURIComponent(wikidataId)}`
+  );
+  if (json) u.searchParams.set("format", "JSON");
+  return u.toString();
+}
+
+export function getJORFTextLink(source_id: string) {
+  return `https://bodata.steinertriples.ch/${encodeURIComponent(source_id)}/redirect`;
+}
+
+export function extractJORFTextId(url: string): string {
+  const parts = url.split("?");
+  const path = parts[0];
+  const queryString = parts[1];
+
+  if (!queryString) {
+    const pathParts = path.split("/");
+    const lastNonEmptyPart = pathParts.filter((part) => part !== "").pop();
+    return lastNonEmptyPart ?? "";
+  }
+
+  const queryParams = queryString.split("&");
+  for (const param of queryParams) {
+    const [key, value] = param.split("=");
+    if (key === "cidTexte") {
+      return value;
+    }
+  }
+
+  // Fallback in case 'cidTexte' is not found in the query string
+  const pathParts = path.split("/");
+  const lastNonEmptyPart = pathParts.filter((part) => part !== "").pop();
+  return lastNonEmptyPart ?? "";
 }

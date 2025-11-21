@@ -5,16 +5,18 @@ import {
 } from "../entities/FunctionTags.ts";
 import { IOrganisation, IPeople, ISession, IUser } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
-import {
-  extractTelegramSession,
-  TelegramSession
-} from "../entities/TelegramSession.ts";
-import TelegramBot from "node-telegram-bot-api";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import { Types } from "mongoose";
 import User from "../models/User.ts";
+import {
+  getJORFSearchLinkOrganisation,
+  getJORFSearchLinkFunctionTag,
+  getJORFSearchLinkPeople
+} from "../utils/JORFSearch.utils.ts";
+import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 
-interface UserFollows {
+export interface UserFollows {
   functions: FunctionTags[];
   organisations: IOrganisation[];
   peopleAndNames: {
@@ -26,32 +28,116 @@ interface UserFollows {
   meta: never[];
 }
 
+export function getUserFollowsTotal(userFollows: UserFollows): number {
+  return (
+    userFollows.functions.length +
+    userFollows.organisations.length +
+    userFollows.peopleAndNames.length +
+    userFollows.meta.length
+  );
+}
+
+interface BuildFollowsListMessageOptions {
+  perspective?: "self" | "thirdParty";
+}
+
+export function buildFollowsListMessage(
+  session: ISession,
+  userFollows: UserFollows,
+  options: BuildFollowsListMessageOptions = {}
+): string {
+  const perspective = options.perspective ?? "self";
+  const followVerb =
+    perspective === "thirdParty" ? "Ce compte suit" : "Vous suivez";
+
+  let text = "";
+  let index = 0;
+
+  if (userFollows.functions.length > 0) {
+    text += `${followVerb} ${String(userFollows.functions.length)} fonction${
+      userFollows.functions.length > 1 ? "s" : ""
+    } : \n\n`;
+    const functionsKeys = getFunctionsFromValues(userFollows.functions);
+    userFollows.functions.forEach((_functionTag, idx) => {
+      text += `${String(index + 1)}. *${functionsKeys[idx]}*`;
+
+      if (session.messageApp === "Telegram")
+        text += ` - [JORFSearch](${getJORFSearchLinkFunctionTag(
+          userFollows.functions[idx]
+        )})`;
+      else
+        text += `\n${getJORFSearchLinkFunctionTag(userFollows.functions[idx])}`;
+      text += `\n`;
+      if (userFollows.functions.length < 10) text += `\n`;
+      index++;
+    });
+  }
+
+  if (userFollows.organisations.length > 0) {
+    text += `${followVerb} ${String(
+      userFollows.organisations.length
+    )} organisation${userFollows.organisations.length > 1 ? "s" : ""} : \n\n`;
+    userFollows.organisations.forEach((organisation) => {
+      text += `${String(index + 1)}. *${organisation.nom}*`;
+
+      if (session.messageApp === "Telegram")
+        text += ` - [JORFSearch](${getJORFSearchLinkOrganisation(
+          organisation.wikidataId
+        )})`;
+      else
+        text += `\n${getJORFSearchLinkOrganisation(organisation.wikidataId)}`;
+
+      text += `\n`;
+      if (userFollows.organisations.length < 10) text += `\n`;
+      index++;
+    });
+  }
+
+  if (userFollows.peopleAndNames.length > 0) {
+    text += `${followVerb} ${String(
+      userFollows.peopleAndNames.length
+    )} personne${userFollows.peopleAndNames.length > 1 ? "s" : ""} : \n\n`;
+    userFollows.peopleAndNames.forEach((followedName, idx) => {
+      text += `${String(index + 1)}. *${followedName.nomPrenom}*`;
+      if (followedName.JORFSearchLink !== undefined) {
+        if (session.messageApp !== "WhatsApp")
+          text += ` - [JORFSearch](${followedName.JORFSearchLink})`;
+        else text += `\n${followedName.JORFSearchLink}`;
+        text += `\n`;
+      } else {
+        text += ` - Suivi manuel\n`;
+      }
+      if (
+        idx + 1 < userFollows.peopleAndNames.length &&
+        userFollows.peopleAndNames.length < 10
+      ) {
+        text += `\n`;
+      }
+      index++;
+    });
+  }
+
+  return text;
+}
+
 const noDataText = `Vous ne suivez aucun contact, fonction, ni organisation pour le moment.`;
 
-async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
-  const followedFunctions = user.followedFunctions.sort((a, b) => {
-    if (a < b) {
-      return -1;
-    }
-    if (a > b) {
-      return 1;
-    }
-    return 0;
-  });
+export async function getAllUserFollowsOrdered(
+  user: IUser
+): Promise<UserFollows> {
+  const followedFunctions = user.followedFunctions.sort((a, b) =>
+    a.functionTag.localeCompare(b.functionTag)
+  );
 
   let followedOrganisations: IOrganisation[] = [];
   if (user.followedOrganisations.length > 0)
     followedOrganisations = await Organisation.find({
-      $or: user.followedOrganisations.map((o) => ({
-        wikidataId: new RegExp(`^${o.wikidataId}$`, "i") // same value, ignore case
-      }))
+      wikidataId: { $in: user.followedOrganisations.map((o) => o.wikidataId) }
     }).lean();
 
-  followedOrganisations.sort((a, b) => {
-    if (a.nom.toUpperCase() < b.nom.toUpperCase()) return -1;
-    if (a.nom.toUpperCase() > b.nom.toUpperCase()) return 1;
-    return 0;
-  });
+  followedOrganisations.sort((a, b) =>
+    a.nom.toUpperCase().localeCompare(b.nom.toUpperCase())
+  );
 
   let followedPeoples: IPeople[] = [];
   if (user.followedPeople.length > 0)
@@ -71,18 +157,14 @@ async function getAllUserFollowsOrdered(user: IUser): Promise<UserFollows> {
       nomPrenom: `${p.nom} ${p.prenom}`,
       prenomNom: `${p.prenom} ${p.nom}`,
       peopleId: p._id,
-      JORFSearchLink: encodeURI(
-        `https://jorfsearch.steinertriples.ch/name/${p.prenom} ${p.nom}`
-      )
+      JORFSearchLink: getJORFSearchLinkPeople(p.prenom + " " + p.nom)
     })
   );
 
   // Sort the array by alphabetic order of lastnames
-  followedPeopleTab.sort((a, b) => {
-    if (a.nomPrenom.toUpperCase() < b.nomPrenom.toUpperCase()) return -1;
-    if (a.nomPrenom.toUpperCase() > b.nomPrenom.toUpperCase()) return 1;
-    return 0;
-  });
+  followedPeopleTab.sort((a, b) =>
+    a.nomPrenom.toUpperCase().localeCompare(b.nomPrenom.toUpperCase())
+  );
 
   return {
     functions: followedFunctions.map((f) => f.functionTag),
@@ -100,7 +182,7 @@ export const listCommand = async (session: ISession) => {
 
     // We only want to create a user upon use of the follow function
     if (session.user == null) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
@@ -111,149 +193,86 @@ export const listCommand = async (session: ISession) => {
       userFollows.peopleAndNames.length +
       userFollows.meta.length;
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
 
-    let text = "";
+    let text = buildFollowsListMessage(session, userFollows);
 
-    let i = 0;
-    if (userFollows.functions.length > 0) {
-      text += `Vous suivez ${String(userFollows.functions.length)} fonction${userFollows.functions.length > 1 ? "s" : ""} : \n\n`;
-      const functionsKeys = getFunctionsFromValues(userFollows.functions);
-      for (; i < userFollows.functions.length; i++) {
-        text += `${String(i + 1)}. *${functionsKeys[i]}*`;
-
-        if (session.messageApp === "Telegram")
-          text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/tag/${encodeURI(
-            userFollows.functions[i]
-          )})`;
-        else
-          text += `\nhttps://jorfsearch.steinertriples.ch/tag/${encodeURI(
-            userFollows.functions[i]
-          )}`;
-
-        text += `\n\n`;
-      }
-    }
-
-    let k = 0;
-    if (userFollows.organisations.length > 0) {
-      text += `Vous suivez ${String(userFollows.organisations.length)} organisation${userFollows.organisations.length > 1 ? "s" : ""} : \n\n`;
-      for (; k < userFollows.organisations.length; k++) {
-        text += `${String(i + k + 1)}. *${userFollows.organisations[k].nom}*`;
-
-        if (session.messageApp === "Telegram")
-          text += ` - [JORFSearch](https://jorfsearch.steinertriples.ch/${encodeURI(
-            userFollows.organisations[k].wikidataId
-          )})`;
-        else
-          text += `\nhttps://jorfsearch.steinertriples.ch/${encodeURI(
-            userFollows.organisations[k].wikidataId
-          )}`;
-
-        text += `\n\n`;
-      }
-    }
-
-    let j = 0;
-    if (userFollows.peopleAndNames.length > 0) {
-      text += `Vous suivez ${String(userFollows.peopleAndNames.length)} personne${userFollows.peopleAndNames.length > 1 ? "s" : ""} : \n\n`;
-      for (; j < userFollows.peopleAndNames.length; j++) {
-        const followedName = userFollows.peopleAndNames[j];
-        text += `${String(i + k + j + 1)}. *${followedName.nomPrenom}*`;
-        if (followedName.JORFSearchLink !== undefined) {
-          if (session.messageApp === "Telegram")
-            text += ` - [JORFSearch](${followedName.JORFSearchLink})`;
-          else text += `\n${followedName.JORFSearchLink}`;
-          text += `\n`;
-        } else {
-          text += ` - Suivi manuel\n`;
-        }
-        if (userFollows.peopleAndNames[j + 1]) {
-          text += `\n`;
-        }
-      }
-    }
-
-    if (session.messageApp === "Telegram")
-      await session.sendMessage(text, [
-        [{ text: "✋ Retirer un suivi" }],
-        [{ text: "🏠 Menu principal" }]
-      ]);
-    else {
+    if (session.messageApp === "Signal")
       text +=
         "\nPour retirer un suivi, précisez le(s) nombre(s) à supprimer: *Retirer 1 4 7*";
-      await session.sendMessage(text, session.mainMenuKeyboard);
-    }
+
+    const tempKeyboard: Keyboard = [
+      [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
+      [KEYBOARD_KEYS.MAIN_MENU.key]
+    ];
+    await session.sendMessage(text, { keyboard: tempKeyboard });
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
-export const unfollowTelegram = async (session: ISession) => {
+const UNFOLLOW_PROMPT_TEXT =
+  "Entrez le(s) nombre(s) correspondant au(x) contact(s) à supprimer.\n" +
+  "Exemple: 1 4 7\n";
+
+const UNFOLLOW_KEYBOARD: Keyboard = [
+  [KEYBOARD_KEYS.FOLLOWS_LIST.key],
+  [KEYBOARD_KEYS.MAIN_MENU.key]
+];
+
+async function askUnfollowQuestion(session: ISession): Promise<void> {
+  await askFollowUpQuestion(
+    session,
+    UNFOLLOW_PROMPT_TEXT,
+    handleUnfollowAnswer,
+    {
+      messageOptions: { keyboard: UNFOLLOW_KEYBOARD }
+    }
+  );
+}
+
+async function handleUnfollowAnswer(
+  session: ISession,
+  answer: string
+): Promise<boolean> {
+  const trimmedAnswer = answer.trim();
+
+  if (trimmedAnswer.length === 0) {
+    await session.sendMessage(
+      `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options. 👎\nRéessayer la commande`,
+      { keyboard: UNFOLLOW_KEYBOARD }
+    );
+    return true;
+  }
+
+  await unfollowFromStr(session, `Retirer ${trimmedAnswer}`, false);
+  return true;
+}
+
+export const unfollowCommand = async (session: ISession) => {
   await session.log({ event: "/unfollow" });
   try {
     await session.sendTypingAction();
 
-    // We only want to create a user upon use of the follow function
     if (session.user == null) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
 
-    const followTotal =
-      userFollows.functions.length +
-      userFollows.organisations.length +
-      userFollows.peopleAndNames.length +
-      userFollows.meta.length;
+    const followTotal = getUserFollowsTotal(userFollows);
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
+      await session.sendMessage(noDataText);
       return;
     }
 
-    const tgSession: TelegramSession | undefined = await extractTelegramSession(
-      session,
-      true
-    );
-    if (tgSession == null) return;
-
-    const tgBot = tgSession.telegramBot;
-
-    const question = await tgBot.sendMessage(
-      session.chatId,
-      `Entrez le(s) nombre(s) correspondant au(x) contact(s) à supprimer.\nExemple: 1 4 7\n
-Si nécessaire, vous pouvez utiliser la commande /list pour revoir vos suivis`,
-      {
-        reply_markup: {
-          force_reply: true
-        }
-      }
-    );
-
-    tgBot.onReplyToMessage(
-      session.chatId,
-      question.message_id,
-      (tgMsg: TelegramBot.Message) => {
-        void (async () => {
-          if (session.user == undefined) return;
-
-          if (tgMsg.text == "/list") {
-            await listCommand(session);
-            return;
-          }
-
-          await unfollowFromStr(
-            session,
-            "Retirer " + (tgMsg.text ?? ""),
-            false
-          );
-        })();
-      }
-    );
+    await askUnfollowQuestion(session);
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };
 
@@ -261,24 +280,20 @@ export const unfollowFromStr = async (
   session: ISession,
   msg: string,
   triggerUmami = true
-) => {
+): Promise<boolean> => {
   try {
     if (triggerUmami) await session.log({ event: "/unfollow" });
 
     if (session.user == null) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
-      return;
+      await session.sendMessage(noDataText);
+      return false;
     }
     const userFollows = await getAllUserFollowsOrdered(session.user);
 
-    const followTotal =
-      userFollows.functions.length +
-      userFollows.organisations.length +
-      userFollows.peopleAndNames.length +
-      userFollows.meta.length;
+    const followTotal = getUserFollowsTotal(userFollows);
     if (followTotal == 0) {
-      await session.sendMessage(noDataText, session.mainMenuKeyboard);
-      return;
+      await session.sendMessage(noDataText);
+      return false;
     }
 
     const selectionUnfollowText = msg.split(" ").slice(1).join(" ");
@@ -288,12 +303,14 @@ export const unfollowFromStr = async (
     if (answers.length === 0) {
       const text = `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.`;
       if (session.messageApp === "Telegram")
-        await session.sendMessage(text, [
-          [{ text: "✋ Retirer un suivi" }],
-          [{ text: "🏠 Menu principal" }]
-        ]);
-      else await session.sendMessage(text, session.mainMenuKeyboard);
-      return;
+        await session.sendMessage(text, {
+          keyboard: [
+            [KEYBOARD_KEYS.FOLLOWS_REMOVE.key],
+            [KEYBOARD_KEYS.MAIN_MENU.key]
+          ]
+        });
+      else await session.sendMessage(text);
+      return false;
     }
 
     // Shift all answers by 1 to get array-wise indexes
@@ -462,8 +479,11 @@ export const unfollowFromStr = async (
       await session.log({ event: "/user-deletion-no-follow" });
     }
 
-    await session.sendMessage(text, session.mainMenuKeyboard);
+    await session.sendMessage(text);
+    return true;
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
+  return false;
 };

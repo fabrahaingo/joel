@@ -1,18 +1,43 @@
 import axios from "axios";
+import { MessageApp } from "../types";
 
-export const log = async (args: { event: UmamiEvent; data?: never }) => {
+export interface UmamiNotificationData {
+  message_nb: number;
+  updated_follows_nb: number;
+  total_records_nb: number;
+}
+
+export const log = async (args: {
+  event: UmamiEvent;
+  messageApp?: MessageApp;
+  notificationData?: UmamiNotificationData;
+  payload?: Record<string, unknown>;
+}) => {
   if (process.env.NODE_ENV === "development") {
-    console.log("Umami event", args.event);
+    console.log(
+      `Umami event ${args.messageApp ? " (" + args.messageApp + ")" : ""}: ${args.event}`
+    );
+    if (args.notificationData != null) console.log(args.notificationData);
     return;
   }
 
+  const extra_data: Record<string, unknown> = args.payload ?? {};
+  if (args.messageApp) {
+    extra_data.messageApp = args.messageApp;
+  }
+
+  if (args.notificationData != null) {
+    extra_data.message_nb = args.notificationData.message_nb;
+    extra_data.updated_follows_nb = args.notificationData.updated_follows_nb;
+    extra_data.total_records_nb = args.notificationData.total_records_nb;
+  }
   const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;
   const payload = {
     payload: {
       hostname: process.env.UMAMI_HOST,
       website: process.env.UMAMI_ID,
       name: args.event,
-      data: args.data
+      data: extra_data
     },
     type: "event"
   };
@@ -35,17 +60,12 @@ export default {
 };
 
 export type UmamiEvent =
-  | "/message-signal"
-  | "/message-telegram"
-  | "/message-whatsapp"
-  | "/message-sent-signal"
-  | "/message-sent-telegram"
-  | "/telegram-too-many-requests"
-  | "/telegram-too-many-requests-aborted"
-  | "/whatsapp-too-many-requests"
-  | "/whatsapp-echo-refused"
-  | "/whatsapp-too-many-requests-aborted"
-  | "/message-sent-whatsapp"
+  | "/message-received"
+  | "/message-sent"
+  | "/message-sent-broadcast"
+  | "/message-fail-too-many-requests"
+  | "/message-fail-too-many-requests-aborted"
+  | "/message-received-echo-refused"
   | "/start"
   | "/start-from-people"
   | "/start-from-organisation"
@@ -56,6 +76,7 @@ export type UmamiEvent =
   | "/stats"
   | "/list"
   | "/delete-profile"
+  | "/jorfsearch-error"
   | "/jorfsearch-request-people"
   | "/jorfsearch-request-people-formatted"
   | "/jorfsearch-request-tag"
@@ -82,6 +103,9 @@ export type UmamiEvent =
   | "/user-deactivated"
   | "/user-deletion-no-follow"
   | "/user-deletion-self"
+  | "/data-export"
+  | "/data-import"
+  | "/data-import-confirmed"
   | "/notification-update-people"
   | "/notification-update-name"
   | "/notification-update-function"
@@ -90,4 +114,5 @@ export type UmamiEvent =
   | "/notification-process-completed"
   | "/daily-active-user"
   | "/weekly-active-user"
-  | "/monthly-active-user";
+  | "/monthly-active-user"
+  | "/console-log";

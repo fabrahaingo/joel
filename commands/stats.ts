@@ -13,6 +13,12 @@ export const statsCommand = async (session: ISession): Promise<void> => {
     const telegramCount = await Users.countDocuments({
       messageApp: "Telegram"
     });
+    const matrixCount = await Users.countDocuments({
+      messageApp: "Matrix"
+    });
+    const tchapCount = await Users.countDocuments({
+      messageApp: "Tchap"
+    });
 
     const peopleCount = await People.countDocuments();
     const orgCount = await Organisation.countDocuments();
@@ -20,7 +26,9 @@ export const statsCommand = async (session: ISession): Promise<void> => {
     const followApps = [
       { app: "WhatsApp", count: WHCount },
       { app: "Signal", count: signalCount },
-      { app: "Telegram", count: telegramCount }
+      { app: "Telegram", count: telegramCount },
+      { app: "Matrix", count: matrixCount },
+      { app: "Tchap", count: tchapCount }
     ].sort((a, b) => b.count - a.count);
 
     let msg = `📈 JOEL aujourd'hui c'est\n👨‍💻 ${String(usersCount)} utilisateurs\n`;
@@ -34,8 +42,9 @@ export const statsCommand = async (session: ISession): Promise<void> => {
 
     msg += `JOEL sait combien vous êtes à l'utiliser mais il ne sait pas qui vous êtes... et il ne cherchera jamais à le savoir! 🛡`;
 
-    await session.sendMessage(msg, session.mainMenuKeyboard);
+    await session.sendMessage(msg, { separateMenuMessage: true });
   } catch (error) {
     console.log(error);
+    await session.log({ event: "/console-log" });
   }
 };

@@ -2,21 +2,13 @@ import { expect } from "@jest/globals";
 import mongoose, { Types } from "mongoose";
 import User, { USER_SCHEMA_VERSION } from "../models/User.ts";
 import { ISession, IUser } from "../types.ts";
-import { ChatId } from "node-telegram-bot-api";
-import { LegacyRawUser_V1 } from "../models/LegacyUser.js";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 
-const userMockChatId = 12346789 as ChatId;
-
-const exampleLegacyFollowedFunctions: LegacyRawUser_V1["followedFunctions"] = [
-  "ambassadeur" as FunctionTags,
-  "grade" as FunctionTags
-];
+const userMockChatId = 12346789;
 
 const exampleCurrentFollowedFunctions: IUser["followedFunctions"] = [
   { functionTag: "ambassadeur" as FunctionTags, lastUpdate: new Date() },
-  { functionTag: "consul" as FunctionTags, lastUpdate: new Date() },
-  { functionTag: "Jean Luc" as FunctionTags, lastUpdate: new Date() }
+  { functionTag: "consul" as FunctionTags, lastUpdate: new Date() }
 ];
 
 const exampleFollowedNames: IUser["followedNames"] = [
@@ -63,7 +55,7 @@ const legacyUserData_withFollows = {
   language_code: "fr",
   status: "active",
   followedPeople: exampleFollowedPeople,
-  followedFunctions: exampleLegacyFollowedFunctions,
+  followedFunctions: exampleCurrentFollowedFunctions,
   followedNames: undefined,
   followedOrganisations: undefined,
   followedMeta: undefined,
@@ -158,23 +150,7 @@ describe("User Model Test Suite", () => {
           user.data.followedPeople ?? []
         );
 
-        let expectedFollowedFunctions: IUser["followedFunctions"] = [];
-
-        if (user.data.followedFunctions == null) {
-          expectedFollowedFunctions = [];
-        } else if (
-          user.data.schemaVersion == null ||
-          user.data.schemaVersion < 2
-        ) {
-          expectedFollowedFunctions = (
-            user.data.followedFunctions as FunctionTags[]
-          ).map((f) => ({
-            functionTag: f,
-            lastUpdate: new Date()
-          }));
-        } else {
-          expectedFollowedFunctions = user.data.followedFunctions;
-        }
+        const expectedFollowedFunctions: IUser["followedFunctions"] = [];
 
         for (
           let idx = 0;

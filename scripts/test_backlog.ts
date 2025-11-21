@@ -1,11 +1,11 @@
 import "dotenv/config";
 import mongoose, { Types } from "mongoose";
-import { IPeople, IUser } from "../types";
+import { IPeople, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { callJORFSearchPeople } from "../utils/JORFSearch.utils.ts";
 import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.ts";
 import fs from "node:fs";
-import { convertToCSV } from "../utils/text.utils";
+import { convertToCSV } from "../utils/text.utils.ts";
 
 const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
@@ -61,7 +61,14 @@ await (async () => {
       }
       const prenomNom = people.prenom + " " + people.nom;
       const nomPrenom = people.nom + " " + people.prenom;
-      const peopleItems = await callJORFSearchPeople(prenomNom);
+      const peopleItems = await callJORFSearchPeople(
+        prenomNom,
+        "debug" as MessageApp
+      );
+      if (peopleItems == null) {
+        console.log("No result for ", prenomNom);
+        return;
+      }
       if (peopleItems.length == 0) {
         console.log(prenomNom);
         throw Error("No people found");

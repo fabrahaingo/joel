@@ -1,45 +1,44 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
-import umami from "./utils/umami";
-import { FindCursor } from "mongodb";
+import { UmamiEvent } from "./utils/umami";
+import { MessageSendingOptionsInternal } from "./entities/Session.ts";
 
 export interface CommandType {
   regex: RegExp;
   action: (session: ISession, msg: string) => Promise<void>;
 }
 
-export type MessageApp = "Telegram" | "WhatsApp" | "Signal";
-//| "Matrix";
-
-export type Keyboard = {
-  text: string;
-  desc?: string;
-}[][];
+export type MessageApp =
+  | "Telegram"
+  | "WhatsApp"
+  | "Signal"
+  | "Matrix"
+  | "Tchap";
 
 export interface ISession {
   messageApp: MessageApp;
-  chatId: number;
+  chatId: string;
+  roomId?: string;
   language_code: string;
   user: IUser | null | undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: Keyboard;
 
   loadUser: () => Promise<void>;
   createUser: () => Promise<void>;
   sendMessage: (
     msg: string,
-    keyboard?: Keyboard,
-    menuType?: KeyboardType
+    options?: MessageSendingOptionsInternal
   ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
-  log: typeof umami.log;
+  log: (args: { event: UmamiEvent }) => Promise<void>;
 }
 
 // fields are undefined for users created before implementation
 export interface IUser {
   _id: Types.ObjectId;
   messageApp: MessageApp;
-  chatId: number;
+  roomId?: string;
+  chatId: string;
   language_code: string;
   status: "active" | "blocked";
   followedPeople: {
@@ -59,6 +58,13 @@ export interface IUser {
     metaType: string;
     lastUpdate: Date;
   }[];
+
+  transferData?: {
+    code: string;
+    expiresAt: Date;
+  };
+
+  lastMessageReceivedAt?: Date;
 
   lastInteractionDay?: Date;
   lastInteractionWeek?: Date;
@@ -105,11 +111,6 @@ export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
-  collection: {
-    insertOne(arg): Promise<void>;
-    find(arg): FindCursor<IUser>; //  ← cursor, not IUser[]
-    findOne(arg): Promise<IUser | null>;
-  };
 }
 
 export interface IPeople {

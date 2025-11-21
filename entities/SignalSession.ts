@@ -1,14 +1,14 @@
-import { Keyboard, ISession, IUser, MessageApp } from "../types.ts";
+import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser } from "./Session.ts";
-import umami from "../utils/umami.ts";
-import { splitText } from "../utils/text.utils.ts";
+import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
+import umami, { UmamiEvent } from "../utils/umami.ts";
+import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
-import emojiRegex from "emoji-regex";
+import Umami from "../utils/umami.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
 
-const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
+export const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
 const SIGNAL_COOL_DOWN_DELAY_SECONDS = 6;
 
 export const SIGNAL_API_SENDING_CONCURRENCY = 1;
@@ -17,13 +17,10 @@ export class SignalSession implements ISession {
   messageApp = SignalMessageApp;
   signalCli: SignalCli;
   language_code: string;
-  chatId: number;
+  chatId: string;
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
-  mainMenuKeyboard: Keyboard;
-
-  log = umami.log;
 
   constructor(
     signalCli: SignalCli,
@@ -33,9 +30,8 @@ export class SignalSession implements ISession {
   ) {
     this.signalCli = signalCli;
     this.botPhoneID = botPhoneID;
-    this.chatId = parseInt(userPhoneId);
+    this.chatId = userPhoneId;
     this.language_code = language_code;
-    this.mainMenuKeyboard = [];
   }
 
   // try to fetch user from db
@@ -53,22 +49,16 @@ export class SignalSession implements ISession {
     // TODO: check implementation in Signal
   }
 
+  async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
+    await Umami.log({
+      event: args.event,
+      messageApp: this.messageApp,
+      payload: args.payload
+    });
+  }
+
   async sendMessage(formattedData: string): Promise<void> {
-    const mArr = splitText(
-      cleanMessageForSignal(formattedData),
-      SIGNAL_MESSAGE_CHAR_LIMIT
-    );
-
-    for (const elem of mArr) {
-      await this.signalCli.sendMessage(this.chatId.toString(), elem);
-
-      await umami.log({ event: "/message-sent-signal" });
-
-      // prevent hitting the Signal API rate limit
-      await new Promise((resolve) =>
-        setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
-      );
-    }
+    await sendSignalAppMessage(this.signalCli, this.chatId, formattedData);
   }
 }
 
@@ -78,10 +68,10 @@ export async function extractSignalAppSession(
 ): Promise<SignalSession | undefined> {
   if (session.messageApp !== "Signal") {
     console.log("Session is not a SignalSession");
+    await session.log({ event: "/console-log" });
     if (userFacingError) {
       await session.sendMessage(
-        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`,
-        session.mainMenuKeyboard
+        `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
       );
     }
     return undefined;
@@ -90,51 +80,11 @@ export async function extractSignalAppSession(
     console.log(
       "Session messageApp is Signal, but session is not a SignalSession"
     );
+    await session.log({ event: "/console-log" });
     return undefined;
   }
 
   return session;
-}
-
-function cleanMessageForSignal(msg: string): string {
-  // text-utils.ts
-  /**
-   * Remove every accent/diacritic and return plain ASCII letters.
-   * @example
-   *   deburr("À bientôt, garçon! — Ça va?")  // "A bientot, garcon! — Ca va?"
-   */
-  function deburr(input: string): string {
-    // 1. Use canonical decomposition (NFD) so "é" → "e\u0301"
-    const decomposed = input.normalize("NFD");
-
-    // 2. Strip all combining diacritical marks (U+0300–036F)
-    const stripped = decomposed.replace(
-      /\s[\u0300-\u036f]|[\u0300-\u036f]|🛡/gu,
-      ""
-    );
-
-    // 3. Map remaining special-case runes that don't decompose nicely
-    return stripped
-      .replace(/ß/g, "ss")
-      .replace(/Æ/g, "AE")
-      .replace(/æ/g, "ae")
-      .replace(/Ø/g, "O")
-      .replace(/ø/g, "o")
-      .replace(/Ð/g, "D")
-      .replace(/ð/g, "d")
-      .replace(/Þ/g, "Th")
-      .replace(/þ/g, "th")
-      .replace(/Œ/g, "OE")
-      .replace(/œ/g, "oe");
-  }
-
-  const emoteFreeText = msg.replace(emojiRegex(), "");
-
-  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/gu, "");
-
-  const accentFreeText = deburr(formattingFreeText);
-
-  return accentFreeText;
 }
 
 export async function sendSignalAppMessage(
@@ -143,7 +93,7 @@ export async function sendSignalAppMessage(
   message: string
 ): Promise<boolean> {
   try {
-    const cleanMessage = cleanMessageForSignal(message);
+    const cleanMessage = markdown2plainText(message);
     const userPhoneIdInt = userPhoneId.startsWith("+")
       ? userPhoneId
       : "+" + userPhoneId;
@@ -151,15 +101,17 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
-      await umami.log({ event: "/message-sent-signal" });
+      await umami.log({ event: "/message-sent", messageApp: "Signal" });
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
         setTimeout(resolve, SIGNAL_COOL_DOWN_DELAY_SECONDS * 1000)
       );
     }
+    await recordSuccessfulDelivery(SignalMessageApp, userPhoneId);
   } catch (error) {
     console.log(error);
+    await umami.log({ event: "/console-log", messageApp: "Signal" });
     return false;
   }
   return true;

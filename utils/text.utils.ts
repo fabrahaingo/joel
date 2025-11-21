@@ -1,40 +1,40 @@
+import emojiRegex from "emoji-regex";
+import { MessageApp } from "../types";
+import { TELEGRAM_MESSAGE_CHAR_LIMIT } from "../entities/TelegramSession.ts";
+import { WHATSAPP_MESSAGE_CHAR_LIMIT } from "../entities/WhatsAppSession.ts";
+import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
+import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
+
+const injectionCharacters = /[<>`{}\[\]\$]/g;
+const controlCharacters = /[\u0000-\u001F\u007F]+/g;
+
+export function sanitizeUserInput(input: string): string {
+  return input.replace(controlCharacters, "").replace(injectionCharacters, "");
+}
+
 export function splitText(text: string, max: number): string[] {
   if (!Number.isFinite(max) || max <= 0) return [text];
 
   const chunks: string[] = [];
-  const n = text.length;
-  let i = 0;
+  const FORCE_SPLIT = "\\split";
+  const segments: string[] = [];
 
-  while (i < n) {
-    // Skip leading newlines
-    while (i < n && (text[i] === "\n" || text[i] === "\r")) i++;
-    if (i >= n) break;
-
-    let end = Math.min(i + max, n);
-
-    if (end < n) {
-      // 1) Prefer a newline within [i, end)
-      const nl = Math.max(
-        text.lastIndexOf("\n", end - 1),
-        text.lastIndexOf("\r", end - 1)
-      );
-      if (nl >= i) {
-        end = nl;
-      } else {
-        // 2) Otherwise prefer last whitespace within [i, end)
-        let j = end;
-        while (j > i && !isSpace(text.charCodeAt(j - 1))) j--;
-        if (j > i) end = j;
-      }
+  let start = 0;
+  while (true) {
+    const idx = text.indexOf(FORCE_SPLIT, start);
+    if (idx === -1) {
+      segments.push(text.slice(start));
+      break;
     }
 
-    // 3) If we couldn't find a better break, hard-cut at max to ensure progress
-    if (end === i) end = Math.min(i + max, n);
+    segments.push(text.slice(start, idx));
+    start = idx + FORCE_SPLIT.length;
+  }
 
-    const chunk = trimEdgeNewlines(text.slice(i, end));
-    if (chunk.length) chunks.push(chunk);
-
-    i = end;
+  for (const segment of segments) {
+    appendSegment(segment);
+    // Processing each segment independently automatically enforces the
+    // explicit split markers—no extra state required here.
   }
 
   return chunks;
@@ -50,6 +50,63 @@ export function splitText(text: string, max: number): string[] {
     while (b > a && (s.charCodeAt(b - 1) === 10 || s.charCodeAt(b - 1) === 13))
       b--;
     return s.slice(a, b);
+  }
+
+  function appendSegment(segmentText: string): void {
+    const n = segmentText.length;
+    let i = 0;
+
+    while (i < n) {
+      // Skip leading newlines
+      while (i < n && (segmentText[i] === "\n" || segmentText[i] === "\r")) i++;
+      if (i >= n) break;
+
+      let end = Math.min(i + max, n);
+
+      if (end < n) {
+        // 1) Prefer a newline within [i, end)
+        const nl = Math.max(
+          segmentText.lastIndexOf("\n", end - 1),
+          segmentText.lastIndexOf("\r", end - 1)
+        );
+        if (nl >= i) {
+          end = nl;
+        } else {
+          // 2) Otherwise prefer last whitespace within [i, end)
+          let j = end;
+          while (j > i && !isSpace(segmentText.charCodeAt(j - 1))) j--;
+          if (j > i) end = j;
+        }
+      }
+
+      // 3) If we couldn't find a better break, hard-cut at max to ensure progress
+      if (end === i) end = Math.min(i + max, n);
+
+      const chunk = trimEdgeNewlines(segmentText.slice(i, end));
+      if (chunk.length) chunks.push(chunk);
+
+      i = end;
+    }
+  }
+}
+
+export function getSplitTextMessageSize(text: string, app: MessageApp): number {
+  switch (app) {
+    case "Matrix":
+    case "Tchap":
+      return splitText(text, MATRIX_MESSAGE_CHAR_LIMIT).length;
+
+    case "Telegram":
+      return splitText(text, TELEGRAM_MESSAGE_CHAR_LIMIT).length;
+
+    case "WhatsApp":
+      return splitText(text, WHATSAPP_MESSAGE_CHAR_LIMIT).length;
+
+    case "Signal":
+      return splitText(text, SIGNAL_MESSAGE_CHAR_LIMIT).length;
+
+    default:
+      throw new Error("Unknown message app");
   }
 }
 
@@ -121,4 +178,85 @@ export function trimStrings<T>(value: T): T {
 
   // Any other primitive (number, boolean, null, undefined, symbol, bigint) – return as-is
   return value;
+}
+
+// Remove every accent/diacritic and return plain ASCII letters.
+export function markdown2plainText(msg: string): string {
+  function deburr(input: string): string {
+    // 1. Use canonical decomposition (NFD) so "é" → "e\u0301"
+    const decomposed = input.normalize("NFD");
+
+    // 2. Strip all combining diacritical marks (U+0300–036F)
+    const stripped = decomposed.replace(
+      /\s[\u0300-\u036f]|[\u0300-\u036f]|🛡/gu,
+      ""
+    );
+
+    // 3. Map remaining special-case runes that don't decompose nicely
+    return stripped
+      .replace(/ß/g, "ss")
+      .replace(/Æ/g, "AE")
+      .replace(/æ/g, "ae")
+      .replace(/Ø/g, "O")
+      .replace(/ø/g, "o")
+      .replace(/Ð/g, "D")
+      .replace(/ð/g, "d")
+      .replace(/Þ/g, "Th")
+      .replace(/þ/g, "th")
+      .replace(/Œ/g, "OE")
+      .replace(/œ/g, "oe");
+  }
+
+  const emoteFreeText = msg.replace(emojiRegex(), "");
+
+  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/gu, "");
+
+  const accentFreeText = deburr(formattingFreeText);
+
+  return accentFreeText;
+}
+
+export function markdown2WHMarkdown(input: string): string {
+  return input.replace(/\[(.*?)]\((.*?)\)/g, "*$1*\n$2");
+}
+
+export function markdown2html(input: string): string {
+  // Minimal markdown → HTML: [text](url), **bold** / __bold__, *italic* / _italic_
+  /*
+    const escapeHtml = (s: string) =>
+      s.replace(
+        /[&<>"']/g,
+        (ch) =>
+          ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+          })[ch]!
+      );
+
+    // Escape all HTML first so inserted tags are the only HTML.
+    let out = escapeHtml(input);
+     */
+
+  // Links: [text](url)
+  let out = input.replace(
+    /\[([^\]]+)\]\(([^)\s]+)\)/g,
+    (_m, text: string, url: string) =>
+      `<a href="${url}" rel="noopener noreferrer">${text}</a>`
+  );
+
+  // Bold: *text*
+  out = out.replace(
+    /\*([^*\s][^*]*?)\*/g,
+    (_m, t: string) => `<strong>${t}</strong>`
+  );
+  // Italic: _text_
+
+  out = out.replace(/_([^_\s][^_]*?)_/g, (_m, t: string) => `<em>${t}</em>`);
+
+  out = out.replace(/\n/g, `<br />`);
+
+  return out;
 }

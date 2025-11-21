@@ -28,7 +28,7 @@ export const List_Promos_INSP_ENA: Promo_ENA_INSP[] = [
   },
   {
     name: "Joséphine Baker",
-    period: "2023-2024",
+    period: "2023-2025",
     school: "INSP",
     onJORF: true
   },
