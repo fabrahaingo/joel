@@ -180,19 +180,13 @@ export function trimStrings<T>(value: T): T {
   return value;
 }
 
-// Remove every accent/diacritic and return plain ASCII letters.
+// Remove accents and light Markdown/emoji, return ASCII-ish text.
 export function markdown2plainText(msg: string): string {
   function deburr(input: string): string {
-    // 1. Use canonical decomposition (NFD) so "é" → "e\u0301"
     const decomposed = input.normalize("NFD");
 
-    // 2. Strip all combining diacritical marks (U+0300–036F)
-    const stripped = decomposed.replace(
-      /\s[\u0300-\u036f]|[\u0300-\u036f]|🛡/gu,
-      ""
-    );
+    const stripped = decomposed.replace(/[\u0300-\u036f]/gu, "");
 
-    // 3. Map remaining special-case runes that don't decompose nicely
     return stripped
       .replace(/ß/g, "ss")
       .replace(/Æ/g, "AE")
@@ -209,7 +203,7 @@ export function markdown2plainText(msg: string): string {
 
   const emoteFreeText = msg.replace(emojiRegex(), "");
 
-  const formattingFreeText = emoteFreeText.replace(/[_*🗓]/gu, "");
+  const formattingFreeText = emoteFreeText.replace(/[_*]/gu, "");
 
   const accentFreeText = deburr(formattingFreeText);
 
