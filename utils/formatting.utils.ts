@@ -24,7 +24,7 @@ export const textTypeOrdre = (
     case "promotion":
       return `📝 A été _promu${agree(sex)}_\n`;
     case "admission":
-      return `📝 A été _admis${agree(sex)}_ \n`;
+      return `📝 A été _admis${agree(sex)}_\n`;
     case "inscription":
       return `📝 A été _inscrit${agree(sex)}_\n`;
     case "désignation":
@@ -57,7 +57,7 @@ export const textTypeOrdre = (
     case "autorisation":
       return `📝 A été _autorisé${agree(sex)}_\n`;
     case "mise à disposition":
-      return `📝 A été _mis${agree(sex)} disposition_\n`;
+      return `📝 A été _mis${agree(sex)} à disposition_\n`;
     case "décharge":
       return `📝 A été _déchargé${agree(sex)}_\n`;
     case "diplome":
@@ -81,9 +81,9 @@ export const textTypeOrdre = (
     case "reprise de fonctions":
       return `📝 A _repris ses fonctions_\n`;
     case "bourse":
-      return `📝 a reçu une _bourse_\n`;
+      return `📝 A reçu une _bourse_\n`;
     case "prime":
-      return `📝 a reçu une _prime_\n`;
+      return `📝 A reçu une _prime_\n`;
     default:
       return `📝 A été _${type_ordre}_\n`;
   }

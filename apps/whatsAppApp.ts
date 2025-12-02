@@ -164,7 +164,17 @@ app.get("/", (req, res) => {
   res.type("text/plain").send("JOEL WH server is running.");
 });
 
+const CORS_URL = "https://www.joel-officiel.fr";
+
+app.options("/stats/", (req, res) => {
+  res.header("Access-Control-Allow-Origin", CORS_URL);
+  res.header("Access-Control-Allow-Methods", "GET,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
+  res.sendStatus(204);
+});
+
 app.get("/stats/", async (_req, res) => {
+  res.header("Access-Control-Allow-Origin", CORS_URL);
   try {
     const stats = await getCachedStats();
     res.json(stats);
