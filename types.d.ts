@@ -55,7 +55,7 @@ export interface IUser {
     lastUpdate: Date;
   }[];
   followedMeta: {
-    metaType: string;
+    alertString: string;
     lastUpdate: Date;
   }[];
 
@@ -88,9 +88,12 @@ export interface IUser {
   addFollowedPeopleBulk: (arg0: IPeople[]) => Promise<boolean>;
   addFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
   addFollowedName: (arg0: string) => Promise<boolean>;
+  addFollowedAlertString: (arg0: string) => Promise<boolean>;
   removeFollowedPeople: (arg0: IPeople) => Promise<boolean>;
   removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
   removeFollowedName: (arg0: string) => Promise<boolean>;
+  removeFollowedAlertString: (arg0: string) => Promise<boolean>;
+  checkFollowedAlertString: (arg0: string) => boolean;
   followsNothing: () => boolean;
 }
 

@@ -27,6 +27,10 @@ const exampleFollowedOrganisations: IUser["followedOrganisations"] = [
   { wikidataId: "987654321", lastUpdate: new Date() }
 ];
 
+const exampleFollowedMeta: IUser["followedMeta"] = [
+  { alertString: "budget", lastUpdate: new Date() }
+];
+
 const MockTelegramSession = {
   chatId: userMockChatId,
   messageApp: "Telegram",
@@ -74,7 +78,7 @@ const currentUserData_withFollows = {
   followedFunctions: exampleCurrentFollowedFunctions,
   followedNames: exampleFollowedNames,
   followedOrganisations: exampleFollowedOrganisations,
-  followedMeta: [],
+  followedMeta: exampleFollowedMeta,
   lastInteractionDay: Date.now(),
   lastInteractionMonth: Date.now(),
   lastInteractionWeek: Date.now(),
@@ -117,6 +121,11 @@ describe("User Model Test Suite", () => {
             wikidataId: o.wikidataId,
             lastUpdate: o.lastUpdate
           }));
+
+        userFromDBLean.followedMeta = userFromDBLean.followedMeta.map((meta) => ({
+          alertString: meta.alertString,
+          lastUpdate: meta.lastUpdate
+        }));
 
         userFromDBLean.followedFunctions = userFromDBLean.followedFunctions.map(
           (f) => ({

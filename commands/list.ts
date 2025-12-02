@@ -25,7 +25,7 @@ export interface UserFollows {
     peopleId?: Types.ObjectId;
     JORFSearchLink?: string;
   }[];
-  meta: never[];
+  meta: { alertString: string }[];
 }
 
 export function getUserFollowsTotal(userFollows: UserFollows): number {
@@ -117,6 +117,18 @@ export function buildFollowsListMessage(
     });
   }
 
+  if (userFollows.meta.length > 0) {
+    text += `${followVerb} ${String(userFollows.meta.length)} alerte${
+      userFollows.meta.length > 1 ? "s" : ""
+    } sur des textes :\n\n`;
+    text += "Alertes sur des textes :\n\n";
+    userFollows.meta.forEach((meta) => {
+      text += `${String(index + 1)}. *${meta.alertString}*\n`;
+      if (index + 1 < getUserFollowsTotal(userFollows)) text += "\n";
+      index++;
+    });
+  }
+
   return text;
 }
 
@@ -166,11 +178,18 @@ export async function getAllUserFollowsOrdered(
     a.nomPrenom.toUpperCase().localeCompare(b.nomPrenom.toUpperCase())
   );
 
+  const followedMeta = (user.followedMeta ?? [])
+    .map((meta) => ({
+      alertString: meta.alertString ?? (meta as { metaType?: string }).metaType ?? "",
+      lastUpdate: meta.lastUpdate
+    }))
+    .sort((a, b) => a.alertString.localeCompare(b.alertString));
+
   return {
     functions: followedFunctions.map((f) => f.functionTag),
     organisations: followedOrganisations,
     peopleAndNames: followedPeopleTab,
-    meta: []
+    meta: followedMeta
   };
 }
 
@@ -332,11 +351,28 @@ export const unfollowFromStr = async (
       .filter(
         (i) =>
           i >= userFollows.functions.length + userFollows.organisations.length
+          &&
+          i <
+            userFollows.functions.length +
+              userFollows.organisations.length +
+              userFollows.peopleAndNames.length
       )
       .map(
         (i) =>
           i - userFollows.functions.length - userFollows.organisations.length
       );
+
+    const metaStartIndex =
+      userFollows.functions.length +
+      userFollows.organisations.length +
+      userFollows.peopleAndNames.length;
+    const unfollowedMetaIdx = answers
+      .filter(
+        (i) =>
+          i >= metaStartIndex &&
+          i < metaStartIndex + userFollows.meta.length
+      )
+      .map((i) => i - metaStartIndex);
 
     const unfollowedPrenomNomTab: string[] = [];
 
@@ -353,6 +389,10 @@ export const unfollowFromStr = async (
       },
       []
     );
+
+    const unfollowedMeta = unfollowedMetaIdx.map((idx) => {
+      return userFollows.meta[idx];
+    });
 
     const unfollowedNamesIdx = unfollowedPeopleIdx.reduce(
       (tab: number[], idx) => {
@@ -382,7 +422,8 @@ export const unfollowFromStr = async (
       unfollowedFunctions.length +
       unfollowedOrganisations.length +
       unfollowedPeopleId.length +
-      unfollowedNamesIdx.length;
+      unfollowedNamesIdx.length +
+      unfollowedMeta.length;
 
     // If only 1 item unfollowed
     if (unfollowedTotal === 1) {
@@ -394,6 +435,8 @@ export const unfollowFromStr = async (
         text += `Vous ne suivez plus l'organisation *${unfollowedOrganisations[0].nom}* 🙅‍♂️`;
       } else if (unfollowedPrenomNomTab.length === 1) {
         text += `Vous ne suivez plus la personne *${unfollowedPrenomNomTab[0]}* 🙅‍♂️`;
+      } else if (unfollowedMeta.length === 1) {
+        text += `Vous ne suivez plus l'alerte texte *${unfollowedMeta[0].alertString}* 🙅‍♂️`;
       }
     } else if (unfollowedTotal === unfollowedFunctions.length) {
       // If only 1 type of unfollowed items: functions
@@ -412,6 +455,10 @@ export const unfollowFromStr = async (
       text +=
         "Vous ne suivez plus les personnes 🙅‍ :" +
         unfollowedPrenomNomTab.map((p) => `\n - *${p}*`).join("");
+    } else if (unfollowedTotal === unfollowedMeta.length) {
+      text +=
+        "Vous ne suivez plus les alertes texte 🙅‍ :" +
+        unfollowedMeta.map((meta) => `\n - *${meta.alertString}*`).join("");
     } else {
       // Mixed types of unfollowed items
       text += "Vous ne suivez plus les items 🙅‍ :";
@@ -446,6 +493,17 @@ export const unfollowFromStr = async (
             unfollowedPrenomNomTab.map((p) => `\n   - *${p}*`).join("");
         }
       }
+      if (unfollowedMeta.length > 0) {
+        if (unfollowedMeta.length === 1) {
+          text += `\n- Alerte texte : *${unfollowedMeta[0].alertString}*`;
+        } else {
+          text +=
+            `\n- Alertes texte :` +
+            unfollowedMeta
+              .map((meta) => `\n   - *${meta.alertString}*`)
+              .join("");
+        }
+      }
     }
 
     session.user.followedPeople = session.user.followedPeople.filter(
@@ -458,6 +516,12 @@ export const unfollowFromStr = async (
     session.user.followedNames = session.user.followedNames.filter(
       (_value, idx) => !unfollowedNamesIdx.includes(idx)
     );
+
+    session.user.followedMeta = session.user.followedMeta.filter((meta) => {
+      return !unfollowedMeta
+        .map((u) => u.alertString.trim().toLowerCase())
+        .includes(meta.alertString.trim().toLowerCase());
+    });
 
     session.user.followedOrganisations =
       session.user.followedOrganisations.filter(

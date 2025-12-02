@@ -79,10 +79,9 @@ const UserSchema = new Schema<IUser, UserModel>(
       default: []
     },
     followedMeta: {
-      // Placeholder before implementation
       type: [
         {
-          metaType: {
+          alertString: {
             type: String
           },
           lastUpdate: {
@@ -305,6 +304,43 @@ UserSchema.method(
     return this.followedNames.some((elem) => {
       return elem.toUpperCase() === nameClean.toUpperCase();
     });
+  }
+);
+
+UserSchema.method(
+  "checkFollowedAlertString",
+  function checkFollowedAlertString(this: IUser, alertString: string): boolean {
+    const normalizedAlertString = alertString.trim().toLowerCase();
+    return this.followedMeta.some((elem) => {
+      return (
+        elem.alertString?.trim().toLowerCase() === normalizedAlertString
+      );
+    });
+  }
+);
+
+UserSchema.method(
+  "addFollowedAlertString",
+  async function addFollowedAlertString(this: IUser, alertString: string) {
+    if (this.checkFollowedAlertString(alertString)) return false;
+    this.followedMeta.push({ alertString: alertString.trim(), lastUpdate: new Date() });
+    await this.save();
+    return true;
+  }
+);
+
+UserSchema.method(
+  "removeFollowedAlertString",
+  async function removeFollowedAlertString(this: IUser, alertString: string) {
+    if (!this.checkFollowedAlertString(alertString)) return false;
+    const normalizedAlertString = alertString.trim().toLowerCase();
+    this.followedMeta = this.followedMeta.filter((elem) => {
+      return (
+        elem.alertString?.trim().toLowerCase() !== normalizedAlertString
+      );
+    });
+    await this.save();
+    return true;
   }
 );
 

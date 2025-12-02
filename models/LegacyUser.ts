@@ -24,7 +24,7 @@ export interface LegacyRawUser_V2 extends Document {
     lastUpdate: Date;
   }[];
   followedMeta: {
-    metaType: string;
+    alertString: string;
     lastUpdate: Date;
   }[];
 
