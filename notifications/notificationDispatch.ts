@@ -12,16 +12,16 @@ import { MiniUserInfo } from "../entities/Session.ts";
  * Schedules the sendMessage to respect per-app throttling rules.
  * Returns the promise representing the delivery attempt.
  */
-export interface NotificationTask<T> {
+export interface NotificationTask<T, R = JORFSearchItem> {
   userId: Types.ObjectId;
   userInfo: MiniUserInfo;
-  updatedRecordsMap: Map<T, JORFSearchItem[]>;
+  updatedRecordsMap: Map<T, R[]>;
   recordCount: number;
 }
 
-export async function dispatchTasksToMessageApps<T>(
-  taskList: NotificationTask<T>[],
-  taskFunction: (task: NotificationTask<T>) => Promise<void>
+export async function dispatchTasksToMessageApps<T, R = JORFSearchItem>(
+  taskList: NotificationTask<T, R>[],
+  taskFunction: (task: NotificationTask<T, R>) => Promise<void>
 ): Promise<void> {
   taskList.sort((a, b) => b.recordCount - a.recordCount);
 
@@ -39,7 +39,7 @@ export async function dispatchTasksToMessageApps<T>(
   );
   concurrencyLimitByMessageApp.set("Signal", SIGNAL_API_SENDING_CONCURRENCY);
 
-  const tasksByMessageApp = new Map<MessageApp, NotificationTask<T>[]>();
+  const tasksByMessageApp = new Map<MessageApp, NotificationTask<T, R>[]>();
   taskList.forEach((task) => {
     tasksByMessageApp.set(
       task.userInfo.messageApp,
