@@ -1,7 +1,14 @@
 import { Schema as _Schema, Types, model } from "mongoose";
 const Schema = _Schema;
 import umami from "../utils/umami.ts";
-import { ISession, IPeople, IUser, UserModel } from "../types.ts";
+import {
+  IOrganisation,
+  ISession,
+  IPeople,
+  IUser,
+  UserModel,
+  WikidataId
+} from "../types.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { loadUser } from "../entities/Session.ts";
 import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
@@ -139,13 +146,16 @@ UserSchema.static(
     }
 
     await umami.log({ event: "/new-user", messageApp: session.messageApp });
-    return await this.create({
+    const newUser = await this.create({
       chatId: session.chatId,
       messageApp: session.messageApp,
       roomId: session.roomId,
       language_code: session.language_code,
       schemaVersion: USER_SCHEMA_VERSION
     });
+
+    await newUser.updateInteractionMetrics();
+    return newUser;
   }
 );
 
@@ -219,9 +229,13 @@ UserSchema.method(
 
 UserSchema.method(
   "checkFollowedPeople",
-  function checkFollowedPeople(this: IUser, people: IPeople): boolean {
+  function checkFollowedPeople(
+    this: IUser,
+    people: IPeople | Types.ObjectId
+  ): boolean {
+    const peopleId = people instanceof Types.ObjectId ? people : people._id;
     return this.followedPeople.some(
-      (person) => person.peopleId.toString() === people._id.toString()
+      (person) => person.peopleId.toString() === peopleId.toString()
     );
   }
 );
@@ -229,7 +243,7 @@ UserSchema.method(
 UserSchema.method(
   "addFollowedPeople",
   async function addFollowedPeople(this: IUser, peopleToFollow: IPeople) {
-    if (this.checkFollowedPeople(peopleToFollow)) return false;
+    if (this.checkFollowedPeople(peopleToFollow._id)) return false;
     this.followedPeople.push({
       peopleId: peopleToFollow._id,
       lastUpdate: new Date()
@@ -241,9 +255,12 @@ UserSchema.method(
 
 UserSchema.method(
   "addFollowedPeopleBulk",
-  async function addFollowedPeopleBulk(this: IUser, peopleToFollow: IPeople[]) {
+  async function addFollowedPeopleBulk(
+    this: IUser,
+    peopleToFollow: IPeople[]
+  ) {
     for (const people of peopleToFollow) {
-      if (this.checkFollowedPeople(people)) continue;
+      if (this.checkFollowedPeople(people._id)) continue;
       this.followedPeople.push({
         peopleId: people._id,
         lastUpdate: new Date()
@@ -256,10 +273,17 @@ UserSchema.method(
 
 UserSchema.method(
   "removeFollowedPeople",
-  async function removeFollowedPeople(this: IUser, peopleToUnfollow: IPeople) {
-    if (!this.checkFollowedPeople(peopleToUnfollow)) return false;
+  async function removeFollowedPeople(
+    this: IUser,
+    peopleToUnfollow: IPeople | Types.ObjectId
+  ) {
+    const peopleId =
+      peopleToUnfollow instanceof Types.ObjectId
+        ? peopleToUnfollow
+        : peopleToUnfollow._id;
+    if (!this.checkFollowedPeople(peopleId)) return false;
     this.followedPeople = this.followedPeople.filter((elem) => {
-      return !(elem.peopleId.toString() === peopleToUnfollow._id.toString());
+      return elem.peopleId.toString() !== peopleId.toString();
     });
     await this.save();
     return true;
@@ -287,7 +311,7 @@ UserSchema.method(
 
 UserSchema.method(
   "removeFollowedFunction",
-  async function removeFollowedFunctions(this: IUser, fct: FunctionTags) {
+  async function removeFollowedFunction(this: IUser, fct: FunctionTags) {
     if (!this.checkFollowedFunction(fct)) return false;
     this.followedFunctions = this.followedFunctions.filter((elem) => {
       return elem.functionTag !== fct;
@@ -323,7 +347,10 @@ UserSchema.method(
   "addFollowedAlertString",
   async function addFollowedAlertString(this: IUser, alertString: string) {
     if (this.checkFollowedAlertString(alertString)) return false;
-    this.followedMeta.push({ alertString: alertString.trim(), lastUpdate: new Date() });
+    this.followedMeta.push({
+      alertString: alertString.trim(),
+      lastUpdate: new Date()
+    });
     await this.save();
     return true;
   }
@@ -339,6 +366,61 @@ UserSchema.method(
         elem.alertString?.trim().toLowerCase() !== normalizedAlertString
       );
     });
+    await this.save();
+    return true;
+  }
+);
+
+UserSchema.method(
+  "checkFollowedOrganisation",
+  function checkFollowedOrganisation(
+    this: IUser,
+    organisation: IOrganisation | WikidataId
+  ): boolean {
+    const wikidataId =
+      typeof organisation === "string"
+        ? organisation
+        : organisation.wikidataId;
+    return this.followedOrganisations.some(
+      (elem) => elem.wikidataId === wikidataId
+    );
+  }
+);
+
+UserSchema.method(
+  "addFollowedOrganisation",
+  async function addFollowedOrganisation(
+    this: IUser,
+    organisation: IOrganisation | WikidataId
+  ) {
+    const wikidataId =
+      typeof organisation === "string"
+        ? organisation
+        : organisation.wikidataId;
+    if (this.checkFollowedOrganisation(wikidataId)) return false;
+    this.followedOrganisations.push({
+      wikidataId,
+      lastUpdate: new Date()
+    });
+    await this.save();
+    return true;
+  }
+);
+
+UserSchema.method(
+  "removeFollowedOrganisation",
+  async function removeFollowedOrganisation(
+    this: IUser,
+    organisation: IOrganisation | WikidataId
+  ) {
+    const wikidataId =
+      typeof organisation === "string"
+        ? organisation
+        : organisation.wikidataId;
+    if (!this.checkFollowedOrganisation(wikidataId)) return false;
+    this.followedOrganisations = this.followedOrganisations.filter(
+      (elem) => elem.wikidataId !== wikidataId
+    );
     await this.save();
     return true;
   }

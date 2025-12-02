@@ -81,18 +81,23 @@ export interface IUser {
 
   updateInteractionMetrics: () => Promise<void>;
 
-  checkFollowedPeople: (arg0: IPeople) => boolean;
+  checkFollowedPeople: (arg0: IPeople | Types.ObjectId) => boolean;
   checkFollowedFunction: (arg0: FunctionTags) => boolean;
   checkFollowedName: (arg0: string) => boolean;
+  checkFollowedOrganisation: (arg0: IOrganisation | WikidataId) => boolean;
   addFollowedPeople: (arg0: IPeople) => Promise<boolean>;
   addFollowedPeopleBulk: (arg0: IPeople[]) => Promise<boolean>;
   addFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
   addFollowedName: (arg0: string) => Promise<boolean>;
   addFollowedAlertString: (arg0: string) => Promise<boolean>;
-  removeFollowedPeople: (arg0: IPeople) => Promise<boolean>;
+  addFollowedOrganisation: (arg0: IOrganisation | WikidataId) => Promise<boolean>;
+  removeFollowedPeople: (arg0: IPeople | Types.ObjectId) => Promise<boolean>;
   removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
   removeFollowedName: (arg0: string) => Promise<boolean>;
   removeFollowedAlertString: (arg0: string) => Promise<boolean>;
+  removeFollowedOrganisation: (
+    arg0: IOrganisation | WikidataId
+  ) => Promise<boolean>;
   checkFollowedAlertString: (arg0: string) => boolean;
   followsNothing: () => boolean;
 }

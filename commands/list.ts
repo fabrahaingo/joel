@@ -506,36 +506,24 @@ export const unfollowFromStr = async (
       }
     }
 
-    session.user.followedPeople = session.user.followedPeople.filter(
-      (people) =>
-        !unfollowedPeopleId
-          .map((id) => id.toString())
-          .includes(people.peopleId.toString())
+    const namesToRemove = unfollowedNamesIdx.map(
+      (idx) => session.user?.followedNames[idx]
     );
 
-    session.user.followedNames = session.user.followedNames.filter(
-      (_value, idx) => !unfollowedNamesIdx.includes(idx)
-    );
+    for (const peopleId of unfollowedPeopleId)
+      await session.user.removeFollowedPeople(peopleId);
 
-    session.user.followedMeta = session.user.followedMeta.filter((meta) => {
-      return !unfollowedMeta
-        .map((u) => u.alertString.trim().toLowerCase())
-        .includes(meta.alertString.trim().toLowerCase());
-    });
+    for (const name of namesToRemove)
+      if (name !== undefined) await session.user.removeFollowedName(name);
 
-    session.user.followedOrganisations =
-      session.user.followedOrganisations.filter(
-        (org) =>
-          !unfollowedOrganisations
-            .map((o) => o.wikidataId)
-            .includes(org.wikidataId)
-      );
+    for (const meta of unfollowedMeta)
+      await session.user.removeFollowedAlertString(meta.alertString);
 
-    session.user.followedFunctions = session.user.followedFunctions.filter(
-      (tag) => !unfollowedFunctions.includes(tag.functionTag)
-    );
+    for (const org of unfollowedOrganisations)
+      await session.user.removeFollowedOrganisation(org.wikidataId);
 
-    await session.user.save();
+    for (const fct of unfollowedFunctions)
+      await session.user.removeFollowedFunction(fct);
 
     // Delete the user if it doesn't follow anything any more
     if (session.user.followsNothing()) {
