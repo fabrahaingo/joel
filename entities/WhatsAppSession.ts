@@ -42,11 +42,16 @@ const fullMenuKeyboard: ActionList = new ActionList(
     "Recherches",
     new Row(
       "opt_1",
-      KEYBOARD_KEYS.PEOPLE_SEARCH.key.text,
-      "Rechercher une personne au JORF/BO."
+      KEYBOARD_KEYS.TEXT_SEARCH.key.text,
+      "Rechercher ou suivre un texte au JORF/BO."
     ),
     new Row(
       "opt_2",
+      KEYBOARD_KEYS.PEOPLE_SEARCH.key.text,
+      "Rechercher une personne au JORF/BO. Suivre à partir d'un texte."
+    ),
+    new Row(
+      "opt_3",
       KEYBOARD_KEYS.FUNCTION_FOLLOW.key.text,
       "Suivre une fonction (ambassadeur, préfet ...)."
     ),
@@ -62,11 +67,6 @@ const fullMenuKeyboard: ActionList = new ActionList(
       "opt_5",
       KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH_LONG_NO_KEYBOARD.key.text,
       "Suivre les élèves d'une promotion ENA ou INSP."
-    ),
-    new Row(
-      "opt_6",
-      KEYBOARD_KEYS.REFERENCE_FOLLOW_NO_KEYBOARD.key.text,
-      "Suivre à partir d'une référence JORF/BO. Ex: JORFTEXT000052184758"
     )
   ),
   new ListSection(
@@ -76,12 +76,7 @@ const fullMenuKeyboard: ActionList = new ActionList(
       KEYBOARD_KEYS.FOLLOWS_LIST.key.text,
       "Lister mes suivis. Supprimer un suivi."
     ),
-    new Row("opt_8", KEYBOARD_KEYS.HELP.key.text, "Aide et contact."),
-    new Row(
-      "opt_9",
-      KEYBOARD_KEYS.STATS.key.text,
-      "Pour jeter un oeil aux statistiques de suivi JOEL."
-    ),
+    new Row("opt_8", KEYBOARD_KEYS.HELP.key.text, "Aide & Stats."),
     new Row(
       "opt_10",
       KEYBOARD_KEYS.DELETE.key.text,

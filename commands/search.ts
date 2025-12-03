@@ -8,13 +8,17 @@ import { Types } from "mongoose";
 import User from "../models/User.ts";
 import People from "../models/People.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
-import { removeSpecialCharacters } from "../utils/text.utils.ts";
+import {
+  containsNumber,
+  removeSpecialCharacters
+} from "../utils/text.utils.ts";
 import {
   cloneKeyboard,
   Keyboard,
   KEYBOARD_KEYS
 } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
+import { handleReferenceAnswer } from "./ena.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -25,8 +29,10 @@ const isPersonAlreadyFollowed = (
   });
 };
 
-const SEARCH_PROMPT_TEXT =
-  "Entrez le prénom et nom de la personne que vous souhaitez rechercher:";
+const SEARCH_PROMPT_TEXT = `Entrez le nom de la personne à rechercher, ou la référence du texte à parcourir.\\split
+Exemples:
+- *Edouard Philippe*
+- *JORFTEXT000052060473*`;
 
 const SEARCH_PROMPT_KEYBOARD: Keyboard = [
   [KEYBOARD_KEYS.PEOPLE_SEARCH_NEW.key],
@@ -38,7 +44,7 @@ const SEARCH_RESULT_BASE_KEYBOARD: Keyboard = [
   [KEYBOARD_KEYS.MAIN_MENU.key]
 ];
 
-async function askSearchQuestion(session: ISession): Promise<void> {
+export async function askSearchQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, SEARCH_PROMPT_TEXT, handleSearchAnswer, {
     messageOptions: {
       keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
@@ -60,6 +66,9 @@ async function handleSearchAnswer(
     await askSearchQuestion(session);
     return true;
   }
+
+  if (containsNumber(trimmedAnswer))
+    return await handleReferenceAnswer(session, trimmedAnswer);
 
   switch (trimmedAnswer) {
     case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key.text:
