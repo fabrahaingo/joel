@@ -69,25 +69,42 @@ async function handleTextAlertAnswer(
     return true;
   }
 
-  await sendMatchingPublicationsPreview(
-    session,
-    trimmedAnswer,
-    matchingPublications
-  );
-  await askFollowUpQuestion(
-    session,
-    TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer),
-    handleTextAlertConfirmation,
-    {
-      context: { alertString: trimmedAnswer },
-      messageOptions: {
-        keyboard: [
-          [{ text: "✅ Oui" }, { text: "❌ Non" }],
-          [KEYBOARD_KEYS.MAIN_MENU.key]
-        ]
-      }
+  let text = "";
+
+  const hasResults = matchingPublications.length > 0;
+  const previewLimit = Math.min(10, matchingPublications.length);
+
+  text += hasResults
+    ? `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`
+    : `Aucun texte des deux dernières années ne correspond à « ${trimmedAnswer} ».\n\n`;
+
+  for (let i = 0; i < previewLimit; i++) {
+    const publication = matchingPublications[i];
+    const publicationLink = getJORFTextLink(publication.id);
+    text += `*${publication.date.replaceAll("-", "/")}*`;
+    if (session.messageApp === "WhatsApp") {
+      text += `\n${publicationLink}\n`;
+    } else {
+      text += ` - [Cliquer ici](${publicationLink})\n`;
     }
-  );
+    text += `${publication.title}\n\n`;
+  }
+
+  if (hasResults && matchingPublications.length > previewLimit) {
+    text += `${String(matchingPublications.length - previewLimit)} autres résultats ne sont pas affichés.\n\n`;
+  }
+
+  text += "\\split" + TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
+
+  await askFollowUpQuestion(session, text, handleTextAlertConfirmation, {
+    context: { alertString: trimmedAnswer },
+    messageOptions: {
+      keyboard: [
+        [{ text: "✅ Oui" }, { text: "❌ Non" }],
+        [KEYBOARD_KEYS.MAIN_MENU.key]
+      ]
+    }
+  });
 
   return true;
 }
@@ -169,38 +186,6 @@ async function handleTextAlertConfirmation(
   return true;
 }
 
-async function sendMatchingPublicationsPreview(
-  session: ISession,
-  alertString: string,
-  publications: { title: string; id: string }[]
-): Promise<void> {
-  const hasResults = publications.length > 0;
-  const previewLimit = Math.min(10, publications.length);
-
-  let text = hasResults
-    ? `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${alertString} » :\n\n`
-    : `Aucun texte des deux dernières années ne correspond à « ${alertString} ».\n\n`;
-
-  for (let i = 0; i < previewLimit; i++) {
-    const publication = publications[i];
-    const publicationLink = getJORFTextLink(publication.id);
-    text += `${String(i + 1)}. ${publication.title}`;
-    if (session.messageApp === "WhatsApp") {
-      text += `\n${publicationLink}\n\n`;
-    } else {
-      text += ` - [Lien du texte](${publicationLink})\n\n`;
-    }
-  }
-
-  if (hasResults && publications.length > previewLimit) {
-    text += `${String(publications.length - previewLimit)} autres résultats ne sont pas affichés.\n\n`;
-  }
-
-  await session.sendMessage(text, {
-    keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
-  });
-}
-
 export const textAlertCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/text-alert" });
   try {
@@ -214,6 +199,7 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
 
 interface PublicationPreview {
   title: string;
+  date: string;
   id: string;
   date_obj: Date;
 }
@@ -232,7 +218,7 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
     {
       date_obj: { $gte: twoYearsAgo }
     },
-    { title: 1, id: 1, date_obj: 1, _id: 0 }
+    { title: 1, id: 1, date: 1, date_obj: 1, _id: 0 }
   )
     .sort({ date_obj: -1 })
     .lean();
