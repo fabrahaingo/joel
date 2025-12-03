@@ -16,6 +16,7 @@ import {
   JORFSearchResponseMeta
 } from "../entities/JORFSearchResponseMeta.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
+import { dateToString } from "./date.utils.ts";
 
 // Per Wikimedia policy, provide a descriptive agent with contact info.
 const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
@@ -136,11 +137,14 @@ export async function callJORFSearchDay(
 ): Promise<JORFSearchItem[] | null> {
   try {
     await umami.log({ event: "/jorfsearch-request-date" });
+    const dateDMY = dateToString(day, "DMY");
+    const dateYMD = dateToString(day, "YMD");
+
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/${
-            day.toLocaleDateString("fr-FR").split("/").join("-") // format day = "18-02-2024";
+            dateDMY // format day = "18-02-2024";
           }?format=JSON`
         ),
         {
@@ -155,7 +159,9 @@ export async function callJORFSearchDay(
           console.log("JORFSearch request for date returned null");
           return null;
         }
-        return cleanJORFItems(res.data);
+        return cleanJORFItems(
+          res.data.filter((m) => m.source_date === dateYMD)
+        );
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -185,12 +191,19 @@ export async function callJORFSearchMetaDay(
 ): Promise<JORFSearchPublication[] | null> {
   try {
     await umami.log({ event: "/jorfsearch-request-meta" });
+
+    const dateYMD = dateToString(day, "YMD");
+
+    const previousDay = new Date(day);
+    // subtract one day
+    previousDay.setDate(previousDay.getDate() - 1);
+    const previousDayYMD = dateToString(previousDay, "YMD");
+
     return await axios
       .get<JORFSearchResponseMeta>(
-        `https://jorfsearch.steinertriples.ch/meta/search?&date=${day
-          .toLocaleDateString("fr-FR")
-          .split("/")
-          .join("-")}`,
+        encodeURI(
+          `https://jorfsearch.steinertriples.ch/meta/search?date=${dateYMD}`
+        ),
         {
           headers: {
             "User-Agent": USER_AGENT
@@ -203,7 +216,9 @@ export async function callJORFSearchMetaDay(
           console.log("JORFSearch request for meta returned null");
           return null;
         }
-        return cleanJORFPublication(res.data);
+        return cleanJORFPublication(
+          res.data.filter((m) => m.date === previousDayYMD)
+        );
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -215,9 +230,7 @@ export async function callJORFSearchMetaDay(
       }
       await logJORFSearchError("meta");
       console.log(
-        `JORFSearch request for meta aborted after ${String(
-          RETRY_MAX
-        )} tries`,
+        `JORFSearch request for meta aborted after ${String(RETRY_MAX)} tries`,
         error
       );
     } else {
