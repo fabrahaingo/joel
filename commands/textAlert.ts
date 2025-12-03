@@ -184,11 +184,11 @@ async function sendMatchingPublicationsPreview(
   for (let i = 0; i < previewLimit; i++) {
     const publication = publications[i];
     const publicationLink = getJORFTextLink(publication.id);
-    text += `${String(i + 1)}. ${publication.title}\n`;
+    text += `${String(i + 1)}. ${publication.title}`;
     if (session.messageApp === "WhatsApp") {
-      text += `${publicationLink}\n\n`;
+      text += `\n${publicationLink}\n\n`;
     } else {
-      text += `[JORFSearch](${publicationLink})\n\n`;
+      text += ` - [Lien du texte](${publicationLink})\n\n`;
     }
   }
 
