@@ -63,27 +63,24 @@ export const KEYBOARD_KEYS: Record<
   FUNCTION_FOLLOW: {
     key: { text: "💼 Fonctions" },
     action: async (session: ISession) => {
-      const { followFunctionCommand } = await import(
-        "../commands/followFunction.ts"
-      );
+      const { followFunctionCommand } =
+        await import("../commands/followFunction.ts");
       await followFunctionCommand(session);
     }
   },
   ORGANISATION_FOLLOW: {
     key: { text: "🏛️️ Organisations" },
     action: async (session: ISession) => {
-      const { searchOrganisation } = await import(
-        "../commands/followOrganisation.ts"
-      );
+      const { searchOrganisation } =
+        await import("../commands/followOrganisation.ts");
       await searchOrganisation(session);
     }
   },
   ORGANISATION_FOLLOW_NEW: {
     key: { text: "🏛️️ Rechercher" },
     action: async (session: ISession) => {
-      const { searchOrganisation } = await import(
-        "../commands/followOrganisation.ts"
-      );
+      const { searchOrganisation } =
+        await import("../commands/followOrganisation.ts");
       await searchOrganisation(session);
     }
   },
@@ -118,9 +115,8 @@ export const KEYBOARD_KEYS: Record<
   DELETE: {
     key: { text: "🗑️ Supprimer compte" },
     action: async (session: ISession) => {
-      const { deleteProfileCommand } = await import(
-        "../commands/deleteProfile.ts"
-      );
+      const { deleteProfileCommand } =
+        await import("../commands/deleteProfile.ts");
       await deleteProfileCommand(session);
     }
   },

@@ -30,6 +30,7 @@ import {
 import { buildInfoCommand } from "./help.ts";
 import { exportCommand, importCommand } from "./importExport.ts";
 import { sanitizeUserInput } from "../utils/text.utils.ts";
+import { textAlertCommand } from "./textAlert.ts";
 
 export async function processMessage(
   session: ISession,
@@ -79,6 +80,10 @@ export const commands: CommandType[] = [
   {
     regex: /^\/start$|^Bonjour /i,
     action: startCommand
+  },
+  {
+    regex: /^\/textAlert/i,
+    action: textAlertCommand
   },
   {
     regex: /^Rechercher$|^Recherche$/i,

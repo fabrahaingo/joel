@@ -8,15 +8,17 @@ export function dateToFrenchString(date: string): string {
   });
 }
 
-export function dateTOJORFFormat(date: Date): string {
-  date.setHours(0, 0, 0, 0);
-  return date
-    .toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "numeric",
-      year: "numeric"
-    })
-    .replaceAll("/", "-");
+export function dateToString(date: Date, format: "YMD" | "DMY"): string {
+  // Don't mutate the original date
+  const d = new Date(date.getTime());
+
+  const year = String(d.getFullYear());
+  const month = String(d.getMonth() + 1).padStart(2, "0"); // getMonth is 0-based
+  const day = String(d.getDate()).padStart(2, "0");
+
+  if (format === "DMY") return `${day}-${month}-${year}`;
+
+  return `${year}-${month}-${day}`; // YYYY-MM-DD
 }
 
 export function JORFtoDate(dateStr: string): Date {

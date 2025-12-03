@@ -138,6 +138,104 @@ export function removeSpecialCharacters(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "");
 }
 
+export function normalizeFrenchText(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/œ/gi, "oe")
+    .replace(/æ/gi, "ae")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+export function levenshteinDistance(a: string, b: string): number {
+  const rows = a.length + 1;
+  const cols = b.length + 1;
+
+  const distance = Array.from({ length: rows }, (_, i) => {
+    const row = new Array<number>(cols).fill(0);
+    row[0] = i;
+    return row;
+  });
+
+  for (let j = 0; j < cols; j++) distance[0][j] = j;
+
+  for (let i = 1; i < rows; i++) {
+    for (let j = 1; j < cols; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        distance[i][j] = distance[i - 1][j - 1];
+      } else {
+        distance[i][j] =
+          1 +
+          Math.min(
+            distance[i - 1][j],
+            distance[i][j - 1],
+            distance[i - 1][j - 1]
+          );
+      }
+    }
+  }
+
+  return distance[rows - 1][cols - 1];
+}
+
+export function fuzzyIncludes(haystack: string, needle: string): boolean {
+  const normalizedNeedle = normalizeFrenchText(needle);
+  if (normalizedNeedle.length === 0) return false;
+
+  const normalizedHaystack = normalizeFrenchText(haystack);
+  if (normalizedHaystack.includes(normalizedNeedle)) return true;
+
+  const haystackWords = normalizedHaystack.split(" ").filter(Boolean);
+  const needleWords = normalizedNeedle.split(" ").filter(Boolean);
+
+  if (needleWords.length === 0) return false;
+
+  const canonicalizePlural = (word: string) =>
+    word.length > 3 && /[sx]$/.test(word) ? word.slice(0, -1) : word;
+  const wordsEqual = (a: string, b: string) =>
+    a === b || canonicalizePlural(a) === canonicalizePlural(b);
+
+  // Check if all the normalized needle words appear in order in the haystack,
+  // allowing other words in between (e.g. "ingénieurs armement" should match
+  // "corps des ingénieurs de l'armement").
+  let lastIndex = -1;
+  let orderedMatch = true;
+  for (const word of needleWords) {
+    let nextIndex = -1;
+    for (let i = lastIndex + 1; i < haystackWords.length; i++) {
+      if (wordsEqual(haystackWords[i], word)) {
+        nextIndex = i;
+        break;
+      }
+    }
+
+    if (nextIndex === -1) {
+      orderedMatch = false;
+      break;
+    }
+    lastIndex = nextIndex;
+  }
+
+  if (orderedMatch) return true;
+
+  const windowSize = Math.max(1, needleWords.length);
+  const allowedDistance = Math.max(
+    1,
+    Math.round(normalizedNeedle.length * 0.15)
+  );
+
+  for (let i = 0; i <= haystackWords.length - windowSize; i++) {
+    const currentWindow = haystackWords.slice(i, i + windowSize).join(" ");
+    if (levenshteinDistance(currentWindow, normalizedNeedle) <= allowedDistance)
+      return true;
+  }
+
+  return false;
+}
+
 // Function to convert an array to CSV
 export function convertToCSV(array: never[]) {
   if (array.length < 1) {

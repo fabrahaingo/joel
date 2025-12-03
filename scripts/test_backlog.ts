@@ -3,7 +3,7 @@ import mongoose, { Types } from "mongoose";
 import { IPeople, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { callJORFSearchPeople } from "../utils/JORFSearch.utils.ts";
-import { dateTOJORFFormat, JORFtoDate } from "../utils/date.utils.ts";
+import { dateToString, JORFtoDate } from "../utils/date.utils.ts";
 import fs from "node:fs";
 import { convertToCSV } from "../utils/text.utils.ts";
 
@@ -112,14 +112,8 @@ await (async () => {
         peopleName: item.peopleName,
         nbLateRecords: item.nbLateRecords,
         nbLateFollowers: item.nbLateFollowers,
-        newestJORFDate: dateTOJORFFormat(item.newestJORFDate)
-          .split("-")
-          .reverse()
-          .join("-"),
-        worstUpdateInDb: dateTOJORFFormat(item.worstUpdateInDb)
-          .split("-")
-          .reverse()
-          .join("-")
+        newestJORFDate: dateToString(item.newestJORFDate, "YMD"),
+        worstUpdateInDb: dateToString(item.worstUpdateInDb, "YMD")
       })) as never[]
     );
 
