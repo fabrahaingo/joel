@@ -97,7 +97,7 @@ export function buildFollowsListMessage(
     text += `${followVerb} ${String(
       userFollows.peopleAndNames.length
     )} personne${userFollows.peopleAndNames.length > 1 ? "s" : ""} : \n\n`;
-    userFollows.peopleAndNames.forEach((followedName, idx) => {
+    userFollows.peopleAndNames.forEach((followedName) => {
       text += `${String(index + 1)}. *${followedName.nomPrenom}*`;
       if (followedName.JORFSearchLink !== undefined) {
         if (session.messageApp !== "WhatsApp")
@@ -107,10 +107,7 @@ export function buildFollowsListMessage(
       } else {
         text += ` - Suivi manuel\n`;
       }
-      if (
-        idx + 1 < userFollows.peopleAndNames.length &&
-        userFollows.peopleAndNames.length < 10
-      ) {
+      if (userFollows.peopleAndNames.length < 10) {
         text += `\n`;
       }
       index++;
@@ -118,13 +115,14 @@ export function buildFollowsListMessage(
   }
 
   if (userFollows.meta.length > 0) {
-    text += `${followVerb} ${String(userFollows.meta.length)} alerte${
-      userFollows.meta.length > 1 ? "s" : ""
-    } sur des textes :\n\n`;
-    text += "Alertes sur des textes :\n\n";
+    text += `${followVerb} ${String(
+      userFollows.meta.length
+    )} expression${userFollows.meta.length > 1 ? "s" : ""} : \n\n`;
     userFollows.meta.forEach((meta) => {
-      text += `${String(index + 1)}. *${meta.alertString}*\n`;
-      if (index + 1 < getUserFollowsTotal(userFollows)) text += "\n";
+      text += `${String(index + 1)}. *${meta.alertString}*`;
+
+      text += `\n`;
+      if (userFollows.meta.length < 10) text += `\n`;
       index++;
     });
   }
@@ -178,12 +176,9 @@ export async function getAllUserFollowsOrdered(
     a.nomPrenom.toUpperCase().localeCompare(b.nomPrenom.toUpperCase())
   );
 
-  const followedMeta = (user.followedMeta ?? [])
-    .map((meta) => ({
-      alertString: meta.alertString ?? (meta as { metaType?: string }).metaType ?? "",
-      lastUpdate: meta.lastUpdate
-    }))
-    .sort((a, b) => a.alertString.localeCompare(b.alertString));
+  const followedMeta = user.followedMeta.sort((a, b) =>
+    a.alertString.localeCompare(b.alertString)
+  );
 
   return {
     functions: followedFunctions.map((f) => f.functionTag),
@@ -350,8 +345,8 @@ export const unfollowFromStr = async (
     const unfollowedPeopleIdx = answers
       .filter(
         (i) =>
-          i >= userFollows.functions.length + userFollows.organisations.length
-          &&
+          i >=
+            userFollows.functions.length + userFollows.organisations.length &&
           i <
             userFollows.functions.length +
               userFollows.organisations.length +
@@ -369,8 +364,7 @@ export const unfollowFromStr = async (
     const unfollowedMetaIdx = answers
       .filter(
         (i) =>
-          i >= metaStartIndex &&
-          i < metaStartIndex + userFollows.meta.length
+          i >= metaStartIndex && i < metaStartIndex + userFollows.meta.length
       )
       .map((i) => i - metaStartIndex);
 
