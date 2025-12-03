@@ -333,7 +333,7 @@ UserSchema.method(
   function checkFollowedAlertString(this: IUser, alertString: string): boolean {
     const normalizedAlertString = alertString.trim().toLowerCase();
     return this.followedMeta.some((elem) => {
-      return elem.alertString?.trim().toLowerCase() === normalizedAlertString;
+      return elem.alertString.trim().toLowerCase() === normalizedAlertString;
     });
   }
 );
@@ -357,7 +357,7 @@ UserSchema.method(
     if (!this.checkFollowedAlertString(alertString)) return false;
     const normalizedAlertString = alertString.trim().toLowerCase();
     this.followedMeta = this.followedMeta.filter((elem) => {
-      return elem.alertString?.trim().toLowerCase() !== normalizedAlertString;
+      return elem.alertString.trim().toLowerCase() !== normalizedAlertString;
     });
     await this.save();
     return true;
