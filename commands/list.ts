@@ -37,6 +37,29 @@ export function getUserFollowsTotal(userFollows: UserFollows): number {
   );
 }
 
+async function deleteEntitiesWithNoFollowers(
+  peopleIds: Types.ObjectId[],
+  organisationIds: string[]
+): Promise<void> {
+  for (const peopleId of peopleIds) {
+    const isStillFollowed = await User.exists({
+      "followedPeople.peopleId": peopleId
+    });
+    if (isStillFollowed === null) {
+      await People.deleteOne({ _id: peopleId });
+    }
+  }
+
+  for (const wikidataId of organisationIds) {
+    const isStillFollowed = await User.exists({
+      "followedOrganisations.wikidataId": wikidataId
+    });
+    if (isStillFollowed === null) {
+      await Organisation.deleteOne({ wikidataId });
+    }
+  }
+}
+
 interface BuildFollowsListMessageOptions {
   perspective?: "self" | "thirdParty";
 }
@@ -518,6 +541,11 @@ export const unfollowFromStr = async (
 
     for (const fct of unfollowedFunctions)
       await session.user.removeFollowedFunction(fct);
+
+    await deleteEntitiesWithNoFollowers(
+      unfollowedPeopleId,
+      unfollowedOrganisations.map((org) => org.wikidataId)
+    );
 
     // Delete the user if it doesn't follow anything any more
     if (session.user.followsNothing()) {
