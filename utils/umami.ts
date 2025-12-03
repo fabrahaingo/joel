@@ -15,7 +15,7 @@ export const log = async (args: {
 }) => {
   if (process.env.NODE_ENV === "development") {
     console.log(
-      `Umami event ${args.messageApp ? " (" + args.messageApp + ")" : ""}: ${args.event}`
+      `Umami event ${args.messageApp ? "(" + args.messageApp + ")" : ""}: ${args.event}`
     );
     if (args.notificationData != null) console.log(args.notificationData);
     return;
