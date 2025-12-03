@@ -39,6 +39,12 @@ async function handleTextAlertAnswer(
     return false;
   }
 
+  await session.sendMessage("Recherche en cours ...", {
+    forceNoKeyboard: true
+  });
+
+  await session.sendTypingAction();
+
   const twoYearsAgo = new Date();
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
