@@ -103,9 +103,14 @@ async function saveNewMetaPublications(
     .lean();
   const existingIds = new Set(existing.map((record) => record.id));
 
-  const newRecords = metaRecords.filter(
-    (record) => !existingIds.has(record.id)
-  );
+  const addedIds = new Set<string>();
+
+  const newRecords = metaRecords
+    .filter((record) => !existingIds.has(record.id))
+    .reduce((tab: JORFSearchPublication[], item) => {
+      if (!addedIds.has(item.id)) tab.push(item);
+      return tab;
+    }, []);
 
   if (newRecords.length > 0) {
     await Publication.insertMany(newRecords, { ordered: false });
