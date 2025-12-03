@@ -9,7 +9,7 @@ import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import umami from "../utils/umami.ts";
 
 const TEXT_ALERT_PROMPT =
-  "Quel texte souhaitez-vous surveiller ? Renseignez un mot ou une expression.";
+  "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
 
 async function askTextAlertQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, TEXT_ALERT_PROMPT, handleTextAlertAnswer, {

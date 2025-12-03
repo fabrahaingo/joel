@@ -12,8 +12,7 @@ import {
   searchCommand,
   searchPersonHistory
 } from "./search.ts";
-import { enaCommand, promosCommand, suivreFromJOReference } from "./ena.ts";
-import { statsCommand } from "./stats.ts";
+import { enaCommand, promosCommand } from "./ena.ts";
 import { defaultCommand } from "./default.ts";
 import { startCommand } from "./start.ts";
 import { deleteProfileCommand } from "./deleteProfile.ts";
@@ -100,11 +99,6 @@ export const commands: CommandType[] = [
         session,
         "SuivreN " + msg.split(" ").slice(5).join(" ")
       )
-  },
-  {
-    regex:
-      /^SuivreR|^SuiviR|^Suivre R |^Suivi R |^Suivre R$|^Suivi R$|^Suivre à partir d'une référence JORF\/BO/i,
-    action: suivreFromJOReference
   },
   {
     regex: /^SuivreN|^SuiviN/i,
@@ -201,10 +195,6 @@ export const commands: CommandType[] = [
   {
     regex: /^\/secret$|^\/ENA$|^\/INSP$|^ENA$|^INSP$/i,
     action: enaCommand
-  },
-  {
-    regex: /^\/stats|^stats/i,
-    action: statsCommand
   },
   {
     regex:
