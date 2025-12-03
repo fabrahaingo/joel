@@ -122,10 +122,12 @@ describe("User Model Test Suite", () => {
             lastUpdate: o.lastUpdate
           }));
 
-        userFromDBLean.followedMeta = userFromDBLean.followedMeta.map((meta) => ({
-          alertString: meta.alertString,
-          lastUpdate: meta.lastUpdate
-        }));
+        userFromDBLean.followedMeta = userFromDBLean.followedMeta.map(
+          (meta) => ({
+            alertString: meta.alertString,
+            lastUpdate: meta.lastUpdate
+          })
+        );
 
         userFromDBLean.followedFunctions = userFromDBLean.followedFunctions.map(
           (f) => ({

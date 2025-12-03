@@ -397,7 +397,10 @@ export const followOrganisationsFromWikidataIdStr = async (
         .map((org) => `\n   - *${org.nom}* (${org.wikidataId})`)
         .join("\n")}`;
 
-    if (addedOrganisations.length > 0 && alreadyFollowedOrganisations.length > 0)
+    if (
+      addedOrganisations.length > 0 &&
+      alreadyFollowedOrganisations.length > 0
+    )
       text += "\n\n";
 
     if (alreadyFollowedOrganisations.length === 1)

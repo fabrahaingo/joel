@@ -90,7 +90,9 @@ export interface IUser {
   addFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
   addFollowedName: (arg0: string) => Promise<boolean>;
   addFollowedAlertString: (arg0: string) => Promise<boolean>;
-  addFollowedOrganisation: (arg0: IOrganisation | WikidataId) => Promise<boolean>;
+  addFollowedOrganisation: (
+    arg0: IOrganisation | WikidataId
+  ) => Promise<boolean>;
   removeFollowedPeople: (arg0: IPeople | Types.ObjectId) => Promise<boolean>;
   removeFollowedFunction: (arg0: FunctionTags) => Promise<boolean>;
   removeFollowedName: (arg0: string) => Promise<boolean>;

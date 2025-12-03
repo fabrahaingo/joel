@@ -255,10 +255,7 @@ UserSchema.method(
 
 UserSchema.method(
   "addFollowedPeopleBulk",
-  async function addFollowedPeopleBulk(
-    this: IUser,
-    peopleToFollow: IPeople[]
-  ) {
+  async function addFollowedPeopleBulk(this: IUser, peopleToFollow: IPeople[]) {
     for (const people of peopleToFollow) {
       if (this.checkFollowedPeople(people._id)) continue;
       this.followedPeople.push({
@@ -336,9 +333,7 @@ UserSchema.method(
   function checkFollowedAlertString(this: IUser, alertString: string): boolean {
     const normalizedAlertString = alertString.trim().toLowerCase();
     return this.followedMeta.some((elem) => {
-      return (
-        elem.alertString?.trim().toLowerCase() === normalizedAlertString
-      );
+      return elem.alertString?.trim().toLowerCase() === normalizedAlertString;
     });
   }
 );
@@ -362,9 +357,7 @@ UserSchema.method(
     if (!this.checkFollowedAlertString(alertString)) return false;
     const normalizedAlertString = alertString.trim().toLowerCase();
     this.followedMeta = this.followedMeta.filter((elem) => {
-      return (
-        elem.alertString?.trim().toLowerCase() !== normalizedAlertString
-      );
+      return elem.alertString?.trim().toLowerCase() !== normalizedAlertString;
     });
     await this.save();
     return true;
@@ -378,9 +371,7 @@ UserSchema.method(
     organisation: IOrganisation | WikidataId
   ): boolean {
     const wikidataId =
-      typeof organisation === "string"
-        ? organisation
-        : organisation.wikidataId;
+      typeof organisation === "string" ? organisation : organisation.wikidataId;
     return this.followedOrganisations.some(
       (elem) => elem.wikidataId === wikidataId
     );
@@ -394,9 +385,7 @@ UserSchema.method(
     organisation: IOrganisation | WikidataId
   ) {
     const wikidataId =
-      typeof organisation === "string"
-        ? organisation
-        : organisation.wikidataId;
+      typeof organisation === "string" ? organisation : organisation.wikidataId;
     if (this.checkFollowedOrganisation(wikidataId)) return false;
     this.followedOrganisations.push({
       wikidataId,
@@ -414,9 +403,7 @@ UserSchema.method(
     organisation: IOrganisation | WikidataId
   ) {
     const wikidataId =
-      typeof organisation === "string"
-        ? organisation
-        : organisation.wikidataId;
+      typeof organisation === "string" ? organisation : organisation.wikidataId;
     if (!this.checkFollowedOrganisation(wikidataId)) return false;
     this.followedOrganisations = this.followedOrganisations.filter(
       (elem) => elem.wikidataId !== wikidataId

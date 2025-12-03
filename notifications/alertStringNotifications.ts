@@ -55,7 +55,9 @@ export async function notifyAlertStringUpdates(
       const lastUpdate = follow.lastUpdate ?? new Date(0);
       const dateFilteredUpdates = updatesForAlert.filter((record) => {
         const publicationDate = record.date ? new Date(record.date) : null;
-        return publicationDate ? publicationDate.getTime() > lastUpdate.getTime() : true;
+        return publicationDate
+          ? publicationDate.getTime() > lastUpdate.getTime()
+          : true;
       });
 
       if (dateFilteredUpdates.length > 0) {
@@ -137,7 +139,9 @@ async function sendAlertStringUpdate(
 
     for (const record of updates) {
       const publicationLink = `https://bodata.steinertriples.ch/${record.id}/redirect`;
-      const dateString = record.date ? dateToFrenchString(record.date) : undefined;
+      const dateString = record.date
+        ? dateToFrenchString(record.date)
+        : undefined;
 
       notificationText += `• ${record.title}\n`;
       if (dateString) notificationText += `🗓️ ${dateString}\n`;

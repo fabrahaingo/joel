@@ -169,7 +169,11 @@ export function levenshteinDistance(a: string, b: string): number {
       } else {
         distance[i][j] =
           1 +
-          Math.min(distance[i - 1][j], distance[i][j - 1], distance[i - 1][j - 1]);
+          Math.min(
+            distance[i - 1][j],
+            distance[i][j - 1],
+            distance[i - 1][j - 1]
+          );
       }
     }
   }
@@ -187,7 +191,10 @@ export function fuzzyIncludes(haystack: string, needle: string): boolean {
   const haystackWords = normalizedHaystack.split(" ").filter(Boolean);
   const needleWords = normalizedNeedle.split(" ").filter(Boolean);
   const windowSize = Math.max(1, needleWords.length);
-  const allowedDistance = Math.max(1, Math.round(normalizedNeedle.length * 0.15));
+  const allowedDistance = Math.max(
+    1,
+    Math.round(normalizedNeedle.length * 0.15)
+  );
 
   for (let i = 0; i <= haystackWords.length - windowSize; i++) {
     const currentWindow = haystackWords.slice(i, i + windowSize).join(" ");

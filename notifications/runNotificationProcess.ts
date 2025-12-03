@@ -88,9 +88,7 @@ async function getJORFMetaRecordsFromDate(
 
       return fullTab.concat(resDay);
     }, [])
-    .sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
 export async function runNotificationProcess(
