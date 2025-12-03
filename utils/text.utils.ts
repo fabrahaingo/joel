@@ -190,6 +190,37 @@ export function fuzzyIncludes(haystack: string, needle: string): boolean {
 
   const haystackWords = normalizedHaystack.split(" ").filter(Boolean);
   const needleWords = normalizedNeedle.split(" ").filter(Boolean);
+
+  if (needleWords.length === 0) return false;
+
+  const canonicalizePlural = (word: string) =>
+    word.length > 3 && /[sx]$/.test(word) ? word.slice(0, -1) : word;
+  const wordsEqual = (a: string, b: string) =>
+    a === b || canonicalizePlural(a) === canonicalizePlural(b);
+
+  // Check if all the normalized needle words appear in order in the haystack,
+  // allowing other words in between (e.g. "ingénieurs armement" should match
+  // "corps des ingénieurs de l'armement").
+  let lastIndex = -1;
+  let orderedMatch = true;
+  for (const word of needleWords) {
+    let nextIndex = -1;
+    for (let i = lastIndex + 1; i < haystackWords.length; i++) {
+      if (wordsEqual(haystackWords[i], word)) {
+        nextIndex = i;
+        break;
+      }
+    }
+
+    if (nextIndex === -1) {
+      orderedMatch = false;
+      break;
+    }
+    lastIndex = nextIndex;
+  }
+
+  if (orderedMatch) return true;
+
   const windowSize = Math.max(1, needleWords.length);
   const allowedDistance = Math.max(
     1,
