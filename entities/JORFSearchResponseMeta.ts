@@ -1,3 +1,5 @@
+import { JORFtoDate } from "../utils/date.utils.ts";
+
 export type JORFSearchResponseMeta = null | string | JORFSearchPublicationRaw[];
 
 // Minimal expected publication from JORFSearch
@@ -11,6 +13,7 @@ interface JORFSearchPublicationRaw {
 export interface JORFSearchPublication extends JORFSearchPublicationRaw {
   id: string;
   date: string;
+  date_obj: Date;
   title: string;
   nor?: string;
   ministere?: string;
@@ -69,9 +72,14 @@ export function cleanJORFPublication(
         return clean_publications;
       }
 
-      publication_raw.tags ??= {};
-
-      clean_publications.push(publication_raw as JORFSearchPublication);
+      clean_publications.push({
+        ...publication_raw,
+        id: publication_raw.id,
+        date: publication_raw.date,
+        title: publication_raw.title,
+        tags: publication_raw.tags ?? {},
+        date_obj: JORFtoDate(publication_raw.date)
+      });
       return clean_publications;
     },
     []

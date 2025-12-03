@@ -16,6 +16,7 @@ import {
   JORFSearchResponseMeta
 } from "../entities/JORFSearchResponseMeta.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
+import { dateToString } from "./date.utils.ts";
 
 // Per Wikimedia policy, provide a descriptive agent with contact info.
 const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
@@ -43,7 +44,8 @@ async function logJORFSearchError(
     | "function_tag"
     | "date"
     | "wikidata"
-    | "reference",
+    | "reference"
+    | "meta",
   messageApp?: MessageApp
 ) {
   await umami.log({
@@ -135,11 +137,14 @@ export async function callJORFSearchDay(
 ): Promise<JORFSearchItem[] | null> {
   try {
     await umami.log({ event: "/jorfsearch-request-date" });
+    const dateDMY = dateToString(day, "DMY");
+    const dateYMD = dateToString(day, "YMD");
+
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/${
-            day.toLocaleDateString("fr-FR").split("/").join("-") // format day = "18-02-2024";
+            dateDMY // format day = "18-02-2024";
           }?format=JSON`
         ),
         {
@@ -154,7 +159,9 @@ export async function callJORFSearchDay(
           console.log("JORFSearch request for date returned null");
           return null;
         }
-        return cleanJORFItems(res.data);
+        return cleanJORFItems(
+          res.data.filter((m) => m.source_date === dateYMD)
+        );
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -170,6 +177,62 @@ export async function callJORFSearchDay(
           error
         );
       }
+    } else {
+      await umami.log({ event: "/console-log" });
+      console.log(error);
+    }
+  }
+  return null;
+}
+
+export async function callJORFSearchMetaDay(
+  day: Date,
+  retryNumber = 0
+): Promise<JORFSearchPublication[] | null> {
+  try {
+    await umami.log({ event: "/jorfsearch-request-meta" });
+
+    const dateYMD = dateToString(day, "YMD");
+
+    const previousDay = new Date(day);
+    // subtract one day
+    previousDay.setDate(previousDay.getDate() - 1);
+    const previousDayYMD = dateToString(previousDay, "YMD");
+
+    return await axios
+      .get<JORFSearchResponseMeta>(
+        encodeURI(
+          `https://jorfsearch.steinertriples.ch/meta/search?date=${dateYMD}`
+        ),
+        {
+          headers: {
+            "User-Agent": USER_AGENT
+          }
+        }
+      )
+      .then(async (res) => {
+        if (res.data === null || typeof res.data === "string") {
+          await logJORFSearchError("meta");
+          console.log("JORFSearch request for meta returned null");
+          return null;
+        }
+        return cleanJORFPublication(
+          res.data.filter((m) => m.date === previousDayYMD)
+        );
+      });
+  } catch (error) {
+    if (shouldRetry(error)) {
+      if (retryNumber < RETRY_MAX) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
+        );
+        return await callJORFSearchMetaDay(day, retryNumber + 1);
+      }
+      await logJORFSearchError("meta");
+      console.log(
+        `JORFSearch request for meta aborted after ${String(RETRY_MAX)} tries`,
+        error
+      );
     } else {
       await umami.log({ event: "/console-log" });
       console.log(error);
@@ -391,46 +454,6 @@ export async function callJORFSearchReference(
       event: "/jorfsearch-error",
       messageApp,
       payload: { reference: true }
-    });
-    console.log(error);
-    await umami.log({ event: "/console-log", messageApp: messageApp });
-  }
-  return null;
-}
-
-// not used for now
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function JORFSearchCallPublications(
-  currentDay: string,
-  messageApp: MessageApp
-): Promise<JORFSearchPublication[] | null> {
-  try {
-    await umami.log({ event: "/jorfsearch-request-meta", messageApp });
-    return await axios
-      .get<JORFSearchResponseMeta>(
-        `https://jorfsearch.steinertriples.ch/meta/search?&date=${currentDay.split("-").reverse().join("-")}`,
-        {
-          headers: {
-            "User-Agent": USER_AGENT
-          }
-        }
-      )
-      .then(async (res) => {
-        if (res.data === null || typeof res.data === "string") {
-          await umami.log({
-            event: "/jorfsearch-error",
-            messageApp,
-            payload: { meta: true }
-          });
-          return null;
-        }
-        return cleanJORFPublication(res.data);
-      });
-  } catch (error) {
-    await umami.log({
-      event: "/jorfsearch-error",
-      messageApp,
-      payload: { meta: true }
     });
     console.log(error);
     await umami.log({ event: "/console-log", messageApp: messageApp });

@@ -25,7 +25,7 @@ export interface UserFollows {
     peopleId?: Types.ObjectId;
     JORFSearchLink?: string;
   }[];
-  meta: never[];
+  meta: { alertString: string }[];
 }
 
 export function getUserFollowsTotal(userFollows: UserFollows): number {
@@ -97,7 +97,7 @@ export function buildFollowsListMessage(
     text += `${followVerb} ${String(
       userFollows.peopleAndNames.length
     )} personne${userFollows.peopleAndNames.length > 1 ? "s" : ""} : \n\n`;
-    userFollows.peopleAndNames.forEach((followedName, idx) => {
+    userFollows.peopleAndNames.forEach((followedName) => {
       text += `${String(index + 1)}. *${followedName.nomPrenom}*`;
       if (followedName.JORFSearchLink !== undefined) {
         if (session.messageApp !== "WhatsApp")
@@ -107,12 +107,22 @@ export function buildFollowsListMessage(
       } else {
         text += ` - Suivi manuel\n`;
       }
-      if (
-        idx + 1 < userFollows.peopleAndNames.length &&
-        userFollows.peopleAndNames.length < 10
-      ) {
+      if (userFollows.peopleAndNames.length < 10) {
         text += `\n`;
       }
+      index++;
+    });
+  }
+
+  if (userFollows.meta.length > 0) {
+    text += `${followVerb} ${String(
+      userFollows.meta.length
+    )} expression${userFollows.meta.length > 1 ? "s" : ""} : \n\n`;
+    userFollows.meta.forEach((meta) => {
+      text += `${String(index + 1)}. *${meta.alertString}*`;
+
+      text += `\n`;
+      if (userFollows.meta.length < 10) text += `\n`;
       index++;
     });
   }
@@ -166,11 +176,15 @@ export async function getAllUserFollowsOrdered(
     a.nomPrenom.toUpperCase().localeCompare(b.nomPrenom.toUpperCase())
   );
 
+  const followedMeta = user.followedMeta.sort((a, b) =>
+    a.alertString.localeCompare(b.alertString)
+  );
+
   return {
     functions: followedFunctions.map((f) => f.functionTag),
     organisations: followedOrganisations,
     peopleAndNames: followedPeopleTab,
-    meta: []
+    meta: followedMeta
   };
 }
 
@@ -331,12 +345,28 @@ export const unfollowFromStr = async (
     const unfollowedPeopleIdx = answers
       .filter(
         (i) =>
-          i >= userFollows.functions.length + userFollows.organisations.length
+          i >=
+            userFollows.functions.length + userFollows.organisations.length &&
+          i <
+            userFollows.functions.length +
+              userFollows.organisations.length +
+              userFollows.peopleAndNames.length
       )
       .map(
         (i) =>
           i - userFollows.functions.length - userFollows.organisations.length
       );
+
+    const metaStartIndex =
+      userFollows.functions.length +
+      userFollows.organisations.length +
+      userFollows.peopleAndNames.length;
+    const unfollowedMetaIdx = answers
+      .filter(
+        (i) =>
+          i >= metaStartIndex && i < metaStartIndex + userFollows.meta.length
+      )
+      .map((i) => i - metaStartIndex);
 
     const unfollowedPrenomNomTab: string[] = [];
 
@@ -353,6 +383,10 @@ export const unfollowFromStr = async (
       },
       []
     );
+
+    const unfollowedMeta = unfollowedMetaIdx.map((idx) => {
+      return userFollows.meta[idx];
+    });
 
     const unfollowedNamesIdx = unfollowedPeopleIdx.reduce(
       (tab: number[], idx) => {
@@ -382,7 +416,8 @@ export const unfollowFromStr = async (
       unfollowedFunctions.length +
       unfollowedOrganisations.length +
       unfollowedPeopleId.length +
-      unfollowedNamesIdx.length;
+      unfollowedNamesIdx.length +
+      unfollowedMeta.length;
 
     // If only 1 item unfollowed
     if (unfollowedTotal === 1) {
@@ -394,6 +429,8 @@ export const unfollowFromStr = async (
         text += `Vous ne suivez plus l'organisation *${unfollowedOrganisations[0].nom}* 🙅‍♂️`;
       } else if (unfollowedPrenomNomTab.length === 1) {
         text += `Vous ne suivez plus la personne *${unfollowedPrenomNomTab[0]}* 🙅‍♂️`;
+      } else if (unfollowedMeta.length === 1) {
+        text += `Vous ne suivez plus l'alerte texte *${unfollowedMeta[0].alertString}* 🙅‍♂️`;
       }
     } else if (unfollowedTotal === unfollowedFunctions.length) {
       // If only 1 type of unfollowed items: functions
@@ -412,6 +449,10 @@ export const unfollowFromStr = async (
       text +=
         "Vous ne suivez plus les personnes 🙅‍ :" +
         unfollowedPrenomNomTab.map((p) => `\n - *${p}*`).join("");
+    } else if (unfollowedTotal === unfollowedMeta.length) {
+      text +=
+        "Vous ne suivez plus les alertes texte 🙅‍ :" +
+        unfollowedMeta.map((meta) => `\n - *${meta.alertString}*`).join("");
     } else {
       // Mixed types of unfollowed items
       text += "Vous ne suivez plus les items 🙅‍ :";
@@ -446,32 +487,37 @@ export const unfollowFromStr = async (
             unfollowedPrenomNomTab.map((p) => `\n   - *${p}*`).join("");
         }
       }
+      if (unfollowedMeta.length > 0) {
+        if (unfollowedMeta.length === 1) {
+          text += `\n- Alerte texte : *${unfollowedMeta[0].alertString}*`;
+        } else {
+          text +=
+            `\n- Alertes texte :` +
+            unfollowedMeta
+              .map((meta) => `\n   - *${meta.alertString}*`)
+              .join("");
+        }
+      }
     }
 
-    session.user.followedPeople = session.user.followedPeople.filter(
-      (people) =>
-        !unfollowedPeopleId
-          .map((id) => id.toString())
-          .includes(people.peopleId.toString())
+    const namesToRemove = unfollowedNamesIdx.map(
+      (idx) => session.user?.followedNames[idx]
     );
 
-    session.user.followedNames = session.user.followedNames.filter(
-      (_value, idx) => !unfollowedNamesIdx.includes(idx)
-    );
+    for (const peopleId of unfollowedPeopleId)
+      await session.user.removeFollowedPeople(peopleId);
 
-    session.user.followedOrganisations =
-      session.user.followedOrganisations.filter(
-        (org) =>
-          !unfollowedOrganisations
-            .map((o) => o.wikidataId)
-            .includes(org.wikidataId)
-      );
+    for (const name of namesToRemove)
+      if (name !== undefined) await session.user.removeFollowedName(name);
 
-    session.user.followedFunctions = session.user.followedFunctions.filter(
-      (tag) => !unfollowedFunctions.includes(tag.functionTag)
-    );
+    for (const meta of unfollowedMeta)
+      await session.user.removeFollowedAlertString(meta.alertString);
 
-    await session.user.save();
+    for (const org of unfollowedOrganisations)
+      await session.user.removeFollowedOrganisation(org.wikidataId);
+
+    for (const fct of unfollowedFunctions)
+      await session.user.removeFollowedFunction(fct);
 
     // Delete the user if it doesn't follow anything any more
     if (session.user.followsNothing()) {

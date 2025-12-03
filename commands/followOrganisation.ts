@@ -1,6 +1,6 @@
 import Organisation from "../models/Organisation.ts";
 import User from "../models/User.ts";
-import { IOrganisation, ISession, IUser, WikidataId } from "../types.ts";
+import { IOrganisation, ISession, WikidataId } from "../types.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import {
   getJORFSearchLinkOrganisation,
@@ -12,13 +12,6 @@ import {
   KEYBOARD_KEYS
 } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
-
-const isOrganisationAlreadyFollowed = (
-  user: IUser,
-  wikidataId: WikidataId
-): boolean => {
-  return user.followedOrganisations.some((o) => o.wikidataId === wikidataId);
-};
 
 const FULL_COMMAND_PROMPT = `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
 
@@ -153,7 +146,7 @@ async function handleSingleOrganisationResult(
 
   if (
     session.user &&
-    isOrganisationAlreadyFollowed(session.user, organisation.wikidataId)
+    session.user.checkFollowedOrganisation(organisation.wikidataId)
   ) {
     text += `\n\nVous suivez déjà *${organisation.nom}* ✅`;
     await session.sendMessage(text, { keyboard: ORGANISATION_SEARCH_KEYBOARD });
@@ -210,7 +203,7 @@ async function handleMultipleOrganisationResults(
 
     if (
       session.user != undefined &&
-      isOrganisationAlreadyFollowed(session.user, organisation_k.wikidataId)
+      session.user.checkFollowedOrganisation(organisation_k.wikidataId)
     )
       text += ` - Suivi ✅`;
 
@@ -384,23 +377,36 @@ export const followOrganisationsFromWikidataIdStr = async (
 
     session.user ??= await User.findOrCreate(session);
 
-    for (const org of orgResults) {
-      // Don't call JORF if the organisation is already followed
-      if (!isOrganisationAlreadyFollowed(session.user, org.wikidataId))
-        session.user.followedOrganisations.push({
-          wikidataId: org.wikidataId,
-          lastUpdate: new Date()
-        });
-    }
+    const addedOrganisations: IOrganisation[] = [];
+    const alreadyFollowedOrganisations: IOrganisation[] = [];
 
-    await session.user.save();
+    for (const org of orgResults) {
+      if (await session.user.addFollowedOrganisation(org)) {
+        addedOrganisations.push(org);
+      } else {
+        alreadyFollowedOrganisations.push(org);
+      }
+    }
 
     let text = "";
 
-    if (orgResults.length == 1)
-      text += `Vous suivez désormais *${orgResults[0].nom}* (${orgResults[0].wikidataId}) ✅`;
-    else
-      text += `Vous suivez désormais les organisations: ✅\n${orgResults
+    if (addedOrganisations.length == 1)
+      text += `Vous suivez désormais *${addedOrganisations[0].nom}* (${addedOrganisations[0].wikidataId}) ✅`;
+    else if (addedOrganisations.length > 1)
+      text += `Vous suivez désormais les organisations: ✅\n${addedOrganisations
+        .map((org) => `\n   - *${org.nom}* (${org.wikidataId})`)
+        .join("\n")}`;
+
+    if (
+      addedOrganisations.length > 0 &&
+      alreadyFollowedOrganisations.length > 0
+    )
+      text += "\n\n";
+
+    if (alreadyFollowedOrganisations.length === 1)
+      text += `Vous suivez déjà *${alreadyFollowedOrganisations[0].nom}* (${alreadyFollowedOrganisations[0].wikidataId}) ✅`;
+    else if (alreadyFollowedOrganisations.length > 1)
+      text += `Vous suivez déjà les organisations: ✅\n${alreadyFollowedOrganisations
         .map((org) => `\n   - *${org.nom}* (${org.wikidataId})`)
         .join("\n")}`;
 

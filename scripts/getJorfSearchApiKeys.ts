@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from "axios";
 import { JORFSearchResponse } from "../entities/JORFSearchResponse.ts";
 import * as fs from "node:fs";
-import { dateTOJORFFormat } from "../utils/date.utils.ts";
+import { dateToString } from "../utils/date.utils.ts";
 import { convertToCSV } from "../utils/text.utils";
 import pLimit from "p-limit";
 
@@ -60,7 +60,7 @@ async function main() {
   const dates = Array.from({ length: NB_DAYS }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
-    return dateTOJORFFormat(d);
+    return dateToString(d, "DMY");
   });
 
   const limit = pLimit(CONCURRENCY);
