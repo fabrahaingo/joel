@@ -94,6 +94,7 @@ export type UmamiEvent =
   | "/follow-function"
   | "/follow-organisation"
   | "/follow-reference"
+  | "/text-alert"
   | "/unfollow"
   | "/new-user"
   | "/new-organisation"

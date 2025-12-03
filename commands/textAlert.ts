@@ -55,4 +55,3 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
     await session.log({ event: "/console-log" });
   }
 };
-
