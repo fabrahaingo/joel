@@ -17,9 +17,10 @@ import umami from "../utils/umami.ts";
 import mongoose from "mongoose";
 
 import { ExternalMessageOptions } from "../entities/Session.ts";
+import { Publication } from "../models/Publication.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
-const SHIFT_DAYS = 30;
+const SHIFT_DAYS = 150;
 
 async function getJORFRecordsFromDate(
   startDate: Date
@@ -91,6 +92,26 @@ async function getJORFMetaRecordsFromDate(
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
+async function saveNewMetaPublications(
+  metaRecords: JORFSearchPublication[]
+): Promise<void> {
+  const ids = metaRecords.map((record) => record.id);
+  const existing: JORFSearchPublication[] = await Publication.find({
+    id: { $in: ids }
+  })
+    .select("id")
+    .lean();
+  const existingIds = new Set(existing.map((record) => record.id));
+
+  const newRecords = metaRecords.filter(
+    (record) => !existingIds.has(record.id)
+  );
+
+  if (newRecords.length > 0) {
+    await Publication.insertMany(newRecords, { ordered: false });
+  }
+}
+
 export async function runNotificationProcess(
   targetApps: MessageApp[],
   messageAppsOptions: ExternalMessageOptions
@@ -156,23 +177,24 @@ export async function runNotificationProcess(
       targetApps,
       messageAppsOptions
     );
-  }
 
-  if (JORFMetaRecordsFromDate.length > 0)
-    await notifyAlertStringUpdates(
-      JORFMetaRecordsFromDate,
+    await notifyPeopleUpdates(
+      JORFAllRecordsFromDate,
       targetApps,
       messageAppsOptions
     );
 
-  await notifyPeopleUpdates(
-    JORFAllRecordsFromDate,
-    targetApps,
-    messageAppsOptions
-  );
+    await notifyNameMentionUpdates(
+      JORFAllRecordsFromDate,
+      targetApps,
+      messageAppsOptions
+    );
+  }
 
-  await notifyNameMentionUpdates(
-    JORFAllRecordsFromDate,
+  if (JORFMetaRecordsFromDate.length > 0)
+    await saveNewMetaPublications(JORFMetaRecordsFromDate);
+  await notifyAlertStringUpdates(
+    JORFMetaRecordsFromDate,
     targetApps,
     messageAppsOptions
   );

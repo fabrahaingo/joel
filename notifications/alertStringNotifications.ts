@@ -52,7 +52,7 @@ export async function notifyAlertStringUpdates(
         fuzzyIncludes(record.title, follow.alertString)
       );
 
-      const lastUpdate = follow.lastUpdate ?? new Date(0);
+      const lastUpdate = follow.lastUpdate;
       const dateFilteredUpdates = updatesForAlert.filter((record) => {
         const publicationDate = record.date ? new Date(record.date) : null;
         return publicationDate
