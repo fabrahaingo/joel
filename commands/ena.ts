@@ -17,6 +17,9 @@ import { FunctionTags } from "../entities/FunctionTags.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import { extractJORFTextId } from "../utils/JORFSearch.utils.ts";
+import { askSearchQuestion } from "./search.ts";
+import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
+import { Publication } from "../models/Publication.ts";
 
 const inspId = "Q109039648" as WikidataId;
 
@@ -80,7 +83,7 @@ const PROMO_SEARCH_KEYBOARD: Keyboard = [
 ];
 
 const PROMO_CONFIRM_TEXT =
-  "Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\n\n" +
+  "Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\\split" +
   "⚠️ Attention : *les retirer peut ensuite prendre du temps*.";
 
 interface PromoConfirmContext {
@@ -322,46 +325,20 @@ interface ReferenceConfirmationContext {
   results: JORFSearchItem[];
 }
 
-const REFERENCE_PROMPT_TEXT =
-  "Entrez la référence JORF/BO et l'intégralité des personnes mentionnées sera ajoutée à la liste de vos contacts.\n" +
-  "⚠️ Attention, un nombre important de suivis seront ajoutés en même temps, les retirer peut ensuite prendre du temps. ⚠️\n" +
-  "Format: *JORFTEXT000052060473*";
-
 const REFERENCE_PROMPT_KEYBOARD: Keyboard = [
-  [KEYBOARD_KEYS.REFERENCE_FOLLOW.key],
+  [KEYBOARD_KEYS.PEOPLE_SEARCH.key],
   [KEYBOARD_KEYS.MAIN_MENU.key]
 ];
 
 const REFERENCE_CONFIRM_TEXT =
-  "Voulez-vous ajouter ces personnes à vos suivis ? (répondez *oui* ou *non*)\n\n⚠️ Attention : les retirer peut ensuite prendre du temps.";
+  "Voulez-vous ajouter l'intégralité des personnes mentionnées à vos suivis ? (répondez *oui* ou *non*)\\split" +
+  "⚠️ Attention : les retirer peut ensuite prendre du temps.";
 
-async function askReferenceQuestion(session: ISession): Promise<void> {
-  await askFollowUpQuestion(
-    session,
-    REFERENCE_PROMPT_TEXT,
-    handleReferenceAnswer,
-    {
-      messageOptions: {
-        keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
-      }
-    }
-  );
-}
-
-async function handleReferenceAnswer(
+export async function handleReferenceAnswer(
   session: ISession,
   answer: string
 ): Promise<boolean> {
   const trimmedAnswer = answer.trim();
-
-  if (trimmedAnswer.length === 0) {
-    await session.sendMessage(
-      `Votre réponse n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
-      { keyboard: REFERENCE_PROMPT_KEYBOARD }
-    );
-    await askReferenceQuestion(session);
-    return true;
-  }
 
   switch (trimmedAnswer) {
     case KEYBOARD_KEYS.FOLLOW_UP_FOLLOW.key.text:
@@ -387,12 +364,27 @@ async function handleReferenceAnswer(
     );
     return true;
   }
+
+  const textFromDb: JORFSearchPublication | null = await Publication.findOne({
+    id: reference
+  });
+
+  let message = "";
+
+  if (textFromDb == null) {
+    console.log(`Text ${reference} not in dB`);
+    await session.log({ event: "/console-log" });
+    message += `Le texte [${reference}](${getJORFTextLink(reference)})`;
+  } else {
+    message += `*${reference}*- [Lien du texte](${getJORFTextLink(textFromDb.title)})\n`;
+    message += `${textFromDb.title}\n\n`;
+    message += "Le texte";
+  }
+
   if (JORFResult.length === 0) {
-    await session.sendMessage(
-      `La référence n'a pas été reconnue.👎\nVeuillez essayer de nouveau la commande.`,
-      { keyboard: REFERENCE_PROMPT_KEYBOARD }
-    );
-    await askReferenceQuestion(session);
+    message += " ne contient aucune nomination.";
+    await session.sendMessage(message, { keyboard: REFERENCE_PROMPT_KEYBOARD });
+    await askSearchQuestion(session);
     return true;
   }
 
@@ -406,8 +398,8 @@ async function handleReferenceAnswer(
     return `${contact.nom} ${contact.prenom}`;
   });
 
-  let message = `Le texte [${reference}](${getJORFTextLink(reference)}) mentionne *${String(JORFResult.length)}* personnes:\n`;
-  message += contacts.join("\n");
+  message += ` mentionne *${String(JORFResult.length)}* personnes:`;
+  message += "\n- " + contacts.join("\n- ");
 
   await session.sendMessage(message, { separateMenuMessage: true });
 
@@ -475,22 +467,9 @@ async function handleReferenceConfirmation(
 
   if (/non/i.test(trimmedAnswer)) {
     await session.sendMessage(`Ok, aucun ajout n'a été effectué. 👌`);
-    await askReferenceQuestion(session);
     return true;
   }
 
   await session.sendMessage(`Votre réponse n'a pas été reconnue. 👎`);
   return true;
 }
-
-export const suivreFromJOReference = async (
-  session: ISession
-): Promise<void> => {
-  try {
-    await session.log({ event: "/follow-reference" });
-    await askReferenceQuestion(session);
-  } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
-  }
-};

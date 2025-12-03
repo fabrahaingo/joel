@@ -90,6 +90,10 @@ export function splitText(text: string, max: number): string[] {
   }
 }
 
+export function containsNumber(value: string): boolean {
+  return /\d/.test(value);
+}
+
 export function getSplitTextMessageSize(text: string, app: MessageApp): number {
   switch (app) {
     case "Matrix":

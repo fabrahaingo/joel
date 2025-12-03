@@ -25,6 +25,13 @@ export const KEYBOARD_KEYS: Record<
       await mainMenuCommand(session);
     }
   },
+  TEXT_SEARCH: {
+    key: { text: "📰 Textes" },
+    action: async (session: ISession) => {
+      const { textAlertCommand } = await import("../commands/textAlert.ts");
+      await textAlertCommand(session);
+    }
+  },
   PEOPLE_SEARCH: {
     key: { text: "👨‍💼 Nominations" },
     action: async (session: ISession) => {
@@ -84,20 +91,6 @@ export const KEYBOARD_KEYS: Record<
       await searchOrganisation(session);
     }
   },
-  REFERENCE_FOLLOW: {
-    key: { text: "📰 Suivre référence" },
-    action: async (session: ISession) => {
-      const { suivreFromJOReference } = await import("../commands/ena.ts");
-      await suivreFromJOReference(session);
-    }
-  },
-  REFERENCE_FOLLOW_NO_KEYBOARD: {
-    key: { text: "📰 À partir d'un texte" },
-    action: async (session: ISession) => {
-      const { suivreFromJOReference } = await import("../commands/ena.ts");
-      await suivreFromJOReference(session);
-    }
-  },
   FOLLOWS_LIST: {
     key: { text: "📋 Mes suivis" },
     action: async (session: ISession) => {
@@ -121,17 +114,10 @@ export const KEYBOARD_KEYS: Record<
     }
   },
   HELP: {
-    key: { text: "❓ Aide" },
+    key: { text: "❓ Aide & Stats" },
     action: async (session: ISession) => {
       const { helpCommand } = await import("../commands/help.ts");
       await helpCommand(session);
-    }
-  },
-  STATS: {
-    key: { text: "📈 Statistiques" },
-    action: async (session: ISession) => {
-      const { statsCommand } = await import("../commands/stats.ts");
-      await statsCommand(session);
     }
   },
   FOLLOW_UP_FOLLOW: {
