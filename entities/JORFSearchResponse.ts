@@ -1,6 +1,7 @@
 import { SourceName, TypeOrdre, WikidataId } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
 import { trimStrings } from "../utils/text.utils.ts";
+import { JORFtoDate } from "../utils/date.utils.ts";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 
@@ -215,12 +216,13 @@ export function cleanJORFItems(
       []
     );
 
+    let remplacement: { prenom: string; nom: string } | undefined = undefined;
     // Drop remplacement where the name is missing
     if (
-      item_raw.remplacement?.nom === undefined ||
-      item_raw.remplacement.prenom === undefined
+      item_raw.remplacement?.nom != null &&
+      item_raw.remplacement.prenom != null
     ) {
-      item_raw.remplacement = undefined;
+      remplacement = item_raw.remplacement as { prenom: string; nom: string };
     }
 
     // Replace potential misspellings some type_ordre
@@ -248,8 +250,13 @@ export function cleanJORFItems(
       ...trimStrings(item_raw),
       prenom: item_raw.prenom.trim(),
       nom: item_raw.nom.trim(),
+      type_ordre: item_raw.type_ordre as TypeOrdre,
+      source_date: item_raw.source_date,
+      source_name: item_raw.source_name as SourceName,
+      source_id: item_raw.source_id,
+      remplacement: remplacement,
       organisations: clean_organisations
-    } as JORFSearchItem;
+    };
 
     // extend FunctionTag eleve_ena to include INSP students
     if (
