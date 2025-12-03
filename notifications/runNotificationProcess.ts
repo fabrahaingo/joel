@@ -20,7 +20,7 @@ import { ExternalMessageOptions } from "../entities/Session.ts";
 import { Publication } from "../models/Publication.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
-const SHIFT_DAYS = 150;
+const SHIFT_DAYS = 15;
 
 async function getJORFRecordsFromDate(
   startDate: Date
