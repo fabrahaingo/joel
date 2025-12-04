@@ -205,7 +205,8 @@ interface PublicationPreview {
   date_obj: Date;
 }
 
-const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
+// 4 hours
+const META_REFRESH_TIME_MS = 4 * 60 * 60 * 1000;
 
 let cachedPublications: PublicationPreview[] | null = null;
 let lastFetchedAt: number | null = null;
@@ -237,7 +238,7 @@ async function getRecentPublications(
     const isCacheStale =
       !cachedPublications ||
       !lastFetchedAt ||
-      Date.now() - lastFetchedAt > ONE_WEEK_IN_MS;
+      Date.now() - lastFetchedAt > META_REFRESH_TIME_MS;
 
     if (!isCacheStale && cachedPublications != null) {
       return cachedPublications;
