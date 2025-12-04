@@ -1,6 +1,11 @@
 import axios from "axios";
 import { MessageApp } from "../types.ts";
 import umami from "./umami.ts";
+import { splitText } from "./text.utils.ts";
+import {
+  TELEGRAM_COOL_DOWN_DELAY_SECONDS,
+  TELEGRAM_MESSAGE_CHAR_LIMIT
+} from "../entities/TelegramSession.ts";
 
 type LogLevel = "warning" | "error";
 
@@ -26,10 +31,18 @@ const sendTelegramDebugMessage = async (text: string): Promise<void> => {
   const endpoint = `https://api.telegram.org/bot${TELEGRAM_DEBUG_BOT_TOKEN}/sendMessage`;
 
   try {
-    await axios.post(endpoint, {
-      chat_id: DEBUG_CHAT_ID,
-      text
-    });
+    const mArr = splitText(text, TELEGRAM_MESSAGE_CHAR_LIMIT);
+
+    for (const m of mArr) {
+      await axios.post(endpoint, {
+        chat_id: DEBUG_CHAT_ID,
+        text: m
+      });
+      // prevent hitting the Telegram API rate limit
+      await new Promise((resolve) =>
+        setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
+      );
+    }
   } catch (sendError) {
     console.error("Failed to send debug log to Telegram:", sendError);
   }
