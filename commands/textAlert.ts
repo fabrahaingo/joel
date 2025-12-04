@@ -1,9 +1,13 @@
 import User from "../models/User.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
-import { ISession, MessageApp } from "../types.ts";
+import { ISession, MessageApp, IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { Publication } from "../models/Publication.ts";
-import { fuzzyIncludes } from "../utils/text.utils.ts";
+import {
+  fuzzyIncludes,
+  levenshteinDistance,
+  normalizeFrenchText
+} from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { logError } from "../utils/debugLogger.ts";
@@ -11,6 +15,37 @@ import { dateToString } from "../utils/date.utils.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
+
+function findFollowedAlertString(
+  user: IUser,
+  alertString: string
+): { existingFollow?: string; compatibleFollow?: string } {
+  const normalizedQuery = normalizeFrenchText(alertString);
+  if (normalizedQuery.length === 0) return {};
+
+  const compatibleCandidates: string[] = [];
+
+  for (const follow of user.followedMeta) {
+    const normalizedFollow = normalizeFrenchText(follow.alertString);
+    if (normalizedFollow === normalizedQuery) {
+      return { existingFollow: follow.alertString };
+    }
+
+    const distance = levenshteinDistance(normalizedFollow, normalizedQuery);
+    const maxLength = Math.max(normalizedFollow.length, normalizedQuery.length);
+    const allowedDistance = Math.max(1, Math.round(maxLength * 0.2));
+
+    if (
+      normalizedFollow.includes(normalizedQuery) ||
+      normalizedQuery.includes(normalizedFollow) ||
+      distance <= allowedDistance
+    ) {
+      compatibleCandidates.push(follow.alertString);
+    }
+  }
+
+  return { compatibleFollow: compatibleCandidates[0] };
+}
 
 async function askTextAlertQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, TEXT_ALERT_PROMPT, handleTextAlertAnswer, {
@@ -95,7 +130,31 @@ async function handleTextAlertAnswer(
     text += `${String(matchingPublications.length - previewLimit)} autres résultats depuis le ${dateToString(twoYearsAgo, "DMY").replaceAll("-", "/")}.\n\n`;
   }
 
-  text += "\\split" + TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
+  text += "\\split";
+
+  let foundFollow: string | undefined = undefined;
+  if (session.user != null) {
+    const { existingFollow, compatibleFollow } = findFollowedAlertString(
+      session.user,
+      trimmedAnswer
+    );
+    foundFollow = compatibleFollow;
+    if (existingFollow != null) {
+      text += `Vous suivez déjà l'expression « ${existingFollow} ». ✅`;
+      await session.sendMessage(text, {
+        keyboard: [
+          [KEYBOARD_KEYS.TEXT_SEARCH.key],
+          [KEYBOARD_KEYS.MAIN_MENU.key]
+        ]
+      });
+      return true;
+    }
+  }
+  if (foundFollow != undefined) {
+    text += `Vous suivez une expression proche : « ${foundFollow} ».\n\n`;
+  }
+
+  text += TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
 
   await askFollowUpQuestion(session, text, handleTextAlertConfirmation, {
     context: { alertString: trimmedAnswer },
