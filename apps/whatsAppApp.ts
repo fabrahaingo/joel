@@ -223,7 +223,11 @@ app.get("/webhook", (req, res) => {
     res.sendStatus(400);
   } catch (e: unknown) {
     res.sendStatus(e as number);
-    await logError("WhatsApp", "Webhook verification failed", e);
+    logError("WhatsApp", "Webhook verification failed", e).catch(
+      (err: unknown) => {
+        console.error("Error logging failed:", err);
+      }
+    );
   }
 });
 
