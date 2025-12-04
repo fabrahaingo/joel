@@ -15,6 +15,7 @@ import {
 } from "../utils/JORFSearch.utils.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
+import { deleteEntitiesWithNoFollowers } from "../utils/userDeletion.utils.ts";
 
 export interface UserFollows {
   functions: FunctionTags[];
@@ -35,29 +36,6 @@ export function getUserFollowsTotal(userFollows: UserFollows): number {
     userFollows.peopleAndNames.length +
     userFollows.meta.length
   );
-}
-
-async function deleteEntitiesWithNoFollowers(
-  peopleIds: Types.ObjectId[],
-  organisationIds: string[]
-): Promise<void> {
-  for (const peopleId of peopleIds) {
-    const isStillFollowed = await User.exists({
-      "followedPeople.peopleId": peopleId
-    });
-    if (isStillFollowed === null) {
-      await People.deleteOne({ _id: peopleId });
-    }
-  }
-
-  for (const wikidataId of organisationIds) {
-    const isStillFollowed = await User.exists({
-      "followedOrganisations.wikidataId": wikidataId
-    });
-    if (isStillFollowed === null) {
-      await Organisation.deleteOne({ wikidataId });
-    }
-  }
 }
 
 interface BuildFollowsListMessageOptions {

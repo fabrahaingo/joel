@@ -20,6 +20,7 @@ import {
   Text
 } from "whatsapp-api-js/messages";
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
+import { deleteUserAndCleanupByIdentifier } from "../utils/userDeletion.utils.ts";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
 import Umami from "../utils/umami.ts";
@@ -298,10 +299,7 @@ export async function sendWhatsAppMessage(
               event: "/user-deactivated",
               messageApp: "WhatsApp"
             });
-            await User.deleteOne({
-              messageApp: "WhatsApp",
-              chatId: userPhoneIdStr
-            });
+            await deleteUserAndCleanupByIdentifier("WhatsApp", userPhoneIdStr);
             break;
           default:
             console.log(resp.error);
