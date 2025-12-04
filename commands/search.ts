@@ -19,6 +19,7 @@ import {
 } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import { handleReferenceAnswer } from "./ena.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const isPersonAlreadyFollowed = (
   person: IPeople,
@@ -107,8 +108,7 @@ export const fullHistoryCommand = async (
   await session.log({ event: "/history" });
 
   if (msg == undefined) {
-    console.log("/history command called without msg argument");
-    await session.log({ event: "/console-log" });
+    await logError("Telegram", "/history command called without msg argument");
     return;
   }
 
@@ -295,7 +295,7 @@ export async function searchPersonHistory(
     return;
   } catch (error) {
     console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in search command", error);
   }
   return;
 }
@@ -385,8 +385,7 @@ export const followCommand = async (
 
     await session.sendMessage(text, { keyboard: SEARCH_PROMPT_KEYBOARD });
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in /search command", error);
   }
 };
 export const manualFollowCommand = async (

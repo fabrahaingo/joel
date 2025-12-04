@@ -20,9 +20,11 @@ import {
   Text
 } from "whatsapp-api-js/messages";
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
+import { deleteUserAndCleanupByIdentifier } from "../utils/userDeletion.utils.ts";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
 import Umami from "../utils/umami.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 export const WHATSAPP_MESSAGE_CHAR_LIMIT = 900;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the same user, but we'll take 1 here
@@ -147,8 +149,10 @@ export async function extractWhatsAppSession(
   userFacingError?: boolean
 ): Promise<WhatsAppSession | undefined> {
   if (session.messageApp !== "WhatsApp") {
-    console.log("Session is not a WhatsAppSession");
-    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
+    await logError(
+      session.messageApp,
+      "Error extracting whatsapp session from session"
+    );
     if (userFacingError) {
       await session.sendMessage(
         `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
@@ -157,10 +161,10 @@ export async function extractWhatsAppSession(
     return undefined;
   }
   if (!(session instanceof WhatsAppSession)) {
-    console.log(
+    await logError(
+      session.messageApp,
       "Session messageApp is WhatsApp, but session is not a WhatsAppSession"
     );
-    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
     return undefined;
   }
 
@@ -200,27 +204,28 @@ export async function sendWhatsAppMessage(
   else if (options.keyboard != null) {
     const keyboardFlat = replaceWHButtons(options.keyboard).flat();
     if (keyboardFlat.length > 3) {
-      console.log(
-        `WhatsApp keyboard length for buttons is ${String(keyboardFlat.length)}>3 : `
+      await logError(
+        "WhatsApp",
+        `WhatsApp keyboard length for buttons is ${String(keyboardFlat.length)}>3 : ${keyboardFlat.map((k) => k.text).join(", ")}`
       );
-      await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
       keyboardFlat.forEach((k) => {
         console.log(k.text);
       });
-      await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
       return false;
     }
     for (const key of keyboardFlat) {
       if (key.text.length > 20) {
-        console.log(`WhatsApp keyboard text too long, aborting: ${key.text}`);
-        await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
+        await logError(
+          "WhatsApp",
+          `WhatsApp keyboard text too long, aborting: ${key.text}`
+        );
         return false;
       }
     }
     const buttons = keyboardFlat.map(
       (u, idx) => new Button(`reply_${String(idx)}`, u.text)
     );
-    // @ts-expect-error Typescript does not account for the spread operator
+    // @ts-expect-error TypeScript does not account for the spread operator
     interactiveKeyboard = new ActionButtons(...buttons);
   }
 
@@ -298,14 +303,10 @@ export async function sendWhatsAppMessage(
               event: "/user-deactivated",
               messageApp: "WhatsApp"
             });
-            await User.deleteOne({
-              messageApp: "WhatsApp",
-              chatId: userPhoneIdStr
-            });
+            await deleteUserAndCleanupByIdentifier("WhatsApp", userPhoneIdStr);
             break;
           default:
-            console.log(resp.error);
-            await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
+            await logError("WhatsApp", "Error sending WH message", resp.error);
         }
         return false;
       }
@@ -339,8 +340,7 @@ export async function sendWhatsAppMessage(
         );
       }
       if (resp.error) {
-        console.log(resp.error);
-        await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
+        await logError("WhatsApp", "Error sending WH message", resp.error);
         return false;
       }
       numberMessageBurst += 1;
@@ -360,8 +360,7 @@ export async function sendWhatsAppMessage(
       );
     }
   } catch (error) {
-    console.log(error);
-    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
+    await logError("WhatsApp", "Error sending WH message", error);
     return false;
   }
   await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneIdStr);

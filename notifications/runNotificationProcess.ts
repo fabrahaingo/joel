@@ -23,7 +23,8 @@ import { Publication } from "../models/Publication.ts";
 const SHIFT_DAYS = 15;
 
 async function getJORFRecordsFromDate(
-  startDate: Date
+  startDate: Date,
+  messageApps: MessageApp[]
 ): Promise<JORFSearchItem[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -43,7 +44,11 @@ async function getJORFRecordsFromDate(
 
   const results: (JORFSearchItem[] | null)[] = [];
   for (const sub of chunks) {
-    results.push(...(await Promise.all(sub.map(callJORFSearchDay))));
+    results.push(
+      ...(await Promise.all(
+        sub.map((day: Date) => callJORFSearchDay(day, messageApps))
+      ))
+    );
   }
 
   return results
@@ -60,7 +65,8 @@ async function getJORFRecordsFromDate(
 }
 
 async function getJORFMetaRecordsFromDate(
-  startDate: Date
+  startDate: Date,
+  messageApps: MessageApp[]
 ): Promise<JORFSearchPublication[]> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -80,7 +86,11 @@ async function getJORFMetaRecordsFromDate(
 
   const results: (JORFSearchPublication[] | null)[] = [];
   for (const sub of chunks) {
-    results.push(...(await Promise.all(sub.map(callJORFSearchMetaDay))));
+    results.push(
+      ...(await Promise.all(
+        sub.map((day: Date) => callJORFSearchMetaDay(day, messageApps))
+      ))
+    );
   }
 
   return results
@@ -114,6 +124,10 @@ async function saveNewMetaPublications(
 
   if (newRecords.length > 0) {
     await Publication.insertMany(newRecords, { ordered: false });
+    await umami.log({
+      event: "/publication-added",
+      payload: { nb: newRecords.length }
+    });
   }
 }
 
@@ -167,8 +181,14 @@ export async function runNotificationProcess(
   );
   startDate.setHours(0, 0, 0, 0);
 
-  const JORFAllRecordsFromDate = await getJORFRecordsFromDate(startDate);
-  const JORFMetaRecordsFromDate = await getJORFMetaRecordsFromDate(startDate);
+  const JORFAllRecordsFromDate = await getJORFRecordsFromDate(
+    startDate,
+    targetApps
+  );
+  const JORFMetaRecordsFromDate = await getJORFMetaRecordsFromDate(
+    startDate,
+    targetApps
+  );
 
   if (JORFAllRecordsFromDate.length > 0) {
     await notifyFunctionTagsUpdates(
@@ -196,13 +216,14 @@ export async function runNotificationProcess(
     );
   }
 
-  if (JORFMetaRecordsFromDate.length > 0)
+  if (JORFMetaRecordsFromDate.length > 0) {
     await saveNewMetaPublications(JORFMetaRecordsFromDate);
-  await notifyAlertStringUpdates(
-    JORFMetaRecordsFromDate,
-    targetApps,
-    messageAppsOptions
-  );
+    await notifyAlertStringUpdates(
+      JORFMetaRecordsFromDate,
+      targetApps,
+      messageAppsOptions
+    );
+  }
 
   for (const appType of targetApps) {
     await umami.log({

@@ -79,7 +79,7 @@ async function connectDevice() {
       process.exit(1);
     }
   } catch (error) {
-    console.error("Fatal error during device linking:", error.message);
+    console.error("Fatal error during device linking:", error);
     console.error("\nCommon solutions:");
     console.error(
       "   • Install signal-cli: https://github.com/AsamK/signal-cli"

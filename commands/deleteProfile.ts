@@ -1,7 +1,8 @@
-import User from "../models/User.ts";
 import { ISession } from "../types.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { deleteUserAndCleanup } from "../utils/userDeletion.utils.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const DELETE_PROFILE_CONFIRMATION_PROMPT =
   "*Vous êtes sur le point de supprimer votre profil JOÉL*, comprenant l'ensemble de vos contacts, fonctions et organisations suivis.\n" +
@@ -42,9 +43,7 @@ async function handleDeleteProfileAnswer(
   }
 
   if (trimmedAnswer === "SUPPRIMER MON COMPTE") {
-    await User.deleteOne({
-      _id: session.user._id
-    });
+    await deleteUserAndCleanup(session.user);
     session.user = null;
     await session.sendMessage(
       `🗑 Votre profil a bien été supprimé ! 👋\\splitUn profil vierge sera créé lors de l'ajout du prochain suivi ⚠️`
@@ -71,7 +70,10 @@ export const deleteProfileCommand = async (
 
     await askDeleteProfileQuestion(session);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in /deleteProfile command",
+      error
+    );
   }
 };

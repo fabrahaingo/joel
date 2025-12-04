@@ -10,6 +10,7 @@ import { SignalCli } from "signal-sdk";
 import { MatrixClient } from "matrix-bot-sdk";
 import { Keyboard } from "./Keyboard.ts";
 import { sendMatrixMessage } from "./MatrixSession.ts";
+import umami from "../utils/umami.ts";
 
 export interface ExternalMessageOptions {
   matrixClient?: MatrixClient;
@@ -28,6 +29,12 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
     messageApp: session.messageApp,
     chatId: session.chatId
   });
+
+  if (user?.followsNothing() === true) {
+    await User.deleteOne({ _id: user._id });
+    await umami.log({ event: "/user-deletion-no-follow" });
+    return null;
+  }
 
   if (user == null) {
     const legacyUser = (await User.collection.findOne({

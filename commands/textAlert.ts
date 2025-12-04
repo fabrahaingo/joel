@@ -10,7 +10,8 @@ import {
 } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
-import umami from "../utils/umami.ts";
+import { logError } from "../utils/debugLogger.ts";
+import { dateToString } from "../utils/date.utils.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
@@ -144,7 +145,7 @@ async function handleTextAlertAnswer(
   }
 
   if (hasResults && matchingPublications.length > previewLimit) {
-    text += `${String(matchingPublications.length - previewLimit)} autres résultats ne sont pas affichés.\n\n`;
+    text += `${String(matchingPublications.length - previewLimit)} autres résultats depuis le ${dateToString(twoYearsAgo, "DMY").replaceAll("-", "/")}.\n\n`;
   }
 
   text += "\\split" + TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
@@ -206,7 +207,7 @@ async function handleTextAlertConfirmation(
       : `Vous suivez déjà une alerte pour « ${context.alertString} ». ✅`;
 
     await session.sendMessage(responseText, {
-      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+      keyboard: [[KEYBOARD_KEYS.TEXT_SEARCH.key], [KEYBOARD_KEYS.MAIN_MENU.key]]
     });
     return true;
   }
@@ -245,8 +246,7 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
     await session.sendTypingAction();
     await askTextAlertQuestion(session);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in textAlertCommand", error);
   }
 };
 
@@ -257,7 +257,8 @@ interface PublicationPreview {
   date_obj: Date;
 }
 
-const ONE_WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
+// 4 hours
+const META_REFRESH_TIME_MS = 4 * 60 * 60 * 1000;
 
 let cachedPublications: PublicationPreview[] | null = null;
 let lastFetchedAt: number | null = null;
@@ -289,7 +290,7 @@ async function getRecentPublications(
     const isCacheStale =
       !cachedPublications ||
       !lastFetchedAt ||
-      Date.now() - lastFetchedAt > ONE_WEEK_IN_MS;
+      Date.now() - lastFetchedAt > META_REFRESH_TIME_MS;
 
     if (!isCacheStale && cachedPublications != null) {
       return cachedPublications;
@@ -301,8 +302,11 @@ async function getRecentPublications(
 
     return await inflightRefresh;
   } catch (error) {
-    console.error("Failed to recent publications cache", error);
-    await umami.log({ event: "/console-log", messageApp });
+    await logError(
+      messageApp,
+      "Failed to refresh recent publications cache",
+      error
+    );
   }
   return null;
 }
