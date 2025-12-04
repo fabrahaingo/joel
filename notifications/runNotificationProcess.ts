@@ -124,6 +124,10 @@ async function saveNewMetaPublications(
 
   if (newRecords.length > 0) {
     await Publication.insertMany(newRecords, { ordered: false });
+    await umami.log({
+      event: "/publication-added",
+      payload: { nb: newRecords.length }
+    });
   }
 }
 
@@ -212,13 +216,14 @@ export async function runNotificationProcess(
     );
   }
 
-  if (JORFMetaRecordsFromDate.length > 0)
+  if (JORFMetaRecordsFromDate.length > 0) {
     await saveNewMetaPublications(JORFMetaRecordsFromDate);
-  await notifyAlertStringUpdates(
-    JORFMetaRecordsFromDate,
-    targetApps,
-    messageAppsOptions
-  );
+    await notifyAlertStringUpdates(
+      JORFMetaRecordsFromDate,
+      targetApps,
+      messageAppsOptions
+    );
+  }
 
   for (const appType of targetApps) {
     await umami.log({
