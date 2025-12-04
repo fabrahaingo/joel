@@ -5,7 +5,6 @@ import {
   MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
-import umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {

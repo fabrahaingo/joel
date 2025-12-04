@@ -2,7 +2,6 @@ import "dotenv/config";
 import { MessageApp } from "../types.ts";
 import { runNotificationProcess } from "./runNotificationProcess.ts";
 import { ExternalMessageOptions } from "../entities/Session.ts";
-import umami from "../utils/umami.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
 
 interface DailyTime {

@@ -199,10 +199,7 @@ async function handleMultipleOrganisationResults(
       text += ` - [JORFSearch](${orgUrl_k})`;
     }
 
-    if (
-      session.user != undefined &&
-      session.user.checkFollowedOrganisation(organisation_k.wikidataId)
-    )
+    if (session.user?.checkFollowedOrganisation(organisation_k.wikidataId))
       text += ` - Suivi ✅`;
 
     text += "\n\n";

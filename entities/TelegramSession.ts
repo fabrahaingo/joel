@@ -12,7 +12,6 @@ import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import Umami from "../utils/umami.ts";
-import { errorLog } from "napi-postinstall/lib/helpers";
 import { logError } from "../utils/debugLogger.ts";
 export const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
 const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user

@@ -2,7 +2,7 @@ import { ISession } from "../types.ts";
 import { MessageSendingOptionsInternal } from "./Session.ts";
 
 function sessionKey(session: ISession): string {
-  return `${session.messageApp}:${String(session.chatId)}`;
+  return `${session.messageApp}:${session.chatId}`;
 }
 
 type FollowUpHandler = (
