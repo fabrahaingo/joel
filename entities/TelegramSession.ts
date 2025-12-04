@@ -261,6 +261,9 @@ export async function sendTelegramMessage(
           await umami.log({ event: "/console-log", messageApp: "Telegram" });
           break;
       }
+    } else {
+      console.log(err);
+      await umami.log({ event: "/console-log", messageApp: "Telegram" });
     }
     return false;
   }
