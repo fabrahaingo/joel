@@ -19,6 +19,8 @@ const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
 await (async () => {
   await mongodbConnect();
 
+  await logError("Telegram", "Bot started");
+
   bot.on(message("text"), async (ctx): Promise<void> => {
     try {
       const tgUser = ctx.from;
