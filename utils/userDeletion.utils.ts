@@ -3,8 +3,11 @@ import Organisation from "../models/Organisation.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import { MessageApp, IUser } from "../types.ts";
+import umami from "./umami.ts";
 
-function uniqueObjectIds(ids: (Types.ObjectId | undefined)[]): Types.ObjectId[] {
+function uniqueObjectIds(
+  ids: (Types.ObjectId | undefined)[]
+): Types.ObjectId[] {
   const uniqueIds = new Set<string>();
   const result: Types.ObjectId[] = [];
 
@@ -34,6 +37,7 @@ export async function deleteEntitiesWithNoFollowers(
     });
     if (isStillFollowed === null) {
       await People.deleteOne({ _id: peopleId });
+      await umami.log({ event: "/person-deletion-no-follow" });
     }
   }
 
@@ -43,6 +47,7 @@ export async function deleteEntitiesWithNoFollowers(
     });
     if (isStillFollowed === null) {
       await Organisation.deleteOne({ wikidataId });
+      await umami.log({ event: "/organisation-deletion-no-follow" });
     }
   }
 }
