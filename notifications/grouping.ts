@@ -30,7 +30,7 @@ export type SeparatorSelector = (level: number) => string;
 
 function normaliseGroupId(id: string | null | undefined): string | null {
   if (id === undefined || id === null) return null;
-  const trimmed = String(id).trim();
+  const trimmed = id.trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 

@@ -15,6 +15,7 @@ import {
 import { MatrixClient, MatrixError } from "matrix-bot-sdk";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import Umami from "../utils/umami.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 export const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
 const MATRIX_COOL_DOWN_DELAY_SECONDS = 1;
@@ -139,14 +140,11 @@ export async function sendMatrixMessage(
           { $unset: { roomId: 1 } }
         );
       } catch (updateError) {
-        console.log(
+        await logError(
+          userInfo.messageApp,
           `${userInfo.messageApp}: failed to unset stored room for ${userInfo.chatId}`,
           updateError
         );
-        await umami.log({
-          event: "/console-log",
-          messageApp: userInfo.messageApp
-        });
       }
 
       userInfo.roomId = undefined;
@@ -166,27 +164,21 @@ export async function sendMatrixMessage(
             { $set: { roomId: dmRoomId } }
           );
         } catch (updateError) {
-          console.log(
+          await logError(
+            userInfo.messageApp,
             `${userInfo.messageApp}: failed to persist DM room for ${userInfo.chatId}`,
             updateError
           );
-          await umami.log({
-            event: "/console-log",
-            messageApp: userInfo.messageApp
-          });
         }
         userInfo.roomId = dmRoomId;
       }
     }
 
     if (!userInfo.roomId) {
-      console.log(
+      await logError(
+        userInfo.messageApp,
         `${userInfo.messageApp}: Could not find DM room for user ${userInfo.chatId}`
       );
-      await umami.log({
-        event: "/console-log",
-        messageApp: userInfo.messageApp
-      });
       await User.updateOne({
         messageApp: userInfo.messageApp,
         chatId: userInfo.chatId
@@ -256,11 +248,11 @@ export async function sendMatrixMessage(
         );
         break;
       default:
-        console.log(error);
-        await umami.log({
-          event: "/console-log",
-          messageApp: userInfo.messageApp
-        });
+        await logError(
+          client.messageApp,
+          `Error sending ${client.messageApp} message`,
+          error
+        );
     }
     return false;
   }
@@ -343,11 +335,10 @@ async function sendMatrixReactions(
   try {
     userInfo.roomId ??= await findUserDMRoomId(client.matrix, userInfo.chatId);
     if (!userInfo.roomId) {
-      console.log("Could not find DM room for user " + userInfo.chatId);
-      await umami.log({
-        event: "/console-log",
-        messageApp: userInfo.messageApp
-      });
+      await logError(
+        userInfo.messageApp,
+        "Could not find DM room for user " + userInfo.chatId
+      );
       return false;
     }
 
@@ -419,8 +410,7 @@ export async function extractMatrixSession(
   userFacingError?: boolean
 ): Promise<MatrixSession | undefined> {
   if (["Matrix", "Tchap"].some((m) => m !== session.messageApp)) {
-    console.log("Session is not a MatrixSession");
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Session is not a MatrixSession");
     if (userFacingError) {
       await session.sendMessage(
         `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
@@ -429,10 +419,10 @@ export async function extractMatrixSession(
     return undefined;
   }
   if (!(session instanceof MatrixSession)) {
-    console.log(
+    await logError(
+      session.messageApp,
       "Session messageApp is Matrix, but session is not a MatrixSession"
     );
-    await session.log({ event: "/console-log" });
     return undefined;
   }
 

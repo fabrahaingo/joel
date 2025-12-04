@@ -74,6 +74,7 @@ export type UmamiEvent =
   | "/main-menu-message"
   | "/help"
   | "/stats"
+  | "/build"
   | "/list"
   | "/delete-profile"
   | "/jorfsearch-error"

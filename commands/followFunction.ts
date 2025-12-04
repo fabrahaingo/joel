@@ -4,6 +4,7 @@ import { parseIntAnswers } from "../utils/text.utils.ts";
 import { ISession } from "../types.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const functionTagValues = Object.values(FunctionTags);
 const functionTagKeys = Object.keys(FunctionTags);
@@ -127,8 +128,11 @@ export const followFunctionCommand = async (
 
     await askFunctionQuestion(session);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in /followFunction command",
+      error
+    );
   }
 };
 
@@ -178,8 +182,11 @@ const followFunctionsCommand = async (
 
     await session.sendMessage(text);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in /followFunctions command",
+      error
+    );
   }
 };
 
@@ -209,7 +216,10 @@ export const followFunctionFromStrCommand = async (
 
     await followFunctionsCommand(session, selectedFunctions);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in followFunctionFromStrCommand",
+      error
+    );
   }
 };

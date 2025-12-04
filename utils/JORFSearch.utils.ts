@@ -17,6 +17,7 @@ import {
 } from "../entities/JORFSearchResponseMeta.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { dateToString } from "./date.utils.ts";
+import { logError } from "./debugLogger.ts";
 
 // Per Wikimedia policy, provide a descriptive agent with contact info.
 const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
@@ -124,8 +125,7 @@ export async function callJORFSearchPeople(
         );
       }
     } else {
-      await umami.log({ event: "/console-log" });
-      console.log(error);
+      await logError(messageApp, "Error in callJORFSearchPeople", error);
     }
   }
   return null;
@@ -133,6 +133,7 @@ export async function callJORFSearchPeople(
 
 export async function callJORFSearchDay(
   day: Date,
+  messageApps: MessageApp[],
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
@@ -169,7 +170,7 @@ export async function callJORFSearchDay(
         await new Promise((resolve) =>
           setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
         );
-        return await callJORFSearchDay(day, retryNumber + 1);
+        return await callJORFSearchDay(day, messageApps, retryNumber + 1);
       } else {
         await logJORFSearchError("date");
         console.log(
@@ -178,8 +179,8 @@ export async function callJORFSearchDay(
         );
       }
     } else {
-      await umami.log({ event: "/console-log" });
-      console.log(error);
+      for (const messageApp of messageApps)
+        await logError(messageApp, "Error in callJORFSearchDay", error);
     }
   }
   return null;
@@ -187,6 +188,7 @@ export async function callJORFSearchDay(
 
 export async function callJORFSearchMetaDay(
   day: Date,
+  messageApps: MessageApp[],
   retryNumber = 0
 ): Promise<JORFSearchPublication[] | null> {
   try {
@@ -226,7 +228,7 @@ export async function callJORFSearchMetaDay(
         await new Promise((resolve) =>
           setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
         );
-        return await callJORFSearchMetaDay(day, retryNumber + 1);
+        return await callJORFSearchMetaDay(day, messageApps, retryNumber + 1);
       }
       await logJORFSearchError("meta");
       console.log(
@@ -234,8 +236,8 @@ export async function callJORFSearchMetaDay(
         error
       );
     } else {
-      await umami.log({ event: "/console-log" });
-      console.log(error);
+      for (const messageApp of messageApps)
+        await logError(messageApp, "Error in callJORFSearchMetaDay", error);
     }
   }
   return null;
@@ -286,8 +288,7 @@ export async function callJORFSearchTag(
         );
       }
     } else {
-      await umami.log({ event: "/console-log" });
-      console.log(error);
+      await logError(messageApp, "Error in callJORFSearchTag", error);
     }
   }
   return null;
@@ -338,8 +339,7 @@ export async function callJORFSearchOrganisation(
         );
       }
     } else {
-      await umami.log({ event: "/console-log" });
-      console.log(error);
+      await logError(messageApp, "Error in callJORFSearchOrganisation", error);
     }
   }
   return null;
@@ -377,11 +377,10 @@ export async function searchOrganisationWikidataId(
       )
       .then(async (r) => {
         if (r.data === null || typeof r.data === "string") {
-          console.log(
-            "Wikidata API error when fetching organisation: ",
-            org_name
+          await logError(
+            messageApp,
+            `Wikidata API error when fetching organisation: ${org_name}`
           );
-          await umami.log({ event: "/console-log", messageApp: messageApp });
           return null;
         }
         return r.data.search.map((o) => o.id);
@@ -418,8 +417,11 @@ export async function searchOrganisationWikidataId(
       messageApp,
       payload: { wikidata_name: true }
     });
-    console.log(error);
-    await umami.log({ event: "/console-log", messageApp: messageApp });
+    await logError(
+      messageApp,
+      "Error in /searchOrganisationWikidataId command",
+      error
+    );
   }
   return null;
 }
@@ -455,8 +457,7 @@ export async function callJORFSearchReference(
       messageApp,
       payload: { reference: true }
     });
-    console.log(error);
-    await umami.log({ event: "/console-log", messageApp: messageApp });
+    await logError(messageApp, "Error in callJORFSearchReference", error);
   }
   return null;
 }
