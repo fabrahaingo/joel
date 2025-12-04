@@ -85,11 +85,7 @@ export function startDailyNotificationJobs(
         } catch (error) {
           await Promise.all(
             messageApps.map((app) =>
-              logError(
-                app,
-                `${app}: error during notification process`,
-                error
-              )
+              logError(app, `${app}: error during notification process`, error)
             )
           );
         } finally {

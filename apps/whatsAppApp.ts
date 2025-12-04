@@ -279,7 +279,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
       warnedPhoneIDs.add(phoneID);
       await logWarning(
         "WhatsApp",
-        `First inbound from non-primary phoneID ${phoneID} (expected ${WHATSAPP_PHONE_ID ?? ""}). Ignoring from now on."
+        `First inbound from non-primary phoneID ${phoneID} (expected ${WHATSAPP_PHONE_ID ?? ""}). Ignoring from now on.`
       );
     }
     return;

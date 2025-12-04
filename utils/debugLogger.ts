@@ -35,7 +35,11 @@ const sendTelegramDebugMessage = async (text: string): Promise<void> => {
   }
 };
 
-const logToConsole = (level: LogLevel, message: string, error?: unknown): void => {
+const logToConsole = (
+  level: LogLevel,
+  message: string,
+  error?: unknown
+): void => {
   if (level === "warning") {
     console.warn(message);
     if (error) console.warn(error);
@@ -67,7 +71,9 @@ export const logWarning = async (
   error?: unknown
 ): Promise<void> => {
   logToConsole("warning", message, error);
-  await sendTelegramDebugMessage(buildLogMessage("warning", messageApp, message, error));
+  await sendTelegramDebugMessage(
+    buildLogMessage("warning", messageApp, message, error)
+  );
 };
 
 export const logError = async (
@@ -77,5 +83,7 @@ export const logError = async (
 ): Promise<void> => {
   logToConsole("error", message, error);
   await umami.log({ event: "/console-log", messageApp });
-  await sendTelegramDebugMessage(buildLogMessage("error", messageApp, message, error));
+  await sendTelegramDebugMessage(
+    buildLogMessage("error", messageApp, message, error)
+  );
 };
