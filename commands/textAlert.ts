@@ -1,15 +1,50 @@
 import User from "../models/User.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
-import { ISession, MessageApp } from "../types.ts";
+import { ISession, MessageApp, IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { Publication } from "../models/Publication.ts";
-import { fuzzyIncludes } from "../utils/text.utils.ts";
+import {
+  fuzzyIncludes,
+  levenshteinDistance,
+  normalizeFrenchText
+} from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import umami from "../utils/umami.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
+
+function findFollowedAlertString(
+  user: IUser,
+  alertString: string
+): { existingFollow?: string; compatibleFollow?: string } {
+  const normalizedQuery = normalizeFrenchText(alertString);
+  if (normalizedQuery.length === 0) return {};
+
+  const compatibleCandidates: string[] = [];
+
+  for (const follow of user.followedMeta) {
+    const normalizedFollow = normalizeFrenchText(follow.alertString);
+    if (normalizedFollow === normalizedQuery) {
+      return { existingFollow: follow.alertString };
+    }
+
+    const distance = levenshteinDistance(normalizedFollow, normalizedQuery);
+    const maxLength = Math.max(normalizedFollow.length, normalizedQuery.length);
+    const allowedDistance = Math.max(1, Math.round(maxLength * 0.2));
+
+    if (
+      normalizedFollow.includes(normalizedQuery) ||
+      normalizedQuery.includes(normalizedFollow) ||
+      distance <= allowedDistance
+    ) {
+      compatibleCandidates.push(follow.alertString);
+    }
+  }
+
+  return { compatibleFollow: compatibleCandidates[0] };
+}
 
 async function askTextAlertQuestion(session: ISession): Promise<void> {
   await askFollowUpQuestion(session, TEXT_ALERT_PROMPT, handleTextAlertAnswer, {
@@ -37,6 +72,20 @@ async function handleTextAlertAnswer(
 
   if (trimmedAnswer.startsWith("/")) {
     return false;
+  }
+
+  session.user ??= await User.findOrCreate(session);
+  const { existingFollow, compatibleFollow } = findFollowedAlertString(
+    session.user,
+    trimmedAnswer
+  );
+
+  if (existingFollow != null) {
+    await session.sendMessage(
+      `Vous suivez déjà l'expression « ${existingFollow} ». ✅`,
+      { keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]] }
+    );
+    return true;
   }
 
   await session.sendMessage("Recherche en cours ...", {
@@ -73,6 +122,10 @@ async function handleTextAlertAnswer(
 
   const hasResults = matchingPublications.length > 0;
   const previewLimit = Math.min(10, matchingPublications.length);
+
+  if (compatibleFollow) {
+    text += `Vous suivez une expression proche : « ${compatibleFollow} ».\n\n`;
+  }
 
   text += hasResults
     ? `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`
