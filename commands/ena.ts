@@ -20,6 +20,7 @@ import { extractJORFTextId } from "../utils/JORFSearch.utils.ts";
 import { askSearchQuestion } from "./search.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { Publication } from "../models/Publication.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const inspId = "Q109039648" as WikidataId;
 
@@ -162,8 +163,10 @@ async function handlePromoAnswer(
     return true;
   }
   if (promoJORFList.length === 0) {
-    console.log("No JORFSearch result for promo", promoInfo);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      `No JORFSearch result for promo ${promoInfo.period}`
+    );
     await session.sendMessage(
       "Une erreur est survenue et notre équipe a été avertie."
     );
@@ -275,8 +278,7 @@ export const enaCommand = async (session: ISession): Promise<void> => {
     await session.log({ event: "/ena" });
     await askPromoQuestion(session);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in /enaCommand command", error);
   }
 };
 
@@ -315,8 +317,11 @@ export const promosCommand = async (session: ISession): Promise<void> => {
       ]
     });
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in /promosCommand command",
+      error
+    );
   }
 };
 
@@ -372,8 +377,7 @@ export async function handleReferenceAnswer(
   let message = "";
 
   if (textFromDb == null) {
-    console.log(`Text ${reference} not in dB`);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, `Text ${reference} not in dB`);
     message += `Le texte [${reference}](${getJORFTextLink(reference)})`;
   } else {
     message += `*${reference}*- [Lien du texte](${getJORFTextLink(textFromDb.title)})\n`;

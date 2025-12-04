@@ -2,6 +2,7 @@ import User from "../models/User.ts";
 import { ISession } from "../types.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const DELETE_PROFILE_CONFIRMATION_PROMPT =
   "*Vous êtes sur le point de supprimer votre profil JOÉL*, comprenant l'ensemble de vos contacts, fonctions et organisations suivis.\n" +
@@ -71,7 +72,10 @@ export const deleteProfileCommand = async (
 
     await askDeleteProfileQuestion(session);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in /deleteProfile command",
+      error
+    );
   }
 };
