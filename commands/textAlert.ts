@@ -7,6 +7,7 @@ import { fuzzyIncludes } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { dateToString } from "../utils/date.utils.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
@@ -91,7 +92,7 @@ async function handleTextAlertAnswer(
   }
 
   if (hasResults && matchingPublications.length > previewLimit) {
-    text += `${String(matchingPublications.length - previewLimit)} autres résultats ne sont pas affichés.\n\n`;
+    text += `${String(matchingPublications.length - previewLimit)} autres résultats depuis le ${dateToString(twoYearsAgo, "DMY").replaceAll("-", "/")}.\n\n`;
   }
 
   text += "\\split" + TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
@@ -153,7 +154,7 @@ async function handleTextAlertConfirmation(
       : `Vous suivez déjà une alerte pour « ${context.alertString} ». ✅`;
 
     await session.sendMessage(responseText, {
-      keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]]
+      keyboard: [[KEYBOARD_KEYS.TEXT_SEARCH.key], [KEYBOARD_KEYS.MAIN_MENU.key]]
     });
     return true;
   }

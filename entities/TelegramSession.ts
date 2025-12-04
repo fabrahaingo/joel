@@ -8,6 +8,7 @@ import {
 } from "./Session.ts";
 import umami, { UmamiEvent } from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
+import { deleteUserAndCleanupByIdentifier } from "../utils/userDeletion.utils.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
@@ -238,10 +239,7 @@ export async function sendTelegramMessage(
             event: "/user-deactivated",
             messageApp: "Telegram"
           });
-          await User.deleteOne({
-            messageApp: "Telegram",
-            chatId: chatId
-          });
+          await deleteUserAndCleanupByIdentifier("Telegram", chatId);
           break;
         case "Too many requests":
           await umami.log({
