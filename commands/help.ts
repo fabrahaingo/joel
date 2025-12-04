@@ -4,6 +4,7 @@ import Users from "../models/User.ts";
 import People from "../models/People.ts";
 import Organisation from "../models/Organisation.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { getBuildInfo } from "../utils/buildInfo.ts";
 
 export const helpCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/help" });
@@ -56,7 +57,23 @@ export const getHelpText = (session: ISession): string => {
 };
 
 export const buildInfoCommand = async (session: ISession): Promise<void> => {
-  const message = "";
+  await session.log({ event: "/build" });
+  await session.sendTypingAction();
+
+  const { uptime, commitHash, commitUrl } = await getBuildInfo();
+
+  const commitText =
+    commitHash == null
+      ? "🔖 Commit: inconnu"
+      : commitUrl == null
+        ? `🔖 Commit: ${commitHash}`
+        : `🔖 Commit: [${commitHash}](${commitUrl})`;
+
+  const message = [
+    "🏗️ Informations de build",
+    `⏱️ Uptime: ${uptime}`,
+    commitText
+  ].join("\n");
 
   await session.sendMessage(message, { separateMenuMessage: true });
 };
