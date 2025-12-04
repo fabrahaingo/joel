@@ -114,6 +114,10 @@ async function saveNewMetaPublications(
 
   if (newRecords.length > 0) {
     await Publication.insertMany(newRecords, { ordered: false });
+    await umami.log({
+      event: "/publication-added",
+      payload: { nb: newRecords.length }
+    });
   }
 }
 

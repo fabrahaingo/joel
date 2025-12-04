@@ -98,6 +98,7 @@ export type UmamiEvent =
   | "/unfollow"
   | "/new-user"
   | "/new-organisation"
+  | "/publication-added"
   | "/organisation-deletion-no-follow"
   | "/person-added"
   | "/person-deletion-no-follow"
