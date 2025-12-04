@@ -5,7 +5,7 @@ import umami from "./umami.ts";
 type LogLevel = "warning" | "error";
 
 const DEBUG_CHAT_ID = process.env.DEBUG_BOT;
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_DEBUG_BOT_TOKEN = process.env.DEBUG_BOT_TOKEN;
 
 const formatError = (error: unknown): string | null => {
   if (error == null) return null;
@@ -21,9 +21,9 @@ const formatError = (error: unknown): string | null => {
 };
 
 const sendTelegramDebugMessage = async (text: string): Promise<void> => {
-  if (DEBUG_CHAT_ID == null || TELEGRAM_BOT_TOKEN == null) return;
+  if (DEBUG_CHAT_ID == null || TELEGRAM_DEBUG_BOT_TOKEN == null) return;
 
-  const endpoint = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const endpoint = `https://api.telegram.org/bot${TELEGRAM_DEBUG_BOT_TOKEN}/sendMessage`;
 
   try {
     await axios.post(endpoint, {
