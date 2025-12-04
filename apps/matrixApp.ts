@@ -14,6 +14,7 @@ import { startDailyNotificationJobs } from "../notifications/notificationSchedul
 import User from "../models/User.ts";
 import { IUser } from "../types";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { logError } from "../utils/debugLogger.ts";
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
 if (
   MATRIX_HOME_URL == undefined ||
@@ -261,8 +262,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
 
       await processMessage(matrixSession, msgText);
     } catch (error) {
-      console.log(error);
-      await umami.log({ event: "/console-log", messageApp: matrixApp });
+      await logError(matrixApp, "Error processing command", error);
     }
   })();
 }

@@ -6,6 +6,7 @@ import { TelegramSession } from "../entities/TelegramSession.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (TELEGRAM_BOT_TOKEN === undefined) {
@@ -39,8 +40,7 @@ await (async () => {
 
       await processMessage(tgSession, ctx.message.text);
     } catch (error) {
-      console.error("Telegram: Error processing command:", error);
-      await umami.log({ event: "/console-log", messageApp: "Telegram" });
+      await logError("Telegram", "Error processing command", error);
     }
   });
 

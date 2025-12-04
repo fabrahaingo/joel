@@ -7,6 +7,7 @@ import { fuzzyIncludes } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import umami from "../utils/umami.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
@@ -248,8 +249,11 @@ async function getRecentPublications(
 
     return await inflightRefresh;
   } catch (error) {
-    console.error("Failed to recent publications cache", error);
-    await umami.log({ event: "/console-log", messageApp });
+    await logError(
+      messageApp,
+      "Failed to refresh recent publications cache",
+      error
+    );
   }
   return null;
 }

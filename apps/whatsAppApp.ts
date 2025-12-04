@@ -16,6 +16,7 @@ import { startDailyNotificationJobs } from "../notifications/notificationSchedul
 import User from "../models/User.ts";
 import Organisation from "../models/Organisation.ts";
 import People from "../models/People.ts";
+import { logError, logWarning } from "../utils/debugLogger.ts";
 
 const MAX_AGE_SEC = 5 * 60;
 const DUPLICATE_MESSAGE_TTL_MS = MAX_AGE_SEC * 1000;
@@ -155,8 +156,7 @@ app.post("/webhook", async (req, res) => {
     res.sendStatus(200);
   } catch (error) {
     res.sendStatus(500);
-    console.log(error);
-    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
+    await logError("WhatsApp", "Webhook processing failed", error);
   }
 });
 
@@ -179,7 +179,7 @@ app.get("/stats/", async (_req, res) => {
     const stats = await getCachedStats();
     res.json(stats);
   } catch (error) {
-    console.error(error);
+    await logError("WhatsApp", "Failed to serve /stats endpoint", error);
     res.sendStatus(500);
   }
 });
@@ -223,7 +223,7 @@ app.get("/webhook", (req, res) => {
     res.sendStatus(400);
   } catch (e: unknown) {
     res.sendStatus(e as number);
-    console.log(e);
+    await logError("WhatsApp", "Webhook verification failed", e);
   }
 });
 
@@ -277,8 +277,9 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   if (phoneID !== WHATSAPP_PHONE_ID) {
     if (!warnedPhoneIDs.has(phoneID)) {
       warnedPhoneIDs.add(phoneID);
-      console.warn(
-        `WhatsApp: first inbound from non-primary phoneID ${phoneID} (expected ${WHATSAPP_PHONE_ID ?? ""}). Ignoring from now on.`
+      await logWarning(
+        "WhatsApp",
+        `First inbound from non-primary phoneID ${phoneID} (expected ${WHATSAPP_PHONE_ID ?? ""}). Ignoring from now on."
       );
     }
     return;
@@ -305,8 +306,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
 
     await processMessage(WHSession, msgText);
   } catch (error) {
-    console.log(error);
-    await umami.log({ event: "/console-log", messageApp: "WhatsApp" });
+    await logError("WhatsApp", "Error processing inbound message", error);
   }
   return;
 };
