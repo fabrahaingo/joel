@@ -75,20 +75,6 @@ async function handleTextAlertAnswer(
     return false;
   }
 
-  session.user ??= await User.findOrCreate(session);
-  const { existingFollow, compatibleFollow } = findFollowedAlertString(
-    session.user,
-    trimmedAnswer
-  );
-
-  if (existingFollow != null) {
-    await session.sendMessage(
-      `Vous suivez déjà l'expression « ${existingFollow} ». ✅`,
-      { keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]] }
-    );
-    return true;
-  }
-
   await session.sendMessage("Recherche en cours ...", {
     forceNoKeyboard: true
   });
@@ -124,10 +110,6 @@ async function handleTextAlertAnswer(
   const hasResults = matchingPublications.length > 0;
   const previewLimit = Math.min(10, matchingPublications.length);
 
-  if (compatibleFollow) {
-    text += `Vous suivez une expression proche : « ${compatibleFollow} ».\n\n`;
-  }
-
   text += hasResults
     ? `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`
     : `Aucun texte des deux dernières années ne correspond à « ${trimmedAnswer} ».\n\n`;
@@ -148,7 +130,31 @@ async function handleTextAlertAnswer(
     text += `${String(matchingPublications.length - previewLimit)} autres résultats depuis le ${dateToString(twoYearsAgo, "DMY").replaceAll("-", "/")}.\n\n`;
   }
 
-  text += "\\split" + TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
+  text += "\\split";
+
+  let foundFollow: string | undefined = undefined;
+  if (session.user != null) {
+    const { existingFollow, compatibleFollow } = findFollowedAlertString(
+      session.user,
+      trimmedAnswer
+    );
+    foundFollow = compatibleFollow;
+    if (existingFollow != null) {
+      text += `Vous suivez déjà l'expression « ${existingFollow} ». ✅`;
+      await session.sendMessage(text, {
+        keyboard: [
+          [KEYBOARD_KEYS.TEXT_SEARCH.key],
+          [KEYBOARD_KEYS.MAIN_MENU.key]
+        ]
+      });
+      return true;
+    }
+  }
+  if (foundFollow != undefined) {
+    text += `Vous suivez une expression proche : « ${foundFollow} ».\n\n`;
+  }
+
+  text += TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
 
   await askFollowUpQuestion(session, text, handleTextAlertConfirmation, {
     context: { alertString: trimmedAnswer },
