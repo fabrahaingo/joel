@@ -14,8 +14,10 @@ import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import Umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
+import pLimit from "p-limit";
+
 export const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
-const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
+export const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
 
 export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
 
@@ -75,7 +77,7 @@ export class TelegramSession implements ISession {
   }
 
   async sendTypingAction() {
-    await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
+    await sendTelegramTypingAction(this.chatIdTg, this.botToken);
   }
 
   async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
@@ -93,45 +95,12 @@ export class TelegramSession implements ISession {
     let keyboard = options?.keyboard;
     if (!options?.forceNoKeyboard) keyboard ??= this.mainMenuKeyboard;
 
-    const keyboardFormatted = keyboard?.map((row) =>
-      row.map(({ text }) => ({ text }))
+    await sendTelegramMessage(
+      this.botToken,
+      this.chatId,
+      formattedData,
+      keyboard
     );
-    const tgMessageOptions =
-      keyboardFormatted === undefined
-        ? telegramMessageOptions
-        : {
-            ...telegramMessageOptions,
-            reply_markup: {
-              ...telegramMessageOptions.reply_markup,
-              keyboard: keyboardFormatted
-            }
-          };
-
-    const mArr = splitText(formattedData, TELEGRAM_MESSAGE_CHAR_LIMIT);
-
-    for (let i = 0; i < mArr.length; i++) {
-      if (i == mArr.length - 1 && keyboard !== undefined) {
-        await this.telegramBot.sendMessage(
-          this.chatIdTg,
-          mArr[i],
-          tgMessageOptions
-        );
-      } else {
-        await this.telegramBot.sendMessage(
-          this.chatIdTg,
-          mArr[i],
-          telegramMessageOptions
-        );
-      }
-      await this.log({ event: "/message-sent" });
-
-      // prevent hitting the Telegram API rate limit
-      await new Promise((resolve) =>
-        setTimeout(resolve, TELEGRAM_COOL_DOWN_DELAY_SECONDS * 1000)
-      );
-    }
-
-    await recordSuccessfulDelivery(this.messageApp, this.chatId);
   }
 }
 
@@ -233,14 +202,14 @@ export async function sendTelegramMessage(
             { messageApp: "Telegram", chatId: chatId },
             { $set: { status: "blocked" } }
           );
-          break;
+          return false;
         case "Forbidden: user is deactivated":
           await umami.log({
             event: "/user-deactivated",
             messageApp: "Telegram"
           });
           await deleteUserAndCleanupByIdentifier("Telegram", chatId);
-          break;
+          return false;
         case "Too many requests":
           await umami.log({
             event: "/message-fail-too-many-requests",
@@ -258,15 +227,101 @@ export async function sendTelegramMessage(
             retryNumber + 1
           );
         default:
-          await logError("Telegram", "Error sending telegram message", err);
           break;
       }
-    } else {
-      await logError("Telegram", "Error sending telegram message", err);
     }
+    await logError("Telegram", "Error sending telegram message", err);
     return false;
   }
 
   await recordSuccessfulDelivery("Telegram", chatId);
   return true;
+}
+
+async function sendTelegramTypingAction(
+  chatIdTg: number,
+  botToken: string,
+  status: "active" | "blocked" = "active"
+): Promise<void> {
+  const chatId = chatIdTg.toString();
+  try {
+    await axios.post(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
+      chat_id: chatIdTg,
+      action: "typing"
+    });
+
+    if (status === "blocked") {
+      status = "active";
+      await User.updateOne(
+        { messageApp: "Telegram" },
+        { $set: { status: "active" } }
+      );
+
+      await umami.log({
+        event: "/user-unblocked-joel",
+        messageApp: "Telegram"
+      });
+    }
+  } catch (err) {
+    if (isAxiosError(err)) {
+      const error = err as AxiosError<TelegramAPIError>;
+      const description = error.response?.data.description;
+
+      switch (description) {
+        case "Forbidden: bot was blocked by the user":
+          if (status === "active") {
+            await User.updateOne(
+              { messageApp: "Telegram" },
+              { $set: { status: "blocked" } }
+            );
+
+            await umami.log({
+              event: "/user-blocked-joel",
+              messageApp: "Telegram"
+            });
+          }
+          return;
+        case "Forbidden: user is deactivated":
+          await umami.log({
+            event: "/user-deactivated",
+            messageApp: "Telegram"
+          });
+          await deleteUserAndCleanupByIdentifier("Telegram", chatId);
+          return;
+        default:
+          break;
+      }
+    }
+
+    await logError(
+      "Telegram",
+      `Error sending typing action to Telegram user ${chatId}`,
+      err
+    );
+  }
+}
+
+export async function refreshTelegramBlockedUsers(
+  botToken: string | undefined
+): Promise<void> {
+  if (botToken == null) return;
+
+  const blockedTelegramUsers = await User.find({
+    messageApp: "Telegram",
+    status: "blocked"
+  })
+    .select("chatId")
+    .lean();
+
+  if (blockedTelegramUsers.length === 0) return;
+
+  const limit = pLimit(TELEGRAM_API_SENDING_CONCURRENCY);
+
+  await Promise.all(
+    blockedTelegramUsers.map(({ chatId }) =>
+      limit(async () =>
+        sendTelegramTypingAction(Number.parseInt(chatId), botToken, "blocked")
+      )
+    )
+  );
 }
