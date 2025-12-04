@@ -14,7 +14,7 @@ import { startDailyNotificationJobs } from "../notifications/notificationSchedul
 import User from "../models/User.ts";
 import { IUser } from "../types";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
-import { logError } from "../utils/debugLogger.ts";
+import { logError, logWarning } from "../utils/debugLogger.ts";
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
 if (
   MATRIX_HOME_URL == undefined ||
@@ -237,9 +237,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
 
     // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
     if (/^@_?server:/.test(event.sender)) {
-      console.log(`${matrixApp}: message from the server`);
-      console.log(msgText);
-      await umami.log({ event: "/console-log", messageApp: matrixApp });
+      await logWarning(matrixApp, `${matrixApp}: message from the server`);
       if (event.type === "m.room.message")
         await client.sendReadReceipt(roomId, event.event_id);
       return;

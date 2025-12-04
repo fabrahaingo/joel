@@ -6,6 +6,7 @@ import {
   sendMessage
 } from "../entities/Session.ts";
 import umami from "../utils/umami.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
@@ -15,8 +16,7 @@ export const defaultCommand = async (session: ISession): Promise<void> => {
       separateMenuMessage: true
     });
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in /default command", error);
   }
 };
 
@@ -79,8 +79,7 @@ export async function sendMainMenu(
         separateMenuMessage
       });
   } catch (error) {
-    console.log(error);
-    await umami.log({ event: "/console-log", messageApp: userInfo.messageApp });
+    await logError(userInfo.messageApp, "Error in /default command", error);
   }
 }
 

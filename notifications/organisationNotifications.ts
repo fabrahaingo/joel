@@ -23,6 +23,7 @@ import {
   SeparatorSelector
 } from "./grouping.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
@@ -213,22 +214,18 @@ async function sendOrganisationUpdate(
   for (const orgId of organisationsUpdateRecordsMap.keys()) {
     const orgName = orgNameById.get(orgId);
     if (orgName === undefined) {
-      console.log(
+      await logError(
+        userInfo.messageApp,
         "Unable to find the name of the organisation with wikidataId " + orgId
       );
-      await umami.log({
-        event: "/console-log",
-        messageApp: userInfo.messageApp
-      });
       continue;
     }
     const orgRecords = organisationsUpdateRecordsMap.get(orgId);
     if (orgRecords === undefined || orgRecords.length === 0) {
-      console.log("Organisation notification update sent with no records");
-      await umami.log({
-        event: "/console-log",
-        messageApp: userInfo.messageApp
-      });
+      await logError(
+        userInfo.messageApp,
+        "Organisation notification update sent with no records"
+      );
       continue;
     }
 

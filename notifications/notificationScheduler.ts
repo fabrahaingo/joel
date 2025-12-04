@@ -72,9 +72,6 @@ export function startDailyNotificationJobs(
               )
             )
           );
-          for (const app of messageApps) {
-            await umami.log({ event: `/console-log`, messageApp: app });
-          }
           scheduleNextRun();
           return;
         }

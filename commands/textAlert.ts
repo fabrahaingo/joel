@@ -6,7 +6,6 @@ import { Publication } from "../models/Publication.ts";
 import { fuzzyIncludes } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
-import umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
 
 const TEXT_ALERT_PROMPT =
@@ -193,8 +192,7 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
     await session.sendTypingAction();
     await askTextAlertQuestion(session);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in textAlertCommand", error);
   }
 };
 

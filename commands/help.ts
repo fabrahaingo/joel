@@ -3,6 +3,7 @@ import { ISession } from "../types.ts";
 import Users from "../models/User.ts";
 import People from "../models/People.ts";
 import Organisation from "../models/Organisation.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 export const helpCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/help" });
@@ -99,8 +100,7 @@ const statsText = async (session: ISession): Promise<string> => {
 
     return msg;
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in /help command", error);
   }
   return "";
 };

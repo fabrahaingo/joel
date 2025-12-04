@@ -1,6 +1,7 @@
 import { ISession } from "../types.ts";
 import { processMessage } from "./Commands.ts";
 import { getHelpText } from "./help.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 export const startCommand = async (
   session: ISession,
@@ -42,7 +43,6 @@ export const startCommand = async (
       await session.log({ event: "/start" });
     }
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in /start command", error);
   }
 };
