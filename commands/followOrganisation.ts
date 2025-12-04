@@ -12,6 +12,7 @@ import {
   KEYBOARD_KEYS
 } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const FULL_COMMAND_PROMPT = `\n\nFormat:\n*RechercherO Nom de l'organisation*\nou\n*RechercherO WikidataId de l'organisation*`;
 
@@ -144,10 +145,7 @@ async function handleSingleOrganisationResult(
     text += ` - [JORFSearch](${orgUrl})`;
   }
 
-  if (
-    session.user &&
-    session.user.checkFollowedOrganisation(organisation.wikidataId)
-  ) {
+  if (session.user?.checkFollowedOrganisation(organisation.wikidataId)) {
     text += `\n\nVous suivez déjà *${organisation.nom}* ✅`;
     await session.sendMessage(text, { keyboard: ORGANISATION_SEARCH_KEYBOARD });
     return;
@@ -201,10 +199,7 @@ async function handleMultipleOrganisationResults(
       text += ` - [JORFSearch](${orgUrl_k})`;
     }
 
-    if (
-      session.user != undefined &&
-      session.user.checkFollowedOrganisation(organisation_k.wikidataId)
-    )
+    if (session.user?.checkFollowedOrganisation(organisation_k.wikidataId))
       text += ` - Suivi ✅`;
 
     text += "\n\n";
@@ -268,8 +263,11 @@ export const searchOrganisation = async (session: ISession) => {
     await session.log({ event: "/follow-organisation" });
     await askOrganisationSearch(session);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in /searchOrganisation command",
+      error
+    );
   }
 };
 
@@ -285,8 +283,11 @@ export const searchOrganisationFromStr = async (
       await processOrganisationSearch(session, orgName, triggerUmami);
     else await session.sendMessage(FULL_COMMAND_PROMPT);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in /searchOrganisationFromStr command",
+      error
+    );
   }
 };
 
@@ -414,7 +415,10 @@ export const followOrganisationsFromWikidataIdStr = async (
       await session.sendMessage(text, { keyboard: tempKeyboard });
     else await session.sendMessage(text);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error in /followOrganisationsFromWikidataIdStr command",
+      error
+    );
   }
 };

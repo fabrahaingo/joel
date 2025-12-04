@@ -25,6 +25,7 @@ import {
   groupRecordsBy
 } from "./grouping.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
@@ -212,11 +213,10 @@ async function sendTagUpdates(
   for (const tag of tagOrder) {
     const tagRecords = tagMap.get(tag);
     if (tagRecords === undefined || tagRecords.length === 0) {
-      console.log("Tag notification update sent with no records");
-      await umami.log({
-        event: "/console-log",
-        messageApp: userInfo.messageApp
-      });
+      await logError(
+        userInfo.messageApp,
+        "Tag notification update sent with no records"
+      );
       continue;
     }
     const tagKey = tagKeys[tagValues.indexOf(tag)];

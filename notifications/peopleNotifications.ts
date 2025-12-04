@@ -20,6 +20,7 @@ import {
   dispatchTasksToMessageApps
 } from "./notificationDispatch.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
@@ -217,11 +218,10 @@ async function sendPeopleUpdate(
   for (const peopleId of updatedRecordMap.keys()) {
     const peopleRecords = updatedRecordMap.get(peopleId);
     if (peopleRecords === undefined || peopleRecords.length === 0) {
-      console.log("FollowedPeople notification update sent with no records");
-      await umami.log({
-        event: "/console-log",
-        messageApp: userInfo.messageApp
-      });
+      await logError(
+        userInfo.messageApp,
+        "FollowedPeople notification update sent with no records"
+      );
       continue;
     }
 

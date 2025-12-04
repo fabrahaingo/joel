@@ -1,7 +1,6 @@
 import { SourceName, TypeOrdre, WikidataId } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
 import { trimStrings } from "../utils/text.utils.ts";
-import { JORFtoDate } from "../utils/date.utils.ts";
 
 export type JORFSearchResponse = null | string | JORFSearchRawItem[];
 

@@ -16,6 +16,7 @@ import {
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import { deleteEntitiesWithNoFollowers } from "../utils/userDeletion.utils.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 export interface UserFollows {
   functions: FunctionTags[];
@@ -224,8 +225,7 @@ export const listCommand = async (session: ISession) => {
     ];
     await session.sendMessage(text, { keyboard: tempKeyboard });
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in /list command", error);
   }
 };
 
@@ -286,8 +286,7 @@ export const unfollowCommand = async (session: ISession) => {
 
     await askUnfollowQuestion(session);
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in /list command", error);
   }
 };
 
@@ -534,8 +533,7 @@ export const unfollowFromStr = async (
     await session.sendMessage(text);
     return true;
   } catch (error) {
-    console.log(error);
-    await session.log({ event: "/console-log" });
+    await logError(session.messageApp, "Error in /list command", error);
   }
   return false;
 };

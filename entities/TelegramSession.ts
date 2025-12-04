@@ -13,6 +13,7 @@ import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import Umami from "../utils/umami.ts";
+import { logError } from "../utils/debugLogger.ts";
 export const TELEGRAM_MESSAGE_CHAR_LIMIT = 3000;
 const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for the same user
 
@@ -139,8 +140,10 @@ export async function extractTelegramSession(
   userFacingError?: boolean
 ): Promise<TelegramSession | undefined> {
   if (session.messageApp !== "Telegram") {
-    console.log("Session is not a TelegramSession");
-    await session.log({ event: "/console-log" });
+    await logError(
+      session.messageApp,
+      "Error extracting telegram session from session"
+    );
     if (userFacingError) {
       await session.sendMessage(
         `Cette fonctionnalité n'est pas encore disponible sur ${session.messageApp}`
@@ -149,10 +152,10 @@ export async function extractTelegramSession(
     return undefined;
   }
   if (!(session instanceof TelegramSession)) {
-    console.log(
+    await logError(
+      session.messageApp,
       "Session messageApp is Telegram, but session is not a TelegramSession"
     );
-    await session.log({ event: "/console-log" });
     return undefined;
   }
 
@@ -255,13 +258,11 @@ export async function sendTelegramMessage(
             retryNumber + 1
           );
         default:
-          console.log(err);
-          await umami.log({ event: "/console-log", messageApp: "Telegram" });
+          await logError("Telegram", "Error sending telegram message", err);
           break;
       }
     } else {
-      console.log(err);
-      await umami.log({ event: "/console-log", messageApp: "Telegram" });
+      await logError("Telegram", "Error sending telegram message", err);
     }
     return false;
   }
