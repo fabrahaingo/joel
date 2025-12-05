@@ -208,9 +208,11 @@ async function handleTextAlertConfirmation(
     const wasAdded = await session.user.addFollowedAlertString(
       context.alertString
     );
-    const responseText = wasAdded
-      ? `Alerte enregistrée pour « ${context.alertString} » ✅`
-      : `Vous suivez déjà une alerte pour « ${context.alertString} ». ✅`;
+    let responseText = `Vous suivez déjà une alerte pour « ${context.alertString} ». ✅`;
+    if (wasAdded) {
+      responseText = `Alerte enregistrée pour « ${context.alertString} » ✅`;
+      await session.log({ event: "/follow-meta" });
+    }
 
     await session.sendMessage(responseText, {
       keyboard: [[KEYBOARD_KEYS.TEXT_SEARCH.key], [KEYBOARD_KEYS.MAIN_MENU.key]]
