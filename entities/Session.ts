@@ -24,55 +24,63 @@ export interface ExternalMessageOptions {
 }
 
 export async function loadUser(session: ISession): Promise<IUser | null> {
-  if (session.user != null) return null;
+  try {
+    if (session.user != null) return session.user;
 
-  let user: IUser | null = null;
+    let user: IUser | null = null;
 
-  const matchingUsers: IUser[] = await User.find({
-    messageApp: session.messageApp,
-    chatId: session.chatId
-  });
-
-  if (matchingUsers.length > 1) {
-    await logError(
-      session.messageApp,
-      `Multiple users found for chatId ${session.chatId} and app ${session.messageApp}: ${matchingUsers.map((u) => u._id.toString()).join(", ")}`
-    );
-    await session.sendMessage(
-      "Une erreur est survenue, veuillez réessayer ultérieurement."
-    );
-    return null;
-  }
-  if (matchingUsers.length === 1) user = matchingUsers[0];
-
-  if (user == null) {
-    const legacyUser = (await User.collection.findOne({
+    const matchingUsers: IUser[] = await User.find({
       messageApp: session.messageApp,
       chatId: session.chatId
-    })) as IRawUser | null;
-    if (legacyUser !== null) {
-      await migrateUser(legacyUser);
-      // now return the migrated user
-      return User.findOne({
+    });
+
+    if (matchingUsers.length > 1) {
+      await logError(
+        session.messageApp,
+        `Multiple users found for chatId ${session.chatId} and app ${session.messageApp}: ${matchingUsers.map((u) => u._id.toString()).join(", ")}`
+      );
+      await session.sendMessage(
+        "Une erreur est survenue, veuillez réessayer ultérieurement."
+      );
+      throw new Error(
+        `Multiple users found for ${matchingUsers[0].messageApp} and chatId: ` +
+          matchingUsers.map((u) => u._id.toString()).join(",")
+      );
+    }
+    if (matchingUsers.length === 1) user = matchingUsers[0];
+
+    if (user == null) {
+      const legacyUser = (await User.collection.findOne({
         messageApp: session.messageApp,
         chatId: session.chatId
-      });
+      })) as IRawUser | null;
+      if (legacyUser !== null) {
+        await migrateUser(legacyUser);
+        // now return the migrated user
+        return await User.findOne({
+          messageApp: session.messageApp,
+          chatId: session.chatId
+        });
+      }
+    } else {
+      if (user.followsNothing()) {
+        await User.deleteOne({ _id: user._id });
+        await umami.log({ event: "/user-deletion-no-follow" });
+        return null;
+      }
+      if (
+        user.transferData &&
+        user.transferData.expiresAt.getTime() < new Date().getTime()
+      ) {
+        user.transferData = undefined;
+        await user.save();
+      }
     }
-  } else {
-    if (user.followsNothing()) {
-      await User.deleteOne({ _id: user._id });
-      await umami.log({ event: "/user-deletion-no-follow" });
-      return null;
-    }
-    if (
-      user.transferData &&
-      user.transferData.expiresAt.getTime() < new Date().getTime()
-    ) {
-      user.transferData = undefined;
-      await user.save();
-    }
+    return user;
+  } catch (error) {
+    await logError(session.messageApp, "Error loadUser", error);
   }
-  return user;
+  return null;
 }
 
 export async function migrateUser(rawUser: IRawUser): Promise<void> {
