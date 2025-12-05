@@ -26,7 +26,7 @@ import {
   clearFollowUp,
   handleFollowUpMessage
 } from "../entities/FollowUpManager.ts";
-import { buildInfoCommand } from "./help.ts";
+import { buildInfoCommand, statsCommand } from "./help.ts";
 import { exportCommand, importCommand } from "./importExport.ts";
 import { sanitizeUserInput } from "../utils/text.utils.ts";
 import { textAlertCommand } from "./textAlert.ts";
@@ -202,7 +202,7 @@ export const commands: CommandType[] = [
     action: searchOrganisation
   },
   {
-    regex: /^\/supprimerCompte|supprimerCompte/i,
+    regex: /^\/supprimerCompte|supprimerCompte|supprimer|delete/i,
     action: deleteProfileCommand
   },
   {
@@ -216,5 +216,9 @@ export const commands: CommandType[] = [
   {
     regex: /^\/build|build/i,
     action: buildInfoCommand
+  },
+  {
+    regex: /^\/stats|stats/i,
+    action: statsCommand
   }
 ];

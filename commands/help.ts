@@ -1,5 +1,5 @@
 import { BotMessages } from "../entities/BotMessages.ts";
-import { ISession } from "../types.ts";
+import { ISession, MessageApp } from "../types.ts";
 import Users from "../models/User.ts";
 import People from "../models/People.ts";
 import Organisation from "../models/Organisation.ts";
@@ -10,25 +10,28 @@ export const helpCommand = async (session: ISession): Promise<void> => {
   await session.log({ event: "/help" });
   await session.sendTypingAction();
 
-  let helpText = getHelpText(session);
-
-  if (session.messageApp === "Telegram") {
-    helpText +=
-      "\n\nPour exporter vos suivis sur une autre messagerie: utilisez la commande /export";
-    helpText +=
-      "\n\nPour supprimer votre compte: utilisez la commande /supprimerCompte";
-  } else {
-    helpText +=
-      "\n\nPour exporter vos suivis sur une autre messagerie: utilisez la commande *Exporter*";
-  }
+  const helpText = getHelpText(session);
 
   const statsTexts = await statsText(session);
 
-  const fullText = helpText + "\\split" + statsTexts;
+  const commandsText = getCommandsTexts(session.messageApp);
+
+  const fullText = helpText + "\\split" + commandsText + "\\split" + statsTexts;
 
   await session.sendMessage(fullText, { separateMenuMessage: true });
 };
 
+export const getCommandsTexts = (messageApp: MessageApp): string => {
+  const isTelegram = messageApp === "Telegram";
+
+  let msg = "";
+
+  msg += `Pour exporter vos suivis sur une autre messagerie: utilisez la commande ${isTelegram ? "/export" : "_Exporter_"}`;
+  msg += "\n\n";
+  msg += `Pour supprimer votre compte: utilisez la commande ${isTelegram ? "/supprimerCompte" : "_Supprimer_"}`;
+
+  return msg;
+};
 export const getHelpText = (session: ISession): string => {
   let helpText = BotMessages.HELP.replace("{CHAT_ID}", session.chatId)
     .replace("{MESSAGE_APP}", session.messageApp)
@@ -76,6 +79,14 @@ export const buildInfoCommand = async (session: ISession): Promise<void> => {
   ].join("\n");
 
   await session.sendMessage(message, { separateMenuMessage: true });
+};
+
+export const statsCommand = async (session: ISession): Promise<void> => {
+  await session.log({ event: "/stats" });
+  await session.sendTypingAction();
+  await session.sendMessage(await statsText(session), {
+    separateMenuMessage: true
+  });
 };
 
 const statsText = async (session: ISession): Promise<string> => {

@@ -53,7 +53,7 @@ export const exportCommand = async (session: ISession): Promise<void> => {
   await session.user.save();
 
   await session.sendMessage(
-    `Voici votre code d'export *valable 4 heures* est :\\split*${code}*\\splitUtilisez la commande *Importer* ou /import sur votre nouveau compte afin de transférer les données.`,
+    `Voici votre code d'export *valable 4 heures* est :\\split*${code}*\\splitUtilisez la commande _Importer_ sur votre nouveau compte afin de transférer les données.`,
     { separateMenuMessage: true }
   );
 };
@@ -202,6 +202,8 @@ function copyFollowData(target: IUser, source: IUser): void {
     target.followedNames.push(name);
     targetFollowedNames.add(normalizedName);
   });
+
+  target.followedMeta = source.followedMeta;
 
   const targetOrgIds = new Set(
     target.followedOrganisations.map((follow) => follow.wikidataId)
