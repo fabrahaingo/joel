@@ -108,6 +108,7 @@ export interface IOrganisation {
   nom: string;
   wikidataId: WikidataId;
   save: () => Promise<IOrganisation>;
+  validate: () => Promise<void>;
 }
 
 export interface OrganisationModel extends Model<IOrganisation> {
