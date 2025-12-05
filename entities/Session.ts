@@ -11,6 +11,7 @@ import { MatrixClient } from "matrix-bot-sdk";
 import { Keyboard } from "./Keyboard.ts";
 import { sendMatrixMessage } from "./MatrixSession.ts";
 import umami from "../utils/umami.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 export interface ExternalMessageOptions {
   matrixClient?: MatrixClient;
@@ -25,16 +26,24 @@ export interface ExternalMessageOptions {
 export async function loadUser(session: ISession): Promise<IUser | null> {
   if (session.user != null) return null;
 
-  const user: IUser | null = await User.findOne({
+  let user: IUser | null = null;
+
+  const matchingUsers: IUser[] = await User.find({
     messageApp: session.messageApp,
     chatId: session.chatId
   });
 
-  if (user?.followsNothing() === true) {
-    await User.deleteOne({ _id: user._id });
-    await umami.log({ event: "/user-deletion-no-follow" });
+  if (matchingUsers.length > 1) {
+    await logError(
+      session.messageApp,
+      `Multiple users found for chatId ${session.chatId} and app ${session.messageApp}: ${matchingUsers.map((u) => u._id.toString()).join(", ")}`
+    );
+    await session.sendMessage(
+      "Une erreur est survenue, veuillez réessayer ultérieurement."
+    );
     return null;
   }
+  if (matchingUsers.length === 1) user = matchingUsers[0];
 
   if (user == null) {
     const legacyUser = (await User.collection.findOne({
@@ -48,6 +57,19 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
         messageApp: session.messageApp,
         chatId: session.chatId
       });
+    }
+  } else {
+    if (user.followsNothing()) {
+      await User.deleteOne({ _id: user._id });
+      await umami.log({ event: "/user-deletion-no-follow" });
+      return null;
+    }
+    if (
+      user.transferData &&
+      user.transferData.expiresAt.getTime() < new Date().getTime()
+    ) {
+      user.transferData = undefined;
+      await user.save();
     }
   }
   return user;
