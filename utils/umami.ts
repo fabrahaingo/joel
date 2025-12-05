@@ -86,6 +86,7 @@ export type UmamiEvent =
   | "/jorfsearch-request-meta"
   | "/jorfsearch-request-reference"
   | "/jorfsearch-request-wikidata-names"
+  | "/jorfsearch-request-date-nonempty"
   | "/search"
   | "/history"
   | "/ena"
@@ -95,6 +96,7 @@ export type UmamiEvent =
   | "/follow-function"
   | "/follow-organisation"
   | "/follow-reference"
+  | "/follow-meta"
   | "/text-alert"
   | "/unfollow"
   | "/new-user"
@@ -120,4 +122,7 @@ export type UmamiEvent =
   | "/daily-active-user"
   | "/weekly-active-user"
   | "/monthly-active-user"
-  | "/console-log";
+  | "/console-log"
+  | "/daily-stats-completed"
+  | "/notification-failover-triggered"
+  | "/notification-failover-clear";
