@@ -10,6 +10,7 @@ import {
 } from "./list.ts";
 import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const EXPORT_CODE_VALIDITY_MS = 4 * 60 * 60 * 1000; // 4 hours
 
@@ -27,7 +28,26 @@ export const exportCommand = async (session: ISession): Promise<void> => {
     return;
   }
 
-  const code = randomBytes(6).toString("hex").toUpperCase();
+  const code = randomBytes(10).toString("hex").toUpperCase();
+
+  const matchingUsers: IUser[] = await User.find({
+    "transferData.code": code
+  });
+  if (matchingUsers.length > 0) {
+    await logError(
+      session.messageApp,
+      `Un code d'export généré (${code})est entré en collision avec un autre utilisateur: ` +
+        matchingUsers.map((u) => u._id.toString()).join(",")
+    );
+    for (const matchingUser of matchingUsers) {
+      matchingUser.transferData = undefined;
+      await matchingUser.save();
+    }
+    await session.sendMessage(
+      "Une erreur est survenue lors de l'export. Veuillez réessayer la commande /export ou Export."
+    );
+  }
+
   const expirationDate = new Date(Date.now() + EXPORT_CODE_VALIDITY_MS);
   session.user.transferData = { code: code, expiresAt: expirationDate };
   await session.user.save();
@@ -75,21 +95,39 @@ async function handleImporterCode(
     return true;
   }
 
-  const sourceUser: IUser | null = await User.findOne({
+  const matchingUsers: IUser[] = await User.find({
     "transferData.code": code
   });
 
-  if (
-    sourceUser?.transferData == null ||
-    new Date().getTime() > sourceUser.transferData.expiresAt.getTime()
-  ) {
+  if (matchingUsers.length == 0) {
     await session.sendMessage(
-      "Ce code n'est pas valide ou a expiré. Vérifiez-le et réessayez avec la commande *Exporter* ou /export"
+      "Ce code n'est pas valide. Vérifiez-le et réessayez avec la commande *Exporter* ou /export"
     );
-    if (sourceUser != null) {
-      sourceUser.transferData = undefined;
-      await sourceUser.save();
+    return true;
+  }
+  if (matchingUsers.length > 1) {
+    await session.sendMessage(
+      "Une erreur est survenue. Veuillez réessayez avec la commande *Exporter* ou /export"
+    );
+    await logError(
+      session.messageApp,
+      `Error in /importCommand command: found ${String(matchingUsers.length)} users with export code ${code}: ${matchingUsers.map((u) => u._id.toString()).join(", ")}`
+    );
+    for (const user of matchingUsers) {
+      user.transferData = undefined;
+      await user.save();
     }
+    return true;
+  }
+  const sourceUser = matchingUsers[0];
+  if (sourceUser.transferData == null) return true; // will not happen, but TS doesn't know that
+
+  if (new Date().getTime() > sourceUser.transferData.expiresAt.getTime()) {
+    await session.sendMessage(
+      "Ce code a expiré. Vérifiez-le et réessayez avec la commande *Exporter* ou /export"
+    );
+    sourceUser.transferData = undefined;
+    await sourceUser.save();
     return true;
   }
 
