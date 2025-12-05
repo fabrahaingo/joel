@@ -27,7 +27,9 @@ const UserSchema = new Schema<IUser, UserModel>(
       required: true
     },
     roomId: {
-      type: String
+      type: String,
+      required: false,
+      default: undefined
     },
     language_code: {
       type: String,
@@ -37,7 +39,8 @@ const UserSchema = new Schema<IUser, UserModel>(
     status: {
       type: String,
       enum: ["active", "blocked"],
-      default: "active"
+      default: "active",
+      required: true
     },
     followedPeople: {
       type: [
@@ -51,7 +54,8 @@ const UserSchema = new Schema<IUser, UserModel>(
           }
         }
       ],
-      default: []
+      default: [],
+      required: true
     },
     followedFunctions: {
       type: [
@@ -65,11 +69,13 @@ const UserSchema = new Schema<IUser, UserModel>(
           }
         }
       ],
-      default: []
+      default: [],
+      required: false
     },
     followedNames: {
       type: [String],
-      default: []
+      default: [],
+      required: false
     },
     followedOrganisations: {
       type: [
@@ -83,7 +89,8 @@ const UserSchema = new Schema<IUser, UserModel>(
           }
         }
       ],
-      default: []
+      default: [],
+      required: false
     },
     followedMeta: {
       type: [
@@ -97,32 +104,44 @@ const UserSchema = new Schema<IUser, UserModel>(
           }
         }
       ],
-      default: []
+      default: [],
+      required: false
     },
     transferData: {
-      code: {
-        type: String
+      type: {
+        code: {
+          type: String
+        },
+        expiresAt: {
+          type: Date
+        }
       },
-      expiresAt: {
-        type: Date
-      }
+      required: false,
+      default: undefined
     },
     schemaVersion: {
       type: Number,
       required: true
     },
-
     lastInteractionDay: {
-      type: Date
+      type: Date,
+      required: false,
+      default: undefined
     },
     lastInteractionWeek: {
-      type: Date
+      type: Date,
+      required: false,
+      default: undefined
     },
     lastInteractionMonth: {
-      type: Date
+      type: Date,
+      required: false,
+      default: undefined
     },
     lastMessageReceivedAt: {
-      type: Date
+      type: Date,
+      required: false,
+      default: undefined
     }
   },
   {

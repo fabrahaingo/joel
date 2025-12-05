@@ -18,6 +18,7 @@ import mongoose from "mongoose";
 
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { Publication } from "../models/Publication.ts";
+import { refreshTelegramBlockedUsers } from "../entities/TelegramSession.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 15;
@@ -172,6 +173,10 @@ export async function runNotificationProcess(
 
   // Start mdb connection if not already connected
   if (mongoose.connection.readyState.valueOf() != 1) await mongodbConnect();
+
+  if (targetApps.includes("Telegram")) {
+    await refreshTelegramBlockedUsers(messageAppsOptions.telegramBotToken);
+  }
 
   const currentDate = new Date();
   const startDate = new Date(
