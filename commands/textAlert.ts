@@ -11,10 +11,14 @@ import {
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { logError } from "../utils/debugLogger.ts";
-import { dateToString } from "../utils/date.utils.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
+
+const TEXT_RESULT_MAX = 5;
+
+const twoYearsAgo = new Date();
+twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
 function findFollowedAlertString(
   user: IUser,
@@ -75,14 +79,10 @@ async function handleTextAlertAnswer(
     return false;
   }
 
-  await session.sendMessage("Recherche en cours ...", {
+  void session.sendMessage("Recherche en cours ...", {
     forceNoKeyboard: true
   });
-
-  await session.sendTypingAction();
-
-  const twoYearsAgo = new Date();
-  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+  session.sendTypingAction();
 
   const normalizedAnswer = normalizeFrenchText(trimmedAnswer);
   const normalizedAnswerWords = normalizedAnswer.split(" ").filter(Boolean);
@@ -95,13 +95,21 @@ async function handleTextAlertAnswer(
     return true;
   }
 
-  const matchingPublications = recentPublications.filter((publication) =>
-    fuzzyIncludesNormalized(
-      publication.normalizedTitle,
-      normalizedAnswer,
-      publication.normalizedTitleWords,
-      normalizedAnswerWords
-    )
+  const matchingPublications = recentPublications.reduce(
+    (tab: PublicationPreview[], publication) => {
+      if (tab.length >= TEXT_RESULT_MAX) return tab;
+      if (
+        fuzzyIncludesNormalized(
+          publication.normalizedTitle,
+          normalizedAnswer,
+          publication.normalizedTitleWords,
+          normalizedAnswerWords
+        )
+      )
+        tab.push(publication);
+      return tab;
+    },
+    []
   );
 
   if (matchingPublications.length > 100) {
@@ -116,7 +124,7 @@ async function handleTextAlertAnswer(
   let text = "";
 
   const hasResults = matchingPublications.length > 0;
-  const previewLimit = Math.min(10, matchingPublications.length);
+  const previewLimit = Math.min(TEXT_RESULT_MAX, matchingPublications.length);
 
   text += hasResults
     ? `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`
@@ -132,10 +140,6 @@ async function handleTextAlertAnswer(
       text += ` - [Cliquer ici](${publicationLink})\n`;
     }
     text += `${publication.title}\n\n`;
-  }
-
-  if (hasResults && matchingPublications.length > previewLimit) {
-    text += `${String(matchingPublications.length - previewLimit)} autres résultats depuis le ${dateToString(twoYearsAgo, "DMY").replaceAll("-", "/")}.\n\n`;
   }
 
   text += "\\split";
@@ -164,15 +168,30 @@ async function handleTextAlertAnswer(
 
   text += TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
 
-  await askFollowUpQuestion(session, text, handleTextAlertConfirmation, {
-    context: { alertString: trimmedAnswer },
-    messageOptions: {
-      keyboard: [
-        [{ text: "✅ Oui" }, { text: "❌ Non" }],
-        [KEYBOARD_KEYS.MAIN_MENU.key]
-      ]
+  const res = await askFollowUpQuestion(
+    session,
+    text,
+    handleTextAlertConfirmation,
+    {
+      context: { alertString: trimmedAnswer },
+      messageOptions: {
+        keyboard: [
+          [{ text: "✅ Oui" }, { text: "❌ Non" }],
+          [KEYBOARD_KEYS.MAIN_MENU.key]
+        ]
+      }
     }
-  });
+  );
+
+  if (!res) {
+    await session.sendMessage(
+      "Une erreur est survenue. Veuillez réessayer ultérieurement."
+    );
+    await logError(
+      session.messageApp,
+      `Erreur dans textAlert en cherchant l'expression ${trimmedAnswer}`
+    );
+  }
 
   return true;
 }
@@ -259,7 +278,7 @@ async function handleTextAlertConfirmation(
 export const textAlertCommand = async (session: ISession): Promise<void> => {
   session.log({ event: "/text-alert" });
   try {
-    await session.sendTypingAction();
+    session.sendTypingAction();
     await askTextAlertQuestion(session);
   } catch (error) {
     await logError(session.messageApp, "Error in textAlertCommand", error);

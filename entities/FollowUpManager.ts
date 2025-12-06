@@ -54,7 +54,7 @@ export async function askFollowUpQuestion<Context = unknown>(
     context: Context
   ) => Promise<boolean>,
   options: AskFollowUpOptions<Context> = {}
-): Promise<void> {
+): Promise<boolean> {
   const key = sessionKey(session);
   followUps.set(key, {
     handler: handler as FollowUpHandler,
@@ -63,12 +63,14 @@ export async function askFollowUpQuestion<Context = unknown>(
   });
 
   try {
-    if (question !== "")
-      await session.sendMessage(question, options.messageOptions);
+    if (question !== "") {
+      return await session.sendMessage(question, options.messageOptions);
+    }
   } catch (error) {
     followUps.delete(key);
     throw error;
   }
+  return false;
 }
 
 export function hasFollowUp(session: ISession): boolean {

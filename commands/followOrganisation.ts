@@ -88,7 +88,6 @@ async function handleOrganisationSearchAnswer(
     return false;
   }
 
-  await session.sendTypingAction();
   await processOrganisationSearch(session, trimmedAnswer, false);
   return true;
 }
@@ -302,7 +301,6 @@ export const followOrganisationsFromWikidataIdStr = async (
       return;
     }
     if (triggerUmami) session.log({ event: "/follow-organisation" });
-    await session.sendTypingAction();
 
     const selectedWikiDataIds = msg
       .split(" ")

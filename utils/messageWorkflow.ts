@@ -18,6 +18,7 @@ export async function handleIncomingMessage(
   text: string,
   options?: MessageWorkflowOptions
 ): Promise<void> {
+  session.sendTypingAction();
   const trimmedText = text.trim();
   if (trimmedText === "") return;
 

@@ -92,7 +92,7 @@ export class MatrixSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendTypingAction() {
+  sendTypingAction() {
     //await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
@@ -107,8 +107,8 @@ export class MatrixSession implements ISession {
   async sendMessage(
     formattedData: string,
     options?: MessageSendingOptionsInternal
-  ): Promise<void> {
-    await sendMatrixMessage(
+  ): Promise<boolean> {
+    return await sendMatrixMessage(
       this.client,
       { messageApp: this.messageApp, chatId: this.chatId, roomId: this.roomId },
       formattedData,
