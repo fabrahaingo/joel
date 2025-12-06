@@ -358,8 +358,6 @@ async function getRecentPublications(
   return null;
 }
 
-startBackgroundRefresh();
-
 function startBackgroundRefresh(): void {
   if (backgroundRefreshStarted) return;
 
