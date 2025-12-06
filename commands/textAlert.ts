@@ -79,7 +79,7 @@ async function handleTextAlertAnswer(
     return false;
   }
 
-  void session.sendMessage("Recherche en cours ...", {
+  await session.sendMessage("Recherche en cours ...", {
     forceNoKeyboard: true
   });
   session.sendTypingAction();
