@@ -3,10 +3,9 @@ import "dotenv/config";
 import { SignalCli } from "signal-sdk";
 import { mongodbConnect } from "../db.ts";
 import { SignalSession } from "../entities/SignalSession.ts";
-import { processMessage } from "../commands/Commands.ts";
-import umami from "../utils/umami.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
 
 const { SIGNAL_PHONE_NUMBER, SIGNAL_BAT_PATH } = process.env;
 
@@ -47,20 +46,16 @@ await (async () => {
           const msgText = message.envelope.dataMessage?.message;
           if (msgText === undefined) return;
 
-          await umami.log({ event: "/message-received", messageApp: "Signal" });
-
           const signalSession = new SignalSession(
             signalCli,
             SIGNAL_PHONE_NUMBER,
             message.envelope.sourceNumber,
             "fr"
           );
-          await signalSession.loadUser();
 
-          if (signalSession.user != null)
-            await signalSession.user.updateInteractionMetrics();
-
-          await processMessage(signalSession, msgText);
+          await handleIncomingMessage(signalSession, msgText, {
+            errorContext: "Error processing command"
+          });
         } catch (error) {
           await logError("Signal", "Error processing command", error);
         }
