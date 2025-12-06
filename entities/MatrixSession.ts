@@ -18,7 +18,9 @@ import Umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
 
 export const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
-const MATRIX_COOL_DOWN_DELAY_SECONDS = 1;
+const MATRIX_COOL_DOWN_DELAY_MS = 1000;
+const DIRECT_ROOM_CACHE_TTL_MS = 5 * 60 * 1000;
+const JOINED_ROOMS_CACHE_TTL_MS = 60 * 1000;
 
 export const MATRIX_API_SENDING_CONCURRENCY = 1;
 
@@ -38,6 +40,13 @@ interface ExtendedMatrixClient {
   matrix: MatrixClient;
   messageApp: MessageApp;
 }
+
+const directRoomCache = new Map<
+  string,
+  { roomId: string; expiresAt: number }
+>();
+let joinedRoomsCache: { rooms: Set<string>; expiresAt: number } | undefined =
+  undefined;
 
 export class MatrixSession implements ISession {
   messageApp: MessageApp;
@@ -129,11 +138,24 @@ export async function sendMatrixMessage(
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
   try {
-    const joinedRoomIds = new Set(
-      await client.matrix.getJoinedRooms().catch(() => [] as string[])
-    );
+    let joinedRoomIds: Set<string> | undefined;
 
-    if (userInfo.roomId && !joinedRoomIds.has(userInfo.roomId)) {
+    if (!userInfo.roomId) {
+      joinedRoomIds = await getJoinedRooms(client.matrix);
+    } else if (
+      joinedRoomsCache?.expiresAt &&
+      joinedRoomsCache.expiresAt > Date.now()
+    ) {
+      joinedRoomIds = joinedRoomsCache.rooms;
+    }
+
+    if (
+      userInfo.roomId &&
+      joinedRoomIds &&
+      !joinedRoomIds.has(userInfo.roomId)
+    ) {
+      joinedRoomIds = await getJoinedRooms(client.matrix, true);
+
       try {
         await User.updateOne(
           { messageApp: client.messageApp, chatId: userInfo.chatId },
@@ -147,6 +169,7 @@ export async function sendMatrixMessage(
         );
       }
 
+      directRoomCache.delete(userInfo.chatId);
       userInfo.roomId = undefined;
     }
 
@@ -171,6 +194,10 @@ export async function sendMatrixMessage(
           );
         }
         userInfo.roomId = dmRoomId;
+        directRoomCache.set(userInfo.chatId, {
+          roomId: dmRoomId,
+          expiresAt: Date.now() + DIRECT_ROOM_CACHE_TTL_MS
+        });
       }
     }
 
@@ -199,9 +226,9 @@ export async function sendMatrixMessage(
         messageApp: client.messageApp
       });
 
-      // prevent hitting the Signal API rate limit
+      // short pause to avoid spamming the homeserver
       await new Promise((resolve) =>
-        setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_SECONDS * 1000)
+        setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_MS)
       );
     }
     if (options?.separateMenuMessage)
@@ -224,8 +251,7 @@ export async function sendMatrixMessage(
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
         });
-        const retryAfterMs =
-          mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
+        const retryAfterMs = mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_MS;
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
         );
@@ -242,6 +268,7 @@ export async function sendMatrixMessage(
           event: "/user-blocked-joel",
           messageApp: client.messageApp
         });
+        directRoomCache.delete(userInfo.chatId);
         await User.updateOne(
           { messageApp: client.messageApp, chatId: userInfo.chatId },
           { $set: { status: "blocked" } }
@@ -333,7 +360,12 @@ async function sendMatrixReactions(
 
   let i = 0;
   try {
-    userInfo.roomId ??= await findUserDMRoomId(client.matrix, userInfo.chatId);
+    const joinedRooms = await getJoinedRooms(client.matrix);
+    userInfo.roomId ??= await findUserDMRoomId(
+      client.matrix,
+      userInfo.chatId,
+      joinedRooms
+    );
     if (!userInfo.roomId) {
       await logError(
         userInfo.messageApp,
@@ -360,8 +392,7 @@ async function sendMatrixReactions(
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
         });
-        const retryAfterMs =
-          mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_SECONDS * 1000;
+        const retryAfterMs = mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_MS;
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
         );
@@ -387,23 +418,61 @@ async function sendMatrixReactions(
 
 type DirectRoomData = Record<string, string[]>;
 
+async function getJoinedRooms(
+  client: MatrixClient,
+  forceRefresh = false
+): Promise<Set<string>> {
+  const now = Date.now();
+  if (
+    !forceRefresh &&
+    joinedRoomsCache?.expiresAt &&
+    joinedRoomsCache.expiresAt > now
+  )
+    return joinedRoomsCache.rooms;
+
+  const roomIds = await client.getJoinedRooms().catch(() => [] as string[]);
+
+  joinedRoomsCache = {
+    rooms: new Set(roomIds),
+    expiresAt: now + JOINED_ROOMS_CACHE_TTL_MS
+  };
+
+  return joinedRoomsCache.rooms;
+}
+
 async function findUserDMRoomId(
   client: MatrixClient,
   userId: string,
   joinedRoomIds?: Set<string>
 ): Promise<string | undefined> {
+  const cached = directRoomCache.get(userId);
+  const now = Date.now();
+  if (cached?.expiresAt && cached.expiresAt > now) return cached.roomId;
+
   const data = (await client
     .getAccountData("m.direct")
     .catch(() => ({}) as DirectRoomData)) as DirectRoomData;
   const rooms = Array.isArray(data[userId]) ? data[userId] : [];
-  if (!rooms.length) return undefined;
+  if (!rooms.length) {
+    directRoomCache.delete(userId);
+    return undefined;
+  }
 
   let joinedRooms = joinedRoomIds;
-  joinedRooms ??= new Set(
-    await client.getJoinedRooms().catch(() => [] as string[])
-  );
+  joinedRooms ??= await getJoinedRooms(client);
 
-  return rooms.find((roomId) => joinedRooms.has(roomId));
+  const roomId = rooms.find((id) => joinedRooms.has(id));
+  if (roomId == null) {
+    directRoomCache.delete(userId);
+    return undefined;
+  }
+
+  directRoomCache.set(userId, {
+    roomId,
+    expiresAt: now + DIRECT_ROOM_CACHE_TTL_MS
+  });
+
+  return roomId;
 }
 export async function extractMatrixSession(
   session: ISession,
