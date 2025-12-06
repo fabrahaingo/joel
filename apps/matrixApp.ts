@@ -7,7 +7,6 @@ import {
   AutojoinRoomsMixin
 } from "matrix-bot-sdk";
 import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
-import { processMessage } from "../commands/Commands.ts";
 import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
@@ -15,6 +14,7 @@ import User from "../models/User.ts";
 import { IUser } from "../types";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
+import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
 if (
   MATRIX_HOME_URL == undefined ||
@@ -244,8 +244,6 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     }
 
     try {
-      await umami.log({ event: "/message-received", messageApp: matrixApp });
-
       const matrixSession = new MatrixSession(
         matrixApp,
         client,
@@ -253,12 +251,9 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         roomId,
         "fr"
       );
-      await matrixSession.loadUser();
-
-      if (matrixSession.user != null)
-        await matrixSession.user.updateInteractionMetrics();
-
-      await processMessage(matrixSession, msgText);
+      await handleIncomingMessage(matrixSession, msgText, {
+        errorContext: "Error processing command"
+      });
     } catch (error) {
       await logError(matrixApp, "Error processing command", error);
     }

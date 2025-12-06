@@ -11,12 +11,12 @@ import {
   WHATSAPP_API_VERSION,
   WhatsAppSession
 } from "../entities/WhatsAppSession.ts";
-import { processMessage } from "../commands/Commands.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import User from "../models/User.ts";
 import Organisation from "../models/Organisation.ts";
 import People from "../models/People.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
+import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
 
 const MAX_AGE_SEC = 5 * 60;
 const DUPLICATE_MESSAGE_TTL_MS = MAX_AGE_SEC * 1000;
@@ -299,16 +299,12 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   }
 
   try {
-    await umami.log({ event: "/message-received", messageApp: "WhatsApp" });
-
     await whatsAppAPI.markAsRead(phoneID, message.id);
 
     const WHSession = new WhatsAppSession(whatsAppAPI, phoneID, from, "fr");
-    await WHSession.loadUser();
-
-    if (WHSession.user != null) await WHSession.user.updateInteractionMetrics();
-
-    await processMessage(WHSession, msgText);
+    await handleIncomingMessage(WHSession, msgText, {
+      errorContext: "Error processing inbound message"
+    });
   } catch (error) {
     await logError("WhatsApp", "Error processing inbound message", error);
   }
