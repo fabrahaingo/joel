@@ -75,6 +75,13 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
         user.transferData = undefined;
         await user.save();
       }
+      if (session.roomId != null && user.roomId !== session.roomId) {
+        user.roomId = session.roomId;
+        await User.updateOne(
+          { _id: user._id },
+          { $set: { roomId: session.roomId } }
+        );
+      }
     }
     return user;
   } catch (error) {
