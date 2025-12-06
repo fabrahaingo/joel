@@ -157,14 +157,7 @@ UserSchema.static(
       if (session.user != null) return session.user;
 
       const user: IUser | null = await loadUser(session);
-      if (user != null) {
-        // If the roomId has changed, update the user's roomId'
-        if (session.roomId != null && user.roomId !== session.roomId) {
-          user.roomId = session.roomId;
-          await user.save();
-        }
-        return user;
-      }
+      if (user != null) return user;
 
       umami.log({ event: "/new-user", messageApp: session.messageApp });
       const newUser = await this.create({
