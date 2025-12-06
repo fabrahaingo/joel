@@ -195,10 +195,10 @@ export function fuzzyIncludesNormalized(
 
   if (normalizedHaystack.includes(normalizedNeedle)) return true;
 
-  const finalHaystackWords = haystackWords ??
-    normalizedHaystack.split(" ").filter(Boolean);
-  const finalNeedleWords = needleWords ??
-    normalizedNeedle.split(" ").filter(Boolean);
+  const finalHaystackWords =
+    haystackWords ?? normalizedHaystack.split(" ").filter(Boolean);
+  const finalNeedleWords =
+    needleWords ?? normalizedNeedle.split(" ").filter(Boolean);
 
   if (finalNeedleWords.length === 0) return false;
 
