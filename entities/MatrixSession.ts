@@ -262,6 +262,14 @@ export async function sendMatrixMessage(
           retryNumber + 1
         );
       }
+      case "ECONNRESET":
+        return sendMatrixMessage(
+          client,
+          userInfo,
+          mArr.slice(i).join("\n"),
+          options,
+          retryNumber + 1
+        );
       case "M_FORBIDDEN": // user blocked the bot, user left the room ...
         umami.log({
           event: "/user-blocked-joel",
