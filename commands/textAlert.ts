@@ -98,12 +98,14 @@ async function handleTextAlertAnswer(
   const matchingPublications = recentPublications.reduce(
     (tab: PublicationPreview[], publication) => {
       if (tab.length >= TEXT_RESULT_MAX) return tab;
-      if (fuzzyIncludesNormalized(
+      if (
+        fuzzyIncludesNormalized(
           publication.normalizedTitle,
           normalizedAnswer,
           publication.normalizedTitleWords,
           normalizedAnswerWords
-      ))
+        )
+      )
         tab.push(publication);
       return tab;
     },

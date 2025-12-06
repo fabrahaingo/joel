@@ -8,7 +8,6 @@ import { getBuildInfo } from "../utils/buildInfo.ts";
 
 export const helpCommand = async (session: ISession): Promise<void> => {
   session.log({ event: "/help" });
-  await session.sendTypingAction();
 
   const helpText = getHelpText(session);
 

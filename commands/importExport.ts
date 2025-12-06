@@ -19,7 +19,6 @@ const IMPORTER_CODE_PROMPT =
 
 export const exportCommand = async (session: ISession): Promise<void> => {
   session.log({ event: "/data-export" });
-  await session.sendTypingAction();
 
   if (session.user == null || session.user.followsNothing()) {
     await session.sendMessage(
@@ -60,7 +59,6 @@ export const exportCommand = async (session: ISession): Promise<void> => {
 
 export const importCommand = async (session: ISession): Promise<void> => {
   session.log({ event: "/data-import" });
-  await session.sendTypingAction();
 
   await askFollowUpQuestion(session, IMPORTER_CODE_PROMPT, handleImporterCode, {
     messageOptions: {

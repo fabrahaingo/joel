@@ -233,7 +233,6 @@ async function handlePromoConfirmation(
     await session.sendMessage(`Ajout en cours... ⏰`, {
       forceNoKeyboard: true
     });
-    await session.sendTypingAction();
     session.user ??= await User.findOrCreate(session);
 
     const peopleTab: IPeople[] = [];
@@ -357,7 +356,6 @@ export async function handleReferenceAnswer(
   }
 
   const reference = extractJORFTextId(trimmedAnswer).toUpperCase();
-  await session.sendTypingAction();
 
   const JORFResult = await callJORFSearchReference(
     reference,
@@ -449,7 +447,6 @@ async function handleReferenceConfirmation(
   }
 
   if (/oui/i.test(trimmedAnswer)) {
-    await session.sendTypingAction();
     session.user ??= await User.findOrCreate(session);
 
     const peopleTab: IPeople[] = [];
