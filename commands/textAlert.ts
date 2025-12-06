@@ -270,10 +270,12 @@ interface PublicationPreview {
 
 // 4 hours
 const META_REFRESH_TIME_MS = 4 * 60 * 60 * 1000;
+const BACKGROUND_LOG_APP: MessageApp = "Tchap";
 
 let cachedPublications: PublicationPreview[] | null = null;
 let lastFetchedAt: number | null = null;
 let inflightRefresh: Promise<PublicationPreview[]> | null = null;
+let backgroundRefreshStarted = false;
 
 async function refreshRecentPublications(): Promise<PublicationPreview[]> {
   const twoYearsAgo = new Date();
@@ -301,6 +303,8 @@ async function getRecentPublications(
   messageApp: MessageApp
 ): Promise<PublicationPreview[] | null> {
   try {
+    startBackgroundRefresh();
+
     const isCacheStale =
       !cachedPublications ||
       !lastFetchedAt ||
@@ -324,3 +328,31 @@ async function getRecentPublications(
   }
   return null;
 }
+
+function startBackgroundRefresh(): void {
+  if (backgroundRefreshStarted) return;
+
+  const refreshAndHandleError = async (): Promise<void> => {
+    try {
+      inflightRefresh ??= refreshRecentPublications().finally(() => {
+        inflightRefresh = null;
+      });
+
+      await inflightRefresh;
+    } catch (error) {
+      await logError(
+        BACKGROUND_LOG_APP,
+        "Failed to refresh recent publications cache in background",
+        error
+      );
+    }
+  };
+
+  // Prime the cache immediately, then keep it warm at the same interval as manual refreshes.
+  void refreshAndHandleError();
+  setInterval(() => void refreshAndHandleError(), META_REFRESH_TIME_MS);
+
+  backgroundRefreshStarted = true;
+}
+
+startBackgroundRefresh();
