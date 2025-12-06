@@ -20,7 +20,7 @@
     "express": "^5.2.1",
     "matrix-bot-sdk": "^0.7.1",
     "mongodb": "^6.21.0",
-    "mongoose": "^8.20.1",
+    "mongoose": "^8.20.2",
     "nodemon": "^3.1.11",
     "p-limit": "^6.2.0",
     "signal-sdk": "^0.0.6",
