@@ -133,7 +133,7 @@ app.post("/webhook", async (req, res) => {
     if (now - ts > MAX_AGE_SEC) {
       // Acknowledge but skip processing so Meta doesn't retry
       res.sendStatus(200);
-      await umami.log({
+      umami.log({
         event: "/message-received-echo-refused",
         messageApp: "WhatsApp"
       });
@@ -291,7 +291,7 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   if (msgText == null) return;
 
   if (rememberInboundMessage(message.id)) {
-    await umami.log({
+    umami.log({
       event: "/message-received-echo-refused",
       messageApp: "WhatsApp"
     });

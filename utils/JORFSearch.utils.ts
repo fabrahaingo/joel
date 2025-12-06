@@ -49,7 +49,7 @@ async function logJORFSearchError(
     | "meta",
   messageApp?: MessageApp
 ) {
-  await umami.log({
+  umami.log({
     event: "/jorfsearch-error",
     messageApp,
     payload: { [errorType]: true }
@@ -62,7 +62,7 @@ export async function callJORFSearchPeople(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({
+    umami.log({
       event: "/jorfsearch-request-people",
       messageApp
     });
@@ -92,7 +92,7 @@ export async function callJORFSearchPeople(
             ? `${responseUrl}${/([?&])format=JSON\b/.test(responseUrl) ? "" : "&format=JSON"}`
             : `${responseUrl}?format=JSON`;
 
-          await umami.log({
+          umami.log({
             event: "/jorfsearch-request-people-formatted",
             messageApp
           });
@@ -137,7 +137,7 @@ export async function callJORFSearchDay(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-date" });
+    umami.log({ event: "/jorfsearch-request-date" });
     const dateDMY = dateToString(day, "DMY");
     const dateYMD = dateToString(day, "YMD");
 
@@ -192,7 +192,7 @@ export async function callJORFSearchMetaDay(
   retryNumber = 0
 ): Promise<JORFSearchPublication[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-meta" });
+    umami.log({ event: "/jorfsearch-request-meta" });
 
     const dateYMD = dateToString(day, "YMD");
 
@@ -250,7 +250,7 @@ export async function callJORFSearchTag(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-tag", messageApp });
+    umami.log({ event: "/jorfsearch-request-tag", messageApp });
     return await axios
       .get<JORFSearchResponse>(
         getJORFSearchLinkFunctionTag(tag, true, tagValue),
@@ -300,7 +300,7 @@ export async function callJORFSearchOrganisation(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-organisation", messageApp });
+    umami.log({ event: "/jorfsearch-request-organisation", messageApp });
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
@@ -359,7 +359,7 @@ export async function searchOrganisationWikidataId(
   if (org_name.length == 0) throw new Error("Empty org_name");
 
   try {
-    await umami.log({
+    umami.log({
       event: "/jorfsearch-request-wikidata-names",
       messageApp
     });
@@ -412,7 +412,7 @@ export async function searchOrganisationWikidataId(
         }));
       });
   } catch (error) {
-    await umami.log({
+    umami.log({
       event: "/jorfsearch-error",
       messageApp,
       payload: { wikidata_name: true }
@@ -431,7 +431,7 @@ export async function callJORFSearchReference(
   messageApp: MessageApp
 ): Promise<JORFSearchItem[] | null> {
   try {
-    await umami.log({ event: "/jorfsearch-request-reference", messageApp });
+    umami.log({ event: "/jorfsearch-request-reference", messageApp });
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
@@ -452,7 +452,7 @@ export async function callJORFSearchReference(
         return cleanJORFItems(res.data);
       });
   } catch (error) {
-    await umami.log({
+    umami.log({
       event: "/jorfsearch-error",
       messageApp,
       payload: { reference: true }

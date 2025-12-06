@@ -10,7 +10,7 @@ import { logError } from "../utils/debugLogger.ts";
 export const defaultCommand = async (session: ISession): Promise<void> => {
   try {
     if (session.isReply) return;
-    await session.log({ event: "/default-message" });
+    session.log({ event: "/default-message" });
     await session.sendMessage("Je n'ai pas compris votre message 🥺", {
       separateMenuMessage: true
     });
@@ -22,7 +22,7 @@ export const defaultCommand = async (session: ISession): Promise<void> => {
 export const MAIN_MENU_MESSAGE = "Utilisez le clavier ci-dessous.";
 
 export const mainMenuCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/main-menu-message" });
+  session.log({ event: "/main-menu-message" });
   await sendMainMenu(
     {
       messageApp: session.messageApp,

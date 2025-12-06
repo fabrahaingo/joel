@@ -275,7 +275,7 @@ async function handlePromoConfirmation(
 
 export const enaCommand = async (session: ISession): Promise<void> => {
   try {
-    await session.log({ event: "/ena" });
+    session.log({ event: "/ena" });
     await askPromoQuestion(session);
   } catch (error) {
     await logError(session.messageApp, "Error in /enaCommand command", error);
@@ -284,7 +284,7 @@ export const enaCommand = async (session: ISession): Promise<void> => {
 
 export const promosCommand = async (session: ISession): Promise<void> => {
   try {
-    await session.log({ event: "/ena-list" });
+    session.log({ event: "/ena-list" });
     let text = `Les périodes et noms des promotions successives sont:\n\n`;
 
     // Promotions INSP

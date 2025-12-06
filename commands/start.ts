@@ -21,14 +21,14 @@ export const startCommand = async (
     if (commandMsg != null) {
       const commandMsg = messageSplit[1].trim();
       if (commandMsg.toLowerCase().startsWith("suivreo"))
-        await session.log({ event: "/start-from-organisation" });
+        session.log({ event: "/start-from-organisation" });
       else if (commandMsg.toLowerCase().startsWith("suivref"))
-        await session.log({ event: "/start-from-tag" });
+        session.log({ event: "/start-from-tag" });
       else if (
         commandMsg.toLowerCase().startsWith("suiv") ||
         commandMsg.toLowerCase().startsWith("recherche")
       )
-        await session.log({ event: "/start-from-people" });
+        session.log({ event: "/start-from-people" });
 
       await session.sendMessage(getHelpText(session), {
         forceNoKeyboard: true
@@ -40,7 +40,7 @@ export const startCommand = async (
       await session.sendMessage(getHelpText(session), {
         separateMenuMessage: true
       });
-      await session.log({ event: "/start" });
+      session.log({ event: "/start" });
     }
   } catch (error) {
     await logError(session.messageApp, "Error in /start command", error);

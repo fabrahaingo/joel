@@ -30,7 +30,7 @@ export interface ISession {
     options?: MessageSendingOptionsInternal
   ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
-  log: (args: { event: UmamiEvent }) => Promise<void>;
+  log: (args: { event: UmamiEvent }) => void;
 }
 
 // fields are undefined for users created before implementation
@@ -79,7 +79,7 @@ export interface IUser {
   validate: () => Promise<void>;
   toObject: () => IUser;
 
-  updateInteractionMetrics: () => Promise<void>;
+  updateInteractionMetrics: () => void;
 
   checkFollowedPeople: (arg0: IPeople | Types.ObjectId) => boolean;
   checkFollowedFunction: (arg0: FunctionTags) => boolean;

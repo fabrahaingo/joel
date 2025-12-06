@@ -12,7 +12,6 @@ import { deleteUserAndCleanupByIdentifier } from "../utils/userDeletion.utils.ts
 import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
-import Umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
 import pLimit from "p-limit";
 
@@ -80,14 +79,12 @@ export class TelegramSession implements ISession {
     await sendTelegramTypingAction(this.chatIdTg, this.botToken);
   }
 
-  async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
-    void Umami.log({
+  log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
+    umami.log({
       event: args.event,
       messageApp: this.messageApp,
       payload: args.payload
-    }).catch((error) =>
-      logError(this.messageApp, "Error logging telemetry", error)
-    );
+    });
   }
 
   async sendMessage(
@@ -153,7 +150,7 @@ export async function sendTelegramMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log({
+    umami.log({
       event: "/message-fail-too-many-requests-aborted",
       messageApp: "Telegram"
     });
@@ -184,7 +181,7 @@ export async function sendTelegramMessage(
         `https://api.telegram.org/bot${botToken}/sendMessage`,
         payload
       );
-      await umami.log({ event: "/message-sent", messageApp: "Telegram" });
+      umami.log({ event: "/message-sent", messageApp: "Telegram" });
 
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
@@ -196,7 +193,7 @@ export async function sendTelegramMessage(
       const error = err as AxiosError<TelegramAPIError>;
       switch (error.response?.data.description) {
         case "Forbidden: bot was blocked by the user":
-          await umami.log({
+          umami.log({
             event: "/user-blocked-joel",
             messageApp: "Telegram"
           });
@@ -206,14 +203,14 @@ export async function sendTelegramMessage(
           );
           return false;
         case "Forbidden: user is deactivated":
-          await umami.log({
+          umami.log({
             event: "/user-deactivated",
             messageApp: "Telegram"
           });
           await deleteUserAndCleanupByIdentifier("Telegram", chatId);
           return false;
         case "Too many requests":
-          await umami.log({
+          umami.log({
             event: "/message-fail-too-many-requests",
             messageApp: "Telegram"
           });
@@ -259,7 +256,7 @@ async function sendTelegramTypingAction(
         { $set: { status: "active" } }
       );
 
-      await umami.log({
+      umami.log({
         event: "/user-unblocked-joel",
         messageApp: "Telegram"
       });
@@ -277,14 +274,14 @@ async function sendTelegramTypingAction(
               { $set: { status: "blocked" } }
             );
 
-            await umami.log({
+            umami.log({
               event: "/user-blocked-joel",
               messageApp: "Telegram"
             });
           }
           return;
         case "Forbidden: user is deactivated":
-          await umami.log({
+          umami.log({
             event: "/user-deactivated",
             messageApp: "Telegram"
           });

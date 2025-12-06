@@ -98,7 +98,7 @@ async function processOrganisationSearch(
   orgName: string,
   triggerUmami = true
 ): Promise<void> {
-  if (triggerUmami) await session.log({ event: "/follow-organisation" });
+  if (triggerUmami) session.log({ event: "/follow-organisation" });
 
   const orgResults = await searchOrganisationWikidataId(
     orgName,
@@ -260,7 +260,7 @@ async function handleOrganisationSelection(
 
 export const searchOrganisation = async (session: ISession) => {
   try {
-    await session.log({ event: "/follow-organisation" });
+    session.log({ event: "/follow-organisation" });
     await askOrganisationSearch(session);
   } catch (error) {
     await logError(
@@ -301,7 +301,7 @@ export const followOrganisationsFromWikidataIdStr = async (
       await searchOrganisationFromStr(session, msg, false);
       return;
     }
-    if (triggerUmami) await session.log({ event: "/follow-organisation" });
+    if (triggerUmami) session.log({ event: "/follow-organisation" });
     await session.sendTypingAction();
 
     const selectedWikiDataIds = msg
