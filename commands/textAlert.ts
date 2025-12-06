@@ -4,7 +4,7 @@ import { ISession, MessageApp, IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { Publication } from "../models/Publication.ts";
 import {
-  fuzzyIncludes,
+  fuzzyIncludesNormalized,
   levenshteinDistance,
   normalizeFrenchText
 } from "../utils/text.utils.ts";
@@ -84,6 +84,9 @@ async function handleTextAlertAnswer(
   });
   session.sendTypingAction();
 
+  const normalizedAnswer = normalizeFrenchText(trimmedAnswer);
+  const normalizedAnswerWords = normalizedAnswer.split(" ").filter(Boolean);
+
   const recentPublications = await getRecentPublications(session.messageApp);
   if (recentPublications == null) {
     await session.sendMessage(
@@ -95,7 +98,12 @@ async function handleTextAlertAnswer(
   const matchingPublications = recentPublications.reduce(
     (tab: PublicationPreview[], publication) => {
       if (tab.length >= TEXT_RESULT_MAX) return tab;
-      if (fuzzyIncludes(publication.title, trimmedAnswer))
+      if (fuzzyIncludesNormalized(
+          publication.normalizedTitle,
+          normalizedAnswer,
+          publication.normalizedTitleWords,
+          normalizedAnswerWords
+      ))
         tab.push(publication);
       return tab;
     },
@@ -277,6 +285,8 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
 
 interface PublicationPreview {
   title: string;
+  normalizedTitle: string;
+  normalizedTitleWords: string[];
   date: string;
   id: string;
   date_obj: Date;
@@ -284,10 +294,12 @@ interface PublicationPreview {
 
 // 4 hours
 const META_REFRESH_TIME_MS = 4 * 60 * 60 * 1000;
+let BACKGROUND_LOG_APP: MessageApp = "Tchap";
 
 let cachedPublications: PublicationPreview[] | null = null;
 let lastFetchedAt: number | null = null;
 let inflightRefresh: Promise<PublicationPreview[]> | null = null;
+let backgroundRefreshStarted = false;
 
 async function refreshRecentPublications(): Promise<PublicationPreview[]> {
   const twoYearsAgo = new Date();
@@ -302,15 +314,23 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
     .sort({ date_obj: -1 })
     .lean();
 
-  cachedPublications = publications;
+  cachedPublications = publications.map((publication) => {
+    const normalizedTitle = normalizeFrenchText(publication.title);
+    return {
+      ...publication,
+      normalizedTitle,
+      normalizedTitleWords: normalizedTitle.split(" ").filter(Boolean)
+    };
+  });
   lastFetchedAt = Date.now();
 
-  return publications;
+  return cachedPublications;
 }
 
 async function getRecentPublications(
   messageApp: MessageApp
 ): Promise<PublicationPreview[] | null> {
+  BACKGROUND_LOG_APP = messageApp;
   try {
     const isCacheStale =
       !cachedPublications ||
@@ -335,3 +355,33 @@ async function getRecentPublications(
   }
   return null;
 }
+
+startBackgroundRefresh();
+
+function startBackgroundRefresh(): void {
+  if (backgroundRefreshStarted) return;
+
+  const refreshAndHandleError = async (): Promise<void> => {
+    try {
+      inflightRefresh ??= refreshRecentPublications().finally(() => {
+        inflightRefresh = null;
+      });
+
+      await inflightRefresh;
+    } catch (error) {
+      await logError(
+        BACKGROUND_LOG_APP,
+        "Failed to refresh recent publications cache in background",
+        error
+      );
+    }
+  };
+
+  // Prime the cache immediately, then keep it warm at the same interval as manual refreshes.
+  void refreshAndHandleError();
+  setInterval(() => void refreshAndHandleError(), META_REFRESH_TIME_MS);
+
+  backgroundRefreshStarted = true;
+}
+
+startBackgroundRefresh();
