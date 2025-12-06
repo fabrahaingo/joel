@@ -85,6 +85,7 @@ async function handleTextAlertAnswer(
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
   const normalizedAnswer = normalizeFrenchText(trimmedAnswer);
+  const normalizedAnswerWords = normalizedAnswer.split(" ").filter(Boolean);
 
   const recentPublications = await getRecentPublications(session.messageApp);
   if (recentPublications == null) {
@@ -95,7 +96,12 @@ async function handleTextAlertAnswer(
   }
 
   const matchingPublications = recentPublications.filter((publication) =>
-    fuzzyIncludesNormalized(publication.normalizedTitle, normalizedAnswer)
+    fuzzyIncludesNormalized(
+      publication.normalizedTitle,
+      normalizedAnswer,
+      publication.normalizedTitleWords,
+      normalizedAnswerWords
+    )
   );
 
   if (matchingPublications.length > 100) {
@@ -263,6 +269,7 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
 interface PublicationPreview {
   title: string;
   normalizedTitle: string;
+  normalizedTitleWords: string[];
   date: string;
   id: string;
   date_obj: Date;
@@ -290,10 +297,14 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
     .sort({ date_obj: -1 })
     .lean();
 
-  cachedPublications = publications.map((publication) => ({
-    ...publication,
-    normalizedTitle: normalizeFrenchText(publication.title)
-  }));
+  cachedPublications = publications.map((publication) => {
+    const normalizedTitle = normalizeFrenchText(publication.title);
+    return {
+      ...publication,
+      normalizedTitle,
+      normalizedTitleWords: normalizedTitle.split(" ").filter(Boolean)
+    };
+  });
   lastFetchedAt = Date.now();
 
   return cachedPublications;

@@ -187,16 +187,20 @@ export function levenshteinDistance(a: string, b: string): number {
 
 export function fuzzyIncludesNormalized(
   normalizedHaystack: string,
-  normalizedNeedle: string
+  normalizedNeedle: string,
+  haystackWords?: string[],
+  needleWords?: string[]
 ): boolean {
   if (normalizedNeedle.length === 0) return false;
 
   if (normalizedHaystack.includes(normalizedNeedle)) return true;
 
-  const haystackWords = normalizedHaystack.split(" ").filter(Boolean);
-  const needleWords = normalizedNeedle.split(" ").filter(Boolean);
+  const finalHaystackWords = haystackWords ??
+    normalizedHaystack.split(" ").filter(Boolean);
+  const finalNeedleWords = needleWords ??
+    normalizedNeedle.split(" ").filter(Boolean);
 
-  if (needleWords.length === 0) return false;
+  if (finalNeedleWords.length === 0) return false;
 
   const canonicalizePlural = (word: string) =>
     word.length > 3 && /[sx]$/.test(word) ? word.slice(0, -1) : word;
@@ -208,10 +212,10 @@ export function fuzzyIncludesNormalized(
   // "corps des ingénieurs de l'armement").
   let lastIndex = -1;
   let orderedMatch = true;
-  for (const word of needleWords) {
+  for (const word of finalNeedleWords) {
     let nextIndex = -1;
-    for (let i = lastIndex + 1; i < haystackWords.length; i++) {
-      if (wordsEqual(haystackWords[i], word)) {
+    for (let i = lastIndex + 1; i < finalHaystackWords.length; i++) {
+      if (wordsEqual(finalHaystackWords[i], word)) {
         nextIndex = i;
         break;
       }
@@ -226,14 +230,14 @@ export function fuzzyIncludesNormalized(
 
   if (orderedMatch) return true;
 
-  const windowSize = Math.max(1, needleWords.length);
+  const windowSize = Math.max(1, finalNeedleWords.length);
   const allowedDistance = Math.max(
     1,
     Math.round(normalizedNeedle.length * 0.15)
   );
 
-  for (let i = 0; i <= haystackWords.length - windowSize; i++) {
-    const currentWindow = haystackWords.slice(i, i + windowSize).join(" ");
+  for (let i = 0; i <= finalHaystackWords.length - windowSize; i++) {
+    const currentWindow = finalHaystackWords.slice(i, i + windowSize).join(" ");
     if (levenshteinDistance(currentWindow, normalizedNeedle) <= allowedDistance)
       return true;
   }
