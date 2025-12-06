@@ -75,8 +75,8 @@ export class TelegramSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendTypingAction() {
-    await sendTelegramTypingAction(this.chatIdTg, this.botToken);
+  sendTypingAction() {
+    void sendTelegramTypingAction(this.chatIdTg, this.botToken);
   }
 
   log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
@@ -90,11 +90,11 @@ export class TelegramSession implements ISession {
   async sendMessage(
     formattedData: string,
     options?: MessageSendingOptionsInternal
-  ): Promise<void> {
+  ): Promise<boolean> {
     let keyboard = options?.keyboard;
     if (!options?.forceNoKeyboard) keyboard ??= this.mainMenuKeyboard;
 
-    await sendTelegramMessage(
+    return await sendTelegramMessage(
       this.botToken,
       this.chatId,
       formattedData,

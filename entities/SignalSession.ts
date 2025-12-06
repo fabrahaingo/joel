@@ -44,8 +44,7 @@ export class SignalSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendTypingAction() {
-    await Promise.resolve();
+  sendTypingAction() {
     // TODO: check implementation in Signal
   }
 
@@ -57,8 +56,12 @@ export class SignalSession implements ISession {
     });
   }
 
-  async sendMessage(formattedData: string): Promise<void> {
-    await sendSignalAppMessage(this.signalCli, this.chatId, formattedData);
+  async sendMessage(formattedData: string): Promise<boolean> {
+    return await sendSignalAppMessage(
+      this.signalCli,
+      this.chatId,
+      formattedData
+    );
   }
 }
 
