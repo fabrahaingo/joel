@@ -89,11 +89,13 @@ export class MatrixSession implements ISession {
   }
 
   async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
-    await Umami.log({
+    void Umami.log({
       event: args.event,
       messageApp: this.messageApp,
       payload: args.payload
-    });
+    }).catch((error) =>
+      logError(this.messageApp, "Error logging telemetry", error)
+    );
   }
 
   async sendMessage(
