@@ -26,7 +26,11 @@ export async function handleIncomingMessage(
     const telemetryPromise = umami
       .log({ event: "/message-received", messageApp: session.messageApp })
       .catch(async (telemetryError: unknown) =>
-        logError(session.messageApp, "Error recording inbound telemetry", telemetryError)
+        logError(
+          session.messageApp,
+          "Error recording inbound telemetry",
+          telemetryError
+        )
       );
 
     if (beforeProcessing) await beforeProcessing();
@@ -38,7 +42,9 @@ export async function handleIncomingMessage(
     await session.loadUser();
 
     const updateMetricsPromise =
-      session.user != null ? session.user.updateInteractionMetrics() : undefined;
+      session.user != null
+        ? session.user.updateInteractionMetrics()
+        : undefined;
 
     await processMessage(session, trimmedText);
 
