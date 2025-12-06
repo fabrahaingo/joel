@@ -16,7 +16,7 @@ import { MatrixClient, MatrixError } from "matrix-bot-sdk";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { logError } from "../utils/debugLogger.ts";
 
-export const MATRIX_MESSAGE_CHAR_LIMIT = 1000;
+export const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
 const MATRIX_COOL_DOWN_DELAY_MS = 1000;
 const DIRECT_ROOM_CACHE_TTL_MS = 5 * 60 * 1000;
 const JOINED_ROOMS_CACHE_TTL_MS = 60 * 1000;
