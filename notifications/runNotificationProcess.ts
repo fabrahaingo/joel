@@ -125,7 +125,7 @@ async function saveNewMetaPublications(
 
   if (newRecords.length > 0) {
     await Publication.insertMany(newRecords, { ordered: false });
-    await umami.log({
+    umami.log({
       event: "/publication-added",
       payload: { nb: newRecords.length }
     });
@@ -231,7 +231,7 @@ export async function runNotificationProcess(
   }
 
   for (const appType of targetApps) {
-    await umami.log({
+    umami.log({
       event: "/notification-process-completed",
       messageApp: appType
     });

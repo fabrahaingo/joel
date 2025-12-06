@@ -65,7 +65,7 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
     } else {
       if (user.followsNothing()) {
         await User.deleteOne({ _id: user._id });
-        await umami.log({ event: "/user-deletion-no-follow" });
+        umami.log({ event: "/user-deletion-no-follow" });
         return null;
       }
       if (

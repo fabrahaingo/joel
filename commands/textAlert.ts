@@ -211,7 +211,7 @@ async function handleTextAlertConfirmation(
     let responseText = `Vous suivez déjà une alerte pour « ${context.alertString} ». ✅`;
     if (wasAdded) {
       responseText = `Alerte enregistrée pour « ${context.alertString} » ✅`;
-      await session.log({ event: "/follow-meta" });
+      session.log({ event: "/follow-meta" });
     }
 
     await session.sendMessage(responseText, {
@@ -249,7 +249,7 @@ async function handleTextAlertConfirmation(
 }
 
 export const textAlertCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/text-alert" });
+  session.log({ event: "/text-alert" });
   try {
     await session.sendTypingAction();
     await askTextAlertQuestion(session);

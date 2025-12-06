@@ -4,7 +4,6 @@ import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
 import umami, { UmamiEvent } from "../utils/umami.ts";
 import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
-import Umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
 
 const SignalMessageApp: MessageApp = "Signal";
@@ -50,14 +49,12 @@ export class SignalSession implements ISession {
     // TODO: check implementation in Signal
   }
 
-  async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
-    void Umami.log({
+  log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
+    umami.log({
       event: args.event,
       messageApp: this.messageApp,
       payload: args.payload
-    }).catch((error) =>
-      logError(this.messageApp, "Error logging telemetry", error)
-    );
+    });
   }
 
   async sendMessage(formattedData: string): Promise<void> {
@@ -103,7 +100,7 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
-      await umami.log({ event: "/message-sent", messageApp: "Signal" });
+      umami.log({ event: "/message-sent", messageApp: "Signal" });
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>

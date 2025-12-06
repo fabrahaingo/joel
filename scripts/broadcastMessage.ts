@@ -90,7 +90,7 @@ https://www.joel-officiel.fr/\\split
     console.log(
       `Broadcast completed: ${String(result.succeeded)}/${String(result.attempted)} deliveries succeeded.`
     );
-    await umami.log({ event: "/message-sent-broadcast" });
+    umami.log({ event: "/message-sent-broadcast" });
     process.exit(result.failed === 0 ? 0 : 2);
   } catch (error) {
     console.error("Broadcast failed:", error);

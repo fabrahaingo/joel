@@ -7,7 +7,7 @@ export interface UmamiNotificationData {
   total_records_nb: number;
 }
 
-export const log = async (args: {
+export const log = (args: {
   event: UmamiEvent;
   messageApp?: MessageApp;
   notificationData?: UmamiNotificationData;
@@ -48,11 +48,9 @@ export const log = async (args: {
     }
   };
 
-  try {
-    await axios.post(endpoint, payload, options);
-  } catch (error) {
+  void axios.post(endpoint, payload, options).catch((error) => {
     console.log(error);
-  }
+  });
 };
 
 export default {

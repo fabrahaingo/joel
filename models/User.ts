@@ -166,7 +166,7 @@ UserSchema.static(
         return user;
       }
 
-      await umami.log({ event: "/new-user", messageApp: session.messageApp });
+      umami.log({ event: "/new-user", messageApp: session.messageApp });
       const newUser = await this.create({
         chatId: session.chatId,
         messageApp: session.messageApp,
@@ -175,7 +175,7 @@ UserSchema.static(
         schemaVersion: USER_SCHEMA_VERSION
       });
 
-      await newUser.updateInteractionMetrics();
+      newUser.updateInteractionMetrics();
       return newUser;
     } catch (error) {
       await logError(session.messageApp, "Error findOrCreate user", error);
@@ -186,11 +186,11 @@ UserSchema.static(
 
 UserSchema.method(
   "updateInteractionMetrics",
-  async function updateInteractionMetrics(this: IUser) {
+  function updateInteractionMetrics(this: IUser): void {
     let needSaving = false;
 
     if (this.status === "blocked") {
-      await umami.log({
+      umami.log({
         event: "/user-unblocked-joel",
         messageApp: this.messageApp
       });
@@ -208,7 +208,7 @@ UserSchema.method(
       this.lastInteractionDay.toDateString() !== currentDay.toDateString()
     ) {
       this.lastInteractionDay = currentDay;
-      await umami.log({
+      umami.log({
         event: "/daily-active-user",
         messageApp: this.messageApp
       });
@@ -225,7 +225,7 @@ UserSchema.method(
       thisWeek !== lastInteractionWeek
     ) {
       this.lastInteractionWeek = currentDay;
-      await umami.log({
+      umami.log({
         event: "/weekly-active-user",
         messageApp: this.messageApp
       });
@@ -241,14 +241,14 @@ UserSchema.method(
       const startMonth = new Date(currentDay);
       startMonth.setDate(1);
       this.lastInteractionMonth = startMonth;
-      await umami.log({
+      umami.log({
         event: "/monthly-active-user",
         messageApp: this.messageApp
       });
       needSaving = true;
     }
 
-    if (needSaving) await this.save();
+    if (needSaving) void this.save();
   }
 );
 
