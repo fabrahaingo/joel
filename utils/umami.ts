@@ -13,43 +13,46 @@ export const log = (args: {
   notificationData?: UmamiNotificationData;
   payload?: Record<string, unknown>;
 }) => {
-  if (process.env.NODE_ENV === "development") {
-    console.log(
-      `Umami event ${args.messageApp ? "(" + args.messageApp + ")" : ""}: ${args.event}`
-    );
-    if (args.notificationData != null) console.log(args.notificationData);
-    return;
-  }
-
-  const extra_data: Record<string, unknown> = args.payload ?? {};
-  if (args.messageApp) {
-    extra_data.messageApp = args.messageApp;
-  }
-
-  if (args.notificationData != null) {
-    extra_data.message_nb = args.notificationData.message_nb;
-    extra_data.updated_follows_nb = args.notificationData.updated_follows_nb;
-    extra_data.total_records_nb = args.notificationData.total_records_nb;
-  }
-  const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;
-  const payload = {
-    payload: {
-      hostname: process.env.UMAMI_HOST,
-      website: process.env.UMAMI_ID,
-      name: args.event,
-      data: extra_data
-    },
-    type: "event"
-  };
-  const options = {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0"
+  // Schedule the whole logging routine to keep callers non-blocking.
+  setImmediate(() => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(
+        `Umami event ${args.messageApp ? "(" + args.messageApp + ")" : ""}: ${args.event}`
+      );
+      if (args.notificationData != null) console.log(args.notificationData);
+      return;
     }
-  };
 
-  void axios.post(endpoint, payload, options).catch((error) => {
-    console.log(error);
+    const extra_data: Record<string, unknown> = args.payload ?? {};
+    if (args.messageApp) {
+      extra_data.messageApp = args.messageApp;
+    }
+
+    if (args.notificationData != null) {
+      extra_data.message_nb = args.notificationData.message_nb;
+      extra_data.updated_follows_nb = args.notificationData.updated_follows_nb;
+      extra_data.total_records_nb = args.notificationData.total_records_nb;
+    }
+    const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;
+    const payload = {
+      payload: {
+        hostname: process.env.UMAMI_HOST,
+        website: process.env.UMAMI_ID,
+        name: args.event,
+        data: extra_data
+      },
+      type: "event"
+    };
+    const options = {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0"
+      }
+    };
+
+    void axios.post(endpoint, payload, options).catch((error) => {
+      console.log(error);
+    });
   });
 };
 
