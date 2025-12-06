@@ -173,7 +173,7 @@ async function sendAlertStringUpdate(
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  await umami.log({
+  umami.log({
     event: "/notification-update-meta",
     messageApp: userInfo.messageApp,
     notificationData: notifData

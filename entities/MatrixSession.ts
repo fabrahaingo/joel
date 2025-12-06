@@ -14,7 +14,6 @@ import {
 } from "../utils/text.utils.ts";
 import { MatrixClient, MatrixError } from "matrix-bot-sdk";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
-import Umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
 
 export const MATRIX_MESSAGE_CHAR_LIMIT = 1000;
@@ -97,14 +96,12 @@ export class MatrixSession implements ISession {
     //await this.telegramBot.sendChatAction(this.chatIdTg, "typing");
   }
 
-  async log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
-    void Umami.log({
+  log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
+    umami.log({
       event: args.event,
       messageApp: this.messageApp,
       payload: args.payload
-    }).catch((error) =>
-      logError(this.messageApp, "Error logging telemetry", error)
-    );
+    });
   }
 
   async sendMessage(
@@ -128,7 +125,7 @@ export async function sendMatrixMessage(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log({
+    umami.log({
       event: "/message-fail-too-many-requests-aborted",
       messageApp: client.messageApp
     });
@@ -223,7 +220,7 @@ export async function sendMatrixMessage(
         formatted_body: markdown2html(mArr[i])
       });
 
-      await umami.log({
+      umami.log({
         event: "/message-sent",
         messageApp: client.messageApp
       });
@@ -249,7 +246,7 @@ export async function sendMatrixMessage(
     const mError = error as MatrixError;
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
-        await umami.log({
+        umami.log({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
         });
@@ -266,7 +263,7 @@ export async function sendMatrixMessage(
         );
       }
       case "M_FORBIDDEN": // user blocked the bot, user left the room ...
-        await umami.log({
+        umami.log({
           event: "/user-blocked-joel",
           messageApp: client.messageApp
         });
@@ -322,7 +319,7 @@ export async function sendPollMenu(
     "org.matrix.msc3381.poll.start",
     content
   );
-  await umami.log({ event: "/message-sent", messageApp: client.messageApp });
+  umami.log({ event: "/message-sent", messageApp: client.messageApp });
 
   return true;
 }
@@ -353,7 +350,7 @@ async function sendMatrixReactions(
   retryNumber = 0
 ): Promise<boolean> {
   if (retryNumber > 5) {
-    await umami.log({
+    umami.log({
       event: "/message-fail-too-many-requests-aborted",
       messageApp: client.messageApp
     });
@@ -390,7 +387,7 @@ async function sendMatrixReactions(
     const mError = error as MatrixError;
     switch (mError.errcode) {
       case "M_LIMIT_EXCEEDED": {
-        await umami.log({
+        umami.log({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
         });
@@ -408,7 +405,7 @@ async function sendMatrixReactions(
       }
       default:
         console.log(error);
-        await umami.log({
+        umami.log({
           event: "/console-log",
           messageApp: userInfo.messageApp
         });

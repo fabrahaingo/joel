@@ -18,7 +18,7 @@ const IMPORTER_CODE_PROMPT =
   "Saisir le code d'import que vous avez reçu (valable 4 heures).";
 
 export const exportCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/data-export" });
+  session.log({ event: "/data-export" });
   await session.sendTypingAction();
 
   if (session.user == null || session.user.followsNothing()) {
@@ -59,7 +59,7 @@ export const exportCommand = async (session: ISession): Promise<void> => {
 };
 
 export const importCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/data-import" });
+  session.log({ event: "/data-import" });
   await session.sendTypingAction();
 
   await askFollowUpQuestion(session, IMPORTER_CODE_PROMPT, handleImporterCode, {
@@ -169,7 +169,7 @@ async function handleImporterCode(
   sourceUser.transferData = undefined;
   await sourceUser.save();
 
-  await session.log({ event: "/data-import-confirmed" });
+  session.log({ event: "/data-import-confirmed" });
   await session.sendMessage(
     `Les éléments suivants ont été copiés depuis le compte source :\n\n${summary}`
   );

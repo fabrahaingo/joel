@@ -191,7 +191,7 @@ export async function getAllUserFollowsOrdered(
 }
 
 export const listCommand = async (session: ISession) => {
-  await session.log({ event: "/list" });
+  session.log({ event: "/list" });
 
   try {
     await session.sendTypingAction();
@@ -268,7 +268,7 @@ async function handleUnfollowAnswer(
 }
 
 export const unfollowCommand = async (session: ISession) => {
-  await session.log({ event: "/unfollow" });
+  session.log({ event: "/unfollow" });
   try {
     await session.sendTypingAction();
 
@@ -296,7 +296,7 @@ export const unfollowFromStr = async (
   triggerUmami = true
 ): Promise<boolean> => {
   try {
-    if (triggerUmami) await session.log({ event: "/unfollow" });
+    if (triggerUmami) session.log({ event: "/unfollow" });
 
     if (session.user == null) {
       await session.sendMessage(noDataText);
@@ -527,7 +527,7 @@ export const unfollowFromStr = async (
     // Delete the user if it doesn't follow anything any more
     if (session.user.followsNothing()) {
       await User.deleteOne({ _id: session.user._id });
-      await session.log({ event: "/user-deletion-no-follow" });
+      session.log({ event: "/user-deletion-no-follow" });
     }
 
     await session.sendMessage(text);

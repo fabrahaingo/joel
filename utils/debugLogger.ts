@@ -95,7 +95,7 @@ export const logError = async (
   error?: unknown
 ): Promise<void> => {
   logToConsole("error", message, error);
-  await umami.log({ event: "/console-log", messageApp });
+  umami.log({ event: "/console-log", messageApp });
   await sendTelegramDebugMessage(
     buildLogMessage("error", messageApp, message, error)
   );

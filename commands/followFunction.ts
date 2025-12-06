@@ -115,7 +115,7 @@ function parseFunctionSelection(selectionText: string): FunctionTags[] {
 export const followFunctionCommand = async (
   session: ISession
 ): Promise<void> => {
-  await session.log({ event: "/follow-function" });
+  session.log({ event: "/follow-function" });
   try {
     await session.sendTypingAction();
 

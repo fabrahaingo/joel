@@ -7,7 +7,7 @@ import { logError } from "../utils/debugLogger.ts";
 import { getBuildInfo } from "../utils/buildInfo.ts";
 
 export const helpCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/help" });
+  session.log({ event: "/help" });
   await session.sendTypingAction();
 
   const helpText = getHelpText(session);
@@ -60,7 +60,7 @@ export const getHelpText = (session: ISession): string => {
 };
 
 export const buildInfoCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/build" });
+  session.log({ event: "/build" });
   await session.sendTypingAction();
 
   const { uptime, commitHash, commitUrl } = await getBuildInfo();
@@ -82,7 +82,7 @@ export const buildInfoCommand = async (session: ISession): Promise<void> => {
 };
 
 export const statsCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/stats" });
+  session.log({ event: "/stats" });
   await session.sendTypingAction();
   await session.sendMessage(await statsText(session), {
     separateMenuMessage: true

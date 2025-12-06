@@ -48,7 +48,7 @@ async function handleDeleteProfileAnswer(
     await session.sendMessage(
       `🗑 Votre profil a bien été supprimé ! 👋\\splitUn profil vierge sera créé lors de l'ajout du prochain suivi ⚠️`
     );
-    await session.log({ event: "/user-deletion-self" });
+    session.log({ event: "/user-deletion-self" });
   } else {
     await session.sendMessage("Suppression annulée.");
   }
@@ -59,7 +59,7 @@ async function handleDeleteProfileAnswer(
 export const deleteProfileCommand = async (
   session: ISession
 ): Promise<void> => {
-  await session.log({ event: "/delete-profile" });
+  session.log({ event: "/delete-profile" });
   try {
     if (session.user == null) {
       await session.sendMessage(

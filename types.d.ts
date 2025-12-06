@@ -30,7 +30,7 @@ export interface ISession {
     options?: MessageSendingOptionsInternal
   ) => Promise<void>;
   sendTypingAction: () => Promise<void>;
-  log: (args: { event: UmamiEvent }) => Promise<void>;
+  log: (args: { event: UmamiEvent }) => void;
 }
 
 // fields are undefined for users created before implementation

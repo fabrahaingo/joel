@@ -97,7 +97,7 @@ async function handleSearchAnswer(
 }
 
 export const searchCommand = async (session: ISession): Promise<void> => {
-  await session.log({ event: "/search" });
+  session.log({ event: "/search" });
   await askSearchQuestion(session);
 };
 
@@ -105,7 +105,7 @@ export const fullHistoryCommand = async (
   session: ISession,
   msg?: string
 ): Promise<void> => {
-  await session.log({ event: "/history" });
+  session.log({ event: "/history" });
 
   if (msg == undefined) {
     await logError("Telegram", "/history command called without msg argument");
@@ -335,7 +335,7 @@ export const followCommand = async (
   msg: string
 ): Promise<void> => {
   try {
-    await session.log({ event: "/follow" });
+    session.log({ event: "/follow" });
 
     const msgSplit = msg.split(" ");
 
@@ -392,7 +392,7 @@ export const manualFollowCommand = async (
   session: ISession,
   msg?: string
 ): Promise<void> => {
-  await session.log({ event: "/follow-name" });
+  session.log({ event: "/follow-name" });
 
   const personNameSplit = cleanPeopleName(
     removeSpecialCharacters(msg ?? "")
