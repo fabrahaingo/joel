@@ -270,7 +270,7 @@ interface PublicationPreview {
 
 // 4 hours
 const META_REFRESH_TIME_MS = 4 * 60 * 60 * 1000;
-const BACKGROUND_LOG_APP: MessageApp = "Tchap";
+let BACKGROUND_LOG_APP: MessageApp = "Tchap";
 
 let cachedPublications: PublicationPreview[] | null = null;
 let lastFetchedAt: number | null = null;
@@ -302,9 +302,8 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
 async function getRecentPublications(
   messageApp: MessageApp
 ): Promise<PublicationPreview[] | null> {
+  BACKGROUND_LOG_APP = messageApp;
   try {
-    startBackgroundRefresh();
-
     const isCacheStale =
       !cachedPublications ||
       !lastFetchedAt ||
@@ -328,6 +327,8 @@ async function getRecentPublications(
   }
   return null;
 }
+
+startBackgroundRefresh();
 
 function startBackgroundRefresh(): void {
   if (backgroundRefreshStarted) return;
