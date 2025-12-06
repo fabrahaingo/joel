@@ -117,8 +117,6 @@ export const followFunctionCommand = async (
 ): Promise<void> => {
   session.log({ event: "/follow-function" });
   try {
-    await session.sendTypingAction();
-
     await session.sendMessage(
       `Voici la liste des fonctions que vous pouvez suivre:\n\n${formatFunctionList(
         session
@@ -142,7 +140,6 @@ const followFunctionsCommand = async (
 ): Promise<void> => {
   try {
     if (functions.length == 0) return;
-    await session.sendTypingAction();
 
     session.user ??= await User.findOrCreate(session);
 

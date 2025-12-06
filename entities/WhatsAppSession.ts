@@ -118,7 +118,6 @@ export class WhatsAppSession implements ISession {
   }
 
   async sendTypingAction() {
-    await Promise.resolve();
     // TODO: check implementation in WH
   }
 
@@ -133,8 +132,8 @@ export class WhatsAppSession implements ISession {
   async sendMessage(
     formattedData: string,
     options?: MessageSendingOptionsInternal
-  ): Promise<void> {
-    await sendWhatsAppMessage(
+  ): Promise<boolean> {
+    return await sendWhatsAppMessage(
       this.whatsAppAPI,
       this.chatId,
       formattedData,

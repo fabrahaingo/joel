@@ -194,8 +194,6 @@ export const listCommand = async (session: ISession) => {
   session.log({ event: "/list" });
 
   try {
-    await session.sendTypingAction();
-
     // We only want to create a user upon use of the follow function
     if (session.user == null) {
       await session.sendMessage(noDataText);
@@ -270,8 +268,6 @@ async function handleUnfollowAnswer(
 export const unfollowCommand = async (session: ISession) => {
   session.log({ event: "/unfollow" });
   try {
-    await session.sendTypingAction();
-
     if (session.user == null) {
       await session.sendMessage(noDataText);
       return;

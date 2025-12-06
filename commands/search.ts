@@ -90,7 +90,6 @@ async function handleSearchAnswer(
     return true;
   }
 
-  await session.sendTypingAction();
   await searchPersonHistory(session, "Historique " + trimmedAnswer, "latest");
 
   return true;
@@ -346,8 +345,6 @@ export const followCommand = async (
     }
 
     const personName = msgSplit.slice(1).join(" ");
-
-    await session.sendTypingAction();
 
     const JORFRes = await callJORFSearchPeople(personName, session.messageApp);
     if (JORFRes == null || JORFRes.length == 0) {

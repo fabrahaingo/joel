@@ -28,8 +28,8 @@ export interface ISession {
   sendMessage: (
     msg: string,
     options?: MessageSendingOptionsInternal
-  ) => Promise<void>;
-  sendTypingAction: () => Promise<void>;
+  ) => Promise<boolean>;
+  sendTypingAction: () => void;
   log: (args: { event: UmamiEvent }) => void;
 }
 

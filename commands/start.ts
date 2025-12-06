@@ -10,8 +10,6 @@ export const startCommand = async (
   const messageSplit = userMessage.split(/!|\/start/i);
 
   try {
-    await session.sendTypingAction();
-
     // if "Bonjour JOEL ! Suivre ..." or "/start Suivre ..."
     const commandMsg = messageSplit
       .slice(1)
