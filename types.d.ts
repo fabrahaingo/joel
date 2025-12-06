@@ -79,7 +79,7 @@ export interface IUser {
   validate: () => Promise<void>;
   toObject: () => IUser;
 
-  updateInteractionMetrics: () => Promise<void>;
+  updateInteractionMetrics: () => void;
 
   checkFollowedPeople: (arg0: IPeople | Types.ObjectId) => boolean;
   checkFollowedFunction: (arg0: FunctionTags) => boolean;

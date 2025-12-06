@@ -175,7 +175,7 @@ UserSchema.static(
         schemaVersion: USER_SCHEMA_VERSION
       });
 
-      await newUser.updateInteractionMetrics();
+      newUser.updateInteractionMetrics();
       return newUser;
     } catch (error) {
       await logError(session.messageApp, "Error findOrCreate user", error);
@@ -186,7 +186,7 @@ UserSchema.static(
 
 UserSchema.method(
   "updateInteractionMetrics",
-  async function updateInteractionMetrics(this: IUser) {
+  function updateInteractionMetrics(this: IUser): void {
     let needSaving = false;
 
     if (this.status === "blocked") {
@@ -248,7 +248,7 @@ UserSchema.method(
       needSaving = true;
     }
 
-    if (needSaving) await this.save();
+    if (needSaving) void this.save();
   }
 );
 
