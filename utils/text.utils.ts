@@ -185,11 +185,12 @@ export function levenshteinDistance(a: string, b: string): number {
   return distance[rows - 1][cols - 1];
 }
 
-export function fuzzyIncludes(haystack: string, needle: string): boolean {
-  const normalizedNeedle = normalizeFrenchText(needle);
+export function fuzzyIncludesNormalized(
+  normalizedHaystack: string,
+  normalizedNeedle: string
+): boolean {
   if (normalizedNeedle.length === 0) return false;
 
-  const normalizedHaystack = normalizeFrenchText(haystack);
   if (normalizedHaystack.includes(normalizedNeedle)) return true;
 
   const haystackWords = normalizedHaystack.split(" ").filter(Boolean);
@@ -238,6 +239,13 @@ export function fuzzyIncludes(haystack: string, needle: string): boolean {
   }
 
   return false;
+}
+
+export function fuzzyIncludes(haystack: string, needle: string): boolean {
+  const normalizedNeedle = normalizeFrenchText(needle);
+  const normalizedHaystack = normalizeFrenchText(haystack);
+
+  return fuzzyIncludesNormalized(normalizedHaystack, normalizedNeedle);
 }
 
 // Function to convert an array to CSV

@@ -4,7 +4,7 @@ import { ISession, MessageApp, IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { Publication } from "../models/Publication.ts";
 import {
-  fuzzyIncludes,
+  fuzzyIncludesNormalized,
   levenshteinDistance,
   normalizeFrenchText
 } from "../utils/text.utils.ts";
@@ -84,6 +84,8 @@ async function handleTextAlertAnswer(
   const twoYearsAgo = new Date();
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
+  const normalizedAnswer = normalizeFrenchText(trimmedAnswer);
+
   const recentPublications = await getRecentPublications(session.messageApp);
   if (recentPublications == null) {
     await session.sendMessage(
@@ -93,7 +95,7 @@ async function handleTextAlertAnswer(
   }
 
   const matchingPublications = recentPublications.filter((publication) =>
-    fuzzyIncludes(publication.title, trimmedAnswer)
+    fuzzyIncludesNormalized(publication.normalizedTitle, normalizedAnswer)
   );
 
   if (matchingPublications.length > 100) {
@@ -260,6 +262,7 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
 
 interface PublicationPreview {
   title: string;
+  normalizedTitle: string;
   date: string;
   id: string;
   date_obj: Date;
@@ -285,10 +288,13 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
     .sort({ date_obj: -1 })
     .lean();
 
-  cachedPublications = publications;
+  cachedPublications = publications.map((publication) => ({
+    ...publication,
+    normalizedTitle: normalizeFrenchText(publication.title)
+  }));
   lastFetchedAt = Date.now();
 
-  return publications;
+  return cachedPublications;
 }
 
 async function getRecentPublications(
