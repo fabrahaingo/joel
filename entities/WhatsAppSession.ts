@@ -117,7 +117,7 @@ export class WhatsAppSession implements ISession {
     this.user = await User.findOrCreate(this);
   }
 
-  async sendTypingAction() {
+  sendTypingAction() {
     // TODO: check implementation in WH
   }
 
