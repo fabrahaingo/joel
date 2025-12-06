@@ -200,7 +200,6 @@ export async function searchPersonHistory(
       });
       await session.user.addFollowedPeople(peopleFromDB);
       await session.user.removeFollowedName(nomPrenom);
-      await session.user.save();
 
       await session.sendMessage(
         `*${prenomNom}* a été ajouté vos suivis manuels`,
@@ -371,12 +370,7 @@ export const followCommand = async (
     });
 
     let text = "";
-    if (!isPersonAlreadyFollowed(people, session.user.followedPeople)) {
-      session.user.followedPeople.push({
-        peopleId: people._id,
-        lastUpdate: new Date(Date.now())
-      });
-      await session.user.save();
+    if (await session.user.addFollowedPeople(people)) {
       text += `Vous suivez maintenant *${JORFRes[0].prenom} ${JORFRes[0].nom}* ✅`;
     } else {
       // With the search/follow flow this would happen only if the user types the "Suivre **" manually
