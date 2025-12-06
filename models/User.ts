@@ -13,6 +13,7 @@ import { FunctionTags } from "../entities/FunctionTags.ts";
 import { loadUser } from "../entities/Session.ts";
 import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
 import { getISOWeek } from "../utils/date.utils.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 export const USER_SCHEMA_VERSION = 3;
 
@@ -152,29 +153,34 @@ const UserSchema = new Schema<IUser, UserModel>(
 UserSchema.static(
   "findOrCreate",
   async function (session: ISession): Promise<IUser> {
-    if (session.user != null) return session.user;
+    try {
+      if (session.user != null) return session.user;
 
-    const user: IUser | null = await loadUser(session);
-    if (user != null) {
-      // If the roomId has changed, update the user's roomId'
-      if (session.roomId != null && user.roomId !== session.roomId) {
-        user.roomId = session.roomId;
-        await user.save();
+      const user: IUser | null = await loadUser(session);
+      if (user != null) {
+        // If the roomId has changed, update the user's roomId'
+        if (session.roomId != null && user.roomId !== session.roomId) {
+          user.roomId = session.roomId;
+          await user.save();
+        }
+        return user;
       }
-      return user;
+
+      await umami.log({ event: "/new-user", messageApp: session.messageApp });
+      const newUser = await this.create({
+        chatId: session.chatId,
+        messageApp: session.messageApp,
+        roomId: session.roomId,
+        language_code: session.language_code,
+        schemaVersion: USER_SCHEMA_VERSION
+      });
+
+      await newUser.updateInteractionMetrics();
+      return newUser;
+    } catch (error) {
+      await logError(session.messageApp, "Error findOrCreate user", error);
     }
-
-    await umami.log({ event: "/new-user", messageApp: session.messageApp });
-    const newUser = await this.create({
-      chatId: session.chatId,
-      messageApp: session.messageApp,
-      roomId: session.roomId,
-      language_code: session.language_code,
-      schemaVersion: USER_SCHEMA_VERSION
-    });
-
-    await newUser.updateInteractionMetrics();
-    return newUser;
+    throw new Error("Error findOrCreate user");
   }
 );
 
@@ -209,7 +215,7 @@ UserSchema.method(
       needSaving = true;
     }
 
-    // For weekly active users - check if last interaction was in a different ISO week
+    // For weekly active users - check if the last interaction was in a different ISO week
     const thisWeek = getISOWeek(now);
     const lastInteractionWeek = this.lastInteractionWeek
       ? getISOWeek(this.lastInteractionWeek)
@@ -473,5 +479,7 @@ UserSchema.index({ "followedFunctions.functionTag": 1 });
 UserSchema.index({ "followedOrganisations.wikidataId": 1 });
 
 UserSchema.index({ "transferData.code": 1 });
+
+UserSchema.index({ messageApp: 1, chatId: 1 }, { unique: true });
 
 export default model<IUser, UserModel>("User", UserSchema);
