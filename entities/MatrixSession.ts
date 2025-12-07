@@ -235,22 +235,33 @@ export async function sendMatrixMessage(
         title: KEYBOARD_KEYS.MAIN_MENU.key.text,
         options: fullMenuKeyboard.map((k) => ({ text: k.text }))
       });
-    else if (keyboard != null)
-      await sendMatrixReactions(
+    else if (keyboard != null) {
+      const res = await sendMatrixReactions(
         client,
         userInfo,
         keyboard.flat().map((k) => k.text),
         promptId
       );
+      if (!res) return false;
+    }
   } catch (error) {
-    const mError = error as MatrixError;
-    switch (mError.errcode) {
+    const mError = error as MatrixError | NodeJS.ErrnoException;
+    let errCode: string | undefined = undefined;
+    if ("errcode" in mError) {
+      errCode = mError.errcode;
+    } else if ("code" in mError) {
+      errCode = mError.code;
+    }
+
+    switch (errCode) {
       case "M_LIMIT_EXCEEDED": {
         umami.log({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
         });
-        const retryAfterMs = mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_MS;
+        let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
+        if ("retryAfterMs" in mError && mError.retryAfterMs)
+          retryAfterMs = mError.retryAfterMs;
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
         );
@@ -392,14 +403,23 @@ async function sendMatrixReactions(
       await client.matrix.sendEvent(userInfo.roomId, "m.reaction", content);
     }
   } catch (error) {
-    const mError = error as MatrixError;
-    switch (mError.errcode) {
+    const mError = error as MatrixError | NodeJS.ErrnoException;
+    let errCode: string | undefined = undefined;
+    if ("errcode" in mError) {
+      errCode = mError.errcode;
+    } else if ("code" in mError) {
+      errCode = mError.code;
+    }
+
+    switch (errCode) {
       case "M_LIMIT_EXCEEDED": {
         umami.log({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
         });
-        const retryAfterMs = mError.retryAfterMs ?? MATRIX_COOL_DOWN_DELAY_MS;
+        let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
+        if ("retryAfterMs" in mError && mError.retryAfterMs)
+          retryAfterMs = mError.retryAfterMs;
         await new Promise((resolve) =>
           setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
         );
@@ -411,6 +431,14 @@ async function sendMatrixReactions(
           retryNumber + 1
         );
       }
+      case "ECONNRESET":
+        return await sendMatrixReactions(
+          client,
+          userInfo,
+          reactions.slice(i),
+          eventId,
+          retryNumber + 1
+        );
       default:
         console.log(error);
         umami.log({

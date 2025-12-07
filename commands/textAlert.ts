@@ -79,7 +79,7 @@ async function handleTextAlertAnswer(
     return false;
   }
 
-  void session.sendMessage("Recherche en cours ...", {
+  await session.sendMessage("Recherche en cours ...", {
     forceNoKeyboard: true
   });
   session.sendTypingAction();
@@ -357,8 +357,6 @@ async function getRecentPublications(
   }
   return null;
 }
-
-startBackgroundRefresh();
 
 function startBackgroundRefresh(): void {
   if (backgroundRefreshStarted) return;
