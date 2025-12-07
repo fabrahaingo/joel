@@ -23,6 +23,8 @@ const JOINED_ROOMS_CACHE_TTL_MS = 60 * 1000;
 
 export const MATRIX_API_SENDING_CONCURRENCY = 1;
 
+const MAX_MESSAGE_RETRY = 5;
+
 const mainMenuKeyboardMatrix: Keyboard = [[KEYBOARD_KEYS.MAIN_MENU.key]];
 
 const fullMenuKeyboard: KeyboardKey[] = [
@@ -124,13 +126,6 @@ export async function sendMatrixMessage(
   options?: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
-  if (retryNumber > 5) {
-    umami.log({
-      event: "/message-fail-too-many-requests-aborted",
-      messageApp: client.messageApp
-    });
-    return false;
-  } // give up after 5 retries
   let keyboard = options?.keyboard;
   if (!options?.forceNoKeyboard) keyboard ??= mainMenuKeyboardMatrix;
 
@@ -255,6 +250,10 @@ export async function sendMatrixMessage(
 
     switch (errCode) {
       case "M_LIMIT_EXCEEDED": {
+        if (retryNumber > MAX_MESSAGE_RETRY) {
+          umami.log({ event: "/message-fail-too-many-requests-aborted" });
+          return false;
+        }
         umami.log({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
@@ -274,6 +273,17 @@ export async function sendMatrixMessage(
         );
       }
       case "ECONNRESET":
+      case "EPIPE":
+      case "ETIMEDOUT":
+      case "ECONNABORTED":
+        if (retryNumber > MAX_MESSAGE_RETRY) {
+          await logError(
+            client.messageApp,
+            `Error sending ${client.messageApp} message after ${String(MAX_MESSAGE_RETRY)} retries`,
+            error
+          );
+          return false;
+        }
         return sendMatrixMessage(
           client,
           userInfo,
@@ -368,14 +378,6 @@ async function sendMatrixReactions(
   eventId: string,
   retryNumber = 0
 ): Promise<boolean> {
-  if (retryNumber > 5) {
-    umami.log({
-      event: "/message-fail-too-many-requests-aborted",
-      messageApp: client.messageApp
-    });
-    return false;
-  }
-
   let i = 0;
   try {
     const joinedRooms = await getJoinedRooms(client.matrix);
@@ -413,6 +415,10 @@ async function sendMatrixReactions(
 
     switch (errCode) {
       case "M_LIMIT_EXCEEDED": {
+        if (retryNumber > MAX_MESSAGE_RETRY) {
+          umami.log({ event: "/message-fail-too-many-requests-aborted" });
+          return false;
+        }
         umami.log({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
@@ -432,6 +438,17 @@ async function sendMatrixReactions(
         );
       }
       case "ECONNRESET":
+      case "EPIPE":
+      case "ETIMEDOUT":
+      case "ECONNABORTED":
+        if (retryNumber > MAX_MESSAGE_RETRY) {
+          await logError(
+            client.messageApp,
+            `Error sending ${client.messageApp} message after ${String(MAX_MESSAGE_RETRY)} retries`,
+            error
+          );
+          return false;
+        }
         return await sendMatrixReactions(
           client,
           userInfo,
