@@ -189,7 +189,7 @@ async function handleTextAlertAnswer(
     );
     await logError(
       session.messageApp,
-      `Erreur dans textAlert en cherchant l'expression ${trimmedAnswer}`
+      `Erreur dans textAlert en cherchant l'expression "${trimmedAnswer}"`
     );
   }
 
