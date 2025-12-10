@@ -49,20 +49,7 @@ export async function loadUser(session: ISession): Promise<IUser | null> {
     }
     if (matchingUsers.length === 1) user = matchingUsers[0];
 
-    if (user == null) {
-      const legacyUser = (await User.collection.findOne({
-        messageApp: session.messageApp,
-        chatId: session.chatId
-      })) as IRawUser | null;
-      if (legacyUser !== null) {
-        await migrateUser(legacyUser);
-        // now return the migrated user
-        return await User.findOne({
-          messageApp: session.messageApp,
-          chatId: session.chatId
-        });
-      }
-    } else {
+    if (user != null) {
       if (user.followsNothing()) {
         await User.deleteOne({ _id: user._id });
         umami.log({ event: "/user-deletion-no-follow" });
