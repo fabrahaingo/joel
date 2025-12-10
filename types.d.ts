@@ -79,7 +79,7 @@ export interface IUser {
   validate: () => Promise<void>;
   toObject: () => IUser;
 
-  updateInteractionMetrics: () => void;
+  updateInteractionMetrics: () => Promise<void>;
 
   checkFollowedPeople: (arg0: IPeople | Types.ObjectId) => boolean;
   checkFollowedFunction: (arg0: FunctionTags) => boolean;
@@ -122,6 +122,11 @@ export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
+  updateOne: (
+    filter: unknown,
+    update: unknown,
+    options?: unknown
+  ) => Promise<void>;
 }
 
 export interface IPeople {
