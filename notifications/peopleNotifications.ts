@@ -267,7 +267,7 @@ async function sendPeopleUpdate(
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  umami.log({
+  await umami.logAsync({
     event: "/notification-update-people",
     messageApp: userInfo.messageApp,
     notificationData: notifData
