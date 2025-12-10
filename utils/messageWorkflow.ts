@@ -39,7 +39,7 @@ export async function handleIncomingMessage(
 
     await processMessage(session, trimmedText);
 
-    if (session.user != null) session.user.updateInteractionMetrics();
+    if (session.user != null) await session.user.updateInteractionMetrics();
   } catch (error) {
     await logError(
       session.messageApp,
