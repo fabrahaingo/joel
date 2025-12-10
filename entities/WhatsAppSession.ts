@@ -181,7 +181,7 @@ export async function sendWhatsAppMessage(
   const umamiLogger: UmamiLogger =
     options?.useAsyncUmamiLog === true ? umami.logAsync : umami.log;
   if (retryNumber > 5) {
-    umamiLogger({
+    await umamiLogger({
       event: "/message-fail-too-many-requests-aborted",
       messageApp: "WhatsApp"
     });
@@ -272,7 +272,7 @@ export async function sendWhatsAppMessage(
           case 130429:
           case 131048:
           case 131056:
-            umamiLogger({
+            await umamiLogger({
               event: "/message-fail-too-many-requests",
               messageApp: "WhatsApp"
             });
@@ -288,7 +288,7 @@ export async function sendWhatsAppMessage(
             );
 
           case 131008: // user blocked the bot
-            umamiLogger({
+            await umamiLogger({
               event: "/user-blocked-joel",
               messageApp: "WhatsApp"
             });
@@ -299,7 +299,7 @@ export async function sendWhatsAppMessage(
             break;
           case 131026: // user not on WhatsApp
           case 131030:
-            umamiLogger({
+            await umamiLogger({
               event: "/user-deactivated",
               messageApp: "WhatsApp"
             });
@@ -310,7 +310,7 @@ export async function sendWhatsAppMessage(
         }
         return false;
       }
-      umamiLogger({ event: "/message-sent", messageApp: "WhatsApp" });
+      await umamiLogger({ event: "/message-sent", messageApp: "WhatsApp" });
 
       if (burstMode || (i == mArr.length - 1 && options?.separateMenuMessage)) {
         // prevent hitting the WH API rate limit
@@ -344,7 +344,7 @@ export async function sendWhatsAppMessage(
         return false;
       }
       numberMessageBurst += 1;
-      umamiLogger({ event: "/message-sent", messageApp: "WhatsApp" });
+      await umamiLogger({ event: "/message-sent", messageApp: "WhatsApp" });
     }
 
     // make up for the cooldown delay borrowed in the burst mode

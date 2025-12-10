@@ -217,7 +217,7 @@ export async function sendMatrixMessage(
         formatted_body: markdown2html(mArr[i])
       });
 
-      umamiLogger({
+      await umamiLogger({
         event: "/message-sent",
         messageApp: client.messageApp
       });
@@ -253,10 +253,10 @@ export async function sendMatrixMessage(
     switch (errCode) {
       case "M_LIMIT_EXCEEDED": {
         if (retryNumber > MAX_MESSAGE_RETRY) {
-          umamiLogger({ event: "/message-fail-too-many-requests-aborted" });
+          await umamiLogger({ event: "/message-fail-too-many-requests-aborted" });
           return false;
         }
-        umamiLogger({
+        await umamiLogger({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
         });
