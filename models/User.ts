@@ -168,7 +168,7 @@ UserSchema.static(
         schemaVersion: USER_SCHEMA_VERSION
       });
 
-      newUser.updateInteractionMetrics();
+      await newUser.updateInteractionMetrics();
       return newUser;
     } catch (error) {
       await logError(session.messageApp, "Error findOrCreate user", error);
@@ -179,71 +179,69 @@ UserSchema.static(
 
 UserSchema.method(
   "updateInteractionMetrics",
-  function updateInteractionMetrics(this: IUser): void {
-    setImmediate(() => {
-      let needSaving = false;
+  async function updateInteractionMetrics(this: IUser): Promise<void> {
+    let needSaving = false;
 
-      if (this.status === "blocked") {
-        umami.log({
-          event: "/user-unblocked-joel",
-          messageApp: this.messageApp
-        });
-        this.status = "active";
-        needSaving = true;
-      }
+    if (this.status === "blocked") {
+      umami.log({
+        event: "/user-unblocked-joel",
+        messageApp: this.messageApp
+      });
+      this.status = "active";
+      needSaving = true;
+    }
 
-      const now = new Date();
-      const currentDay = new Date(now);
-      currentDay.setHours(4, 0, 0, 0);
+    const now = new Date();
+    const currentDay = new Date(now);
+    currentDay.setHours(4, 0, 0, 0);
 
-      // For daily active users - check if last interaction was before today
-      if (
-        this.lastInteractionDay === undefined ||
-        this.lastInteractionDay.toDateString() !== currentDay.toDateString()
-      ) {
-        this.lastInteractionDay = currentDay;
-        umami.log({
-          event: "/daily-active-user",
-          messageApp: this.messageApp
-        });
-        needSaving = true;
-      }
+    // For daily active users - check if the last interaction was before today
+    if (
+      this.lastInteractionDay === undefined ||
+      this.lastInteractionDay.toDateString() !== currentDay.toDateString()
+    ) {
+      this.lastInteractionDay = currentDay;
+      umami.log({
+        event: "/daily-active-user",
+        messageApp: this.messageApp
+      });
+      needSaving = true;
+    }
 
-      // For weekly active users - check if the last interaction was in a different ISO week
-      const thisWeek = getISOWeek(now);
-      const lastInteractionWeek = this.lastInteractionWeek
-        ? getISOWeek(this.lastInteractionWeek)
-        : undefined;
-      if (
-        this.lastInteractionWeek === undefined ||
-        thisWeek !== lastInteractionWeek
-      ) {
-        this.lastInteractionWeek = currentDay;
-        umami.log({
-          event: "/weekly-active-user",
-          messageApp: this.messageApp
-        });
-        needSaving = true;
-      }
+    // For weekly active users - check if the last interaction was in a different ISO week
+    const thisWeek = getISOWeek(now);
+    const lastInteractionWeek = this.lastInteractionWeek
+      ? getISOWeek(this.lastInteractionWeek)
+      : undefined;
+    if (
+      this.lastInteractionWeek === undefined ||
+      thisWeek !== lastInteractionWeek
+    ) {
+      this.lastInteractionWeek = currentDay;
+      umami.log({
+        event: "/weekly-active-user",
+        messageApp: this.messageApp
+      });
+      needSaving = true;
+    }
 
-      // For monthly active users - check if last interaction was in a different month
-      if (
-        this.lastInteractionMonth === undefined ||
-        this.lastInteractionMonth.getMonth() !== now.getMonth() ||
-        this.lastInteractionMonth.getFullYear() !== now.getFullYear()
-      ) {
-        const startMonth = new Date(currentDay);
-        startMonth.setDate(1);
-        this.lastInteractionMonth = startMonth;
-        umami.log({
-          event: "/monthly-active-user",
-          messageApp: this.messageApp
-        });
-        needSaving = true;
-      }
+    // For monthly active users - check if last interaction was in a different month
+    if (
+      this.lastInteractionMonth === undefined ||
+      this.lastInteractionMonth.getMonth() !== now.getMonth() ||
+      this.lastInteractionMonth.getFullYear() !== now.getFullYear()
+    ) {
+      const startMonth = new Date(currentDay);
+      startMonth.setDate(1);
+      this.lastInteractionMonth = startMonth;
+      umami.log({
+        event: "/monthly-active-user",
+        messageApp: this.messageApp
+      });
+      needSaving = true;
+    }
 
-      if (needSaving) void this.save();
-    });
+    if (needSaving) await this.save();
   }
 );
 
