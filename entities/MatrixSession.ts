@@ -6,7 +6,7 @@ import {
   MiniUserInfo,
   recordSuccessfulDelivery
 } from "./Session.ts";
-import umami, { UmamiEvent } from "../utils/umami.ts";
+import umami, { UmamiEvent, UmamiLogger } from "../utils/umami.ts";
 import {
   markdown2html,
   markdown2plainText,
@@ -126,6 +126,8 @@ export async function sendMatrixMessage(
   options?: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
+  const umamiLogger: UmamiLogger =
+    options?.useAsyncUmamiLog === true ? umami.logAsync : umami.log;
   let keyboard = options?.keyboard;
   if (!options?.forceNoKeyboard) keyboard ??= mainMenuKeyboardMatrix;
 
@@ -215,7 +217,7 @@ export async function sendMatrixMessage(
         formatted_body: markdown2html(mArr[i])
       });
 
-      umami.log({
+      umamiLogger({
         event: "/message-sent",
         messageApp: client.messageApp
       });
@@ -251,10 +253,10 @@ export async function sendMatrixMessage(
     switch (errCode) {
       case "M_LIMIT_EXCEEDED": {
         if (retryNumber > MAX_MESSAGE_RETRY) {
-          umami.log({ event: "/message-fail-too-many-requests-aborted" });
+          umamiLogger({ event: "/message-fail-too-many-requests-aborted" });
           return false;
         }
-        umami.log({
+        umamiLogger({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp
         });

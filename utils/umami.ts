@@ -64,14 +64,16 @@ const logInternal = async (args: UmamiLogArgs) => {
   });
 };
 
-export const log = (args: UmamiLogArgs) => {
+export const log: UmamiLogger = (args: UmamiLogArgs) => {
   // Schedule the whole logging routine to keep callers non-blocking.
   setImmediate(() => {
     void logInternal(args);
   });
 };
 
-export const logAsync = async (args: UmamiLogArgs): Promise<void> => {
+export const logAsync: UmamiLogger = async (
+  args: UmamiLogArgs
+): Promise<void> => {
   await logInternal(args);
 };
 

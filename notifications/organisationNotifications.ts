@@ -264,7 +264,8 @@ async function sendOrganisationUpdate(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: userInfo.messageApp === "WhatsApp"
+    separateMenuMessage: userInfo.messageApp === "WhatsApp",
+    useAsyncUmamiLog: true
   };
 
   const messageSent = await sendMessage(
