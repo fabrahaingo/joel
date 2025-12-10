@@ -184,7 +184,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
               { $set: { status: "active" }, $unset: { roomId: 1 } },
               { runValidators: true }
             );
-            umami.log({
+            await umami.logAsync({
               event: "/user-blocked-joel",
               messageApp: matrixApp
             });

@@ -202,10 +202,6 @@ export async function sendMatrixMessage(
         userInfo.messageApp,
         `${userInfo.messageApp}: Could not find DM room for user ${userInfo.chatId}`
       );
-      await User.updateOne({
-        messageApp: userInfo.messageApp,
-        chatId: userInfo.chatId
-      });
       return false;
     }
     let promptId = "";
@@ -253,7 +249,9 @@ export async function sendMatrixMessage(
     switch (errCode) {
       case "M_LIMIT_EXCEEDED": {
         if (retryNumber > MAX_MESSAGE_RETRY) {
-          await umamiLogger({ event: "/message-fail-too-many-requests-aborted" });
+          await umamiLogger({
+            event: "/message-fail-too-many-requests-aborted"
+          });
           return false;
         }
         await umamiLogger({

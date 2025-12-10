@@ -198,7 +198,7 @@ export async function sendTelegramMessage(
       const error = err as AxiosError<TelegramAPIError>;
       switch (error.response?.data.description) {
         case "Forbidden: bot was blocked by the user":
-          await umamiLogger({
+          await umami.logAsync({
             event: "/user-blocked-joel",
             messageApp: "Telegram"
           });
@@ -208,7 +208,7 @@ export async function sendTelegramMessage(
           );
           return false;
         case "Forbidden: user is deactivated":
-          await umamiLogger({
+          await umami.logAsync({
             event: "/user-deactivated",
             messageApp: "Telegram"
           });
@@ -280,14 +280,14 @@ async function sendTelegramTypingAction(
               { $set: { status: "blocked" } }
             );
 
-            umami.log({
+            await umami.logAsync({
               event: "/user-blocked-joel",
               messageApp: "Telegram"
             });
           }
           return;
         case "Forbidden: user is deactivated":
-          umami.log({
+          await umami.logAsync({
             event: "/user-deactivated",
             messageApp: "Telegram"
           });

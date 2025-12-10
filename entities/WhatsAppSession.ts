@@ -288,7 +288,7 @@ export async function sendWhatsAppMessage(
             );
 
           case 131008: // user blocked the bot
-            await umamiLogger({
+            await umami.logAsync({
               event: "/user-blocked-joel",
               messageApp: "WhatsApp"
             });
@@ -299,7 +299,7 @@ export async function sendWhatsAppMessage(
             break;
           case 131026: // user not on WhatsApp
           case 131030:
-            await umamiLogger({
+            await umami.logAsync({
               event: "/user-deactivated",
               messageApp: "WhatsApp"
             });

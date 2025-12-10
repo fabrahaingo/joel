@@ -7,7 +7,7 @@ export interface UmamiNotificationData {
   total_records_nb: number;
 }
 
-export type UmamiLogger = (args: UmamiLogArgs) => Promise<void>;
+export type UmamiLogger = (args: UmamiLogArgs) => Promise<void> | void;
 
 export interface UmamiLogArgs {
   event: UmamiEvent;
@@ -64,15 +64,16 @@ const logInternal = async (args: UmamiLogArgs) => {
   });
 };
 
-export const log: UmamiLogger = async (args: UmamiLogArgs) =>
+export const log = (args: UmamiLogArgs): void => {
   // Schedule the whole logging routine to keep callers non-blocking.
-  await new Promise((resolve) => {
-    setImmediate(() => {
-      void logInternal(args).finally(resolve);
-    });
+  setImmediate(() => {
+    void logInternal(args);
   });
+};
 
-export const logAsync: UmamiLogger = async (args: UmamiLogArgs): Promise<void> => {
+export const logAsync: UmamiLogger = async (
+  args: UmamiLogArgs
+): Promise<void> => {
   await logInternal(args);
 };
 

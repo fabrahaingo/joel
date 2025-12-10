@@ -122,6 +122,11 @@ export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
+  updateOne: (
+    filter: unknown,
+    update: unknown,
+    options?: unknown
+  ) => Promise<void>;
 }
 
 export interface IPeople {
