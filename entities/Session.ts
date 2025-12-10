@@ -111,6 +111,7 @@ export interface MessageSendingOptionsInternal {
   keyboard?: Keyboard;
   forceNoKeyboard?: boolean;
   separateMenuMessage?: boolean;
+  useAsyncUmamiLog?: boolean;
 }
 
 export interface MessageSendingOptionsExternal {
@@ -122,6 +123,7 @@ export interface MessageSendingOptionsExternal {
   forceNoKeyboard?: boolean;
   keyboard?: Keyboard;
   separateMenuMessage?: boolean;
+  useAsyncUmamiLog?: boolean;
 }
 
 export interface MiniUserInfo {
@@ -161,7 +163,8 @@ export async function sendMessage(
       return await sendSignalAppMessage(
         options.signalCli,
         userInfo.chatId,
-        message
+        message,
+        options
       );
 
     case "Telegram":
@@ -171,7 +174,9 @@ export async function sendMessage(
         options.telegramBotToken,
         userInfo.chatId,
         message,
-        options.keyboard
+        options.keyboard,
+        0,
+        options
       );
 
     case "WhatsApp":

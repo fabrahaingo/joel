@@ -1,7 +1,11 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { loadUser, recordSuccessfulDelivery } from "./Session.ts";
-import umami, { UmamiEvent } from "../utils/umami.ts";
+import {
+  loadUser,
+  MessageSendingOptionsInternal,
+  recordSuccessfulDelivery
+} from "./Session.ts";
+import umami, { UmamiEvent, UmamiLogger } from "../utils/umami.ts";
 import { markdown2plainText, splitText } from "../utils/text.utils.ts";
 import { SignalCli } from "signal-sdk";
 import { logError } from "../utils/debugLogger.ts";
@@ -92,8 +96,11 @@ export async function extractSignalAppSession(
 export async function sendSignalAppMessage(
   signalCli: SignalCli,
   userPhoneId: string,
-  message: string
+  message: string,
+  options?: MessageSendingOptionsInternal
 ): Promise<boolean> {
+  const umamiLogger: UmamiLogger =
+    options?.useAsyncUmamiLog === true ? umami.logAsync : umami.log;
   try {
     const cleanMessage = markdown2plainText(message);
     const userPhoneIdInt = userPhoneId.startsWith("+")
@@ -103,7 +110,7 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
-      umami.log({ event: "/message-sent", messageApp: "Signal" });
+      await umamiLogger({ event: "/message-sent", messageApp: "Signal" });
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>

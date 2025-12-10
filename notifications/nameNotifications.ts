@@ -209,7 +209,8 @@ async function sendNameMentionUpdates(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: userInfo.messageApp === "WhatsApp"
+    separateMenuMessage: userInfo.messageApp === "WhatsApp",
+    useAsyncUmamiLog: true
   };
 
   const messageSent = await sendMessage(
@@ -227,7 +228,7 @@ async function sendNameMentionUpdates(
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  umami.log({
+  await umami.logAsync({
     event: "/notification-update-name",
     messageApp: userInfo.messageApp,
     notificationData: notifData

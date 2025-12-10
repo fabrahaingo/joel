@@ -155,7 +155,8 @@ async function sendAlertStringUpdate(
 
   const messageAppsOptionsApp = {
     ...messageAppsOptions,
-    separateMenuMessage: userInfo.messageApp === "WhatsApp"
+    separateMenuMessage: userInfo.messageApp === "WhatsApp",
+    useAsyncUmamiLog: true
   };
 
   const messageSent = await sendMessage(
@@ -173,7 +174,7 @@ async function sendAlertStringUpdate(
       .reduce((total: number, value) => total + value.length, 0)
   };
 
-  umami.log({
+  await umami.logAsync({
     event: "/notification-update-meta",
     messageApp: userInfo.messageApp,
     notificationData: notifData
