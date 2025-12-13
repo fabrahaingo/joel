@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, isAxiosError } from "axios";
 import { MessageApp } from "../types";
 
 export interface UmamiNotificationData {
@@ -59,9 +59,18 @@ const logInternal = async (args: UmamiLogArgs) => {
     }
   };
 
-  await axios.post(endpoint, payload, options).catch((error) => {
-    console.log(error);
-  });
+  try {
+    await axios.post(endpoint, payload, options);
+  } catch (error) {
+    if (isAxiosError(error)) {
+      const axiosErr = error as AxiosError;
+      console.error(
+        `Axios error on umami.log "${args.event}" : ${axiosErr.code ? " " + axiosErr.code : ""} ${axiosErr.message}`
+      );
+    } else {
+      console.log(error);
+    }
+  }
 };
 
 export const log = (args: UmamiLogArgs): void => {
