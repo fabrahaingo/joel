@@ -60,11 +60,15 @@ export class SignalSession implements ISession {
     });
   }
 
-  async sendMessage(formattedData: string): Promise<boolean> {
+  async sendMessage(
+    formattedData: string,
+    options?: MessageSendingOptionsInternal
+  ): Promise<boolean> {
     return await sendSignalAppMessage(
       this.signalCli,
       this.chatId,
-      formattedData
+      formattedData,
+      { ...options, useAsyncUmamiLog: false }
     );
   }
 }
@@ -97,10 +101,11 @@ export async function sendSignalAppMessage(
   signalCli: SignalCli,
   userPhoneId: string,
   message: string,
-  options?: MessageSendingOptionsInternal
+  options: MessageSendingOptionsInternal
 ): Promise<boolean> {
-  const umamiLogger: UmamiLogger =
-    options?.useAsyncUmamiLog === true ? umami.logAsync : umami.log;
+  const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
+    ? umami.logAsync
+    : umami.log;
   try {
     const cleanMessage = markdown2plainText(message);
     const userPhoneIdInt = userPhoneId.startsWith("+")

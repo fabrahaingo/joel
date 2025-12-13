@@ -75,7 +75,8 @@ export async function sendMainMenu(
       await sendMessage(userInfo, message, {
         ...options.externalOptions,
         keyboard,
-        separateMenuMessage
+        separateMenuMessage,
+        useAsyncUmamiLog: true
       });
   } catch (error) {
     await logError(userInfo.messageApp, "Error in /default command", error);

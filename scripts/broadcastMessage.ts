@@ -49,7 +49,7 @@ export async function broadcastMessage(
         roomId: recipient.roomId
       },
       message,
-      messageAppOptions
+      { ...messageAppOptions, useAsyncUmamiLog: true }
     );
 
     if (success) {

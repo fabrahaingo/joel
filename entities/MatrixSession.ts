@@ -114,7 +114,7 @@ export class MatrixSession implements ISession {
       this.client,
       { messageApp: this.messageApp, chatId: this.chatId, roomId: this.roomId },
       formattedData,
-      options
+      { ...options, useAsyncUmamiLog: false }
     );
   }
 }
@@ -123,13 +123,14 @@ export async function sendMatrixMessage(
   client: ExtendedMatrixClient,
   userInfo: MiniUserInfo,
   message: string,
-  options?: MessageSendingOptionsInternal,
+  options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
-  const umamiLogger: UmamiLogger =
-    options?.useAsyncUmamiLog === true ? umami.logAsync : umami.log;
-  let keyboard = options?.keyboard;
-  if (!options?.forceNoKeyboard) keyboard ??= mainMenuKeyboardMatrix;
+  const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
+    ? umami.logAsync
+    : umami.log;
+  let keyboard = options.keyboard;
+  if (!options.forceNoKeyboard) keyboard ??= mainMenuKeyboardMatrix;
 
   const mArr = splitText(message, MATRIX_MESSAGE_CHAR_LIMIT);
   let i = 0;
@@ -223,7 +224,7 @@ export async function sendMatrixMessage(
         setTimeout(resolve, MATRIX_COOL_DOWN_DELAY_MS)
       );
     }
-    if (options?.separateMenuMessage)
+    if (options.separateMenuMessage)
       await sendPollMenu(client, userInfo.roomId, {
         title: KEYBOARD_KEYS.MAIN_MENU.key.text,
         options: fullMenuKeyboard.map((k) => ({ text: k.text }))
