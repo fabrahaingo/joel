@@ -137,7 +137,7 @@ export class WhatsAppSession implements ISession {
       this.whatsAppAPI,
       this.chatId,
       formattedData,
-      options
+      { ...options, useAsyncUmamiLog: false }
     );
   }
 }
@@ -175,11 +175,12 @@ export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
   userPhoneIdStr: string,
   message: string,
-  options?: MessageSendingOptionsInternal,
+  options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
-  const umamiLogger: UmamiLogger =
-    options?.useAsyncUmamiLog === true ? umami.logAsync : umami.log;
+  const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
+    ? umami.logAsync
+    : umami.log;
   if (retryNumber > 5) {
     await umamiLogger({
       event: "/message-fail-too-many-requests-aborted",
@@ -192,12 +193,12 @@ export async function sendWhatsAppMessage(
     throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
   }
 
-  if (options?.separateMenuMessage) options.forceNoKeyboard = true;
+  if (options.separateMenuMessage) options.forceNoKeyboard = true;
 
   let interactiveKeyboard: ActionList | ActionButtons | null = null;
 
   if (
-    (options?.keyboard == null && !options?.forceNoKeyboard) ||
+    (options.keyboard == null && !options.forceNoKeyboard) ||
     options.separateMenuMessage
   )
     interactiveKeyboard = fullMenuKeyboard;
