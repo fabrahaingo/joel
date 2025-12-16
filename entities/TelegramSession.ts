@@ -91,16 +91,17 @@ export class TelegramSession implements ISession {
     formattedData: string,
     options?: MessageSendingOptionsInternal
   ): Promise<boolean> {
-    let keyboard = options?.keyboard;
-    if (!options?.forceNoKeyboard) keyboard ??= this.mainMenuKeyboard;
-
     return await sendTelegramMessage(
       this.botToken,
       this.chatId,
       formattedData,
-      keyboard,
-      0,
-      options
+      {
+        ...options,
+        keyboard:
+          options?.keyboard ??
+          (!options?.forceNoKeyboard ? this.mainMenuKeyboard : undefined),
+        useAsyncUmamiLog: false
+      }
     );
   }
 }
@@ -148,12 +149,12 @@ export async function sendTelegramMessage(
   botToken: string,
   chatId: string,
   message: string,
-  keyboard?: Keyboard,
-  retryNumber = 0,
-  options?: MessageSendingOptionsInternal
+  options: MessageSendingOptionsInternal,
+  retryNumber = 0
 ): Promise<boolean> {
-  const umamiLogger: UmamiLogger =
-    options?.useAsyncUmamiLog === true ? umami.logAsync : umami.log;
+  const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
+    ? umami.logAsync
+    : umami.log;
   if (retryNumber > 5) {
     await umamiLogger({
       event: "/message-fail-too-many-requests-aborted",
@@ -175,11 +176,11 @@ export async function sendTelegramMessage(
           is_disabled: true
         }
       };
-      if (i == mArr.length - 1 && keyboard !== undefined) {
+      if (i == mArr.length - 1 && options.keyboard !== undefined) {
         payload.reply_markup = {
           selective: true,
           resize_keyboard: true,
-          keyboard: keyboard
+          keyboard: options.keyboard
         };
       }
       await axios.post(
@@ -227,9 +228,8 @@ export async function sendTelegramMessage(
             botToken,
             chatId,
             mArr.slice(i).join("\n"),
-            keyboard,
-            retryNumber + 1,
-            options
+            options,
+            retryNumber + 1
           );
         default:
           break;

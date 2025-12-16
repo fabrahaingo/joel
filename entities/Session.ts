@@ -123,7 +123,7 @@ export interface MessageSendingOptionsExternal {
   forceNoKeyboard?: boolean;
   keyboard?: Keyboard;
   separateMenuMessage?: boolean;
-  useAsyncUmamiLog?: boolean;
+  useAsyncUmamiLog: boolean;
 }
 
 export interface MiniUserInfo {
@@ -174,8 +174,6 @@ export async function sendMessage(
         options.telegramBotToken,
         userInfo.chatId,
         message,
-        options.keyboard,
-        0,
         options
       );
 

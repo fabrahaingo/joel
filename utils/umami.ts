@@ -1,5 +1,7 @@
 import axios, { AxiosError, isAxiosError } from "axios";
 import { MessageApp } from "../types";
+import * as https from "node:https";
+import pLimit from "p-limit";
 
 export interface UmamiNotificationData {
   message_nb: number;
@@ -41,6 +43,18 @@ const createPayload = (args: UmamiLogArgs) => ({
   type: "event"
 });
 
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 10
+});
+
+const axiosClient = axios.create({
+  httpsAgent
+});
+
+// Shared limiter to cap concurrent send attempts across all log calls.
+const limit = pLimit(5);
+
 const logInternal = async (args: UmamiLogArgs) => {
   if (process.env.NODE_ENV === "development") {
     console.log(
@@ -58,19 +72,20 @@ const logInternal = async (args: UmamiLogArgs) => {
         "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0"
     }
   };
-
-  try {
-    await axios.post(endpoint, payload, options);
-  } catch (error) {
-    if (isAxiosError(error)) {
-      const axiosErr = error as AxiosError;
-      console.error(
-        `Axios error on umami.log "${args.event}" : ${axiosErr.code ? " " + axiosErr.code : ""} ${axiosErr.message}`
-      );
-    } else {
-      console.log(error);
+  await limit(async () => {
+    try {
+      await axiosClient.post(endpoint, payload, options);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        const axiosErr = error as AxiosError;
+        console.error(
+          `Axios error on umami.log "${args.event}" : ${axiosErr.code ? " " + axiosErr.code : ""} ${axiosErr.message}`
+        );
+      } else {
+        console.log(error);
+      }
     }
-  }
+  });
 };
 
 export const log = (args: UmamiLogArgs): void => {
