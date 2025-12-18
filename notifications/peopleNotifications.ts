@@ -1,6 +1,7 @@
 import { Types } from "mongoose";
 import {
   ExternalMessageOptions,
+  MessageSendingOptionsExternal,
   MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
@@ -150,7 +151,8 @@ export async function notifyPeopleUpdates(
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
-          roomId: user.roomId
+          roomId: user.roomId,
+          hasAccount: true
         },
         updatedRecordsMap: newUserPeopleUpdates,
         recordCount: totalUserRecordsCount
@@ -247,10 +249,11 @@ async function sendPeopleUpdate(
     if (peopleId !== lastKey) notification_text += DEFAULT_GROUP_SEPARATOR;
   }
 
-  const messageAppsOptionsApp = {
+  const messageAppsOptionsApp: MessageSendingOptionsExternal = {
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
-    useAsyncUmamiLog: true
+    useAsyncUmamiLog: true,
+    hasAccount: true
   };
 
   const messageSent = await sendMessage(
@@ -271,7 +274,8 @@ async function sendPeopleUpdate(
   await umami.logAsync({
     event: "/notification-update-people",
     messageApp: userInfo.messageApp,
-    notificationData: notifData
+    notificationData: notifData,
+    hasAccount: true
   });
   return true;
 }

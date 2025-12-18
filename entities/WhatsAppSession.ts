@@ -108,11 +108,12 @@ export class WhatsAppSession implements ISession {
   }
 
   // try to fetch user from db
-  async loadUser(): Promise<void> {
+  async loadUser(): Promise<IUser | null> {
     this.user = await loadUser(this);
+    return this.user;
   }
 
-  // Force create a user record
+  // Force to create a user record
   async createUser() {
     this.user = await User.findOrCreate(this);
   }
@@ -125,7 +126,8 @@ export class WhatsAppSession implements ISession {
     umami.log({
       event: args.event,
       messageApp: this.messageApp,
-      payload: args.payload
+      payload: args.payload,
+      hasAccount: this.user != null
     });
   }
 
@@ -137,7 +139,7 @@ export class WhatsAppSession implements ISession {
       this.whatsAppAPI,
       this.chatId,
       formattedData,
-      { ...options, useAsyncUmamiLog: false }
+      { ...options, useAsyncUmamiLog: false, hasAccount: this.user != null }
     );
   }
 }
@@ -184,7 +186,8 @@ export async function sendWhatsAppMessage(
   if (retryNumber > 5) {
     await umamiLogger({
       event: "/message-fail-too-many-requests-aborted",
-      messageApp: "WhatsApp"
+      messageApp: "WhatsApp",
+      hasAccount: options.hasAccount
     });
     return false;
   } // give up after 5 retries
@@ -243,7 +246,7 @@ export async function sendWhatsAppMessage(
       if (
         i == mArr.length - 1 &&
         interactiveKeyboard != null &&
-        !options?.separateMenuMessage
+        !options.separateMenuMessage
       ) {
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
@@ -275,7 +278,8 @@ export async function sendWhatsAppMessage(
           case 131056:
             await umamiLogger({
               event: "/message-fail-too-many-requests",
-              messageApp: "WhatsApp"
+              messageApp: "WhatsApp",
+              hasAccount: options.hasAccount
             });
             await new Promise((resolve) =>
               setTimeout(resolve, Math.pow(4, retryNumber) * 1000)
@@ -291,7 +295,8 @@ export async function sendWhatsAppMessage(
           case 131008: // user blocked the bot
             await umami.logAsync({
               event: "/user-blocked-joel",
-              messageApp: "WhatsApp"
+              messageApp: "WhatsApp",
+              hasAccount: options.hasAccount
             });
             await User.updateOne(
               { messageApp: "WhatsApp", chatId: userPhoneIdStr },
@@ -302,7 +307,8 @@ export async function sendWhatsAppMessage(
           case 131030:
             await umami.logAsync({
               event: "/user-deactivated",
-              messageApp: "WhatsApp"
+              messageApp: "WhatsApp",
+              hasAccount: options.hasAccount
             });
             await deleteUserAndCleanupByIdentifier("WhatsApp", userPhoneIdStr);
             break;
@@ -311,9 +317,13 @@ export async function sendWhatsAppMessage(
         }
         return false;
       }
-      await umamiLogger({ event: "/message-sent", messageApp: "WhatsApp" });
+      await umamiLogger({
+        event: "/message-sent",
+        messageApp: "WhatsApp",
+        hasAccount: options.hasAccount
+      });
 
-      if (burstMode || (i == mArr.length - 1 && options?.separateMenuMessage)) {
+      if (burstMode || (i == mArr.length - 1 && options.separateMenuMessage)) {
         // prevent hitting the WH API rate limit
         await new Promise((resolve) =>
           setTimeout(resolve, WHATSAPP_BURST_MODE_DELAY_SECONDS * 1000)
@@ -326,7 +336,7 @@ export async function sendWhatsAppMessage(
     }
     let numberMessageBurst = burstMode ? mArr.length : 0;
 
-    if (options?.separateMenuMessage && interactiveKeyboard != null) {
+    if (options.separateMenuMessage && interactiveKeyboard != null) {
       if (interactiveKeyboard instanceof ActionButtons) {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
@@ -345,7 +355,11 @@ export async function sendWhatsAppMessage(
         return false;
       }
       numberMessageBurst += 1;
-      await umamiLogger({ event: "/message-sent", messageApp: "WhatsApp" });
+      await umamiLogger({
+        event: "/message-sent",
+        messageApp: "WhatsApp",
+        hasAccount: options.hasAccount
+      });
     }
 
     // make up for the cooldown delay borrowed in the burst mode

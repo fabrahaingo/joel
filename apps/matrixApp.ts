@@ -186,7 +186,8 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
             );
             await umami.logAsync({
               event: "/user-blocked-joel",
-              messageApp: matrixApp
+              messageApp: matrixApp,
+              hasAccount: true
             });
           }
           return;
@@ -218,7 +219,8 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
                 );
                 umami.log({
                   event: "/user-unblocked-joel",
-                  messageApp: matrixApp
+                  messageApp: matrixApp,
+                  hasAccount: true
                 });
                 if (!previousUser.followsNothing())
                   msgText = KEYBOARD_KEYS.FOLLOWS_LIST.key.text;

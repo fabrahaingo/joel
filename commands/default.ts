@@ -27,7 +27,8 @@ export const mainMenuCommand = async (session: ISession): Promise<void> => {
     {
       messageApp: session.messageApp,
       chatId: session.chatId,
-      roomId: session.roomId
+      roomId: session.roomId,
+      hasAccount: session.user != null
     },
     { session }
   );
@@ -76,7 +77,8 @@ export async function sendMainMenu(
         ...options.externalOptions,
         keyboard,
         separateMenuMessage,
-        useAsyncUmamiLog: true
+        useAsyncUmamiLog: true,
+        hasAccount: userInfo.hasAccount
       });
   } catch (error) {
     await logError(userInfo.messageApp, "Error in /default command", error);

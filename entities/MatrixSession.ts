@@ -80,13 +80,14 @@ export class MatrixSession implements ISession {
   }
 
   // try to fetch user from db
-  async loadUser(): Promise<void> {
+  async loadUser(): Promise<IUser | null> {
     this.user = await loadUser(this);
     // If the roomId has changed, update the user's roomId'
     if (this.user && this.user.roomId !== this.roomId) {
       this.user.roomId = this.roomId;
       await this.user.save();
     }
+    return this.user;
   }
 
   // Force create a user record
@@ -102,7 +103,8 @@ export class MatrixSession implements ISession {
     umami.log({
       event: args.event,
       messageApp: this.messageApp,
-      payload: args.payload
+      payload: args.payload,
+      hasAccount: this.user != null
     });
   }
 
@@ -110,11 +112,17 @@ export class MatrixSession implements ISession {
     formattedData: string,
     options?: MessageSendingOptionsInternal
   ): Promise<boolean> {
+    const hasAccount = this.user != null;
     return await sendMatrixMessage(
       this.client,
-      { messageApp: this.messageApp, chatId: this.chatId, roomId: this.roomId },
+      {
+        messageApp: this.messageApp,
+        chatId: this.chatId,
+        roomId: this.roomId,
+        hasAccount
+      },
       formattedData,
-      { ...options, useAsyncUmamiLog: false }
+      { ...options, useAsyncUmamiLog: false, hasAccount }
     );
   }
 }
@@ -216,7 +224,8 @@ export async function sendMatrixMessage(
 
       await umamiLogger({
         event: "/message-sent",
-        messageApp: client.messageApp
+        messageApp: client.messageApp,
+        hasAccount: userInfo.hasAccount
       });
 
       // short pause to avoid spamming the homeserver
@@ -225,10 +234,15 @@ export async function sendMatrixMessage(
       );
     }
     if (options.separateMenuMessage)
-      await sendPollMenu(client, userInfo.roomId, {
-        title: KEYBOARD_KEYS.MAIN_MENU.key.text,
-        options: fullMenuKeyboard.map((k) => ({ text: k.text }))
-      });
+      await sendPollMenu(
+        client,
+        userInfo.roomId,
+        {
+          title: KEYBOARD_KEYS.MAIN_MENU.key.text,
+          options: fullMenuKeyboard.map((k) => ({ text: k.text }))
+        },
+        userInfo.hasAccount
+      );
     else if (keyboard != null) {
       const res = await sendMatrixReactions(
         client,
@@ -251,13 +265,15 @@ export async function sendMatrixMessage(
       case "M_LIMIT_EXCEEDED": {
         if (retryNumber > MAX_MESSAGE_RETRY) {
           await umamiLogger({
-            event: "/message-fail-too-many-requests-aborted"
+            event: "/message-fail-too-many-requests-aborted",
+            hasAccount: userInfo.hasAccount
           });
           return false;
         }
         await umamiLogger({
           event: "/message-fail-too-many-requests",
-          messageApp: client.messageApp
+          messageApp: client.messageApp,
+          hasAccount: userInfo.hasAccount
         });
         let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
         if ("retryAfterMs" in mError && mError.retryAfterMs)
@@ -295,7 +311,8 @@ export async function sendMatrixMessage(
       case "M_FORBIDDEN": // user blocked the bot, user left the room ...
         umami.log({
           event: "/user-blocked-joel",
-          messageApp: client.messageApp
+          messageApp: client.messageApp,
+          hasAccount: userInfo.hasAccount
         });
         directRoomCache.delete(userInfo.chatId);
         await User.updateOne(
@@ -325,7 +342,8 @@ interface PollMenu {
 export async function sendPollMenu(
   client: ExtendedMatrixClient,
   roomId: string,
-  pollMenu: PollMenu
+  pollMenu: PollMenu,
+  hasAccount: boolean
 ): Promise<boolean> {
   //const body = fallbackBody(pollMenu.title, pollMenu.options);
 
@@ -349,7 +367,11 @@ export async function sendPollMenu(
     "org.matrix.msc3381.poll.start",
     content
   );
-  umami.log({ event: "/message-sent", messageApp: client.messageApp });
+  umami.log({
+    event: "/message-sent",
+    messageApp: client.messageApp,
+    hasAccount
+  });
 
   return true;
 }
@@ -417,12 +439,16 @@ async function sendMatrixReactions(
     switch (errCode) {
       case "M_LIMIT_EXCEEDED": {
         if (retryNumber > MAX_MESSAGE_RETRY) {
-          umami.log({ event: "/message-fail-too-many-requests-aborted" });
+          umami.log({
+            event: "/message-fail-too-many-requests-aborted",
+            hasAccount: userInfo.hasAccount
+          });
           return false;
         }
         umami.log({
           event: "/message-fail-too-many-requests",
-          messageApp: client.messageApp
+          messageApp: client.messageApp,
+          hasAccount: userInfo.hasAccount
         });
         let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
         if ("retryAfterMs" in mError && mError.retryAfterMs)
@@ -458,11 +484,11 @@ async function sendMatrixReactions(
           retryNumber + 1
         );
       default:
-        console.log(error);
-        umami.log({
-          event: "/console-log",
-          messageApp: userInfo.messageApp
-        });
+        await logError(
+          client.messageApp,
+          "Error sending Matrix reaction",
+          error
+        );
     }
     return false;
   }

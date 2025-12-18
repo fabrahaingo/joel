@@ -39,8 +39,9 @@ export class SignalSession implements ISession {
   }
 
   // try to fetch user from db
-  async loadUser(): Promise<void> {
+  async loadUser(): Promise<IUser | null> {
     this.user = await loadUser(this);
+    return this.user;
   }
 
   // Force create a user record
@@ -56,7 +57,8 @@ export class SignalSession implements ISession {
     umami.log({
       event: args.event,
       messageApp: this.messageApp,
-      payload: args.payload
+      payload: args.payload,
+      hasAccount: this.user != null
     });
   }
 
@@ -68,7 +70,7 @@ export class SignalSession implements ISession {
       this.signalCli,
       this.chatId,
       formattedData,
-      { ...options, useAsyncUmamiLog: false }
+      { ...options, useAsyncUmamiLog: false, hasAccount: this.user != null }
     );
   }
 }
@@ -115,7 +117,11 @@ export async function sendSignalAppMessage(
     for (const elem of mArr) {
       await signalCli.sendMessage(userPhoneIdInt, elem);
 
-      await umamiLogger({ event: "/message-sent", messageApp: "Signal" });
+      await umamiLogger({
+        event: "/message-sent",
+        messageApp: "Signal",
+        hasAccount: options.hasAccount
+      });
 
       // prevent hitting the Signal API rate limit
       await new Promise((resolve) =>
