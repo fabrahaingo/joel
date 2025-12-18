@@ -127,7 +127,8 @@ async function saveNewMetaPublications(
     await Publication.insertMany(newRecords, { ordered: false });
     await umami.logAsync({
       event: "/publication-added",
-      payload: { nb: newRecords.length }
+      payload: { nb: newRecords.length },
+      hasAccount: true
     });
   }
 }
@@ -233,7 +234,8 @@ export async function runNotificationProcess(
   for (const appType of targetApps) {
     await umami.logAsync({
       event: "/notification-process-completed",
-      messageApp: appType
+      messageApp: appType,
+      hasAccount: true
     });
   }
 }

@@ -2,6 +2,7 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import {
   ExternalMessageOptions,
+  MessageSendingOptionsExternal,
   MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
@@ -153,7 +154,8 @@ export async function notifyFunctionTagsUpdates(
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
-          roomId: user.roomId
+          roomId: user.roomId,
+          hasAccount: true
         },
         updatedRecordsMap: newUserTagsUpdates,
         recordCount: totalUserRecordsCount
@@ -253,10 +255,11 @@ async function sendTagUpdates(
     if (tag !== lastTag) notification_text += DEFAULT_GROUP_SEPARATOR;
   }
 
-  const messageAppsOptionsApp = {
+  const messageAppsOptionsApp: MessageSendingOptionsExternal = {
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
-    useAsyncUmamiLog: true
+    useAsyncUmamiLog: true,
+    hasAccount: true
   };
 
   const messageSent = await sendMessage(
@@ -277,7 +280,8 @@ async function sendTagUpdates(
   await umami.logAsync({
     event: "/notification-update-function",
     messageApp: userInfo.messageApp,
-    notificationData: notifData
+    notificationData: notifData,
+    hasAccount: true
   });
   return true;
 }

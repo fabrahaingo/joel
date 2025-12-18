@@ -23,7 +23,7 @@ export interface ISession {
   user: IUser | null | undefined;
   isReply: boolean | undefined;
 
-  loadUser: () => Promise<void>;
+  loadUser: () => Promise<IUser | null>;
   createUser: () => Promise<void>;
   sendMessage: (
     msg: string,

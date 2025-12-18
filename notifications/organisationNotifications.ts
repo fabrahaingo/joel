@@ -1,5 +1,6 @@
 import {
   ExternalMessageOptions,
+  MessageSendingOptionsExternal,
   MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
@@ -152,7 +153,8 @@ export async function notifyOrganisationsUpdates(
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
-          roomId: user.roomId
+          roomId: user.roomId,
+          hasAccount: true
         },
         updatedRecordsMap: newUserOrganisationsUpdates,
         recordCount: totalUserRecordsCount
@@ -262,10 +264,11 @@ async function sendOrganisationUpdate(
     if (orgId !== lastKey) notification_text += DEFAULT_GROUP_SEPARATOR;
   }
 
-  const messageAppsOptionsApp = {
+  const messageAppsOptionsApp: MessageSendingOptionsExternal = {
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
-    useAsyncUmamiLog: true
+    useAsyncUmamiLog: true,
+    hasAccount: true
   };
 
   const messageSent = await sendMessage(
@@ -286,7 +289,8 @@ async function sendOrganisationUpdate(
   await umami.logAsync({
     event: "/notification-update-organisation",
     messageApp: userInfo.messageApp,
-    notificationData: notifData
+    notificationData: notifData,
+    hasAccount: true
   });
   return true;
 }

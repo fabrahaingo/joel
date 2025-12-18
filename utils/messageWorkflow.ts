@@ -24,22 +24,23 @@ export async function handleIncomingMessage(
 
   const { beforeProcessing, isReply, errorContext } = options ?? {};
   try {
-    umami.log({
-      event: "/message-received",
-      messageApp: session.messageApp
-    });
-
     if (beforeProcessing) await beforeProcessing();
 
     if (isReply !== undefined) {
       session.isReply = isReply;
     }
 
-    await session.loadUser();
+    const user = await session.loadUser();
+
+    umami.log({
+      event: "/message-received",
+      messageApp: session.messageApp,
+      hasAccount: user != null
+    });
 
     await processMessage(session, trimmedText);
 
-    if (session.user != null) await session.user.updateInteractionMetrics();
+    if (user != null) await user.updateInteractionMetrics();
   } catch (error) {
     await logError(
       session.messageApp,

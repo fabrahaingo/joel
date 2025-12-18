@@ -46,10 +46,11 @@ export async function broadcastMessage(
       {
         messageApp: recipient.messageApp,
         chatId: recipient.chatId,
-        roomId: recipient.roomId
+        roomId: recipient.roomId,
+        hasAccount: true
       },
       message,
-      { ...messageAppOptions, useAsyncUmamiLog: true }
+      { ...messageAppOptions, useAsyncUmamiLog: true, hasAccount: true }
     );
 
     if (success) {
