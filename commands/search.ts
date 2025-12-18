@@ -292,7 +292,6 @@ export async function searchPersonHistory(
 
     return;
   } catch (error) {
-    console.log(error);
     await logError(session.messageApp, "Error in search command", error);
   }
   return;

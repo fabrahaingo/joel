@@ -66,8 +66,9 @@ export class TelegramSession implements ISession {
   }
 
   // try to fetch user from db
-  async loadUser(): Promise<void> {
+  async loadUser(): Promise<IUser | null> {
     this.user = await loadUser(this);
+    return this.user;
   }
 
   // Force create a user record
@@ -76,14 +77,19 @@ export class TelegramSession implements ISession {
   }
 
   sendTypingAction() {
-    void sendTelegramTypingAction(this.chatIdTg, this.botToken);
+    void sendTelegramTypingAction(
+      this.chatIdTg,
+      this.botToken,
+      this.user != null
+    );
   }
 
   log(args: { event: UmamiEvent; payload?: Record<string, unknown> }) {
     umami.log({
       event: args.event,
       messageApp: this.messageApp,
-      payload: args.payload
+      payload: args.payload,
+      hasAccount: this.user != null
     });
   }
 
@@ -100,7 +106,8 @@ export class TelegramSession implements ISession {
         keyboard:
           options?.keyboard ??
           (!options?.forceNoKeyboard ? this.mainMenuKeyboard : undefined),
-        useAsyncUmamiLog: false
+        useAsyncUmamiLog: false,
+        hasAccount: this.user != null
       }
     );
   }
@@ -158,7 +165,8 @@ export async function sendTelegramMessage(
   if (retryNumber > 5) {
     await umamiLogger({
       event: "/message-fail-too-many-requests-aborted",
-      messageApp: "Telegram"
+      messageApp: "Telegram",
+      hasAccount: options.hasAccount
     });
     return false;
   }
@@ -187,7 +195,11 @@ export async function sendTelegramMessage(
         `https://api.telegram.org/bot${botToken}/sendMessage`,
         payload
       );
-      await umamiLogger({ event: "/message-sent", messageApp: "Telegram" });
+      await umamiLogger({
+        event: "/message-sent",
+        messageApp: "Telegram",
+        hasAccount: options.hasAccount
+      });
 
       // prevent hitting the Telegram API rate limit
       await new Promise((resolve) =>
@@ -201,7 +213,8 @@ export async function sendTelegramMessage(
         case "Forbidden: bot was blocked by the user":
           await umami.logAsync({
             event: "/user-blocked-joel",
-            messageApp: "Telegram"
+            messageApp: "Telegram",
+            hasAccount: options.hasAccount
           });
           await User.updateOne(
             { messageApp: "Telegram", chatId: chatId },
@@ -211,14 +224,16 @@ export async function sendTelegramMessage(
         case "Forbidden: user is deactivated":
           await umami.logAsync({
             event: "/user-deactivated",
-            messageApp: "Telegram"
+            messageApp: "Telegram",
+            hasAccount: options.hasAccount
           });
           await deleteUserAndCleanupByIdentifier("Telegram", chatId);
           return false;
         case "Too many requests":
           await umamiLogger({
             event: "/message-fail-too-many-requests",
-            messageApp: "Telegram"
+            messageApp: "Telegram",
+            hasAccount: options.hasAccount
           });
           await new Promise((resolve) =>
             setTimeout(resolve, Math.pow(2, retryNumber) * 1000)
@@ -246,6 +261,7 @@ export async function sendTelegramMessage(
 async function sendTelegramTypingAction(
   chatIdTg: number,
   botToken: string,
+  hasAccount: boolean,
   status: "active" | "blocked" = "active"
 ): Promise<void> {
   const chatId = chatIdTg.toString();
@@ -264,7 +280,8 @@ async function sendTelegramTypingAction(
 
       umami.log({
         event: "/user-unblocked-joel",
-        messageApp: "Telegram"
+        messageApp: "Telegram",
+        hasAccount
       });
     }
   } catch (err) {
@@ -282,14 +299,16 @@ async function sendTelegramTypingAction(
 
             await umami.logAsync({
               event: "/user-blocked-joel",
-              messageApp: "Telegram"
+              messageApp: "Telegram",
+              hasAccount
             });
           }
           return;
         case "Forbidden: user is deactivated":
           await umami.logAsync({
             event: "/user-deactivated",
-            messageApp: "Telegram"
+            messageApp: "Telegram",
+            hasAccount
           });
           await deleteUserAndCleanupByIdentifier("Telegram", chatId);
           return;
@@ -325,7 +344,12 @@ export async function refreshTelegramBlockedUsers(
   await Promise.all(
     blockedTelegramUsers.map(({ chatId }) =>
       limit(async () =>
-        sendTelegramTypingAction(Number.parseInt(chatId), botToken, "blocked")
+        sendTelegramTypingAction(
+          Number.parseInt(chatId),
+          botToken,
+          true,
+          "blocked"
+        )
       )
     )
   );

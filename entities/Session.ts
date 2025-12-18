@@ -112,6 +112,7 @@ export interface MessageSendingOptionsInternal {
   forceNoKeyboard?: boolean;
   separateMenuMessage?: boolean;
   useAsyncUmamiLog?: boolean;
+  hasAccount?: boolean;
 }
 
 export interface MessageSendingOptionsExternal {
@@ -124,12 +125,14 @@ export interface MessageSendingOptionsExternal {
   keyboard?: Keyboard;
   separateMenuMessage?: boolean;
   useAsyncUmamiLog: boolean;
+  hasAccount: boolean;
 }
 
 export interface MiniUserInfo {
   messageApp: MessageApp;
   chatId: string;
   roomId?: string;
+  hasAccount: boolean;
 }
 
 export async function sendMessage(

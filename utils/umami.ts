@@ -13,6 +13,7 @@ export type UmamiLogger = (args: UmamiLogArgs) => Promise<void> | void;
 
 export interface UmamiLogArgs {
   event: UmamiEvent;
+  hasAccount?: boolean;
   messageApp?: MessageApp;
   notificationData?: UmamiNotificationData;
   payload?: Record<string, unknown>;
@@ -22,6 +23,9 @@ const buildExtraData = (args: UmamiLogArgs): Record<string, unknown> => {
   const extra_data: Record<string, unknown> = args.payload ?? {};
   if (args.messageApp) {
     extra_data.messageApp = args.messageApp;
+  }
+  if (args.hasAccount != null) {
+    extra_data.has_account = args.hasAccount;
   }
 
   if (args.notificationData != null) {

@@ -185,7 +185,8 @@ UserSchema.method(
     if (this.status === "blocked") {
       umami.log({
         event: "/user-unblocked-joel",
-        messageApp: this.messageApp
+        messageApp: this.messageApp,
+        hasAccount: true
       });
       this.status = "active";
       needSaving = true;
@@ -203,7 +204,8 @@ UserSchema.method(
       this.lastInteractionDay = currentDay;
       umami.log({
         event: "/daily-active-user",
-        messageApp: this.messageApp
+        messageApp: this.messageApp,
+        hasAccount: true
       });
       needSaving = true;
     }
@@ -220,7 +222,8 @@ UserSchema.method(
       this.lastInteractionWeek = currentDay;
       umami.log({
         event: "/weekly-active-user",
-        messageApp: this.messageApp
+        messageApp: this.messageApp,
+        hasAccount: true
       });
       needSaving = true;
     }
@@ -236,7 +239,8 @@ UserSchema.method(
       this.lastInteractionMonth = startMonth;
       umami.log({
         event: "/monthly-active-user",
-        messageApp: this.messageApp
+        messageApp: this.messageApp,
+        hasAccount: true
       });
       needSaving = true;
     }

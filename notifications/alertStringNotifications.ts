@@ -1,5 +1,6 @@
 import {
   ExternalMessageOptions,
+  MessageSendingOptionsExternal,
   MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
@@ -76,7 +77,8 @@ export async function notifyAlertStringUpdates(
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
-          roomId: user.roomId
+          roomId: user.roomId,
+          hasAccount: true
         },
         updatedRecordsMap: newAlertUpdates,
         recordCount: totalUserRecordsCount
@@ -153,10 +155,11 @@ async function sendAlertStringUpdate(
     if (alert !== lastKey) notificationText += DEFAULT_GROUP_SEPARATOR;
   }
 
-  const messageAppsOptionsApp = {
+  const messageAppsOptionsApp: MessageSendingOptionsExternal = {
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
-    useAsyncUmamiLog: true
+    useAsyncUmamiLog: true,
+    hasAccount: true
   };
 
   const messageSent = await sendMessage(
@@ -177,7 +180,8 @@ async function sendAlertStringUpdate(
   await umami.logAsync({
     event: "/notification-update-meta",
     messageApp: userInfo.messageApp,
-    notificationData: notifData
+    notificationData: notifData,
+    hasAccount: true
   });
 
   return true;
