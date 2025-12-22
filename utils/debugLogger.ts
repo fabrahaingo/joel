@@ -71,7 +71,7 @@ const buildLogMessage = (
   const levelEmoji = level === "error" ? "❌" : "⚠️";
   const errorText = formatError(error);
   return [
-    `${levelEmoji} [${messageApp}] ${message}`,
+    `${levelEmoji} [${messageApp} (${process.env.NODE_env ?? "production"})] ${message}`,
     errorText != null ? `Details:\n${errorText}` : null
   ]
     .filter((part): part is string => part != null)
