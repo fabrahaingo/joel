@@ -86,7 +86,8 @@ const {
   WHATSAPP_APP_SECRET,
   WHATSAPP_VERIFY_TOKEN,
   WHATSAPP_APP_PORT,
-  WHATSAPP_PHONE_NUMBER
+  WHATSAPP_PHONE_NUMBER,
+  WHATSAPP_PHONE_ID
 } = process.env;
 
 export function getWhatsAppAPI(): WhatsAppAPI {
@@ -161,6 +162,11 @@ app.post("/webhook", async (req, res) => {
       );
       incomingMessageTargets.add(incomingData.apiPhoneNumber);
       return;
+    } else if (WHATSAPP_PHONE_ID !== incomingData.apiPhoneId) {
+      await logError(
+        "WhatsApp",
+        `WHATSAPP_PHONE_ID should be ${incomingData.apiPhoneId}, it is currently ${WHATSAPP_PHONE_ID ? `"${WHATSAPP_PHONE_ID}"` : "not set"}.`
+      );
     }
 
     const now = Math.floor(Date.now() / 1000);

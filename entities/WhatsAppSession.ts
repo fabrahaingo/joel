@@ -193,7 +193,9 @@ export async function sendWhatsAppMessage(
   } // give up after 5 retries
 
   if (WHATSAPP_PHONE_ID === undefined) {
-    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+    throw new Error(
+      "WHATSAPP_PHONE_ID is not set. Send a message to the bot to fetch the expected value and define it."
+    );
   }
 
   if (options.separateMenuMessage) options.forceNoKeyboard = true;
