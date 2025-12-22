@@ -15,7 +15,7 @@ import { startDailyNotificationJobs } from "../notifications/notificationSchedul
 import User from "../models/User.ts";
 import Organisation from "../models/Organisation.ts";
 import People from "../models/People.ts";
-import { logError, logWarning } from "../utils/debugLogger.ts";
+import { logError } from "../utils/debugLogger.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
 
 const MAX_AGE_SEC = 5 * 60;
@@ -86,14 +86,14 @@ const {
   WHATSAPP_APP_SECRET,
   WHATSAPP_VERIFY_TOKEN,
   WHATSAPP_APP_PORT,
-  WHATSAPP_PHONE_ID
+  WHATSAPP_PHONE_NUMBER
 } = process.env;
 
 export function getWhatsAppAPI(): WhatsAppAPI {
   if (
     WHATSAPP_USER_TOKEN === undefined ||
     WHATSAPP_APP_SECRET === undefined ||
-    WHATSAPP_PHONE_ID === undefined
+    WHATSAPP_PHONE_NUMBER === undefined
   ) {
     console.log("WhatsApp: env is not set, bot did not start \u{1F6A9}");
     process.exit(0);
@@ -123,28 +123,55 @@ app.use(
   })
 );
 
+const incomingMessageTargets = new Set<string>();
+
 app.post("/webhook", async (req, res) => {
   const postData = req.body as PostData;
 
-  // Refuse (ignore) events older than 5 minutes
-  const ts = newestTimestampSec(postData);
-  if (ts !== null) {
+  try {
+    const signature = req.header("x-hub-signature-256");
+    if (!signature) {
+      res.sendStatus(401); // Unauthorized if the signature is missing
+      return;
+    }
+
+    // Refuse (ignore) events older than 5 minutes
+    const incomingData = getBaseIncomingData(postData);
+
+    if (incomingData.emissionTimestamp == null) {
+      await logError("WhatsApp", "Received message with null timestamp");
+      return;
+    }
+    if (incomingData.apiPhoneId == null) {
+      await logError(
+        "WhatsApp",
+        "Received message with null target phone number"
+      );
+      return;
+    }
+    if (incomingData.apiPhoneNumber == null) {
+      await logError("WhatsApp", "Received message with null target phone id");
+      return;
+    }
+
+    if (incomingData.apiPhoneNumber !== WHATSAPP_PHONE_NUMBER) {
+      if (incomingMessageTargets.has(incomingData.apiPhoneNumber)) return;
+      console.log(
+        `Received incoming webhook event for phone number non-production number ${incomingData.apiPhoneNumber} and id ${incomingData.apiPhoneId}. Future events will be ignored.`
+      );
+      incomingMessageTargets.add(incomingData.apiPhoneNumber);
+      return;
+    }
+
     const now = Math.floor(Date.now() / 1000);
-    if (now - ts > MAX_AGE_SEC) {
+    const delay = now - incomingData.emissionTimestamp;
+    if (delay > MAX_AGE_SEC) {
       // Acknowledge but skip processing so Meta doesn't retry
       res.sendStatus(200);
       await umami.logAsync({
         event: "/message-received-echo-refused",
         messageApp: "WhatsApp"
       });
-      return;
-    }
-  }
-
-  try {
-    const signature = req.header("x-hub-signature-256");
-    if (!signature) {
-      res.sendStatus(401); // Unauthorised if the signature is missing
       return;
     }
 
@@ -269,25 +296,10 @@ export function textFromMessage(msg: ServerMessage): string | null {
   }
 }
 
-const warnedPhoneIDs = new Set<string>();
-
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
-  // Ignore echoes of messages the bot just sent
-  if (from === WHATSAPP_PHONE_ID) return;
   if (message.type !== "text" && message.type !== "interactive") return;
 
   const msgText = textFromMessage(message);
-
-  if (phoneID !== WHATSAPP_PHONE_ID) {
-    if (!warnedPhoneIDs.has(phoneID)) {
-      warnedPhoneIDs.add(phoneID);
-      await logWarning(
-        "WhatsApp",
-        `First inbound from non-primary phoneID ${phoneID} (expected ${WHATSAPP_PHONE_ID ?? ""}). Ignoring from now on.`
-      );
-    }
-    return;
-  }
   if (msgText == null) return;
 
   if (rememberInboundMessage(message.id)) {
@@ -378,15 +390,24 @@ await (async function () {
 interface WhatsAppValueObject {
   messages?: { timestamp?: string }[];
   statuses?: { timestamp?: string }[];
+  metadata?: { display_phone_number?: string; phone_number_id?: string };
   message_statuses?: { timestamp?: string }[];
   [key: string]: unknown;
 }
 
-function newestTimestampSec(data: PostData): number | null {
+function getBaseIncomingData(data: PostData): {
+  apiPhoneNumber: string | null;
+  apiPhoneId: string | null;
+  emissionTimestamp: number | null;
+} {
   let newest: number | null = null;
+  let apiPhoneId: string | null = null;
+  let apiPhoneNumber: string | null = null;
   for (const e of data.entry) {
     for (const c of e.changes) {
       const v = c.value as WhatsAppValueObject;
+      apiPhoneNumber ??= v.metadata?.display_phone_number ?? null;
+      apiPhoneId ??= v.metadata?.phone_number_id ?? null;
       const buckets = [v.messages, v.statuses, v.message_statuses];
       for (const arr of buckets) {
         if (!Array.isArray(arr)) continue;
@@ -398,5 +419,5 @@ function newestTimestampSec(data: PostData): number | null {
       }
     }
   }
-  return newest;
+  return { apiPhoneId, apiPhoneNumber, emissionTimestamp: newest };
 }
