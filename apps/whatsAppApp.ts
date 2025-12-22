@@ -338,6 +338,38 @@ app.listen(WHATSAPP_APP_PORT, function () {
 await (async function () {
   await mongodbConnect();
 
+  if (process.env.NODE_ENV === "development") {
+    const {
+      NGROK_AUTH_TOKEN,
+      NGROK_DEV_HOOK,
+      NGROK_API_KEY,
+      WHATSAPP_APP_PORT
+    } = process.env;
+
+    if (
+      NGROK_AUTH_TOKEN == null ||
+      NGROK_DEV_HOOK == null ||
+      NGROK_API_KEY == null
+    ) {
+      throw new Error(
+        "NGROK_AUTH_TOKEN, NGROK_DEV_HOOK and NGROK_API_KEY must be set in development mode"
+      );
+    }
+
+    const { connect } = await import("ngrok");
+
+    console.log("WhatsApp: Initializing Ngrok tunnel...");
+    const ngrokUrl = await connect({
+      proto: "http",
+      authtoken: NGROK_AUTH_TOKEN,
+      hostname: NGROK_DEV_HOOK,
+      addr: WHATSAPP_APP_PORT
+    });
+
+    console.log(`WhatsApp: Listening on url ${ngrokUrl}`);
+    console.log("WhatsApp: Ngrok tunnel initialized!");
+  }
+
   startDailyNotificationJobs(["WhatsApp"], { whatsAppAPI: whatsAppAPI });
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
 })();
