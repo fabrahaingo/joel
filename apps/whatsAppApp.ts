@@ -316,6 +316,21 @@ whatsAppAPI.on.sent = ({ phoneID, to }) => {
   //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
 };
 
+whatsAppAPI.on.status = ({ id, phone, status, error }) => {
+  if (error) {
+    void logError(
+      "WhatsApp",
+      `Message ${id} to ${phone} is "${status}"`,
+      error
+    );
+    return;
+  }
+  if (!["sent", "delivered", "read"].some((m) => status === m)) {
+    void logError("WhatsApp", `Message ${id} to ${phone} is "${status}"`);
+    return;
+  }
+};
+
 app.listen(WHATSAPP_APP_PORT, function () {
   //console.log(`Example WhatsApp listening at ${String(WHATSAPP_APP_PORT)}`);
 });
