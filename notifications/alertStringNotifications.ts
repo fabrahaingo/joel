@@ -5,7 +5,7 @@ import {
   sendMessage
 } from "../entities/Session.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
-import { IUser, MessageApp } from "../types.ts";
+import { IUser, JORFReference, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
 import { dateToFrenchString } from "../utils/date.utils.ts";
@@ -14,30 +14,43 @@ import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "./notificationDispatch.ts";
+import { FilterQuery, Types } from "mongoose";
+import { logError } from "../utils/debugLogger.ts";
+import { sendWhatsAppTemplate } from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
 export async function notifyAlertStringUpdates(
   metaRecords: JORFSearchPublication[],
   enabledApps: MessageApp[],
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  userIds?: Types.ObjectId[],
+  forceWHMessages = false
 ) {
   if (metaRecords.length === 0) return;
 
-  const usersFollowingAlerts: IUser[] = await User.find(
-    {
-      "followedMeta.0": { $exists: true },
-      status: "active",
-      messageApp: { $in: enabledApps }
-    },
-    {
-      _id: 1,
-      messageApp: 1,
-      chatId: 1,
-      roomId: 1,
-      followedMeta: 1
+  let dbFilters: FilterQuery<IUser> = {
+    "followedMeta.0": { $exists: true },
+    status: "active",
+    messageApp: { $in: enabledApps }
+  };
+
+  if (userIds != null) {
+    if (userIds.length === 0) {
+      throw new Error("Empty userIds provided to notifyAlertStringUpdates");
     }
-  ).lean();
+    dbFilters = { ...dbFilters, _id: { $in: userIds } };
+  }
+
+  const usersFollowingAlerts: IUser[] = await User.find(dbFilters, {
+    _id: 1,
+    messageApp: 1,
+    chatId: 1,
+    roomId: 1,
+    status: 1,
+    followedMeta: 1,
+    waitingReengagement: 1
+  }).lean();
 
   if (usersFollowingAlerts.length === 0) return;
 
@@ -78,6 +91,8 @@ export async function notifyAlertStringUpdates(
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
+          status: user.status,
+          waitingReengagement: user.waitingReengagement,
           hasAccount: true
         },
         updatedRecordsMap: newAlertUpdates,
@@ -91,6 +106,50 @@ export async function notifyAlertStringUpdates(
   await dispatchTasksToMessageApps<string, JORFSearchPublication>(
     userUpdateTasks,
     async (task) => {
+      // WH user must be re-engaged before sending notifications
+      if (!forceWHMessages && task.userInfo.messageApp === "WhatsApp") {
+        const notificationSources = new Map<JORFReference, number>();
+
+        for (const records of task.updatedRecordsMap.values()) {
+          for (const record of records) {
+            notificationSources.set(
+              record.id,
+              (notificationSources.get(record.id) ?? 0) + 1
+            );
+          }
+        }
+
+        await User.insertPendingNotifications(
+          task.userId,
+          "meta",
+          notificationSources
+        );
+
+        if (!task.userInfo.waitingReengagement) {
+          const whatsAppAPI = messageAppsOptions.whatsAppAPI;
+          if (whatsAppAPI == null) {
+            await logError(
+              "WhatsApp",
+              "Undefined messageAppsOptions.whatsAppAPI in notifyAlertStringUpdates"
+            );
+            return;
+          }
+          await sendWhatsAppTemplate(
+            whatsAppAPI,
+            task.userInfo.chatId,
+            "notification_meta",
+            messageAppsOptions
+          );
+
+          await User.updateOne(
+            { _id: task.userId },
+            { $set: { waitingReengagement: true } }
+          );
+        }
+
+        return;
+      }
+
       const messageSent = await sendAlertStringUpdate(
         task.userInfo,
         task.updatedRecordsMap,

@@ -1,9 +1,9 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import {
+  ExternalMessageOptions,
   loadUser,
   MessageSendingOptionsInternal,
-  MiniUserInfo,
   recordSuccessfulDelivery
 } from "./Session.ts";
 import umami, { UmamiEvent, UmamiLogger } from "../utils/umami.ts";
@@ -118,18 +118,33 @@ export class MatrixSession implements ISession {
       {
         messageApp: this.messageApp,
         chatId: this.chatId,
-        roomId: this.roomId,
-        hasAccount
+        roomId: this.roomId
       },
       formattedData,
       { ...options, useAsyncUmamiLog: false, hasAccount }
     );
   }
+
+  extractMessageAppsOptions(): ExternalMessageOptions {
+    switch (this.client.messageApp) {
+      case "Matrix":
+        return { matrixClient: this.client.matrix };
+      case "Tchap":
+        return { tchapClient: this.client.matrix };
+    }
+    const errText = `Unknown matrix message app ${this.client.messageApp}`;
+    void logError(this.messageApp, errText);
+    throw new Error(errText);
+  }
 }
 
 export async function sendMatrixMessage(
   client: ExtendedMatrixClient,
-  userInfo: MiniUserInfo,
+  userInfo: {
+    messageApp: IUser["messageApp"];
+    chatId: IUser["chatId"];
+    roomId?: IUser["roomId"];
+  },
   message: string,
   options: MessageSendingOptionsInternal,
   retryNumber = 0
@@ -225,7 +240,7 @@ export async function sendMatrixMessage(
       await umamiLogger({
         event: "/message-sent",
         messageApp: client.messageApp,
-        hasAccount: userInfo.hasAccount
+        hasAccount: options.hasAccount
       });
 
       // short pause to avoid spamming the homeserver
@@ -241,14 +256,15 @@ export async function sendMatrixMessage(
           title: KEYBOARD_KEYS.MAIN_MENU.key.text,
           options: fullMenuKeyboard.map((k) => ({ text: k.text }))
         },
-        userInfo.hasAccount
+        options.hasAccount
       );
     else if (keyboard != null) {
       const res = await sendMatrixReactions(
         client,
         userInfo,
         keyboard.flat().map((k) => k.text),
-        promptId
+        promptId,
+        options
       );
       if (!res) return false;
     }
@@ -266,14 +282,14 @@ export async function sendMatrixMessage(
         if (retryNumber > MAX_MESSAGE_RETRY) {
           await umamiLogger({
             event: "/message-fail-too-many-requests-aborted",
-            hasAccount: userInfo.hasAccount
+            hasAccount: options.hasAccount
           });
           return false;
         }
         await umamiLogger({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp,
-          hasAccount: userInfo.hasAccount
+          hasAccount: options.hasAccount
         });
         let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
         if ("retryAfterMs" in mError && mError.retryAfterMs)
@@ -312,7 +328,7 @@ export async function sendMatrixMessage(
         umami.log({
           event: "/user-blocked-joel",
           messageApp: client.messageApp,
-          hasAccount: userInfo.hasAccount
+          hasAccount: options.hasAccount
         });
         directRoomCache.delete(userInfo.chatId);
         await User.updateOne(
@@ -343,7 +359,7 @@ export async function sendPollMenu(
   client: ExtendedMatrixClient,
   roomId: string,
   pollMenu: PollMenu,
-  hasAccount: boolean
+  hasAccount?: boolean
 ): Promise<boolean> {
   //const body = fallbackBody(pollMenu.title, pollMenu.options);
 
@@ -396,9 +412,14 @@ export async function closePollMenu(
 
 async function sendMatrixReactions(
   client: ExtendedMatrixClient,
-  userInfo: MiniUserInfo,
+  userInfo: {
+    messageApp: IUser["messageApp"];
+    chatId: IUser["chatId"];
+    roomId?: IUser["roomId"];
+  },
   reactions: string[],
   eventId: string,
+  options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
   let i = 0;
@@ -441,14 +462,14 @@ async function sendMatrixReactions(
         if (retryNumber > MAX_MESSAGE_RETRY) {
           umami.log({
             event: "/message-fail-too-many-requests-aborted",
-            hasAccount: userInfo.hasAccount
+            hasAccount: options.hasAccount
           });
           return false;
         }
         umami.log({
           event: "/message-fail-too-many-requests",
           messageApp: client.messageApp,
-          hasAccount: userInfo.hasAccount
+          hasAccount: options.hasAccount
         });
         let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
         if ("retryAfterMs" in mError && mError.retryAfterMs)
@@ -461,6 +482,7 @@ async function sendMatrixReactions(
           userInfo,
           reactions.slice(i),
           eventId,
+          options,
           retryNumber + 1
         );
       }
@@ -481,6 +503,7 @@ async function sendMatrixReactions(
           userInfo,
           reactions.slice(i),
           eventId,
+          options,
           retryNumber + 1
         );
       default:

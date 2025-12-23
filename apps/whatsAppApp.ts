@@ -15,7 +15,7 @@ import { startDailyNotificationJobs } from "../notifications/notificationSchedul
 import User from "../models/User.ts";
 import Organisation from "../models/Organisation.ts";
 import People from "../models/People.ts";
-import { logError } from "../utils/debugLogger.ts";
+import { logError, sendTelegramDebugMessage } from "../utils/debugLogger.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
 
 const MAX_AGE_SEC = 5 * 60;
@@ -157,9 +157,9 @@ app.post("/webhook", async (req, res) => {
 
     if (incomingData.apiPhoneNumber !== WHATSAPP_PHONE_NUMBER) {
       if (incomingMessageTargets.has(incomingData.apiPhoneNumber)) return;
-      console.log(
-        `Received incoming webhook event for phone number non-production number ${incomingData.apiPhoneNumber} and id ${incomingData.apiPhoneId}. Future events will be ignored.`
-      );
+      const logText = `Received incoming WH webhook event for phone number non-production number ${incomingData.apiPhoneNumber} and id ${incomingData.apiPhoneId}. Future events will be ignored.`;
+      console.log(logText);
+      await sendTelegramDebugMessage(logText);
       incomingMessageTargets.add(incomingData.apiPhoneNumber);
       return;
     } else if (WHATSAPP_PHONE_ID !== incomingData.apiPhoneId) {

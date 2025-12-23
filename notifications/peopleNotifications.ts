@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { FilterQuery, Types } from "mongoose";
 import {
   ExternalMessageOptions,
   MessageSendingOptionsExternal,
@@ -6,7 +6,7 @@ import {
   sendMessage
 } from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
-import { IPeople, IUser, MessageApp } from "../types.ts";
+import { IPeople, IUser, JORFReference, MessageApp } from "../types.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
@@ -22,13 +22,16 @@ import {
 } from "./notificationDispatch.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { sendWhatsAppTemplate } from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
 export async function notifyPeopleUpdates(
   updatedRecords: JORFSearchItem[],
   enabledApps: MessageApp[],
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  userIds?: Types.ObjectId[],
+  forceWHMessages = false
 ) {
   if (updatedRecords.length === 0) return;
 
@@ -61,27 +64,35 @@ export async function notifyPeopleUpdates(
     .lean();
   if (updatedPeopleList.length === 0) return;
 
-  const usersFollowingPeople: IUser[] = await User.find(
-    {
-      followedPeople: {
-        $elemMatch: {
-          peopleId: {
-            $in: updatedPeopleList.map((i) => i._id)
-          }
+  let dbFilters: FilterQuery<IUser> = {
+    followedPeople: {
+      $elemMatch: {
+        peopleId: {
+          $in: updatedPeopleList.map((i) => i._id)
         }
-      },
-      status: "active",
-      messageApp: { $in: enabledApps }
+      }
     },
-    {
-      _id: 1,
-      messageApp: 1,
-      chatId: 1,
-      roomId: 1,
-      followedPeople: { peopleId: 1, lastUpdate: 1 },
-      schemaVersion: 1
+    status: "active",
+    messageApp: { $in: enabledApps }
+  };
+
+  if (userIds != null) {
+    if (userIds.length === 0) {
+      throw new Error("Empty userIds provided to notifyPeopleUpdates");
     }
-  ).lean();
+    dbFilters = { ...dbFilters, _id: { $in: userIds } };
+  }
+
+  const usersFollowingPeople: IUser[] = await User.find(dbFilters, {
+    _id: 1,
+    messageApp: 1,
+    chatId: 1,
+    roomId: 1,
+    followedPeople: { peopleId: 1, lastUpdate: 1 },
+    schemaVersion: 1,
+    status: 1,
+    waitingReengagement: 1
+  }).lean();
   if (usersFollowingPeople.length === 0) return;
 
   const cleanPeopleInfo = updatedPeopleList.map((p) => ({
@@ -152,6 +163,8 @@ export async function notifyPeopleUpdates(
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
+          waitingReengagement: user.waitingReengagement,
+          status: user.status,
           hasAccount: true
         },
         updatedRecordsMap: newUserPeopleUpdates,
@@ -162,6 +175,50 @@ export async function notifyPeopleUpdates(
   if (userUpdateTasks.length === 0) return;
 
   await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
+    // WH user must be re-engaged before sending notifications
+    if (!forceWHMessages && task.userInfo.messageApp === "WhatsApp") {
+      const notificationSources = new Map<JORFReference, number>();
+
+      for (const records of task.updatedRecordsMap.values()) {
+        for (const record of records) {
+          notificationSources.set(
+            record.source_id,
+            (notificationSources.get(record.source_id) ?? 0) + 1
+          );
+        }
+      }
+
+      await User.insertPendingNotifications(
+        task.userId,
+        "people",
+        notificationSources
+      );
+
+      if (!task.userInfo.waitingReengagement) {
+        const whatsAppAPI = messageAppsOptions.whatsAppAPI;
+        if (whatsAppAPI == null) {
+          await logError(
+            "WhatsApp",
+            "Undefined messageAppsOptions.whatsAppAPI in notifyPeopleUpdates"
+          );
+          return;
+        }
+        await sendWhatsAppTemplate(
+          whatsAppAPI,
+          task.userInfo.chatId,
+          "notification_meta",
+          messageAppsOptions
+        );
+
+        await User.updateOne(
+          { _id: task.userId },
+          { $set: { waitingReengagement: true } }
+        );
+      }
+
+      return;
+    }
+
     const messageSent = await sendPeopleUpdate(
       task.userInfo,
       task.updatedRecordsMap,
@@ -201,7 +258,7 @@ export async function notifyPeopleUpdates(
   });
 }
 
-async function sendPeopleUpdate(
+export async function sendPeopleUpdate(
   userInfo: MiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions

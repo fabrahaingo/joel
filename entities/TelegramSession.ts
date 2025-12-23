@@ -2,6 +2,7 @@ import { ISession, IUser, MessageApp } from "../types.ts";
 import { Telegram } from "telegraf";
 import User from "../models/User.ts";
 import {
+  ExternalMessageOptions,
   loadUser,
   MessageSendingOptionsInternal,
   recordSuccessfulDelivery
@@ -110,6 +111,10 @@ export class TelegramSession implements ISession {
         hasAccount: this.user != null
       }
     );
+  }
+
+  extractMessageAppsOptions(): ExternalMessageOptions {
+    return { telegramBotToken: this.botToken };
   }
 }
 

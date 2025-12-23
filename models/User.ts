@@ -7,7 +7,9 @@ import {
   IPeople,
   IUser,
   UserModel,
-  WikidataId
+  WikidataId,
+  JORFReference,
+  NotificationType
 } from "../types.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { loadUser } from "../entities/Session.ts";
@@ -102,6 +104,23 @@ const UserSchema = new Schema<IUser, UserModel>(
           lastUpdate: {
             type: Date,
             default: Date.now
+          }
+        }
+      ],
+      default: [],
+      required: false
+    },
+    pendingNotifications: {
+      type: [
+        {
+          notificationType: {
+            type: String
+          },
+          publicationDate: {
+            Date
+          },
+          insertDate: {
+            type: Date
           }
         }
       ],
@@ -467,6 +486,41 @@ UserSchema.method(
         this.followedOrganisations.length +
         this.followedMeta.length ===
       0
+    );
+  }
+);
+
+UserSchema.static(
+  "insertPendingNotifications",
+  async function insertPendingNotifications(
+    userId: Types.ObjectId,
+    notificationType: NotificationType,
+    notificationSources: Map<JORFReference, number>
+  ): Promise<void> {
+    const source_ids: JORFReference[] = [];
+    let items_nb = 0;
+
+    for (const source of notificationSources.keys()) {
+      source_ids.push(source);
+
+      const elem_nb = notificationSources.get(source);
+      if (elem_nb != null) items_nb += elem_nb;
+    }
+
+    const newNotification: IUser["pendingNotifications"][number] = {
+      notificationType,
+      source_ids,
+      insertDate: new Date(),
+      items_nb
+    };
+
+    await this.updateOne(
+      { _id: userId },
+      {
+        $push: {
+          pendingNotifications: newNotification
+        }
+      }
     );
   }
 );

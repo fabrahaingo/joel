@@ -25,7 +25,7 @@ const formatError = (error: unknown): string | null => {
   }
 };
 
-const sendTelegramDebugMessage = async (text: string): Promise<void> => {
+export const sendTelegramDebugMessage = async (text: string): Promise<void> => {
   if (DEBUG_CHAT_ID == null || TELEGRAM_DEBUG_BOT_TOKEN == null) return;
 
   const endpoint = `https://api.telegram.org/bot${TELEGRAM_DEBUG_BOT_TOKEN}/sendMessage`;

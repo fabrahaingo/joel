@@ -35,7 +35,12 @@ export const mainMenuCommand = async (session: ISession): Promise<void> => {
 };
 
 export async function sendMainMenu(
-  userInfo: MiniUserInfo,
+  userInfo: {
+    chatId: MiniUserInfo["chatId"];
+    messageApp: MiniUserInfo["messageApp"];
+    roomId: MiniUserInfo["roomId"];
+    hasAccount: boolean;
+  },
   options: {
     externalOptions?: ExternalMessageOptions;
     session?: ISession;

@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import { FilterQuery, Types } from "mongoose";
 import {
   ExternalMessageOptions,
   MessageSendingOptionsExternal,
@@ -6,7 +6,7 @@ import {
   sendMessage
 } from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
-import { IUser, MessageApp } from "../types.ts";
+import { IUser, JORFReference, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import People from "../models/People.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
@@ -21,30 +21,41 @@ import {
 } from "./notificationDispatch.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { sendWhatsAppTemplate } from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
 export async function notifyNameMentionUpdates(
   updatedRecords: JORFSearchItem[],
   enabledApps: MessageApp[],
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  userIds?: Types.ObjectId[],
+  forceWHMessages = false
 ) {
-  const userFollowingNames: IUser[] = await User.find(
-    {
-      "followedNames.0": { $exists: true },
-      status: "active",
-      messageApp: { $in: enabledApps }
-    },
-    {
-      _id: 1,
-      messageApp: 1,
-      chatId: 1,
-      roomId: 1,
-      followedNames: 1,
-      followedPeople: { peopleId: 1, lastUpdate: 1 },
-      schemaVersion: 1
+  let dbFilters: FilterQuery<IUser> = {
+    "followedNames.0": { $exists: true },
+    status: "active",
+    messageApp: { $in: enabledApps }
+  };
+
+  if (userIds != null) {
+    if (userIds.length === 0) {
+      throw new Error("Empty userIds provided to notifyNameMentionUpdates");
     }
-  ).lean();
+    dbFilters = { ...dbFilters, _id: { $in: userIds } };
+  }
+
+  const userFollowingNames: IUser[] = await User.find(dbFilters, {
+    _id: 1,
+    messageApp: 1,
+    chatId: 1,
+    roomId: 1,
+    followedNames: 1,
+    followedPeople: { peopleId: 1, lastUpdate: 1 },
+    schemaVersion: 1,
+    status: 1,
+    waitingReengagement: 1
+  }).lean();
   if (userFollowingNames.length === 0) return;
 
   const nameMaps = updatedRecords.reduce(
@@ -105,6 +116,8 @@ export async function notifyNameMentionUpdates(
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
+          status: user.status,
+          waitingReengagement: user.waitingReengagement,
           hasAccount: true
         },
         updatedRecordsMap: newUserTagsUpdates,
@@ -115,6 +128,50 @@ export async function notifyNameMentionUpdates(
   if (userUpdateTasks.length === 0) return;
 
   await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
+    // WH user must be re-engaged before sending notifications
+    if (!forceWHMessages && task.userInfo.messageApp === "WhatsApp") {
+      const notificationSources = new Map<JORFReference, number>();
+
+      for (const records of task.updatedRecordsMap.values()) {
+        for (const record of records) {
+          notificationSources.set(
+            record.source_id,
+            (notificationSources.get(record.source_id) ?? 0) + 1
+          );
+        }
+      }
+
+      await User.insertPendingNotifications(
+        task.userId,
+        "name",
+        notificationSources
+      );
+
+      if (!task.userInfo.waitingReengagement) {
+        const whatsAppAPI = messageAppsOptions.whatsAppAPI;
+        if (whatsAppAPI == null) {
+          await logError(
+            "WhatsApp",
+            "Undefined messageAppsOptions.whatsAppAPI in notifyNameMentionUpdates"
+          );
+          return;
+        }
+        await sendWhatsAppTemplate(
+          whatsAppAPI,
+          task.userInfo.chatId,
+          "notification_meta",
+          messageAppsOptions
+        );
+
+        await User.updateOne(
+          { _id: task.userId },
+          { $set: { waitingReengagement: true } }
+        );
+      }
+
+      return;
+    }
+
     await sendNameMentionUpdates(
       task.userInfo,
       task.updatedRecordsMap,
@@ -164,7 +221,7 @@ export async function notifyNameMentionUpdates(
   });
 }
 
-async function sendNameMentionUpdates(
+export async function sendNameMentionUpdates(
   userInfo: MiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions
