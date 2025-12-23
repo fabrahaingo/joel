@@ -39,6 +39,7 @@ export async function handleIncomingMessage(
 
     if (user != null && user.pendingNotifications.length > 0) {
       await triggerPendingNotifications(session);
+      return;
     }
 
     await processMessage(session, trimmedText);
