@@ -110,17 +110,23 @@ const UserSchema = new Schema<IUser, UserModel>(
       default: [],
       required: false
     },
+    costHistory: {
+      type: [{ operationDate: Date, operationType: String, cost: Number }],
+      default: [],
+      required: false
+    },
     pendingNotifications: {
       type: [
         {
           notificationType: {
             type: String
           },
-          publicationDate: {
-            Date
-          },
+          source_ids: { type: [{ type: String }] },
           insertDate: {
             type: Date
+          },
+          items_nb: {
+            type: Number
           }
         }
       ],
