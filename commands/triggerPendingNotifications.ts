@@ -33,7 +33,7 @@ export const triggerPendingNotifications = async (
 
     for (const pendingNotification of session.user.pendingNotifications) {
       if (pendingNotification.notificationType === "meta") {
-        source_id_publications = source_id_items.concat(
+        source_id_publications = source_id_publications.concat(
           pendingNotification.source_ids
         );
       } else {
