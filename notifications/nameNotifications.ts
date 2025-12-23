@@ -156,17 +156,18 @@ export async function notifyNameMentionUpdates(
           );
           return;
         }
-        await sendWhatsAppTemplate(
+        const templateSent = await sendWhatsAppTemplate(
           whatsAppAPI,
           task.userInfo.chatId,
           "notification_meta",
           messageAppsOptions
         );
 
-        await User.updateOne(
-          { _id: task.userId },
-          { $set: { waitingReengagement: true } }
-        );
+        if (templateSent)
+          await User.updateOne(
+            { _id: task.userId },
+            { $set: { waitingReengagement: true } }
+          );
       }
 
       return;
