@@ -9,7 +9,8 @@ import {
   UserModel,
   WikidataId,
   JORFReference,
-  NotificationType
+  NotificationType,
+  MessageApp
 } from "../types.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { loadUser } from "../entities/Session.ts";
@@ -501,18 +502,38 @@ UserSchema.static(
   "insertPendingNotifications",
   async function insertPendingNotifications(
     userId: Types.ObjectId,
+    messageApp: MessageApp,
     notificationType: NotificationType,
     notificationSources: Map<JORFReference, number>
   ): Promise<void> {
     const source_ids: JORFReference[] = [];
     let items_nb = 0;
 
-    for (const source of notificationSources.keys()) {
-      source_ids.push(source);
+    const user: IUser | null = await this.findOne(
+      { _id: userId },
+      { pendingNotifications: 1 }
+    ).lean();
+    if (user === null) {
+      await logError(
+        messageApp,
+        `insertPendingNotifications couldn't find user with id ${userId.toString()}`
+      );
+      return;
+    }
 
+    for (const source of notificationSources.keys()) {
+      if (
+        user.pendingNotifications.some((elem) =>
+          elem.source_ids.includes(source)
+        )
+      )
+        continue;
+
+      source_ids.push(source);
       const elem_nb = notificationSources.get(source);
       if (elem_nb != null) items_nb += elem_nb;
     }
+    if (source_ids.length === 0) return;
 
     const newNotification: IUser["pendingNotifications"][number] = {
       notificationType,
