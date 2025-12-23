@@ -6,7 +6,7 @@ import {
   MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
-import { IUser, MessageApp } from "../types.ts";
+import { IUser, JORFReference, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
@@ -27,6 +27,8 @@ import {
 } from "./grouping.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { FilterQuery, Types } from "mongoose";
+import { sendWhatsAppTemplate } from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
@@ -77,7 +79,9 @@ const functionTagGroupingStrategies: Partial<
 export async function notifyFunctionTagsUpdates(
   updatedRecords: JORFSearchItem[],
   enabledApps: MessageApp[],
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  userIds?: Types.ObjectId[],
+  forceWHMessages = false
 ) {
   if (updatedRecords.length === 0) return;
 
@@ -96,27 +100,35 @@ export async function notifyFunctionTagsUpdates(
 
   const updatedTagSet = new Set<FunctionTags>(updatedTagMap.keys());
 
-  const usersFollowingTags: IUser[] = await User.find(
-    {
-      followedFunctions: {
-        $exists: true,
-        $not: { $size: 0 },
-        $elemMatch: {
-          functionTag: { $in: [...updatedTagSet] }
-        }
-      },
-      status: "active",
-      messageApp: { $in: enabledApps }
+  let dbFilters: FilterQuery<IUser> = {
+    followedFunctions: {
+      $exists: true,
+      $not: { $size: 0 },
+      $elemMatch: {
+        functionTag: { $in: [...updatedTagSet] }
+      }
     },
-    {
-      _id: 1,
-      messageApp: 1,
-      chatId: 1,
-      roomId: 1,
-      followedFunctions: { functionTag: 1, lastUpdate: 1 },
-      schemaVersion: 1
+    status: "active",
+    messageApp: { $in: enabledApps }
+  };
+
+  if (userIds != null) {
+    if (userIds.length === 0) {
+      throw new Error("Empty userIds provided to notifyFunctionTagsUpdates");
     }
-  ).lean();
+    dbFilters = { ...dbFilters, _id: { $in: userIds } };
+  }
+
+  const usersFollowingTags: IUser[] = await User.find(dbFilters, {
+    _id: 1,
+    messageApp: 1,
+    chatId: 1,
+    roomId: 1,
+    followedFunctions: { functionTag: 1, lastUpdate: 1 },
+    schemaVersion: 1,
+    waitingReengagement: 1,
+    status: 1
+  }).lean();
   if (usersFollowingTags.length === 0) return;
 
   const now = new Date();
@@ -155,6 +167,8 @@ export async function notifyFunctionTagsUpdates(
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
+          waitingReengagement: user.waitingReengagement,
+          status: user.status,
           hasAccount: true
         },
         updatedRecordsMap: newUserTagsUpdates,
@@ -167,6 +181,52 @@ export async function notifyFunctionTagsUpdates(
   await dispatchTasksToMessageApps<FunctionTags>(
     userUpdateTasks,
     async (task) => {
+      // WH user must be re-engaged before sending notifications
+      if (!forceWHMessages && task.userInfo.messageApp === "WhatsApp") {
+        const notificationSources = new Map<JORFReference, number>();
+
+        for (const records of task.updatedRecordsMap.values()) {
+          for (const record of records) {
+            notificationSources.set(
+              record.source_id,
+              (notificationSources.get(record.source_id) ?? 0) + 1
+            );
+          }
+        }
+
+        await User.insertPendingNotifications(
+          task.userId,
+          task.userInfo.messageApp,
+          "function",
+          notificationSources
+        );
+
+        if (!task.userInfo.waitingReengagement) {
+          const whatsAppAPI = messageAppsOptions.whatsAppAPI;
+          if (whatsAppAPI == null) {
+            await logError(
+              "WhatsApp",
+              "Undefined messageAppsOptions.whatsAppAPI in notifyFunctionTagsUpdates"
+            );
+            return;
+          }
+          const templateSent = await sendWhatsAppTemplate(
+            whatsAppAPI,
+            task.userInfo.chatId,
+            "notification_meta",
+            messageAppsOptions
+          );
+
+          if (templateSent)
+            await User.updateOne(
+              { _id: task.userId },
+              { $set: { waitingReengagement: true } }
+            );
+        }
+
+        return;
+      }
+
       const messageSent = await sendTagUpdates(
         task.userInfo,
         task.updatedRecordsMap,
@@ -195,7 +255,7 @@ export async function notifyFunctionTagsUpdates(
   );
 }
 
-async function sendTagUpdates(
+export async function sendTagUpdates(
   userInfo: MiniUserInfo,
   tagMap: Map<FunctionTags, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions

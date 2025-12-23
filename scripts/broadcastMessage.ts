@@ -46,8 +46,7 @@ export async function broadcastMessage(
       {
         messageApp: recipient.messageApp,
         chatId: recipient.chatId,
-        roomId: recipient.roomId,
-        hasAccount: true
+        roomId: recipient.roomId
       },
       message,
       { ...messageAppOptions, useAsyncUmamiLog: true, hasAccount: true }

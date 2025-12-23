@@ -129,14 +129,16 @@ export interface MessageSendingOptionsExternal {
 }
 
 export interface MiniUserInfo {
-  messageApp: MessageApp;
-  chatId: string;
-  roomId?: string;
+  messageApp: IUser["messageApp"];
+  chatId: IUser["chatId"];
+  roomId?: IUser["roomId"];
+  status: IUser["status"];
   hasAccount: boolean;
+  waitingReengagement: IUser["waitingReengagement"];
 }
 
 export async function sendMessage(
-  userInfo: MiniUserInfo,
+  userInfo: { messageApp: MessageApp; chatId: string; roomId?: string },
   message: string,
   options?: MessageSendingOptionsExternal
 ): Promise<boolean> {

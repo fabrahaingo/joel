@@ -1,7 +1,10 @@
 import { Model, Types } from "mongoose";
 import { FunctionTags } from "./entities/FunctionTags";
 import { UmamiEvent } from "./utils/umami";
-import { MessageSendingOptionsInternal } from "./entities/Session.ts";
+import {
+  ExternalMessageOptions,
+  MessageSendingOptionsInternal
+} from "./entities/Session.ts";
 
 export interface CommandType {
   regex: RegExp;
@@ -15,9 +18,11 @@ export type MessageApp =
   | "Matrix"
   | "Tchap";
 
+export type JORFReference = string;
+
 export interface ISession {
   messageApp: MessageApp;
-  chatId: string;
+  chatId: IUser["chatId"];
   roomId?: string;
   language_code: string;
   user: IUser | null | undefined;
@@ -30,8 +35,17 @@ export interface ISession {
     options?: MessageSendingOptionsInternal
   ) => Promise<boolean>;
   sendTypingAction: () => void;
-  log: (args: { event: UmamiEvent }) => void;
+  log: (args: { event: UmamiEvent; payload?: Record<string, unknown> }) => void;
+
+  extractMessageAppsOptions: () => ExternalMessageOptions;
 }
+
+export type NotificationType =
+  | "people"
+  | "name"
+  | "function"
+  | "organisation"
+  | "meta";
 
 // fields are undefined for users created before implementation
 export interface IUser {
@@ -41,6 +55,7 @@ export interface IUser {
   chatId: string;
   language_code: string;
   status: "active" | "blocked";
+  waitingReengagement: boolean;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;
@@ -57,6 +72,18 @@ export interface IUser {
   followedMeta: {
     alertString: string;
     lastUpdate: Date;
+  }[];
+
+  costHistory: {
+    operationDate: Date;
+    operationType: "WH_template";
+    cost: number;
+  }[];
+  pendingNotifications: {
+    notificationType: NotificationType;
+    source_ids: JORFReference[];
+    insertDate: Date;
+    items_nb: number;
   }[];
 
   transferData?: {
@@ -122,6 +149,12 @@ export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
   deleteOne: (args) => Promise<void>;
   create: (args) => Promise<IUser>;
+  insertPendingNotifications: (
+    userId: Types.ObjectId,
+    messageApp: MessageApp,
+    notificationType: NotificationType,
+    notificationSources: Map<JORFReference, number>
+  ) => Promise<void>;
   updateOne: (
     filter: unknown,
     update: unknown,

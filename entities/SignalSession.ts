@@ -1,6 +1,7 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import {
+  ExternalMessageOptions,
   loadUser,
   MessageSendingOptionsInternal,
   recordSuccessfulDelivery
@@ -72,6 +73,10 @@ export class SignalSession implements ISession {
       formattedData,
       { ...options, useAsyncUmamiLog: false, hasAccount: this.user != null }
     );
+  }
+
+  extractMessageAppsOptions(): ExternalMessageOptions {
+    return { signalCli: this.signalCli };
   }
 }
 
