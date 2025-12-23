@@ -45,6 +45,7 @@ const UserSchema = new Schema<IUser, UserModel>(
       default: "active",
       required: true
     },
+    waitingReengagement: { type: Boolean, default: false, required: false },
     followedPeople: {
       type: [
         {
@@ -121,7 +122,7 @@ const UserSchema = new Schema<IUser, UserModel>(
           notificationType: {
             type: String
           },
-          source_ids: { type: [{ type: String }] },
+          source_ids: { type: [String] },
           insertDate: {
             type: Date
           },
