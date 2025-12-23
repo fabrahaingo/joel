@@ -157,7 +157,7 @@ app.post("/webhook", async (req, res) => {
 
     if (incomingData.apiPhoneNumber !== WHATSAPP_PHONE_NUMBER) {
       if (incomingMessageTargets.has(incomingData.apiPhoneNumber)) return;
-      const logText = `Received incoming WH webhook event for phone number non-production number ${incomingData.apiPhoneNumber} and id ${incomingData.apiPhoneId}. Future events will be ignored.`;
+      const logText = `Received incoming WH webhook event for non-production phone number ${incomingData.apiPhoneNumber} and id ${incomingData.apiPhoneId}. Future events will be ignored.`;
       console.log(logText);
       await sendTelegramDebugMessage(logText);
       incomingMessageTargets.add(incomingData.apiPhoneNumber);
