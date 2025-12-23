@@ -146,12 +146,12 @@ app.post("/webhook", async (req, res) => {
     if (incomingData.apiPhoneId == null) {
       await logError(
         "WhatsApp",
-        "Received message with null target phone number"
+        "Received message with null target phone id"
       );
       return;
     }
     if (incomingData.apiPhoneNumber == null) {
-      await logError("WhatsApp", "Received message with null target phone id");
+      await logError("WhatsApp", "Received message with null target phone number");
       return;
     }
 
