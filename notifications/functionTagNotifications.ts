@@ -196,6 +196,7 @@ export async function notifyFunctionTagsUpdates(
 
         await User.insertPendingNotifications(
           task.userId,
+          task.userInfo.messageApp,
           "function",
           notificationSources
         );

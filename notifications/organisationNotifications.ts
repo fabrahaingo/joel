@@ -200,6 +200,7 @@ export async function notifyOrganisationsUpdates(
 
         await User.insertPendingNotifications(
           task.userId,
+          task.userInfo.messageApp,
           "organisation",
           notificationSources
         );

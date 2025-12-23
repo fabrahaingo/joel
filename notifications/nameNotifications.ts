@@ -143,6 +143,7 @@ export async function notifyNameMentionUpdates(
 
       await User.insertPendingNotifications(
         task.userId,
+        task.userInfo.messageApp,
         "name",
         notificationSources
       );

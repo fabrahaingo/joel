@@ -121,6 +121,7 @@ export async function notifyAlertStringUpdates(
 
         await User.insertPendingNotifications(
           task.userId,
+          task.userInfo.messageApp,
           "meta",
           notificationSources
         );

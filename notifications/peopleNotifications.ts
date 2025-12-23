@@ -190,6 +190,7 @@ export async function notifyPeopleUpdates(
 
       await User.insertPendingNotifications(
         task.userId,
+        task.userInfo.messageApp,
         "people",
         notificationSources
       );

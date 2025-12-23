@@ -151,6 +151,7 @@ export interface UserModel extends Model<IUser> {
   create: (args) => Promise<IUser>;
   insertPendingNotifications: (
     userId: Types.ObjectId,
+    messageApp: MessageApp,
     notificationType: NotificationType,
     notificationSources: Map<JORFReference, number>
   ) => Promise<void>;
