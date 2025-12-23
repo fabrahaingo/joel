@@ -26,6 +26,7 @@ export const triggerPendingNotifications = async (
     }
     if (session.user.pendingNotifications.length == 0) {
       await session.sendMessage("Aucune notification en attente.");
+      return;
     }
 
     let source_id_publications: JORFReference[] = [];
