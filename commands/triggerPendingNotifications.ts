@@ -65,13 +65,13 @@ export const triggerPendingNotifications = async (
     const candidateJORFPublications: JORFSearchPublication[] =
       await Publication.find({ source_id: { $in: source_id_publications } });
 
-    const candidateJORFSearchItems: JORFSearchItem[] = itemsOut
-      .keys()
-      .reduce((tab: JORFSearchItem[], ref) => {
-        const items = itemsOut.get(ref);
-        if (items != null) return tab.concat(items);
-        return tab;
-      }, []);
+    const candidateJORFSearchItems: JORFSearchItem[] = Array.from(
+      itemsOut.keys()
+    ).reduce((tab: JORFSearchItem[], ref) => {
+      const items = itemsOut.get(ref);
+      if (items != null) return tab.concat(items);
+      return tab;
+    }, []);
 
     await notifyAllFollows(
       candidateJORFSearchItems,
