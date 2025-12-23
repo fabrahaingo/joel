@@ -1,6 +1,7 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import {
+  ExternalMessageOptions,
   loadUser,
   MessageSendingOptionsInternal,
   recordSuccessfulDelivery
@@ -8,7 +9,6 @@ import {
 import umami, { UmamiEvent, UmamiLogger } from "../utils/umami.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { ServerMessageResponse } from "whatsapp-api-js/types";
-import { ErrorMessages } from "./ErrorMessages.ts";
 import {
   ActionButtons,
   ActionList,
@@ -17,6 +17,7 @@ import {
   Interactive,
   ListSection,
   Row,
+  Template,
   Text
 } from "whatsapp-api-js/messages";
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
@@ -34,6 +35,8 @@ const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst
 export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
 
 export const WHATSAPP_API_VERSION = "v24.0";
+
+const TEMPLATE_MESSAGE_COST_EUROS = 0.0248;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
@@ -142,6 +145,10 @@ export class WhatsAppSession implements ISession {
       { ...options, useAsyncUmamiLog: false, hasAccount: this.user != null }
     );
   }
+
+  extractMessageAppsOptions(): ExternalMessageOptions {
+    return { whatsAppAPI: this.whatsAppAPI };
+  }
 }
 
 export async function extractWhatsAppSession(
@@ -193,7 +200,9 @@ export async function sendWhatsAppMessage(
   } // give up after 5 retries
 
   if (WHATSAPP_PHONE_ID === undefined) {
-    throw new Error(ErrorMessages.WHATSAPP_ENV_NOT_SET);
+    throw new Error(
+      "WHATSAPP_PHONE_ID is not set. Send a message to the bot to fetch the expected value and define it."
+    );
   }
 
   if (options.separateMenuMessage) options.forceNoKeyboard = true;
@@ -395,4 +404,118 @@ function replaceWHButtons(keyboard: Keyboard): Keyboard {
       return r ? r : k;
     })
   );
+}
+
+type TemplateType = "notification_meta";
+
+export async function sendWhatsAppTemplate(
+  whatsAppAPI: WhatsAppAPI,
+  userPhoneIdStr: string,
+  templateType: TemplateType,
+  options: MessageSendingOptionsInternal,
+  retryNumber = 0
+): Promise<boolean> {
+  const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
+    ? umami.logAsync
+    : umami.log;
+  if (retryNumber > 5) {
+    await umamiLogger({
+      event: "/message-fail-too-many-requests-aborted",
+      messageApp: "WhatsApp",
+      hasAccount: options.hasAccount,
+      payload: { message_type: "wh_template" }
+    });
+    return false;
+  } // give up after 5 retries
+
+  if (WHATSAPP_PHONE_ID === undefined) {
+    throw new Error(
+      "WHATSAPP_PHONE_ID is not set. Send a message to the bot to fetch the expected value and define it."
+    );
+  }
+
+  try {
+    const template_message = new Template(templateType, "fr");
+
+    const resp: ServerMessageResponse = await whatsAppAPI.sendMessage(
+      WHATSAPP_PHONE_ID,
+      userPhoneIdStr,
+      template_message
+    );
+
+    if (resp.error) {
+      switch (resp.error.code) {
+        // If rate limit exceeded, retry after 4^(numberRetry) seconds
+        case 4:
+        case 80007:
+        case 130429:
+        case 131048:
+        case 131056:
+          await umamiLogger({
+            event: "/message-fail-too-many-requests",
+            messageApp: "WhatsApp",
+            hasAccount: options.hasAccount
+          });
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.pow(4, retryNumber) * 1000)
+          );
+          return await sendWhatsAppTemplate(
+            whatsAppAPI,
+            userPhoneIdStr,
+            templateType,
+            options,
+            retryNumber + 1
+          );
+
+        case 131008: // user blocked the bot
+          await umami.logAsync({
+            event: "/user-blocked-joel",
+            messageApp: "WhatsApp",
+            hasAccount: options.hasAccount
+          });
+          await User.updateOne(
+            { messageApp: "WhatsApp", chatId: userPhoneIdStr },
+            { $set: { status: "blocked" } }
+          );
+          break;
+        case 131026: // user not on WhatsApp
+        case 131030:
+          await umami.logAsync({
+            event: "/user-deactivated",
+            messageApp: "WhatsApp",
+            hasAccount: options.hasAccount
+          });
+          await deleteUserAndCleanupByIdentifier("WhatsApp", userPhoneIdStr);
+          break;
+        default:
+          await logError("WhatsApp", "Error sending WH template", resp.error);
+      }
+      return false;
+    }
+    const costOperation: IUser["costHistory"][number] = {
+      operationDate: new Date(),
+      operationType: "WH_template",
+      cost: TEMPLATE_MESSAGE_COST_EUROS
+    };
+    await User.updateOne(
+      { messageApp: "WhatsApp", chatId: userPhoneIdStr },
+      { $push: { costHistory: costOperation } }
+    );
+
+    await umamiLogger({
+      event: "/reengagement-notifications-sent",
+      messageApp: "WhatsApp",
+      hasAccount: options.hasAccount
+    });
+
+    await new Promise((resolve) =>
+      setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
+    );
+    await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneIdStr);
+  } catch (error) {
+    await logError("WhatsApp", "Error sending WH template", error);
+    return false;
+  }
+
+  return true;
 }

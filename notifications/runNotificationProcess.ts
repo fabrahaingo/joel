@@ -14,11 +14,12 @@ import { notifyNameMentionUpdates } from "./nameNotifications.ts";
 import { notifyFunctionTagsUpdates } from "./functionTagNotifications.ts";
 import { notifyAlertStringUpdates } from "./alertStringNotifications.ts";
 import umami from "../utils/umami.ts";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { Publication } from "../models/Publication.ts";
 import { refreshTelegramBlockedUsers } from "../entities/TelegramSession.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
 const SHIFT_DAYS = 15;
@@ -137,82 +138,126 @@ export async function runNotificationProcess(
   targetApps: MessageApp[],
   messageAppsOptions: ExternalMessageOptions
 ): Promise<void> {
-  if (
-    targetApps.some((a) => a === "Matrix") &&
-    messageAppsOptions.matrixClient == null
-  ) {
-    throw new Error(
-      `Matrix: notification process skipped for as the Matrix client is not set.`
+  try {
+    if (
+      targetApps.some((a) => a === "Matrix") &&
+      messageAppsOptions.matrixClient == null
+    ) {
+      await logError(
+        "Matrix",
+        `Notification process skipped as the Matrix client is not set.`
+      );
+      return;
+    }
+    if (
+      targetApps.some((a) => a === "Telegram") &&
+      messageAppsOptions.telegramBotToken == null
+    ) {
+      await logError(
+        "Telegram",
+        `Notification process skipped as the bot token is not set.`
+      );
+      return;
+    }
+
+    if (
+      targetApps.some((a) => a === "Signal") &&
+      messageAppsOptions.signalCli == null
+    ) {
+      await logError(
+        "Signal",
+        `Notification process skipped as the signal client is not set.`
+      );
+      return;
+    }
+
+    if (
+      targetApps.some((a) => a === "WhatsApp") &&
+      messageAppsOptions.whatsAppAPI == null
+    ) {
+      await logError(
+        "WhatsApp",
+        `Notification process skipped as the WhatsApp client is not set.`
+      );
+      return;
+    }
+
+    // Start mdb connection if not already connected
+    if (mongoose.connection.readyState.valueOf() != 1) await mongodbConnect();
+
+    if (targetApps.includes("Telegram")) {
+      await refreshTelegramBlockedUsers(messageAppsOptions.telegramBotToken);
+    }
+
+    const currentDate = new Date();
+    const startDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate() - SHIFT_DAYS
     );
-  }
-  if (
-    targetApps.some((a) => a === "Telegram") &&
-    messageAppsOptions.telegramBotToken == null
-  ) {
-    throw new Error(
-      `Telegram: notification process skipped for as the bot token is not set.`
+    startDate.setHours(0, 0, 0, 0);
+
+    const JORFAllRecordsFromDate = await getJORFRecordsFromDate(
+      startDate,
+      targetApps
     );
-  }
-
-  if (
-    targetApps.some((a) => a === "Signal") &&
-    messageAppsOptions.signalCli == null
-  ) {
-    throw new Error(
-      `Signal: notification process skipped for as the signal client is not set.`
+    const JORFMetaRecordsFromDate = await getJORFMetaRecordsFromDate(
+      startDate,
+      targetApps
     );
-  }
 
-  if (
-    targetApps.some((a) => a === "WhatsApp") &&
-    messageAppsOptions.whatsAppAPI == null
-  ) {
-    throw new Error(
-      `WhatsApp: notification process skipped for as the WhatsApp client is not set.`
+    await notifyAllFollows(
+      JORFAllRecordsFromDate,
+      JORFMetaRecordsFromDate,
+      targetApps,
+      messageAppsOptions
     );
+
+    for (const appType of targetApps) {
+      await umami.logAsync({
+        event: "/notification-process-completed",
+        messageApp: appType,
+        hasAccount: true
+      });
+    }
+  } catch (err) {
+    for (const appType of targetApps) {
+      await logError(appType, "Error running notification process: ", err);
+    }
   }
+}
 
-  // Start mdb connection if not already connected
-  if (mongoose.connection.readyState.valueOf() != 1) await mongodbConnect();
-
-  if (targetApps.includes("Telegram")) {
-    await refreshTelegramBlockedUsers(messageAppsOptions.telegramBotToken);
-  }
-
-  const currentDate = new Date();
-  const startDate = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth(),
-    currentDate.getDate() - SHIFT_DAYS
-  );
-  startDate.setHours(0, 0, 0, 0);
-
-  const JORFAllRecordsFromDate = await getJORFRecordsFromDate(
-    startDate,
-    targetApps
-  );
-  const JORFMetaRecordsFromDate = await getJORFMetaRecordsFromDate(
-    startDate,
-    targetApps
-  );
-
+export async function notifyAllFollows(
+  JORFAllRecordsFromDate: JORFSearchItem[],
+  JORFMetaRecordsFromDate: JORFSearchPublication[],
+  targetApps: MessageApp[],
+  messageAppsOptions: ExternalMessageOptions,
+  userIds?: Types.ObjectId[],
+  forceWHMessages = false
+) {
   if (JORFAllRecordsFromDate.length > 0) {
     await notifyFunctionTagsUpdates(
       JORFAllRecordsFromDate,
       targetApps,
-      messageAppsOptions
+      messageAppsOptions,
+      userIds,
+      forceWHMessages
     );
 
     await notifyOrganisationsUpdates(
       JORFAllRecordsFromDate,
       targetApps,
-      messageAppsOptions
+      messageAppsOptions,
+      userIds,
+      forceWHMessages
     );
 
     await notifyPeopleUpdates(
       JORFAllRecordsFromDate,
       targetApps,
-      messageAppsOptions
+      messageAppsOptions,
+      userIds,
+      forceWHMessages
     );
 
     await notifyNameMentionUpdates(
@@ -229,13 +274,5 @@ export async function runNotificationProcess(
       targetApps,
       messageAppsOptions
     );
-  }
-
-  for (const appType of targetApps) {
-    await umami.logAsync({
-      event: "/notification-process-completed",
-      messageApp: appType,
-      hasAccount: true
-    });
   }
 }

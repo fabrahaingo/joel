@@ -2,6 +2,7 @@ import { ISession } from "../types.ts";
 import { processMessage } from "../commands/Commands.ts";
 import umami from "./umami.ts";
 import { logError } from "./debugLogger.ts";
+import { triggerPendingNotifications } from "../commands/triggerPendingNotifications.ts";
 
 interface MessageWorkflowOptions {
   isReply?: boolean;
@@ -32,11 +33,13 @@ export async function handleIncomingMessage(
 
     const user = await session.loadUser();
 
-    umami.log({
-      event: "/message-received",
-      messageApp: session.messageApp,
-      hasAccount: user != null
+    session.log({
+      event: "/message-received"
     });
+
+    if (user != null && user.pendingNotifications.length > 0) {
+      await triggerPendingNotifications(session);
+    }
 
     await processMessage(session, trimmedText);
 

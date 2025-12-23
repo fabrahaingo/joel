@@ -25,7 +25,7 @@ const formatError = (error: unknown): string | null => {
   }
 };
 
-const sendTelegramDebugMessage = async (text: string): Promise<void> => {
+export const sendTelegramDebugMessage = async (text: string): Promise<void> => {
   if (DEBUG_CHAT_ID == null || TELEGRAM_DEBUG_BOT_TOKEN == null) return;
 
   const endpoint = `https://api.telegram.org/bot${TELEGRAM_DEBUG_BOT_TOKEN}/sendMessage`;
@@ -71,7 +71,7 @@ const buildLogMessage = (
   const levelEmoji = level === "error" ? "❌" : "⚠️";
   const errorText = formatError(error);
   return [
-    `${levelEmoji} [${messageApp}] ${message}`,
+    `${levelEmoji} [${messageApp} (${process.env.NODE_ENV ?? "production"})] ${message}`,
     errorText != null ? `Details:\n${errorText}` : null
   ]
     .filter((part): part is string => part != null)

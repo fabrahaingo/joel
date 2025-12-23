@@ -5,7 +5,13 @@ import {
   sendMessage
 } from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
-import { IOrganisation, IUser, MessageApp, WikidataId } from "../types.ts";
+import {
+  IOrganisation,
+  IUser,
+  JORFReference,
+  MessageApp,
+  WikidataId
+} from "../types.ts";
 import Organisation from "../models/Organisation.ts";
 import User from "../models/User.ts";
 import { JORFtoDate } from "../utils/date.utils.ts";
@@ -25,6 +31,8 @@ import {
 } from "./grouping.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { FilterQuery, Types } from "mongoose";
+import { sendWhatsAppTemplate } from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
@@ -52,7 +60,9 @@ const organisationSeparatorSelector: SeparatorSelector = () =>
 export async function notifyOrganisationsUpdates(
   allUpdatedRecords: JORFSearchItem[],
   enabledApps: MessageApp[],
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  userIds?: Types.ObjectId[],
+  forceWHMessages = false
 ) {
   const updatedOrgsWikidataIdSet = new Set<WikidataId>(
     allUpdatedRecords
@@ -67,29 +77,36 @@ export async function notifyOrganisationsUpdates(
   }).lean();
   if (updatedOrgsInDb.length === 0) return;
 
-  const usersFollowingOrganisations: IUser[] = await User.find(
-    {
-      followedOrganisations: {
-        $exists: true,
-        $not: { $size: 0 },
-        $elemMatch: {
-          wikidataId: {
-            $in: updatedOrgsInDb.map((o) => o.wikidataId)
-          }
+  let dbFilters: FilterQuery<IUser> = {
+    followedOrganisations: {
+      $exists: true,
+      $not: { $size: 0 },
+      $elemMatch: {
+        wikidataId: {
+          $in: updatedOrgsInDb.map((o) => o.wikidataId)
         }
-      },
-      status: "active",
-      messageApp: { $in: enabledApps }
+      }
     },
-    {
-      _id: 1,
-      chatId: 1,
-      roomId: 1,
-      messageApp: 1,
-      followedOrganisations: { wikidataId: 1, lastUpdate: 1 },
-      schemaVersion: 1
+    status: "active",
+    messageApp: { $in: enabledApps }
+  };
+  if (userIds != null) {
+    if (userIds.length === 0) {
+      throw new Error("Empty userIds provided to notifyOrganisationsUpdates");
     }
-  ).lean();
+    dbFilters = { ...dbFilters, _id: { $in: userIds } };
+  }
+
+  const usersFollowingOrganisations: IUser[] = await User.find(dbFilters, {
+    _id: 1,
+    chatId: 1,
+    roomId: 1,
+    messageApp: 1,
+    followedOrganisations: { wikidataId: 1, lastUpdate: 1 },
+    schemaVersion: 1,
+    waitingReengagement: 1,
+    status: 1
+  }).lean();
   if (usersFollowingOrganisations.length === 0) return;
 
   const orgNameById = new Map<WikidataId, string>(
@@ -154,6 +171,8 @@ export async function notifyOrganisationsUpdates(
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
+          waitingReengagement: user.waitingReengagement,
+          status: user.status,
           hasAccount: true
         },
         updatedRecordsMap: newUserOrganisationsUpdates,
@@ -166,6 +185,52 @@ export async function notifyOrganisationsUpdates(
   await dispatchTasksToMessageApps<WikidataId>(
     userUpdateTasks,
     async (task) => {
+      // WH user must be re-engaged before sending notifications
+      if (!forceWHMessages && task.userInfo.messageApp === "WhatsApp") {
+        const notificationSources = new Map<JORFReference, number>();
+
+        for (const records of task.updatedRecordsMap.values()) {
+          for (const record of records) {
+            notificationSources.set(
+              record.source_id,
+              (notificationSources.get(record.source_id) ?? 0) + 1
+            );
+          }
+        }
+
+        await User.insertPendingNotifications(
+          task.userId,
+          task.userInfo.messageApp,
+          "organisation",
+          notificationSources
+        );
+
+        if (!task.userInfo.waitingReengagement) {
+          const whatsAppAPI = messageAppsOptions.whatsAppAPI;
+          if (whatsAppAPI == null) {
+            await logError(
+              "WhatsApp",
+              "Undefined messageAppsOptions.whatsAppAPI in notifyOrganisationsUpdates"
+            );
+            return;
+          }
+          const templateSent = await sendWhatsAppTemplate(
+            whatsAppAPI,
+            task.userInfo.chatId,
+            "notification_meta",
+            messageAppsOptions
+          );
+
+          if (templateSent)
+            await User.updateOne(
+              { _id: task.userId },
+              { $set: { waitingReengagement: true } }
+            );
+        }
+
+        return;
+      }
+
       const messageSent = await sendOrganisationUpdate(
         task.userInfo,
         task.updatedRecordsMap,
@@ -197,7 +262,7 @@ export async function notifyOrganisationsUpdates(
   );
 }
 
-async function sendOrganisationUpdate(
+export async function sendOrganisationUpdate(
   userInfo: MiniUserInfo,
   organisationsUpdateRecordsMap: Map<WikidataId, JORFSearchItem[]>,
   orgNameById: Map<WikidataId, string>,

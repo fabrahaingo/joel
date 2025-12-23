@@ -30,6 +30,7 @@ import { buildInfoCommand, statsCommand } from "./help.ts";
 import { exportCommand, importCommand } from "./importExport.ts";
 import { sanitizeUserInput } from "../utils/text.utils.ts";
 import { textAlertCommand } from "./textAlert.ts";
+import { triggerPendingNotifications } from "./triggerPendingNotifications.ts";
 
 export async function processMessage(
   session: ISession,
@@ -220,5 +221,9 @@ export const commands: CommandType[] = [
   {
     regex: /^\/stats|stats/i,
     action: statsCommand
+  },
+  {
+    regex: /^Voir mes notifications/i,
+    action: triggerPendingNotifications
   }
 ];

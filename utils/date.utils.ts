@@ -47,3 +47,10 @@ export function getISOWeek(date: Date): string {
     );
   return `${String(target.getFullYear())}-W${String(weekNum)}`;
 }
+
+export function daysBetweenCalendar(a: Date, b: Date): number {
+  const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
+  const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return Math.round((utcB - utcA) / msPerDay);
+}
