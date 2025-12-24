@@ -615,11 +615,11 @@ UserSchema.method(
         _id: this._id,
         followedNames: { $not: { $elemMatch: { $regex: regex } } }
       },
-      { $push: { followedNames: name } }
+      { $push: { followedNames: nameClean } }
     );
 
     if (res.modifiedCount > 0) {
-      this.followedNames.push(name);
+      this.followedNames.push(nameClean);
       return true;
     }
     return false;
