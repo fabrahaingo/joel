@@ -20,6 +20,9 @@ import { logError } from "../utils/debugLogger.ts";
 
 export const USER_SCHEMA_VERSION = 3;
 
+const escapeRegex = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const UserSchema = new Schema<IUser, UserModel>(
   {
     chatId: {
@@ -212,6 +215,17 @@ UserSchema.static(
 UserSchema.method(
   "updateInteractionMetrics",
   async function updateInteractionMetrics(this: IUser): Promise<void> {
+    const User = this.constructor as UserModel;
+
+    const now = new Date();
+    const currentDay = new Date(now);
+    currentDay.setHours(4, 0, 0, 0);
+
+    const $set: Partial<IUser> = {
+      waitingReengagement: false,
+      lastEngagementAt: now
+    };
+
     if (this.status === "blocked") {
       umami.log({
         event: "/user-unblocked-joel",
@@ -219,22 +233,18 @@ UserSchema.method(
         hasAccount: true
       });
       this.status = "active";
+      $set.status = "active";
     }
     this.waitingReengagement = false;
-
-    const now = new Date();
-
     this.lastEngagementAt = now;
 
-    const currentDay = new Date(now);
-    currentDay.setHours(4, 0, 0, 0);
-
-    // For daily active users - check if the last interaction was before today
+    // Daily active users
     if (
       this.lastInteractionDay === undefined ||
       this.lastInteractionDay.toDateString() !== currentDay.toDateString()
     ) {
       this.lastInteractionDay = currentDay;
+      $set.lastInteractionDay = currentDay;
       umami.log({
         event: "/daily-active-user",
         messageApp: this.messageApp,
@@ -242,16 +252,18 @@ UserSchema.method(
       });
     }
 
-    // For weekly active users - check if the last interaction was in a different ISO week
+    // Weekly active users
     const thisWeek = getISOWeek(now);
     const lastInteractionWeek = this.lastInteractionWeek
       ? getISOWeek(this.lastInteractionWeek)
       : undefined;
+
     if (
       this.lastInteractionWeek === undefined ||
       thisWeek !== lastInteractionWeek
     ) {
       this.lastInteractionWeek = currentDay;
+      $set.lastInteractionWeek = currentDay;
       umami.log({
         event: "/weekly-active-user",
         messageApp: this.messageApp,
@@ -259,7 +271,7 @@ UserSchema.method(
       });
     }
 
-    // For monthly active users - check if last interaction was in a different month
+    // Monthly active users
     if (
       this.lastInteractionMonth === undefined ||
       this.lastInteractionMonth.getMonth() !== now.getMonth() ||
@@ -267,7 +279,10 @@ UserSchema.method(
     ) {
       const startMonth = new Date(currentDay);
       startMonth.setDate(1);
+
       this.lastInteractionMonth = startMonth;
+      $set.lastInteractionMonth = startMonth;
+
       umami.log({
         event: "/monthly-active-user",
         messageApp: this.messageApp,
@@ -275,7 +290,7 @@ UserSchema.method(
       });
     }
 
-    await this.save();
+    await User.updateOne({ _id: this._id }, { $set });
   }
 );
 
@@ -295,19 +310,55 @@ UserSchema.method(
 UserSchema.method(
   "addFollowedPeople",
   async function addFollowedPeople(this: IUser, peopleToFollow: IPeople) {
-    if (this.checkFollowedPeople(peopleToFollow._id)) return false;
-    this.followedPeople.push({
-      peopleId: peopleToFollow._id,
-      lastUpdate: new Date()
-    });
-    await this.save();
-    return true;
+    const User = this.constructor as UserModel;
+
+    const res = await User.updateOne(
+      { _id: this._id, "followedPeople.peopleId": { $ne: peopleToFollow._id } },
+      {
+        $push: {
+          followedPeople: {
+            peopleId: peopleToFollow._id,
+            lastUpdate: new Date()
+          }
+        }
+      }
+    );
+
+    if (res.modifiedCount > 0) {
+      this.followedPeople.push({
+        peopleId: peopleToFollow._id,
+        lastUpdate: new Date()
+      });
+      return true;
+    }
+    return false;
   }
 );
 
 UserSchema.method(
   "addFollowedPeopleBulk",
   async function addFollowedPeopleBulk(this: IUser, peopleToFollow: IPeople[]) {
+    const User = this.constructor as UserModel;
+
+    const ops = peopleToFollow.map((people) => ({
+      updateOne: {
+        filter: {
+          _id: this._id,
+          "followedPeople.peopleId": { $ne: people._id }
+        },
+        update: {
+          $push: {
+            followedPeople: { peopleId: people._id, lastUpdate: new Date() }
+          }
+        }
+      }
+    }));
+
+    if (ops.length === 0) return true;
+
+    await User.bulkWrite(ops, { ordered: false });
+
+    // Best-effort sync in-memory (non-authoritative)
     for (const people of peopleToFollow) {
       if (this.checkFollowedPeople(people._id)) continue;
       this.followedPeople.push({
@@ -315,7 +366,6 @@ UserSchema.method(
         lastUpdate: new Date()
       });
     }
-    await this.save();
     return true;
   }
 );
@@ -326,16 +376,25 @@ UserSchema.method(
     this: IUser,
     peopleToUnfollow: IPeople | Types.ObjectId
   ) {
+    const User = this.constructor as UserModel;
+
     const peopleId =
       peopleToUnfollow instanceof Types.ObjectId
         ? peopleToUnfollow
         : peopleToUnfollow._id;
-    if (!this.checkFollowedPeople(peopleId)) return false;
-    this.followedPeople = this.followedPeople.filter((elem) => {
-      return elem.peopleId.toString() !== peopleId.toString();
-    });
-    await this.save();
-    return true;
+
+    const res = await User.updateOne(
+      { _id: this._id, "followedPeople.peopleId": peopleId },
+      { $pull: { followedPeople: { peopleId } } }
+    );
+
+    if (res.modifiedCount > 0) {
+      this.followedPeople = this.followedPeople.filter(
+        (elem) => elem.peopleId.toString() !== peopleId.toString()
+      );
+      return true;
+    }
+    return false;
   }
 );
 
@@ -351,22 +410,42 @@ UserSchema.method(
 UserSchema.method(
   "addFollowedFunction",
   async function addFollowedFunction(this: IUser, fct: FunctionTags) {
-    if (this.checkFollowedFunction(fct)) return false;
-    this.followedFunctions.push({ functionTag: fct, lastUpdate: new Date() });
-    await this.save();
-    return true;
+    const User = this.constructor as UserModel;
+
+    const res = await User.updateOne(
+      { _id: this._id, "followedFunctions.functionTag": { $ne: fct } },
+      {
+        $push: {
+          followedFunctions: { functionTag: fct, lastUpdate: new Date() }
+        }
+      }
+    );
+
+    if (res.modifiedCount > 0) {
+      this.followedFunctions.push({ functionTag: fct, lastUpdate: new Date() });
+      return true;
+    }
+    return false;
   }
 );
 
 UserSchema.method(
   "removeFollowedFunction",
   async function removeFollowedFunction(this: IUser, fct: FunctionTags) {
-    if (!this.checkFollowedFunction(fct)) return false;
-    this.followedFunctions = this.followedFunctions.filter((elem) => {
-      return elem.functionTag !== fct;
-    });
-    await this.save();
-    return true;
+    const User = this.constructor as UserModel;
+
+    const res = await User.updateOne(
+      { _id: this._id, "followedFunctions.functionTag": fct },
+      { $pull: { followedFunctions: { functionTag: fct } } }
+    );
+
+    if (res.modifiedCount > 0) {
+      this.followedFunctions = this.followedFunctions.filter(
+        (elem) => elem.functionTag !== fct
+      );
+      return true;
+    }
+    return false;
   }
 );
 
@@ -393,26 +472,52 @@ UserSchema.method(
 UserSchema.method(
   "addFollowedAlertString",
   async function addFollowedAlertString(this: IUser, alertString: string) {
-    if (this.checkFollowedAlertString(alertString)) return false;
-    this.followedMeta.push({
-      alertString: alertString.trim(),
-      lastUpdate: new Date()
-    });
-    await this.save();
-    return true;
+    const User = this.constructor as UserModel;
+
+    const trimmed = alertString.trim();
+    const regex = new RegExp(`^${escapeRegex(trimmed)}$`, "i");
+
+    const res = await User.updateOne(
+      {
+        _id: this._id,
+        followedMeta: { $not: { $elemMatch: { alertString: regex } } }
+      },
+      {
+        $push: {
+          followedMeta: { alertString: trimmed, lastUpdate: new Date() }
+        }
+      }
+    );
+
+    if (res.modifiedCount > 0) {
+      this.followedMeta.push({ alertString: trimmed, lastUpdate: new Date() });
+      return true;
+    }
+    return false;
   }
 );
 
 UserSchema.method(
   "removeFollowedAlertString",
   async function removeFollowedAlertString(this: IUser, alertString: string) {
-    if (!this.checkFollowedAlertString(alertString)) return false;
-    const normalizedAlertString = alertString.trim().toLowerCase();
-    this.followedMeta = this.followedMeta.filter((elem) => {
-      return elem.alertString.trim().toLowerCase() !== normalizedAlertString;
-    });
-    await this.save();
-    return true;
+    const User = this.constructor as UserModel;
+
+    const trimmed = alertString.trim();
+    const regex = new RegExp(`^${escapeRegex(trimmed)}$`, "i");
+
+    const res = await User.updateOne(
+      { _id: this._id, followedMeta: { $elemMatch: { alertString: regex } } },
+      { $pull: { followedMeta: { alertString: regex } } }
+    );
+
+    if (res.modifiedCount > 0) {
+      const normalized = trimmed.toLowerCase();
+      this.followedMeta = this.followedMeta.filter(
+        (elem) => elem.alertString.trim().toLowerCase() !== normalized
+      );
+      return true;
+    }
+    return false;
   }
 );
 
@@ -436,15 +541,28 @@ UserSchema.method(
     this: IUser,
     organisation: IOrganisation | WikidataId
   ) {
+    const User = this.constructor as UserModel;
+
     const wikidataId =
       typeof organisation === "string" ? organisation : organisation.wikidataId;
-    if (this.checkFollowedOrganisation(wikidataId)) return false;
-    this.followedOrganisations.push({
-      wikidataId,
-      lastUpdate: new Date()
-    });
-    await this.save();
-    return true;
+
+    const res = await User.updateOne(
+      {
+        _id: this._id,
+        "followedOrganisations.wikidataId": { $ne: wikidataId }
+      },
+      {
+        $push: {
+          followedOrganisations: { wikidataId, lastUpdate: new Date() }
+        }
+      }
+    );
+
+    if (res.modifiedCount > 0) {
+      this.followedOrganisations.push({ wikidataId, lastUpdate: new Date() });
+      return true;
+    }
+    return false;
   }
 );
 
@@ -454,36 +572,67 @@ UserSchema.method(
     this: IUser,
     organisation: IOrganisation | WikidataId
   ) {
+    const User = this.constructor as UserModel;
+
     const wikidataId =
       typeof organisation === "string" ? organisation : organisation.wikidataId;
-    if (!this.checkFollowedOrganisation(wikidataId)) return false;
-    this.followedOrganisations = this.followedOrganisations.filter(
-      (elem) => elem.wikidataId !== wikidataId
+
+    const res = await User.updateOne(
+      { _id: this._id, "followedOrganisations.wikidataId": wikidataId },
+      { $pull: { followedOrganisations: { wikidataId } } }
     );
-    await this.save();
-    return true;
+
+    if (res.modifiedCount > 0) {
+      this.followedOrganisations = this.followedOrganisations.filter(
+        (elem) => elem.wikidataId !== wikidataId
+      );
+      return true;
+    }
+    return false;
   }
 );
 
 UserSchema.method(
   "addFollowedName",
   async function addFollowedName(this: IUser, name: string) {
-    if (this.checkFollowedName(name)) return false;
-    this.followedNames.push(name);
-    await this.save();
-    return true;
+    const User = this.constructor as UserModel;
+
+    const nameClean = cleanPeopleName(name);
+    const regex = new RegExp(`^${escapeRegex(nameClean)}$`, "i");
+
+    const res = await User.updateOne(
+      { _id: this._id, followedNames: { $not: regex } },
+      { $push: { followedNames: name } }
+    );
+
+    if (res.modifiedCount > 0) {
+      this.followedNames.push(name);
+      return true;
+    }
+    return false;
   }
 );
 
 UserSchema.method(
   "removeFollowedName",
   async function removeFollowedName(this: IUser, name: string) {
-    if (!this.checkFollowedName(name)) return false;
-    this.followedNames = this.followedNames.filter((elem) => {
-      return elem.toUpperCase() !== name.toUpperCase();
-    });
-    await this.save();
-    return true;
+    const User = this.constructor as UserModel;
+
+    const nameClean = cleanPeopleName(name);
+    const regex = new RegExp(`^${escapeRegex(nameClean)}$`, "i");
+
+    const res = await User.updateOne(
+      { _id: this._id, followedNames: regex },
+      { $pull: { followedNames: regex } }
+    );
+
+    if (res.modifiedCount > 0) {
+      this.followedNames = this.followedNames.filter(
+        (elem) => elem.toUpperCase() !== name.toUpperCase()
+      );
+      return true;
+    }
+    return false;
   }
 );
 
