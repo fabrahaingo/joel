@@ -220,6 +220,7 @@ UserSchema.method(
       });
       this.status = "active";
     }
+    this.waitingReengagement = false;
 
     const now = new Date();
 

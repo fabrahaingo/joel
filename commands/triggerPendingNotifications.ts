@@ -24,12 +24,13 @@ export const triggerPendingNotifications = async (
       await session.sendMessage("Veuillez ajouter un suivi.");
       return;
     }
-    if (session.user.pendingNotifications.length == 0) {
-      await session.sendMessage("Aucune notification en attente.");
+    if (session.user.waitingReengagement)
       await User.updateOne(
         { _id: session.user._id },
         { $set: { waitingReengagement: false } }
       );
+    if (session.user.pendingNotifications.length == 0) {
+      await session.sendMessage("Aucune notification en attente.");
       return;
     }
 
