@@ -14,6 +14,7 @@ import { MiniUserInfo } from "../entities/Session.ts";
  */
 export interface NotificationTask<T, R = JORFSearchItem> {
   userId: Types.ObjectId;
+  userLastEngagement?: Date;
   userInfo: MiniUserInfo;
   updatedRecordsMap: Map<T, R[]>;
   recordCount: number;
