@@ -170,6 +170,11 @@ const UserSchema = new Schema<IUser, UserModel>(
       type: Date,
       required: false,
       default: undefined
+    },
+    lastEngagementAt: {
+      type: Date,
+      required: false,
+      default: undefined
     }
   },
   {
@@ -207,8 +212,6 @@ UserSchema.static(
 UserSchema.method(
   "updateInteractionMetrics",
   async function updateInteractionMetrics(this: IUser): Promise<void> {
-    let needSaving = false;
-
     if (this.status === "blocked") {
       umami.log({
         event: "/user-unblocked-joel",
@@ -216,10 +219,12 @@ UserSchema.method(
         hasAccount: true
       });
       this.status = "active";
-      needSaving = true;
     }
 
     const now = new Date();
+
+    this.lastEngagementAt = now;
+
     const currentDay = new Date(now);
     currentDay.setHours(4, 0, 0, 0);
 
@@ -234,7 +239,6 @@ UserSchema.method(
         messageApp: this.messageApp,
         hasAccount: true
       });
-      needSaving = true;
     }
 
     // For weekly active users - check if the last interaction was in a different ISO week
@@ -252,7 +256,6 @@ UserSchema.method(
         messageApp: this.messageApp,
         hasAccount: true
       });
-      needSaving = true;
     }
 
     // For monthly active users - check if last interaction was in a different month
@@ -269,10 +272,9 @@ UserSchema.method(
         messageApp: this.messageApp,
         hasAccount: true
       });
-      needSaving = true;
     }
 
-    if (needSaving) await this.save();
+    await this.save();
   }
 );
 
