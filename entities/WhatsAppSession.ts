@@ -36,6 +36,9 @@ export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second gl
 
 export const WHATSAPP_API_VERSION = "v24.0";
 
+// 24h - 2 mins
+export const WHATSAPP_REENGAGEMENT_TIMOUT_MS = 24 * (60 - 2) * 60 * 1000;
+
 const TEMPLATE_MESSAGE_COST_EUROS = 0.0248;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
