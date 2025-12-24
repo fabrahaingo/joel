@@ -312,13 +312,15 @@ UserSchema.method(
   async function addFollowedPeople(this: IUser, peopleToFollow: IPeople) {
     const User = this.constructor as UserModel;
 
+    const now = new Date();
+
     const res = await User.updateOne(
       { _id: this._id, "followedPeople.peopleId": { $ne: peopleToFollow._id } },
       {
         $push: {
           followedPeople: {
             peopleId: peopleToFollow._id,
-            lastUpdate: new Date()
+            lastUpdate: now
           }
         }
       }
@@ -327,7 +329,7 @@ UserSchema.method(
     if (res.modifiedCount > 0) {
       this.followedPeople.push({
         peopleId: peopleToFollow._id,
-        lastUpdate: new Date()
+        lastUpdate: now
       });
       return true;
     }
@@ -340,6 +342,8 @@ UserSchema.method(
   async function addFollowedPeopleBulk(this: IUser, peopleToFollow: IPeople[]) {
     const User = this.constructor as UserModel;
 
+    const now = new Date();
+
     const ops = peopleToFollow.map((people) => ({
       updateOne: {
         filter: {
@@ -348,7 +352,7 @@ UserSchema.method(
         },
         update: {
           $push: {
-            followedPeople: { peopleId: people._id, lastUpdate: new Date() }
+            followedPeople: { peopleId: people._id, lastUpdate: now }
           }
         }
       }
@@ -363,7 +367,7 @@ UserSchema.method(
       if (this.checkFollowedPeople(people._id)) continue;
       this.followedPeople.push({
         peopleId: people._id,
-        lastUpdate: new Date()
+        lastUpdate: now
       });
     }
     return true;
@@ -412,17 +416,19 @@ UserSchema.method(
   async function addFollowedFunction(this: IUser, fct: FunctionTags) {
     const User = this.constructor as UserModel;
 
+    const now = new Date();
+
     const res = await User.updateOne(
       { _id: this._id, "followedFunctions.functionTag": { $ne: fct } },
       {
         $push: {
-          followedFunctions: { functionTag: fct, lastUpdate: new Date() }
+          followedFunctions: { functionTag: fct, lastUpdate: now }
         }
       }
     );
 
     if (res.modifiedCount > 0) {
-      this.followedFunctions.push({ functionTag: fct, lastUpdate: new Date() });
+      this.followedFunctions.push({ functionTag: fct, lastUpdate: now });
       return true;
     }
     return false;
@@ -477,6 +483,8 @@ UserSchema.method(
     const trimmed = alertString.trim();
     const regex = new RegExp(`^${escapeRegex(trimmed)}$`, "i");
 
+    const now = new Date();
+
     const res = await User.updateOne(
       {
         _id: this._id,
@@ -484,13 +492,13 @@ UserSchema.method(
       },
       {
         $push: {
-          followedMeta: { alertString: trimmed, lastUpdate: new Date() }
+          followedMeta: { alertString: trimmed, lastUpdate: now }
         }
       }
     );
 
     if (res.modifiedCount > 0) {
-      this.followedMeta.push({ alertString: trimmed, lastUpdate: new Date() });
+      this.followedMeta.push({ alertString: trimmed, lastUpdate: now });
       return true;
     }
     return false;
@@ -546,6 +554,8 @@ UserSchema.method(
     const wikidataId =
       typeof organisation === "string" ? organisation : organisation.wikidataId;
 
+    const now = new Date();
+
     const res = await User.updateOne(
       {
         _id: this._id,
@@ -553,13 +563,13 @@ UserSchema.method(
       },
       {
         $push: {
-          followedOrganisations: { wikidataId, lastUpdate: new Date() }
+          followedOrganisations: { wikidataId, lastUpdate: now }
         }
       }
     );
 
     if (res.modifiedCount > 0) {
-      this.followedOrganisations.push({ wikidataId, lastUpdate: new Date() });
+      this.followedOrganisations.push({ wikidataId, lastUpdate: now });
       return true;
     }
     return false;
@@ -601,7 +611,10 @@ UserSchema.method(
     const regex = new RegExp(`^${escapeRegex(nameClean)}$`, "i");
 
     const res = await User.updateOne(
-      { _id: this._id, followedNames: { $not: { $elemMatch: { $regex: regex } } } },
+      {
+        _id: this._id,
+        followedNames: { $not: { $elemMatch: { $regex: regex } } }
+      },
       { $push: { followedNames: name } }
     );
 
@@ -662,6 +675,8 @@ UserSchema.static(
     const source_ids: JORFReference[] = [];
     let items_nb = 0;
 
+    const now = new Date();
+
     const user: IUser | null = await this.findOne(
       { _id: userId },
       { pendingNotifications: 1 }
@@ -691,7 +706,7 @@ UserSchema.static(
     const newNotification: IUser["pendingNotifications"][number] = {
       notificationType,
       source_ids,
-      insertDate: new Date(),
+      insertDate: now,
       items_nb
     };
 
