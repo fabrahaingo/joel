@@ -37,7 +37,31 @@ export const triggerPendingNotifications = async (
     let source_id_publications: JORFReference[] = [];
     let source_id_items: JORFReference[] = [];
 
+    let people_item_nb = 0;
+    let function_item_nb = 0;
+    let organisation_item_nb = 0;
+    let name_item_nb = 0;
+    let meta_item_nb = 0;
+
     for (const pendingNotification of session.user.pendingNotifications) {
+      switch (pendingNotification.notificationType) {
+        case "people":
+          people_item_nb += pendingNotification.items_nb;
+          break;
+        case "function":
+          function_item_nb += pendingNotification.items_nb;
+          break;
+        case "organisation":
+          organisation_item_nb += pendingNotification.items_nb;
+          break;
+        case "name":
+          name_item_nb += pendingNotification.items_nb;
+          break;
+        case "meta":
+          meta_item_nb += pendingNotification.items_nb;
+          break;
+      }
+
       if (pendingNotification.notificationType === "meta") {
         source_id_publications = source_id_publications.concat(
           pendingNotification.source_ids
@@ -109,7 +133,12 @@ export const triggerPendingNotifications = async (
           earliestInsertDate,
           new Date()
         ),
-        number_batches: session.user.pendingNotifications.length
+        number_batches: session.user.pendingNotifications.length,
+        people_item_nb: people_item_nb,
+        name_item_nb: name_item_nb,
+        function_item_nb: function_item_nb,
+        organisation_item_nb: organisation_item_nb,
+        meta_item_nb: meta_item_nb
       }
     });
   } catch (error) {
