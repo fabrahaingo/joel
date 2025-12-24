@@ -38,7 +38,10 @@ export async function handleIncomingMessage(
 
     if (user != null && user.pendingNotifications.length > 0) {
       await triggerPendingNotifications(session);
-      await user.updateInteractionMetrics();
+      const refreshedUser = await session.loadUser();
+      if (refreshedUser != null) {
+        await refreshedUser.updateInteractionMetrics();
+      }
       return;
     }
 
