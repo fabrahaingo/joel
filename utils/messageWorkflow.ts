@@ -1,6 +1,5 @@
 import { ISession } from "../types.ts";
 import { processMessage } from "../commands/Commands.ts";
-import umami from "./umami.ts";
 import { logError } from "./debugLogger.ts";
 import { triggerPendingNotifications } from "../commands/triggerPendingNotifications.ts";
 
@@ -39,6 +38,7 @@ export async function handleIncomingMessage(
 
     if (user != null && user.pendingNotifications.length > 0) {
       await triggerPendingNotifications(session);
+      await user.updateInteractionMetrics();
       return;
     }
 

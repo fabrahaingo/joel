@@ -16,7 +16,10 @@ import {
 } from "./notificationDispatch.ts";
 import { FilterQuery, Types } from "mongoose";
 import { logError } from "../utils/debugLogger.ts";
-import { sendWhatsAppTemplate } from "../entities/WhatsAppSession.ts";
+import {
+  sendWhatsAppTemplate,
+  WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+} from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
@@ -49,12 +52,12 @@ export async function notifyAlertStringUpdates(
     roomId: 1,
     status: 1,
     followedMeta: 1,
-    waitingReengagement: 1
+    waitingReengagement: 1,
+    lastEngagementAt: 1
   }).lean();
 
   if (usersFollowingAlerts.length === 0) return;
 
-  const now = new Date();
   const userUpdateTasks: NotificationTask<string, JORFSearchPublication>[] = [];
 
   for (const user of usersFollowingAlerts) {
@@ -87,6 +90,7 @@ export async function notifyAlertStringUpdates(
     if (totalUserRecordsCount > 0) {
       userUpdateTasks.push({
         userId: user._id,
+        userLastEngagement: user.lastEngagementAt,
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
@@ -106,8 +110,19 @@ export async function notifyAlertStringUpdates(
   await dispatchTasksToMessageApps<string, JORFSearchPublication>(
     userUpdateTasks,
     async (task) => {
+      const now = new Date();
+
+      const reengagementExpired =
+        task.userLastEngagement == null ||
+        now.getTime() - task.userLastEngagement.getTime() >
+          WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+
       // WH user must be re-engaged before sending notifications
-      if (!forceWHMessages && task.userInfo.messageApp === "WhatsApp") {
+      if (
+        task.userInfo.messageApp === "WhatsApp" &&
+        !forceWHMessages &&
+        reengagementExpired
+      ) {
         const notificationSources = new Map<JORFReference, number>();
 
         for (const records of task.updatedRecordsMap.values()) {

@@ -21,7 +21,10 @@ import {
 } from "./notificationDispatch.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
-import { sendWhatsAppTemplate } from "../entities/WhatsAppSession.ts";
+import {
+  sendWhatsAppTemplate,
+  WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+} from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
@@ -54,7 +57,8 @@ export async function notifyNameMentionUpdates(
     followedPeople: { peopleId: 1, lastUpdate: 1 },
     schemaVersion: 1,
     status: 1,
-    waitingReengagement: 1
+    waitingReengagement: 1,
+    lastEngagementAt: 1
   }).lean();
   if (userFollowingNames.length === 0) return;
 
@@ -79,8 +83,6 @@ export async function notifyNameMentionUpdates(
       prenomNomMap: new Map<string, JORFSearchItem[]>()
     }
   );
-
-  const now = new Date();
 
   const userUpdateTasks: NotificationTask<string>[] = [];
 
@@ -112,6 +114,7 @@ export async function notifyNameMentionUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
+        userLastEngagement: user.lastEngagementAt,
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
@@ -128,8 +131,19 @@ export async function notifyNameMentionUpdates(
   if (userUpdateTasks.length === 0) return;
 
   await dispatchTasksToMessageApps<string>(userUpdateTasks, async (task) => {
+    const now = new Date();
+
+    const reengagementExpired =
+      task.userLastEngagement == null ||
+      now.getTime() - task.userLastEngagement.getTime() >
+        WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+
     // WH user must be re-engaged before sending notifications
-    if (!forceWHMessages && task.userInfo.messageApp === "WhatsApp") {
+    if (
+      task.userInfo.messageApp === "WhatsApp" &&
+      !forceWHMessages &&
+      reengagementExpired
+    ) {
       const notificationSources = new Map<JORFReference, number>();
 
       for (const records of task.updatedRecordsMap.values()) {
@@ -174,52 +188,54 @@ export async function notifyNameMentionUpdates(
       return;
     }
 
-    await sendNameMentionUpdates(
+    const messageSent = await sendNameMentionUpdates(
       task.userInfo,
       task.updatedRecordsMap,
       messageAppsOptions
     );
 
-    const user = userFollowingNames.find(
-      (u) => u._id.toString() === task.userId.toString()
-    );
-    if (user === undefined) return;
+    if (messageSent) {
+      const user = userFollowingNames.find(
+        (u) => u._id.toString() === task.userId.toString()
+      );
+      if (user === undefined) return;
 
-    const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
-      f.peopleId.toString()
-    );
+      const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
+        f.peopleId.toString()
+      );
 
-    const newFollowsIdUnique = [...task.updatedRecordsMap.keys()].reduce(
-      (tab: Types.ObjectId[], idStr) => {
-        const id = peopleIdByFollowedNameMap.get(idStr);
-        if (
-          id !== undefined &&
-          !peopleIdFollowedByUserStr.includes(id.toString())
-        )
-          tab.push(id);
-        return tab;
-      },
-      []
-    );
-
-    await User.updateOne(
-      { _id: user._id },
-      {
-        $pull: {
-          followedNames: {
-            $in: [...task.updatedRecordsMap.keys()]
-          }
+      const newFollowsIdUnique = [...task.updatedRecordsMap.keys()].reduce(
+        (tab: Types.ObjectId[], idStr) => {
+          const id = peopleIdByFollowedNameMap.get(idStr);
+          if (
+            id !== undefined &&
+            !peopleIdFollowedByUserStr.includes(id.toString())
+          )
+            tab.push(id);
+          return tab;
         },
-        $push: {
-          followedPeople: {
-            $each: newFollowsIdUnique.map((id) => ({
-              peopleId: id,
-              lastUpdate: now
-            }))
+        []
+      );
+
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $pull: {
+            followedNames: {
+              $in: [...task.updatedRecordsMap.keys()]
+            }
+          },
+          $push: {
+            followedPeople: {
+              $each: newFollowsIdUnique.map((id) => ({
+                peopleId: id,
+                lastUpdate: now
+              }))
+            }
           }
         }
-      }
-    );
+      );
+    }
   });
 }
 

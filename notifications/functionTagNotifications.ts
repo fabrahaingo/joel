@@ -28,7 +28,10 @@ import {
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
 import { FilterQuery, Types } from "mongoose";
-import { sendWhatsAppTemplate } from "../entities/WhatsAppSession.ts";
+import {
+  sendWhatsAppTemplate,
+  WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+} from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
 const DEFAULT_SUBGROUP_SEPARATOR = "\n--------------------\n\n";
@@ -127,11 +130,10 @@ export async function notifyFunctionTagsUpdates(
     followedFunctions: { functionTag: 1, lastUpdate: 1 },
     schemaVersion: 1,
     waitingReengagement: 1,
-    status: 1
+    status: 1,
+    lastEngagementAt: 1
   }).lean();
   if (usersFollowingTags.length === 0) return;
-
-  const now = new Date();
 
   const userUpdateTasks: NotificationTask<FunctionTags>[] = [];
 
@@ -163,6 +165,7 @@ export async function notifyFunctionTagsUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
+        userLastEngagement: user.lastEngagementAt,
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
@@ -181,8 +184,19 @@ export async function notifyFunctionTagsUpdates(
   await dispatchTasksToMessageApps<FunctionTags>(
     userUpdateTasks,
     async (task) => {
+      const now = new Date();
+
+      const reengagementExpired =
+        task.userLastEngagement == null ||
+        now.getTime() - task.userLastEngagement.getTime() >
+          WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+
       // WH user must be re-engaged before sending notifications
-      if (!forceWHMessages && task.userInfo.messageApp === "WhatsApp") {
+      if (
+        task.userInfo.messageApp === "WhatsApp" &&
+        !forceWHMessages &&
+        reengagementExpired
+      ) {
         const notificationSources = new Map<JORFReference, number>();
 
         for (const records of task.updatedRecordsMap.values()) {

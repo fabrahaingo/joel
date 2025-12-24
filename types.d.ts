@@ -92,6 +92,7 @@ export interface IUser {
   };
 
   lastMessageReceivedAt?: Date;
+  lastEngagementAt?: Date;
 
   lastInteractionDay?: Date;
   lastInteractionWeek?: Date;
