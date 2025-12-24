@@ -53,7 +53,7 @@ export async function notifyAlertStringUpdates(
     status: 1,
     followedMeta: 1,
     waitingReengagement: 1,
-    lastMessageSentAt: 1
+    lastEngagementAt: 1
   }).lean();
 
   if (usersFollowingAlerts.length === 0) return;

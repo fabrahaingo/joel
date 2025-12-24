@@ -131,7 +131,7 @@ export async function notifyFunctionTagsUpdates(
     schemaVersion: 1,
     waitingReengagement: 1,
     status: 1,
-    lastMessageSentAt: 1
+    lastEngagementAt: 1
   }).lean();
   if (usersFollowingTags.length === 0) return;
 

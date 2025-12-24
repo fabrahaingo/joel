@@ -109,7 +109,7 @@ export async function notifyOrganisationsUpdates(
     schemaVersion: 1,
     waitingReengagement: 1,
     status: 1,
-    lastMessageSentAt: 1
+    lastEngagementAt: 1
   }).lean();
   if (usersFollowingOrganisations.length === 0) return;
 

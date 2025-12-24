@@ -58,7 +58,7 @@ export async function notifyNameMentionUpdates(
     schemaVersion: 1,
     status: 1,
     waitingReengagement: 1,
-    lastMessageSentAt: 1
+    lastEngagementAt: 1
   }).lean();
   if (userFollowingNames.length === 0) return;
 

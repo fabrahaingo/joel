@@ -95,7 +95,7 @@ export async function notifyPeopleUpdates(
     schemaVersion: 1,
     status: 1,
     waitingReengagement: 1,
-    lastMessageSentAt: 1
+    lastEngagementAt: 1
   }).lean();
   if (usersFollowingPeople.length === 0) return;
 
