@@ -188,52 +188,54 @@ export async function notifyNameMentionUpdates(
       return;
     }
 
-    await sendNameMentionUpdates(
+    const messageSent = await sendNameMentionUpdates(
       task.userInfo,
       task.updatedRecordsMap,
       messageAppsOptions
     );
 
-    const user = userFollowingNames.find(
-      (u) => u._id.toString() === task.userId.toString()
-    );
-    if (user === undefined) return;
+    if (messageSent) {
+      const user = userFollowingNames.find(
+        (u) => u._id.toString() === task.userId.toString()
+      );
+      if (user === undefined) return;
 
-    const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
-      f.peopleId.toString()
-    );
+      const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
+        f.peopleId.toString()
+      );
 
-    const newFollowsIdUnique = [...task.updatedRecordsMap.keys()].reduce(
-      (tab: Types.ObjectId[], idStr) => {
-        const id = peopleIdByFollowedNameMap.get(idStr);
-        if (
-          id !== undefined &&
-          !peopleIdFollowedByUserStr.includes(id.toString())
-        )
-          tab.push(id);
-        return tab;
-      },
-      []
-    );
-
-    await User.updateOne(
-      { _id: user._id },
-      {
-        $pull: {
-          followedNames: {
-            $in: [...task.updatedRecordsMap.keys()]
-          }
+      const newFollowsIdUnique = [...task.updatedRecordsMap.keys()].reduce(
+        (tab: Types.ObjectId[], idStr) => {
+          const id = peopleIdByFollowedNameMap.get(idStr);
+          if (
+            id !== undefined &&
+            !peopleIdFollowedByUserStr.includes(id.toString())
+          )
+            tab.push(id);
+          return tab;
         },
-        $push: {
-          followedPeople: {
-            $each: newFollowsIdUnique.map((id) => ({
-              peopleId: id,
-              lastUpdate: now
-            }))
+        []
+      );
+
+      await User.updateOne(
+        { _id: user._id },
+        {
+          $pull: {
+            followedNames: {
+              $in: [...task.updatedRecordsMap.keys()]
+            }
+          },
+          $push: {
+            followedPeople: {
+              $each: newFollowsIdUnique.map((id) => ({
+                peopleId: id,
+                lastUpdate: now
+              }))
+            }
           }
         }
-      }
-    );
+      );
+    }
   });
 }
 
