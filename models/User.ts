@@ -628,7 +628,8 @@ UserSchema.method(
 
     if (res.modifiedCount > 0) {
       this.followedNames = this.followedNames.filter(
-        (elem) => elem.toUpperCase() !== name.toUpperCase()
+        (elem) =>
+          cleanPeopleName(elem).toUpperCase() !== nameClean.toUpperCase()
       );
       return true;
     }
