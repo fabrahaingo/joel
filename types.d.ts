@@ -148,18 +148,11 @@ export interface OrganisationModel extends Model<IOrganisation> {
 
 export interface UserModel extends Model<IUser> {
   findOrCreate: (session: ISession) => Promise<IUser>;
-  deleteOne: (args) => Promise<void>;
-  create: (args) => Promise<IUser>;
   insertPendingNotifications: (
     userId: Types.ObjectId,
     messageApp: MessageApp,
     notificationType: NotificationType,
     notificationSources: Map<JORFReference, number>
-  ) => Promise<void>;
-  updateOne: (
-    filter: unknown,
-    update: unknown,
-    options?: unknown
   ) => Promise<void>;
 }
 
