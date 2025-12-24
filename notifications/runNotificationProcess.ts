@@ -22,7 +22,7 @@ import { refreshTelegramBlockedUsers } from "../entities/TelegramSession.ts";
 import { logError } from "../utils/debugLogger.ts";
 
 // Number of days to go back: 0 means we just fetch today's info
-const SHIFT_DAYS = 150;
+const SHIFT_DAYS = 15;
 
 async function getJORFRecordsFromDate(
   startDate: Date,
