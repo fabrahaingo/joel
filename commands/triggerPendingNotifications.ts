@@ -26,6 +26,10 @@ export const triggerPendingNotifications = async (
     }
     if (session.user.pendingNotifications.length == 0) {
       await session.sendMessage("Aucune notification en attente.");
+      await User.updateOne(
+        { _id: session.user._id },
+        { $set: { waitingReengagement: false } }
+      );
       return;
     }
 
