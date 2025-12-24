@@ -132,7 +132,7 @@ app.post("/webhook", async (req, res) => {
   try {
     const signature = req.header("x-hub-signature-256");
     if (!signature) {
-      res.sendStatus(401); // Unauthorized if the signature is missing
+      res.sendStatus(401); // Unauthorised if the signature is missing
       return;
     }
 
@@ -144,14 +144,14 @@ app.post("/webhook", async (req, res) => {
       return;
     }
     if (incomingData.apiPhoneId == null) {
-      await logError(
-        "WhatsApp",
-        "Received message with null target phone id"
-      );
+      await logError("WhatsApp", "Received message with null target phone id");
       return;
     }
     if (incomingData.apiPhoneNumber == null) {
-      await logError("WhatsApp", "Received message with null target phone number");
+      await logError(
+        "WhatsApp",
+        "Received message with null target phone number"
+      );
       return;
     }
 
@@ -306,7 +306,8 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   // Ignore echoes of messages the bot just sent
   if (from === WHATSAPP_PHONE_ID) return;
 
-  if (message.type !== "text" && message.type !== "interactive") return;
+  if (!["text", "interactive", "button"].some((m) => message.type === m))
+    return;
 
   const msgText = textFromMessage(message);
   if (msgText == null) return;
