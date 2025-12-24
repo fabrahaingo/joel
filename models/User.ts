@@ -622,7 +622,7 @@ UserSchema.method(
     const regex = new RegExp(`^${escapeRegex(nameClean)}$`, "i");
 
     const res = await User.updateOne(
-      { _id: this._id, followedNames: regex },
+      { _id: this._id, followedNames: { $elemMatch: { $regex: regex } } },
       { $pull: { followedNames: regex } }
     );
 
