@@ -107,29 +107,35 @@ async function getJORFMetaRecordsFromDate(
 async function saveNewMetaPublications(
   metaRecords: JORFSearchPublication[]
 ): Promise<void> {
-  const ids = metaRecords.map((record) => record.id);
-  const existing: JORFSearchPublication[] = await Publication.find({
-    id: { $in: ids }
-  })
-    .select("id")
-    .lean();
-  const existingIds = new Set(existing.map((record) => record.id));
+  // 1) Deduplicate within the batch (by normalized JORF id)
+  const byId = new Map<string, JORFSearchPublication>();
+  for (const r of metaRecords) {
+    const key = r.id; // normalize type
+    if (!byId.has(key)) byId.set(key, r);
+  }
 
-  const addedIds = new Set<string>();
+  const records = Array.from(byId.entries()).map(([id, doc]) => ({
+    ...doc,
+    id: id
+  }));
+  if (records.length === 0) return;
 
-  const newRecords = metaRecords
-    .filter((record) => !existingIds.has(record.id))
-    .reduce((tab: JORFSearchPublication[], item) => {
-      if (!addedIds.has(item.id)) tab.push(item);
-      return tab;
-    }, []);
+  // 2) Upsert using $setOnInsert so repeats do not create new docs
+  const ops = records.map((doc) => ({
+    updateOne: {
+      filter: { id: doc.id },
+      update: { $setOnInsert: doc },
+      upsert: true
+    }
+  }));
 
-  if (newRecords.length > 0) {
-    await Publication.insertMany(newRecords, { ordered: false });
+  const res = await Publication.bulkWrite(ops, { ordered: false });
+
+  // bulkWrite returns how many were actually inserted via upsert
+  if (res.upsertedCount > 0) {
     await umami.logAsync({
       event: "/publication-added",
-      payload: { nb: newRecords.length },
-      hasAccount: true
+      payload: { nb: res.upsertedCount }
     });
   }
 }
