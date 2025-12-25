@@ -7,6 +7,7 @@ export interface UmamiNotificationData {
   message_nb: number;
   updated_follows_nb: number;
   total_records_nb: number;
+  last_engagement_delay_days: number;
 }
 
 export type UmamiLogger = (args: UmamiLogArgs) => Promise<void> | void;

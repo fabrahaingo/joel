@@ -134,7 +134,11 @@ export interface MiniUserInfo {
   roomId?: IUser["roomId"];
   status: IUser["status"];
   hasAccount: boolean;
+}
+
+export interface ExtendedMiniUserInfo extends MiniUserInfo {
   waitingReengagement: IUser["waitingReengagement"];
+  lastEngagementAt: IUser["lastEngagementAt"];
 }
 
 export async function sendMessage(

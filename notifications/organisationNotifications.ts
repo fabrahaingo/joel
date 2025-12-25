@@ -1,7 +1,7 @@
 import {
+  ExtendedMiniUserInfo,
   ExternalMessageOptions,
   MessageSendingOptionsExternal,
-  MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
@@ -14,7 +14,7 @@ import {
 } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
 import User from "../models/User.ts";
-import { JORFtoDate } from "../utils/date.utils.ts";
+import { daysBetweenCalendar, JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkOrganisation } from "../utils/JORFSearch.utils.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
@@ -169,14 +169,14 @@ export async function notifyOrganisationsUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
-        userLastEngagement: user.lastEngagementAt,
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
           waitingReengagement: user.waitingReengagement,
           status: user.status,
-          hasAccount: true
+          hasAccount: true,
+          lastEngagementAt: user.lastEngagementAt
         },
         updatedRecordsMap: newUserOrganisationsUpdates,
         recordCount: totalUserRecordsCount
@@ -191,9 +191,8 @@ export async function notifyOrganisationsUpdates(
       const now = new Date();
 
       const reengagementExpired =
-        task.userLastEngagement == null ||
-        now.getTime() - task.userLastEngagement.getTime() >
-          WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+        now.getTime() - task.userInfo.lastEngagementAt.getTime() >
+        WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
 
       // WH user must be re-engaged before sending notifications
       if (
@@ -234,12 +233,18 @@ export async function notifyOrganisationsUpdates(
             "notification_meta",
             messageAppsOptions
           );
+          if (!templateSent) return;
 
-          if (templateSent)
-            await User.updateOne(
-              { _id: task.userId },
-              { $set: { waitingReengagement: true } }
+          const res = await User.updateOne(
+            { _id: task.userId },
+            { $set: { waitingReengagement: true } }
+          );
+          if (res.modifiedCount === 0) {
+            await logError(
+              task.userInfo.messageApp,
+              `No waitingReengagement updated for user ${task.userId.toString()} after sending function WH template on organisation update`
             );
+          }
         }
 
         return;
@@ -251,25 +256,30 @@ export async function notifyOrganisationsUpdates(
         orgNameById,
         messageAppsOptions
       );
+      if (!messageSent) return;
 
-      if (messageSent) {
-        await User.updateOne(
-          {
-            _id: task.userId,
-            "followedOrganisations.wikidataId": {
-              $in: [...task.updatedRecordsMap.keys()]
-            }
-          },
-          { $set: { "followedOrganisations.$[elem].lastUpdate": now } },
-          {
-            arrayFilters: [
-              {
-                "elem.wikidataId": {
-                  $in: [...task.updatedRecordsMap.keys()]
-                }
-              }
-            ]
+      const res = await User.updateOne(
+        {
+          _id: task.userId,
+          "followedOrganisations.wikidataId": {
+            $in: [...task.updatedRecordsMap.keys()]
           }
+        },
+        { $set: { "followedOrganisations.$[elem].lastUpdate": now } },
+        {
+          arrayFilters: [
+            {
+              "elem.wikidataId": {
+                $in: [...task.updatedRecordsMap.keys()]
+              }
+            }
+          ]
+        }
+      );
+      if (res.modifiedCount === 0) {
+        await logError(
+          task.userInfo.messageApp,
+          `No lastUpdate updated for user ${task.userId.toString()} after sending organisation update notifications`
         );
       }
     }
@@ -277,7 +287,7 @@ export async function notifyOrganisationsUpdates(
 }
 
 export async function sendOrganisationUpdate(
-  userInfo: MiniUserInfo,
+  userInfo: ExtendedMiniUserInfo,
   organisationsUpdateRecordsMap: Map<WikidataId, JORFSearchItem[]>,
   orgNameById: Map<WikidataId, string>,
   messageAppsOptions: ExternalMessageOptions
@@ -362,7 +372,11 @@ export async function sendOrganisationUpdate(
     updated_follows_nb: organisationsUpdateRecordsMap.size,
     total_records_nb: organisationsUpdateRecordsMap
       .values()
-      .reduce((total: number, value) => total + value.length, 0)
+      .reduce((total: number, value) => total + value.length, 0),
+    last_engagement_delay_days: daysBetweenCalendar(
+      userInfo.lastEngagementAt,
+      new Date()
+    )
   };
 
   await umami.logAsync({

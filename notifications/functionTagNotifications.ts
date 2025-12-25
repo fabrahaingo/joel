@@ -1,14 +1,14 @@
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import {
+  ExtendedMiniUserInfo,
   ExternalMessageOptions,
   MessageSendingOptionsExternal,
-  MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
 import { IUser, JORFReference, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { JORFtoDate } from "../utils/date.utils.ts";
+import { daysBetweenCalendar, JORFtoDate } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkFunctionTag } from "../utils/JORFSearch.utils.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
@@ -165,14 +165,14 @@ export async function notifyFunctionTagsUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
-        userLastEngagement: user.lastEngagementAt,
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
           waitingReengagement: user.waitingReengagement,
           status: user.status,
-          hasAccount: true
+          hasAccount: true,
+          lastEngagementAt: user.lastEngagementAt
         },
         updatedRecordsMap: newUserTagsUpdates,
         recordCount: totalUserRecordsCount
@@ -187,9 +187,8 @@ export async function notifyFunctionTagsUpdates(
       const now = new Date();
 
       const reengagementExpired =
-        task.userLastEngagement == null ||
-        now.getTime() - task.userLastEngagement.getTime() >
-          WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+        now.getTime() - task.userInfo.lastEngagementAt.getTime() >
+        WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
 
       // WH user must be re-engaged before sending notifications
       if (
@@ -230,12 +229,18 @@ export async function notifyFunctionTagsUpdates(
             "notification_meta",
             messageAppsOptions
           );
+          if (!templateSent) return;
 
-          if (templateSent)
-            await User.updateOne(
-              { _id: task.userId },
-              { $set: { waitingReengagement: true } }
+          const res = await User.updateOne(
+            { _id: task.userId },
+            { $set: { waitingReengagement: true } }
+          );
+          if (res.modifiedCount === 0) {
+            await logError(
+              task.userInfo.messageApp,
+              `No waitingReengagement updated for user ${task.userId.toString()} after sending function WH template on function update`
             );
+          }
         }
 
         return;
@@ -246,23 +251,28 @@ export async function notifyFunctionTagsUpdates(
         task.updatedRecordsMap,
         messageAppsOptions
       );
+      if (!messageSent) return;
 
-      if (messageSent) {
-        await User.updateOne(
-          {
-            _id: task.userId,
-            "followedFunctions.functionTag": {
-              $in: [...task.updatedRecordsMap.keys()]
-            }
-          },
-          { $set: { "followedFunctions.$[elem].lastUpdate": now } },
-          {
-            arrayFilters: [
-              {
-                "elem.functionTag": { $in: [...task.updatedRecordsMap.keys()] }
-              }
-            ]
+      const res = await User.updateOne(
+        {
+          _id: task.userId,
+          "followedFunctions.functionTag": {
+            $in: [...task.updatedRecordsMap.keys()]
           }
+        },
+        { $set: { "followedFunctions.$[elem].lastUpdate": now } },
+        {
+          arrayFilters: [
+            {
+              "elem.functionTag": { $in: [...task.updatedRecordsMap.keys()] }
+            }
+          ]
+        }
+      );
+      if (res.modifiedCount === 0) {
+        await logError(
+          task.userInfo.messageApp,
+          `No lastUpdate updated for user ${task.userId.toString()} after sending tag update notifications`
         );
       }
     }
@@ -270,7 +280,7 @@ export async function notifyFunctionTagsUpdates(
 }
 
 export async function sendTagUpdates(
-  userInfo: MiniUserInfo,
+  userInfo: ExtendedMiniUserInfo,
   tagMap: Map<FunctionTags, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions
 ): Promise<boolean> {
@@ -348,7 +358,11 @@ export async function sendTagUpdates(
     updated_follows_nb: tagMap.size,
     total_records_nb: tagMap
       .values()
-      .reduce((total: number, value) => total + value.length, 0)
+      .reduce((total: number, value) => total + value.length, 0),
+    last_engagement_delay_days: daysBetweenCalendar(
+      userInfo.lastEngagementAt,
+      new Date()
+    )
   };
 
   await umami.logAsync({
