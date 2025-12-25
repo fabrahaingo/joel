@@ -157,27 +157,27 @@ const UserSchema = new Schema<IUser, UserModel>(
     lastInteractionDay: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     },
     lastInteractionWeek: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     },
     lastInteractionMonth: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     },
     lastMessageReceivedAt: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     },
     lastEngagementAt: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     }
   },
   {
@@ -239,10 +239,7 @@ UserSchema.method(
     this.lastEngagementAt = now;
 
     // Daily active users
-    if (
-      this.lastInteractionDay === undefined ||
-      this.lastInteractionDay.toDateString() !== currentDay.toDateString()
-    ) {
+    if (this.lastInteractionDay.toDateString() !== currentDay.toDateString()) {
       this.lastInteractionDay = currentDay;
       $set.lastInteractionDay = currentDay;
       umami.log({
@@ -254,14 +251,9 @@ UserSchema.method(
 
     // Weekly active users
     const thisWeek = getISOWeek(now);
-    const lastInteractionWeek = this.lastInteractionWeek
-      ? getISOWeek(this.lastInteractionWeek)
-      : undefined;
+    const lastInteractionWeek = getISOWeek(this.lastInteractionWeek);
 
-    if (
-      this.lastInteractionWeek === undefined ||
-      thisWeek !== lastInteractionWeek
-    ) {
+    if (thisWeek !== lastInteractionWeek) {
       this.lastInteractionWeek = currentDay;
       $set.lastInteractionWeek = currentDay;
       umami.log({
@@ -273,7 +265,6 @@ UserSchema.method(
 
     // Monthly active users
     if (
-      this.lastInteractionMonth === undefined ||
       this.lastInteractionMonth.getMonth() !== now.getMonth() ||
       this.lastInteractionMonth.getFullYear() !== now.getFullYear()
     ) {

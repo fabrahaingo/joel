@@ -91,12 +91,12 @@ export interface IUser {
     expiresAt: Date;
   };
 
-  lastMessageReceivedAt?: Date;
-  lastEngagementAt?: Date;
+  lastMessageReceivedAt: Date;
+  lastEngagementAt: Date;
 
-  lastInteractionDay?: Date;
-  lastInteractionWeek?: Date;
-  lastInteractionMonth?: Date;
+  lastInteractionDay: Date;
+  lastInteractionWeek: Date;
+  lastInteractionMonth: Date;
 
   createdAt: Date;
   updatedAt: Date;
