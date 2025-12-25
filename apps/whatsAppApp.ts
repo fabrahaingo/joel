@@ -132,7 +132,7 @@ app.post("/webhook", async (req, res) => {
   try {
     const signature = req.header("x-hub-signature-256");
     if (!signature) {
-      if (process.env.NODE_ENV !== "production") {
+      if (process.env.ALLOW_UNSIGNED_WEBHOOKS) {
         console.log(
           "WhatsApp: Missing signature on incoming webhook (allowed in development)"
         );
@@ -195,7 +195,7 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.ALLOW_UNSIGNED_WEBHOOKS) {
       const err = error as { name?: string; message?: string };
       if (
         err.name === "WhatsAppAPIError" &&
