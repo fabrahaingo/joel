@@ -155,7 +155,7 @@ export class WhatsAppSession implements ISession {
         lastEngagementAt: this.lastEngagementAt,
         waitingReengagement: false,
         status: "active",
-        hasAccount: this.user != null
+        hasAccount
       },
       formattedData,
       { ...options, useAsyncUmamiLog: false, hasAccount }
@@ -203,7 +203,11 @@ export async function sendWhatsAppMessage(
   options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
-  if (timeDaysBetweenDates(userInfo.lastEngagementAt, new Date()) >= 1) {
+  const now = new Date();
+  if (
+    now.getTime() - userInfo.lastEngagementAt.getTime() >
+    WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+  ) {
     throw new Error(
       `Cannot send message to WH user ${userInfo.chatId} with lastEngagement on ${userInfo.lastEngagementAt.toISOString()}`
     );
