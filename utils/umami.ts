@@ -64,7 +64,8 @@ const logInternal = async (args: UmamiLogArgs) => {
     console.log(
       `Umami event ${args.messageApp ? "(" + args.messageApp + ")" : ""}: ${args.event}`
     );
-    if (args.notificationData != null) console.log(args.notificationData);
+    if (args.notificationData != null || args.payload != null)
+      console.log({ ...args.notificationData, ...args.payload });
     return;
   }
 
