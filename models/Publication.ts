@@ -75,7 +75,7 @@ const PublicationSchema = new Schema<JORFSearchPublication>(
   { timestamps: true }
 );
 
-PublicationSchema.index({ id: 1 });
+PublicationSchema.index({ id: 1 }, { unique: true });
 PublicationSchema.index({ title: 1 });
 PublicationSchema.index({ date_obj: 1 });
 
