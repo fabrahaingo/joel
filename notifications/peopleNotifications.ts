@@ -232,7 +232,7 @@ export async function notifyPeopleUpdates(
         if (res.modifiedCount === 0) {
           await logError(
             task.userInfo.messageApp,
-            `No waitingReengagement updated for user ${task.userId.toString()} after sending function WH template on people update`
+            `No waitingReengagement updated for user ${task.userId.toString()} after sending WH template on people update`
           );
         }
       }
