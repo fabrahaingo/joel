@@ -21,9 +21,6 @@ import { Publication } from "../models/Publication.ts";
 import { refreshTelegramBlockedUsers } from "../entities/TelegramSession.ts";
 import { logError } from "../utils/debugLogger.ts";
 
-// Number of days to go back: 0 means we just fetch today's info
-const SHIFT_DAYS = 15;
-
 async function getJORFRecordsFromDate(
   startDate: Date,
   messageApps: MessageApp[]
@@ -194,6 +191,19 @@ export async function runNotificationProcess(
     if (targetApps.includes("Telegram")) {
       await refreshTelegramBlockedUsers(messageAppsOptions.telegramBotToken);
     }
+
+    // Number of days to go back: 0 means we just fetch today's info
+    const SHIFT_DAYS_ENV = process.env.NOTIFICATIONS_SHIFT_DAYS;
+
+    if (SHIFT_DAYS_ENV == null) {
+      for (const appType of targetApps) {
+        void logError(
+          appType,
+          "Missing NOTIFICATIONS_SHIFT_DAYS env var not set: using 0"
+        );
+      }
+    }
+    const SHIFT_DAYS = SHIFT_DAYS_ENV ? parseInt(SHIFT_DAYS_ENV, 10) : 0;
 
     const currentDate = new Date();
     const startDate = new Date(
