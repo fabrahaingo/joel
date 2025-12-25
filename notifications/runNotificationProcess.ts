@@ -203,7 +203,20 @@ export async function runNotificationProcess(
         );
       }
     }
-    const SHIFT_DAYS = SHIFT_DAYS_ENV ? parseInt(SHIFT_DAYS_ENV, 10) : 0;
+    let SHIFT_DAYS = 0;
+    if (SHIFT_DAYS_ENV != null) {
+      const parsedShiftDays = parseInt(SHIFT_DAYS_ENV, 10);
+      if (Number.isNaN(parsedShiftDays)) {
+        for (const appType of targetApps) {
+          void logError(
+            appType,
+            `Invalid NOTIFICATIONS_SHIFT_DAYS env var value "${SHIFT_DAYS_ENV}": using 0`
+          );
+        }
+      } else {
+        SHIFT_DAYS = parsedShiftDays;
+      }
+    }
 
     const currentDate = new Date();
     const startDate = new Date(
