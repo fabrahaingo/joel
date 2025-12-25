@@ -245,13 +245,16 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
       return;
     }
 
+    const messageSentTime = new Date(); // TODO: use the real message timestamp
+
     try {
       const matrixSession = new MatrixSession(
         matrixApp,
         client,
         event.sender,
         roomId,
-        "fr"
+        "fr",
+        messageSentTime
       );
       await handleIncomingMessage(matrixSession, msgText, {
         errorContext: "Error processing command"

@@ -8,7 +8,7 @@ import {
 } from "../entities/Session.ts";
 import { IUser, JORFReference, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { daysBetweenCalendar, JORFtoDate } from "../utils/date.utils.ts";
+import { JORFtoDate, timeDaysBetweenDates } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkFunctionTag } from "../utils/JORFSearch.utils.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
@@ -225,7 +225,7 @@ export async function notifyFunctionTagsUpdates(
           }
           const templateSent = await sendWhatsAppTemplate(
             whatsAppAPI,
-            task.userInfo.chatId,
+            task.userInfo,
             "notification_meta",
             messageAppsOptions
           );
@@ -359,7 +359,7 @@ export async function sendTagUpdates(
     total_records_nb: tagMap
       .values()
       .reduce((total: number, value) => total + value.length, 0),
-    last_engagement_delay_days: daysBetweenCalendar(
+    last_engagement_delay_days: timeDaysBetweenDates(
       userInfo.lastEngagementAt,
       new Date()
     )

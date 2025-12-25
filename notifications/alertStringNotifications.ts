@@ -10,7 +10,7 @@ import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
 import {
   dateToFrenchString,
-  daysBetweenCalendar
+  timeDaysBetweenDates
 } from "../utils/date.utils.ts";
 import { fuzzyIncludes, getSplitTextMessageSize } from "../utils/text.utils.ts";
 import {
@@ -154,7 +154,7 @@ export async function notifyAlertStringUpdates(
           }
           const templateSent = await sendWhatsAppTemplate(
             whatsAppAPI,
-            task.userInfo.chatId,
+            task.userInfo,
             "notification_meta",
             messageAppsOptions
           );
@@ -264,7 +264,7 @@ async function sendAlertStringUpdate(
     total_records_nb: updatedRecordMap
       .values()
       .reduce((total: number, value) => total + value.length, 0),
-    last_engagement_delay_days: daysBetweenCalendar(
+    last_engagement_delay_days: timeDaysBetweenDates(
       userInfo.lastEngagementAt,
       new Date()
     )

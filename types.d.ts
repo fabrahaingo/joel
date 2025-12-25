@@ -28,6 +28,8 @@ export interface ISession {
   user: IUser | null | undefined;
   isReply: boolean | undefined;
 
+  lastEngagementAt: Date;
+
   loadUser: () => Promise<IUser | null>;
   createUser: () => Promise<void>;
   sendMessage: (

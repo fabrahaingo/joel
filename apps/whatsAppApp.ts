@@ -341,7 +341,15 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   try {
     await whatsAppAPI.markAsRead(phoneID, message.id);
 
-    const WHSession = new WhatsAppSession(whatsAppAPI, phoneID, from, "fr");
+    const messageSentTime = new Date(); // TODO: use the real message timestamp
+
+    const WHSession = new WhatsAppSession(
+      whatsAppAPI,
+      phoneID,
+      from,
+      "fr",
+      messageSentTime
+    );
     await handleIncomingMessage(WHSession, msgText, {
       errorContext: "Error processing inbound message"
     });

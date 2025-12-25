@@ -58,13 +58,15 @@ export class MatrixSession implements ISession {
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
   mainMenuKeyboard: Keyboard;
+  lastEngagementAt: Date;
 
   constructor(
     messageApp: "Matrix" | "Tchap",
     client: MatrixClient,
     chatId: string,
     roomId: string,
-    language_code: string
+    language_code: string,
+    lastEngagementAt: Date
   ) {
     if (!["Matrix", "Tchap"].some((m) => m === messageApp))
       throw new Error(
@@ -77,6 +79,7 @@ export class MatrixSession implements ISession {
     this.roomId = roomId;
     this.language_code = language_code;
     this.mainMenuKeyboard = mainMenuKeyboardMatrix;
+    this.lastEngagementAt = lastEngagementAt;
   }
 
   // try to fetch user from db

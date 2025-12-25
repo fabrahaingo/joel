@@ -25,7 +25,7 @@ import {
   sendWhatsAppTemplate,
   WHATSAPP_REENGAGEMENT_TIMEOUT_MS
 } from "../entities/WhatsAppSession.ts";
-import { daysBetweenCalendar } from "../utils/date.utils.ts";
+import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
@@ -173,7 +173,7 @@ export async function notifyNameMentionUpdates(
         }
         const templateSent = await sendWhatsAppTemplate(
           whatsAppAPI,
-          task.userInfo.chatId,
+          task.userInfo,
           "notification_meta",
           messageAppsOptions
         );
@@ -316,7 +316,7 @@ export async function sendNameMentionUpdates(
     total_records_nb: updatedRecordMap
       .values()
       .reduce((total: number, value) => total + value.length, 0),
-    last_engagement_delay_days: daysBetweenCalendar(
+    last_engagement_delay_days: timeDaysBetweenDates(
       userInfo.lastEngagementAt,
       new Date()
     )

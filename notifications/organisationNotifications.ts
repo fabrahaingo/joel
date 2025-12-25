@@ -14,7 +14,7 @@ import {
 } from "../types.ts";
 import Organisation from "../models/Organisation.ts";
 import User from "../models/User.ts";
-import { daysBetweenCalendar, JORFtoDate } from "../utils/date.utils.ts";
+import { JORFtoDate, timeDaysBetweenDates } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkOrganisation } from "../utils/JORFSearch.utils.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
@@ -229,7 +229,7 @@ export async function notifyOrganisationsUpdates(
           }
           const templateSent = await sendWhatsAppTemplate(
             whatsAppAPI,
-            task.userInfo.chatId,
+            task.userInfo,
             "notification_meta",
             messageAppsOptions
           );
@@ -373,7 +373,7 @@ export async function sendOrganisationUpdate(
     total_records_nb: organisationsUpdateRecordsMap
       .values()
       .reduce((total: number, value) => total + value.length, 0),
-    last_engagement_delay_days: daysBetweenCalendar(
+    last_engagement_delay_days: timeDaysBetweenDates(
       userInfo.lastEngagementAt,
       new Date()
     )

@@ -1,3 +1,5 @@
+const FULL_DAY_MS = 24 * 60 * 60 * 1000;
+
 // Ex: Will take "2021-08-25T00:00:00.000Z" and return "25 août 2021"
 export function dateToFrenchString(date: string): string {
   const dateToConvert = new Date(date);
@@ -47,10 +49,13 @@ export function getISOWeek(date: Date): string {
     );
   return `${String(target.getFullYear())}-W${String(weekNum)}`;
 }
+export function timeDaysBetweenDates(a: Date, b: Date): number {
+  return Math.floor(Math.abs(b.getTime() - a.getTime()) / FULL_DAY_MS);
+}
 
-export function daysBetweenCalendar(a: Date, b: Date): number {
+export function calendarDaysBetweenDates(a: Date, b: Date): number {
   const utcA = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate());
   const utcB = Date.UTC(b.getFullYear(), b.getMonth(), b.getDate());
-  const msPerDay = 24 * 60 * 60 * 1000;
-  return Math.round((utcB - utcA) / msPerDay);
+
+  return Math.round(Math.abs(utcB - utcA) / FULL_DAY_MS);
 }

@@ -10,7 +10,7 @@ import { IPeople, IUser, JORFReference, MessageApp } from "../types.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
-import { daysBetweenCalendar, JORFtoDate } from "../utils/date.utils.ts";
+import { JORFtoDate, timeDaysBetweenDates } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   cleanPeopleName,
@@ -219,7 +219,7 @@ export async function notifyPeopleUpdates(
         }
         const templateSent = await sendWhatsAppTemplate(
           whatsAppAPI,
-          task.userInfo.chatId,
+          task.userInfo,
           "notification_meta",
           messageAppsOptions
         );
@@ -352,7 +352,7 @@ export async function sendPeopleUpdate(
     total_records_nb: updatedRecordMap
       .values()
       .reduce((total: number, value) => total + value.length, 0),
-    last_engagement_delay_days: daysBetweenCalendar(
+    last_engagement_delay_days: timeDaysBetweenDates(
       userInfo.lastEngagementAt,
       new Date()
     )
