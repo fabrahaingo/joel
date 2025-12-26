@@ -580,12 +580,10 @@ Current WH window margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS * 60)}sec
 
         // restore previous lastReceivedAt:
         const previousMessageReceivedTimeHistory =
-          messageReceivedTimeHistory.get({ messageApp: "WhatsApp", chatId });
+          messageReceivedTimeHistory.get(`WhatsApp:${chatId}`);
         if (previousMessageReceivedTimeHistory == null) {
-          await logError(
-            "WhatsApp",
-            `Couldn't retrieve previous lastMessageReceivedAt for ${chatId}`
-          );
+          errorMsg += `\nCouldn't retrieve previous lastMessageReceivedAt for ${chatId}`;
+          await logError("WhatsApp", errorMsg);
           return false;
         }
         await User.updateOne(
@@ -594,7 +592,6 @@ Current WH window margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS * 60)}sec
             $set: { lastMessageReceivedAt: previousMessageReceivedTimeHistory }
           }
         );
-        return false;
       }
       await logError("WhatsApp", errorMsg, error);
       return false;

@@ -13,10 +13,7 @@ import { sendMatrixMessage } from "./MatrixSession.ts";
 import umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
 
-export const messageReceivedTimeHistory = new Map<
-  { messageApp: MessageApp; chatId: IUser["chatId"] },
-  Date
->();
+export const messageReceivedTimeHistory = new Map<string, Date>(); // key is ${messageApp}:${chatId}
 
 export interface ExternalMessageOptions {
   matrixClient?: MatrixClient;
@@ -115,7 +112,7 @@ export async function recordSuccessfulDelivery(
   if (user == null) return;
 
   messageReceivedTimeHistory.set(
-    { messageApp, chatId },
+    `${messageApp}:${chatId}`,
     user.lastMessageReceivedAt
   );
   await User.updateOne(
