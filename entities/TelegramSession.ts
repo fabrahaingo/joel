@@ -21,6 +21,8 @@ export const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for t
 
 export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
 
+const MAX_MESSAGE_RETRY = 5;
+
 const mainMenuKeyboardTelegram: Keyboard = [
   [KEYBOARD_KEYS.TEXT_SEARCH.key, KEYBOARD_KEYS.PEOPLE_SEARCH.key],
   [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key, KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
@@ -171,14 +173,7 @@ export async function sendTelegramMessage(
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
     ? umami.logAsync
     : umami.log;
-  if (retryNumber > 5) {
-    await umamiLogger({
-      event: "/message-fail-too-many-requests-aborted",
-      messageApp: "Telegram",
-      hasAccount: options.hasAccount
-    });
-    return false;
-  }
+
   const mArr = splitText(message, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
   const chatIdTg = parseInt(chatId);
@@ -216,13 +211,13 @@ export async function sendTelegramMessage(
       );
     }
   } catch (err) {
-    const retryFunction = async (k: number): Promise<boolean> => {
+    const retryFunction = async (nextRetryNumber: number): Promise<boolean> => {
       return sendTelegramMessage(
         botToken,
         chatId,
         mArr.slice(i).join("\n"),
         options,
-        k
+        nextRetryNumber
       );
     };
     return await handleTelegramAPIErrors(
@@ -269,13 +264,13 @@ async function sendTelegramTypingAction(
       });
     }
   } catch (err) {
-    const retryFunction = async (i: number): Promise<boolean> => {
+    const retryFunction = async (nextRetryNumber: number): Promise<boolean> => {
       return sendTelegramTypingAction(
         chatIdTg,
         botToken,
         hasAccount,
         status,
-        i
+        nextRetryNumber
       );
     };
     return await handleTelegramAPIErrors(
@@ -355,6 +350,13 @@ async function handleTelegramAPIErrors(
         return false;
       case "Too many requests":
         if (retryParameters != null) {
+          if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
+            await umamiLogger({
+              event: "/message-fail-too-many-requests-aborted",
+              messageApp: "Telegram"
+            });
+            return false;
+          }
           await umamiLogger({
             event: "/message-fail-too-many-requests",
             messageApp: "Telegram"

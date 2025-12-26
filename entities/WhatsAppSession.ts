@@ -34,6 +34,8 @@ const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages
 
 const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst mode, before switching to full cooldown
 
+const MAX_MESSAGE_RETRY = 5;
+
 export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
 
 export const WHATSAPP_API_VERSION = "v24.0";
@@ -216,14 +218,6 @@ export async function sendWhatsAppMessage(
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
     ? umami.logAsync
     : umami.log;
-  if (retryNumber > 5) {
-    await umamiLogger({
-      event: "/message-fail-too-many-requests-aborted",
-      messageApp: "WhatsApp",
-      hasAccount: options.hasAccount
-    });
-    return false;
-  } // give up after 5 retries
 
   if (WHATSAPP_PHONE_ID === undefined) {
     throw new Error(
@@ -304,8 +298,14 @@ export async function sendWhatsAppMessage(
         );
       }
       if (resp.error) {
-        const retryFunction = (i: number) =>
-          sendWhatsAppMessage(whatsAppAPI, userInfo, message, options, i);
+        const retryFunction = (nextRetryNumber: number) =>
+          sendWhatsAppMessage(
+            whatsAppAPI,
+            userInfo,
+            message,
+            options,
+            nextRetryNumber
+          );
         return await handleWhatsAppAPIErrors(
           { errorCode: resp.error.code, rawError: resp.error },
           "sendWhatsAppMessage",
@@ -417,15 +417,6 @@ export async function sendWhatsAppTemplate(
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
     ? umami.logAsync
     : umami.log;
-  if (retryNumber > 5) {
-    await umamiLogger({
-      event: "/message-fail-too-many-requests-aborted",
-      messageApp: "WhatsApp",
-      hasAccount: options.hasAccount,
-      payload: { message_type: "wh_template" }
-    });
-    return false;
-  } // give up after 5 retries
 
   if (WHATSAPP_PHONE_ID === undefined) {
     throw new Error(
@@ -443,13 +434,13 @@ export async function sendWhatsAppTemplate(
     );
 
     if (resp.error) {
-      const retryFunction = (i: number) =>
+      const retryFunction = (nextRetryNumber: number) =>
         sendWhatsAppTemplate(
           whatsAppAPI,
           userInfo,
           notificationType,
           options,
-          i
+          nextRetryNumber
         );
       return await handleWhatsAppAPIErrors(
         { errorCode: resp.error.code, rawError: resp.error },
@@ -513,6 +504,13 @@ export async function handleWhatsAppAPIErrors(
     case 131048:
     case 131056:
       if (retryParameters != null) {
+        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
+          await umamiLogger({
+            event: "/message-fail-too-many-requests-aborted",
+            messageApp: "Telegram"
+          });
+          return false;
+        }
         await umamiLogger({
           event: "/message-fail-too-many-requests",
           messageApp: "WhatsApp"
