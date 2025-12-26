@@ -79,7 +79,7 @@ function computeNextOccurrence(
       `WhatsApp is part of targetApps. Advancing target time by ${String(timeShiftIndex)}*WH_REENGAGEMENT_WINDOWS_MARGIN`
     );
   }
-  return new Date(next.getTime() + timeShiftMs);
+  return new Date(next.getTime() - timeShiftMs);
 }
 
 export function startDailyNotificationJobs(
