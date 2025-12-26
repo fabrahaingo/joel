@@ -26,11 +26,12 @@ import {
   clearFollowUp,
   handleFollowUpMessage
 } from "../entities/FollowUpManager.ts";
-import { buildInfoCommand, statsCommand } from "./help.ts";
+import { buildInfoCommand } from "./help.ts";
 import { exportCommand, importCommand } from "./importExport.ts";
 import { sanitizeUserInput } from "../utils/text.utils.ts";
 import { textAlertCommand } from "./textAlert.ts";
 import { triggerPendingNotifications } from "./triggerPendingNotifications.ts";
+import { statsCommand } from "./stats.ts";
 
 export async function processMessage(
   session: ISession,

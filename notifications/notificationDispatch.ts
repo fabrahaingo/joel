@@ -6,7 +6,7 @@ import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { Types } from "mongoose";
 import pLimit from "p-limit";
 import { MATRIX_API_SENDING_CONCURRENCY } from "../entities/MatrixSession.ts";
-import { MiniUserInfo } from "../entities/Session.ts";
+import { ExtendedMiniUserInfo } from "../entities/Session.ts";
 
 /**
  * Schedules the sendMessage to respect per-app throttling rules.
@@ -14,8 +14,7 @@ import { MiniUserInfo } from "../entities/Session.ts";
  */
 export interface NotificationTask<T, R = JORFSearchItem> {
   userId: Types.ObjectId;
-  userLastEngagement?: Date;
-  userInfo: MiniUserInfo;
+  userInfo: ExtendedMiniUserInfo;
   updatedRecordsMap: Map<T, R[]>;
   recordCount: number;
 }

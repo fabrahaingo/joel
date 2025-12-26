@@ -28,6 +28,8 @@ export interface ISession {
   user: IUser | null | undefined;
   isReply: boolean | undefined;
 
+  lastEngagementAt: Date;
+
   loadUser: () => Promise<IUser | null>;
   createUser: () => Promise<void>;
   sendMessage: (
@@ -91,12 +93,12 @@ export interface IUser {
     expiresAt: Date;
   };
 
-  lastMessageReceivedAt?: Date;
-  lastEngagementAt?: Date;
+  lastMessageReceivedAt: Date;
+  lastEngagementAt: Date;
 
-  lastInteractionDay?: Date;
-  lastInteractionWeek?: Date;
-  lastInteractionMonth?: Date;
+  lastInteractionDay: Date;
+  lastInteractionWeek: Date;
+  lastInteractionMonth: Date;
 
   createdAt: Date;
   updatedAt: Date;

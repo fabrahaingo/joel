@@ -128,6 +128,7 @@ interface MatrixRoomEvent {
   type: string;
   sender: string;
   event_id: string;
+  origin_server_ts?: number; // ms since Unix epoch
   content: {
     body?: string;
     "m.relates_to"?: {
@@ -245,13 +246,21 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
       return;
     }
 
+    if (event.origin_server_ts == null) {
+      await logError(matrixApp, "Missing origin_server_ts in received event");
+      return;
+    }
+
+    const receivedMessageTime = new Date(event.origin_server_ts); // Matrix provides ms epoch
+
     try {
       const matrixSession = new MatrixSession(
         matrixApp,
         client,
         event.sender,
         roomId,
-        "fr"
+        "fr",
+        receivedMessageTime
       );
       await handleIncomingMessage(matrixSession, msgText, {
         errorContext: "Error processing command"

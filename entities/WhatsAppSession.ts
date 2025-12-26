@@ -1,6 +1,7 @@
 import { ISession, IUser, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import {
+  ExtendedMiniUserInfo,
   ExternalMessageOptions,
   loadUser,
   MessageSendingOptionsInternal,
@@ -25,6 +26,7 @@ import { deleteUserAndCleanupByIdentifier } from "../utils/userDeletion.utils.ts
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 export const WHATSAPP_MESSAGE_CHAR_LIMIT = 900;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the same user, but we'll take 1 here
@@ -100,17 +102,20 @@ export class WhatsAppSession implements ISession {
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
+  lastEngagementAt: Date;
 
   constructor(
     whatsAppAPI: WhatsAppAPI,
     botPhoneID: string,
     userPhoneId: string,
-    language_code: string
+    language_code: string,
+    lastEngagementAt: Date
   ) {
     this.whatsAppAPI = whatsAppAPI;
     this.botPhoneID = botPhoneID;
     this.chatId = userPhoneId;
     this.language_code = language_code;
+    this.lastEngagementAt = lastEngagementAt;
   }
 
   // try to fetch user from db
@@ -141,11 +146,19 @@ export class WhatsAppSession implements ISession {
     formattedData: string,
     options?: MessageSendingOptionsInternal
   ): Promise<boolean> {
+    const hasAccount = this.user != null;
     return await sendWhatsAppMessage(
       this.whatsAppAPI,
-      this.chatId,
+      {
+        messageApp: this.messageApp,
+        chatId: this.chatId,
+        lastEngagementAt: this.lastEngagementAt,
+        waitingReengagement: false,
+        status: "active",
+        hasAccount
+      },
       formattedData,
-      { ...options, useAsyncUmamiLog: false, hasAccount: this.user != null }
+      { ...options, useAsyncUmamiLog: false, hasAccount }
     );
   }
 
@@ -185,11 +198,21 @@ const { WHATSAPP_PHONE_ID } = process.env;
 
 export async function sendWhatsAppMessage(
   whatsAppAPI: WhatsAppAPI,
-  userPhoneIdStr: string,
+  userInfo: ExtendedMiniUserInfo,
   message: string,
   options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
+  const now = new Date();
+  if (
+    now.getTime() - userInfo.lastEngagementAt.getTime() >
+    WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+  ) {
+    throw new Error(
+      `Cannot send message to WH user ${userInfo.chatId} with lastEngagement on ${userInfo.lastEngagementAt.toISOString()}`
+    );
+  }
+
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
     ? umami.logAsync
     : umami.log;
@@ -263,20 +286,20 @@ export async function sendWhatsAppMessage(
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneIdStr,
+            userInfo.chatId,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         } else {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
-            userPhoneIdStr,
+            userInfo.chatId,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         }
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
-          userPhoneIdStr,
+          userInfo.chatId,
           new Text(mArr[i])
         );
       }
@@ -298,7 +321,7 @@ export async function sendWhatsAppMessage(
             );
             return await sendWhatsAppMessage(
               whatsAppAPI,
-              userPhoneIdStr,
+              userInfo,
               mArr.slice(i).join("\n"),
               options,
               retryNumber + 1
@@ -311,7 +334,7 @@ export async function sendWhatsAppMessage(
               hasAccount: options.hasAccount
             });
             await User.updateOne(
-              { messageApp: "WhatsApp", chatId: userPhoneIdStr },
+              { messageApp: "WhatsApp", chatId: userInfo.chatId },
               { $set: { status: "blocked" } }
             );
             break;
@@ -322,7 +345,7 @@ export async function sendWhatsAppMessage(
               messageApp: "WhatsApp",
               hasAccount: options.hasAccount
             });
-            await deleteUserAndCleanupByIdentifier("WhatsApp", userPhoneIdStr);
+            await deleteUserAndCleanupByIdentifier("WhatsApp", userInfo.chatId);
             break;
           default:
             await logError("WhatsApp", "Error sending WH message", resp.error);
@@ -352,13 +375,13 @@ export async function sendWhatsAppMessage(
       if (interactiveKeyboard instanceof ActionButtons) {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
-          userPhoneIdStr,
+          userInfo.chatId,
           new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
         );
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
-          userPhoneIdStr,
+          userInfo.chatId,
           new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
         );
       }
@@ -390,7 +413,7 @@ export async function sendWhatsAppMessage(
     await logError("WhatsApp", "Error sending WH message", error);
     return false;
   }
-  await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneIdStr);
+  await recordSuccessfulDelivery(WhatsAppMessageApp, userInfo.chatId);
   return true;
 }
 
@@ -413,11 +436,22 @@ type TemplateType = "notification_meta";
 
 export async function sendWhatsAppTemplate(
   whatsAppAPI: WhatsAppAPI,
-  userPhoneIdStr: string,
+  userInfo: ExtendedMiniUserInfo,
   templateType: TemplateType,
   options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
+  const now = new Date();
+  if (
+    now.getTime() - userInfo.lastEngagementAt.getTime() <
+    WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+  ) {
+    await logError(
+      "WhatsApp",
+      `Sent template to non reengagement user ${userInfo.chatId}, last active on ${userInfo.lastEngagementAt.toISOString()}`
+    );
+  }
+
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
     ? umami.logAsync
     : umami.log;
@@ -442,7 +476,7 @@ export async function sendWhatsAppTemplate(
 
     const resp: ServerMessageResponse = await whatsAppAPI.sendMessage(
       WHATSAPP_PHONE_ID,
-      userPhoneIdStr,
+      userInfo.chatId,
       template_message
     );
 
@@ -464,7 +498,7 @@ export async function sendWhatsAppTemplate(
           );
           return await sendWhatsAppTemplate(
             whatsAppAPI,
-            userPhoneIdStr,
+            userInfo,
             templateType,
             options,
             retryNumber + 1
@@ -477,7 +511,7 @@ export async function sendWhatsAppTemplate(
             hasAccount: options.hasAccount
           });
           await User.updateOne(
-            { messageApp: "WhatsApp", chatId: userPhoneIdStr },
+            { messageApp: "WhatsApp", chatId: userInfo.chatId },
             { $set: { status: "blocked" } }
           );
           break;
@@ -488,7 +522,7 @@ export async function sendWhatsAppTemplate(
             messageApp: "WhatsApp",
             hasAccount: options.hasAccount
           });
-          await deleteUserAndCleanupByIdentifier("WhatsApp", userPhoneIdStr);
+          await deleteUserAndCleanupByIdentifier("WhatsApp", userInfo.chatId);
           break;
         default:
           await logError("WhatsApp", "Error sending WH template", resp.error);
@@ -501,20 +535,26 @@ export async function sendWhatsAppTemplate(
       cost: TEMPLATE_MESSAGE_COST_EUROS
     };
     await User.updateOne(
-      { messageApp: "WhatsApp", chatId: userPhoneIdStr },
+      { messageApp: "WhatsApp", chatId: userInfo.chatId },
       { $push: { costHistory: costOperation } }
     );
 
     await umamiLogger({
       event: "/reengagement-notifications-sent",
       messageApp: "WhatsApp",
-      hasAccount: options.hasAccount
+      hasAccount: options.hasAccount,
+      payload: {
+        last_engagement_delay_days: timeDaysBetweenDates(
+          userInfo.lastEngagementAt,
+          new Date()
+        )
+      }
     });
 
     await new Promise((resolve) =>
       setTimeout(resolve, WHATSAPP_COOL_DOWN_DELAY_SECONDS * 1000)
     );
-    await recordSuccessfulDelivery(WhatsAppMessageApp, userPhoneIdStr);
+    await recordSuccessfulDelivery(WhatsAppMessageApp, userInfo.chatId);
   } catch (error) {
     await logError("WhatsApp", "Error sending WH template", error);
     return false;

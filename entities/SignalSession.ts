@@ -26,17 +26,20 @@ export class SignalSession implements ISession {
   botPhoneID: string;
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
+  lastEngagementAt: Date;
 
   constructor(
     signalCli: SignalCli,
     botPhoneID: string,
     userPhoneId: string,
-    language_code: string
+    language_code: string,
+    lastEngagementAt: Date
   ) {
     this.signalCli = signalCli;
     this.botPhoneID = botPhoneID;
     this.chatId = userPhoneId;
     this.language_code = language_code;
+    this.lastEngagementAt = lastEngagementAt;
   }
 
   // try to fetch user from db

@@ -7,6 +7,7 @@ export interface UmamiNotificationData {
   message_nb: number;
   updated_follows_nb: number;
   total_records_nb: number;
+  last_engagement_delay_days: number;
 }
 
 export type UmamiLogger = (args: UmamiLogArgs) => Promise<void> | void;
@@ -64,7 +65,8 @@ const logInternal = async (args: UmamiLogArgs) => {
     console.log(
       `Umami event ${args.messageApp ? "(" + args.messageApp + ")" : ""}: ${args.event}`
     );
-    if (args.notificationData != null) console.log(args.notificationData);
+    if (args.notificationData != null || args.payload != null)
+      console.log({ ...args.notificationData, ...args.payload });
     return;
   }
 

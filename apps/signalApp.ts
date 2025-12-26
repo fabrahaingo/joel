@@ -46,11 +46,14 @@ await (async () => {
           const msgText = message.envelope.dataMessage?.message;
           if (msgText === undefined) return;
 
+          const messageSentTime = new Date(); // TODO: use the real message timestamp
+
           const signalSession = new SignalSession(
             signalCli,
             SIGNAL_PHONE_NUMBER,
             message.envelope.sourceNumber,
-            "fr"
+            "fr",
+            messageSentTime
           );
 
           await handleIncomingMessage(signalSession, msgText, {

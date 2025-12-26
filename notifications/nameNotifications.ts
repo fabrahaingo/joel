@@ -1,8 +1,8 @@
 import { FilterQuery, Types } from "mongoose";
 import {
+  ExtendedMiniUserInfo,
   ExternalMessageOptions,
   MessageSendingOptionsExternal,
-  MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
@@ -25,6 +25,7 @@ import {
   sendWhatsAppTemplate,
   WHATSAPP_REENGAGEMENT_TIMEOUT_MS
 } from "../entities/WhatsAppSession.ts";
+import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
@@ -114,14 +115,14 @@ export async function notifyNameMentionUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
-        userLastEngagement: user.lastEngagementAt,
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
           status: user.status,
           waitingReengagement: user.waitingReengagement,
-          hasAccount: true
+          hasAccount: true,
+          lastEngagementAt: user.lastEngagementAt
         },
         updatedRecordsMap: newUserTagsUpdates,
         recordCount: totalUserRecordsCount
@@ -134,9 +135,8 @@ export async function notifyNameMentionUpdates(
     const now = new Date();
 
     const reengagementExpired =
-      task.userLastEngagement == null ||
-      now.getTime() - task.userLastEngagement.getTime() >
-        WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+      now.getTime() - task.userInfo.lastEngagementAt.getTime() >
+      WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
 
     // WH user must be re-engaged before sending notifications
     if (
@@ -173,16 +173,22 @@ export async function notifyNameMentionUpdates(
         }
         const templateSent = await sendWhatsAppTemplate(
           whatsAppAPI,
-          task.userInfo.chatId,
+          task.userInfo,
           "notification_meta",
           messageAppsOptions
         );
+        if (!templateSent) return;
 
-        if (templateSent)
-          await User.updateOne(
-            { _id: task.userId },
-            { $set: { waitingReengagement: true } }
+        const res = await User.updateOne(
+          { _id: task.userId },
+          { $set: { waitingReengagement: true } }
+        );
+        if (res.modifiedCount === 0) {
+          await logError(
+            task.userInfo.messageApp,
+            `No waitingReengagement updated for user ${task.userId.toString()} after sending function WH template on name update`
           );
+        }
       }
 
       return;
@@ -217,7 +223,7 @@ export async function notifyNameMentionUpdates(
         []
       );
 
-      await User.updateOne(
+      const res = await User.updateOne(
         { _id: user._id },
         {
           $pull: {
@@ -235,12 +241,18 @@ export async function notifyNameMentionUpdates(
           }
         }
       );
+      if (res.modifiedCount === 0) {
+        await logError(
+          task.userInfo.messageApp,
+          `No lastUpdate updated for user ${task.userId.toString()} after sending name update notifications`
+        );
+      }
     }
   });
 }
 
 export async function sendNameMentionUpdates(
-  userInfo: MiniUserInfo,
+  userInfo: ExtendedMiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions
 ): Promise<boolean> {
@@ -303,7 +315,11 @@ export async function sendNameMentionUpdates(
     updated_follows_nb: updatedRecordMap.size,
     total_records_nb: updatedRecordMap
       .values()
-      .reduce((total: number, value) => total + value.length, 0)
+      .reduce((total: number, value) => total + value.length, 0),
+    last_engagement_delay_days: timeDaysBetweenDates(
+      userInfo.lastEngagementAt,
+      new Date()
+    )
   };
 
   await umami.logAsync({
