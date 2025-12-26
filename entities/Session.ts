@@ -134,11 +134,20 @@ export interface MiniUserInfo {
   roomId?: IUser["roomId"];
   status: IUser["status"];
   hasAccount: boolean;
+}
+
+export interface ExtendedMiniUserInfo extends MiniUserInfo {
   waitingReengagement: IUser["waitingReengagement"];
+  lastEngagementAt: IUser["lastEngagementAt"];
 }
 
 export async function sendMessage(
-  userInfo: { messageApp: MessageApp; chatId: string; roomId?: string },
+  userInfo: {
+    messageApp: MessageApp;
+    chatId: IUser["chatId"];
+    roomId?: IUser["roomId"];
+    lastEngagementAt?: IUser["lastEngagementAt"];
+  },
   message: string,
   options?: MessageSendingOptionsExternal
 ): Promise<boolean> {
@@ -185,9 +194,18 @@ export async function sendMessage(
     case "WhatsApp":
       if (options?.whatsAppAPI == null)
         throw new Error("WhatsAppAPI is required");
+      if (userInfo.lastEngagementAt == null) {
+        throw new Error("lastEngagementAt is required for WhatsApp messages");
+      }
       return await sendWhatsAppMessage(
         options.whatsAppAPI,
-        userInfo.chatId,
+        {
+          ...userInfo,
+          lastEngagementAt: userInfo.lastEngagementAt,
+          hasAccount: options.hasAccount,
+          waitingReengagement: false,
+          status: "active"
+        },
         message,
         options
       );

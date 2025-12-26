@@ -21,9 +21,6 @@ import { Publication } from "../models/Publication.ts";
 import { refreshTelegramBlockedUsers } from "../entities/TelegramSession.ts";
 import { logError } from "../utils/debugLogger.ts";
 
-// Number of days to go back: 0 means we just fetch today's info
-const SHIFT_DAYS = 15;
-
 async function getJORFRecordsFromDate(
   startDate: Date,
   messageApps: MessageApp[]
@@ -107,37 +104,46 @@ async function getJORFMetaRecordsFromDate(
 async function saveNewMetaPublications(
   metaRecords: JORFSearchPublication[]
 ): Promise<void> {
-  const ids = metaRecords.map((record) => record.id);
-  const existing: JORFSearchPublication[] = await Publication.find({
-    id: { $in: ids }
-  })
-    .select("id")
-    .lean();
-  const existingIds = new Set(existing.map((record) => record.id));
+  // 1) Deduplicate within the batch (by normalized JORF id)
+  const byId = new Map<string, JORFSearchPublication>();
+  for (const r of metaRecords) {
+    const key = r.id; // normalize type
+    if (!byId.has(key)) byId.set(key, r);
+  }
 
-  const addedIds = new Set<string>();
+  const records = Array.from(byId.entries()).map(([id, doc]) => ({
+    ...doc,
+    id: id
+  }));
+  if (records.length === 0) return;
 
-  const newRecords = metaRecords
-    .filter((record) => !existingIds.has(record.id))
-    .reduce((tab: JORFSearchPublication[], item) => {
-      if (!addedIds.has(item.id)) tab.push(item);
-      return tab;
-    }, []);
+  // 2) Upsert using $setOnInsert so repeats do not create new docs
+  const ops = records.map((doc) => ({
+    updateOne: {
+      filter: { id: doc.id },
+      update: { $setOnInsert: doc },
+      upsert: true
+    }
+  }));
 
-  if (newRecords.length > 0) {
-    await Publication.insertMany(newRecords, { ordered: false });
+  const res = await Publication.bulkWrite(ops, { ordered: false });
+
+  // bulkWrite returns how many were actually inserted via upsert
+  if (res.upsertedCount > 0) {
     await umami.logAsync({
       event: "/publication-added",
-      payload: { nb: newRecords.length },
-      hasAccount: true
+      payload: { nb: res.upsertedCount }
     });
   }
 }
+
+const NOTIFICATION_DURATION_BEFORE_WARNING_MS = 5 * 60 * 1000; // 5 minutes
 
 export async function runNotificationProcess(
   targetApps: MessageApp[],
   messageAppsOptions: ExternalMessageOptions
 ): Promise<void> {
+  const start = new Date();
   try {
     if (
       targetApps.some((a) => a === "Matrix") &&
@@ -189,6 +195,32 @@ export async function runNotificationProcess(
       await refreshTelegramBlockedUsers(messageAppsOptions.telegramBotToken);
     }
 
+    // Number of days to go back: 0 means we just fetch today's info
+    const SHIFT_DAYS_ENV = process.env.NOTIFICATIONS_SHIFT_DAYS;
+
+    if (SHIFT_DAYS_ENV == null) {
+      for (const appType of targetApps) {
+        void logError(
+          appType,
+          "Missing NOTIFICATIONS_SHIFT_DAYS env var not set: using 0"
+        );
+      }
+    }
+    let SHIFT_DAYS = 0;
+    if (SHIFT_DAYS_ENV != null) {
+      const parsedShiftDays = parseInt(SHIFT_DAYS_ENV, 10);
+      if (Number.isNaN(parsedShiftDays)) {
+        for (const appType of targetApps) {
+          void logError(
+            appType,
+            `Invalid NOTIFICATIONS_SHIFT_DAYS env var value "${SHIFT_DAYS_ENV}": using 0`
+          );
+        }
+      } else {
+        SHIFT_DAYS = parsedShiftDays;
+      }
+    }
+
     const currentDate = new Date();
     const startDate = new Date(
       currentDate.getFullYear(),
@@ -219,6 +251,19 @@ export async function runNotificationProcess(
         messageApp: appType,
         hasAccount: true
       });
+    }
+
+    const end = new Date();
+    if (
+      end.getTime() - start.getTime() >
+      NOTIFICATION_DURATION_BEFORE_WARNING_MS
+    ) {
+      for (const appType of targetApps) {
+        await logError(
+          appType,
+          `Notification process took too long: ${String((end.getTime() - start.getTime()) / 1000)} seconds.`
+        );
+      }
     }
   } catch (err) {
     for (const appType of targetApps) {

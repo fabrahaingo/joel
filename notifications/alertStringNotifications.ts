@@ -1,14 +1,17 @@
 import {
+  ExtendedMiniUserInfo,
   ExternalMessageOptions,
   MessageSendingOptionsExternal,
-  MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { IUser, JORFReference, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
-import { dateToFrenchString } from "../utils/date.utils.ts";
+import {
+  dateToFrenchString,
+  timeDaysBetweenDates
+} from "../utils/date.utils.ts";
 import { fuzzyIncludes, getSplitTextMessageSize } from "../utils/text.utils.ts";
 import {
   NotificationTask,
@@ -90,14 +93,14 @@ export async function notifyAlertStringUpdates(
     if (totalUserRecordsCount > 0) {
       userUpdateTasks.push({
         userId: user._id,
-        userLastEngagement: user.lastEngagementAt,
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
           status: user.status,
           waitingReengagement: user.waitingReengagement,
-          hasAccount: true
+          hasAccount: true,
+          lastEngagementAt: user.lastEngagementAt
         },
         updatedRecordsMap: newAlertUpdates,
         recordCount: totalUserRecordsCount
@@ -113,9 +116,8 @@ export async function notifyAlertStringUpdates(
       const now = new Date();
 
       const reengagementExpired =
-        task.userLastEngagement == null ||
-        now.getTime() - task.userLastEngagement.getTime() >
-          WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+        now.getTime() - task.userInfo.lastEngagementAt.getTime() >
+        WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
 
       // WH user must be re-engaged before sending notifications
       if (
@@ -152,16 +154,22 @@ export async function notifyAlertStringUpdates(
           }
           const templateSent = await sendWhatsAppTemplate(
             whatsAppAPI,
-            task.userInfo.chatId,
+            task.userInfo,
             "notification_meta",
             messageAppsOptions
           );
+          if (!templateSent) return;
 
-          if (templateSent)
-            await User.updateOne(
-              { _id: task.userId },
-              { $set: { waitingReengagement: true } }
+          const res = await User.updateOne(
+            { _id: task.userId },
+            { $set: { waitingReengagement: true } }
+          );
+          if (res.modifiedCount === 0) {
+            await logError(
+              task.userInfo.messageApp,
+              `No waitingReengagement updated for user ${task.userId.toString()} after sending function WH template on text update`
             );
+          }
         }
 
         return;
@@ -172,10 +180,9 @@ export async function notifyAlertStringUpdates(
         task.updatedRecordsMap,
         messageAppsOptions
       );
-
       if (!messageSent) return;
 
-      await User.updateOne(
+      const res = await User.updateOne(
         { _id: task.userId },
         {
           $set: {
@@ -190,12 +197,18 @@ export async function notifyAlertStringUpdates(
           ]
         }
       );
+      if (res.modifiedCount === 0) {
+        await logError(
+          task.userInfo.messageApp,
+          `No lastUpdate updated for user ${task.userId.toString()} after sending text update notifications`
+        );
+      }
     }
   );
 }
 
 async function sendAlertStringUpdate(
-  userInfo: MiniUserInfo,
+  userInfo: ExtendedMiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchPublication[]>,
   messageAppsOptions: ExternalMessageOptions
 ): Promise<boolean> {
@@ -250,7 +263,11 @@ async function sendAlertStringUpdate(
     updated_follows_nb: updatedRecordMap.size,
     total_records_nb: updatedRecordMap
       .values()
-      .reduce((total: number, value) => total + value.length, 0)
+      .reduce((total: number, value) => total + value.length, 0),
+    last_engagement_delay_days: timeDaysBetweenDates(
+      userInfo.lastEngagementAt,
+      new Date()
+    )
   };
 
   await umami.logAsync({

@@ -51,12 +51,14 @@ export class TelegramSession implements ISession {
   user: IUser | null | undefined = undefined;
   isReply: boolean | undefined;
   mainMenuKeyboard: Keyboard;
+  lastEngagementAt: Date;
 
   constructor(
     botToken: string,
     telegramBot: Telegram,
     chatId: string,
-    language_code: string
+    language_code: string,
+    lastEngagementAt: Date
   ) {
     this.botToken = botToken;
     this.telegramBot = telegramBot;
@@ -64,6 +66,8 @@ export class TelegramSession implements ISession {
     this.chatIdTg = parseInt(chatId);
     this.language_code = language_code;
     this.mainMenuKeyboard = mainMenuKeyboardTelegram;
+
+    this.lastEngagementAt = lastEngagementAt;
   }
 
   // try to fetch user from db

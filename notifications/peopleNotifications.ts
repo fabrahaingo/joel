@@ -1,8 +1,8 @@
 import { FilterQuery, Types } from "mongoose";
 import {
+  ExtendedMiniUserInfo,
   ExternalMessageOptions,
   MessageSendingOptionsExternal,
-  MiniUserInfo,
   sendMessage
 } from "../entities/Session.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
@@ -10,7 +10,7 @@ import { IPeople, IUser, JORFReference, MessageApp } from "../types.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
-import { JORFtoDate } from "../utils/date.utils.ts";
+import { JORFtoDate, timeDaysBetweenDates } from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   cleanPeopleName,
@@ -161,14 +161,14 @@ export async function notifyPeopleUpdates(
     if (totalUserRecordsCount > 0)
       userUpdateTasks.push({
         userId: user._id,
-        userLastEngagement: user.lastEngagementAt,
         userInfo: {
           messageApp: user.messageApp,
           chatId: user.chatId,
           roomId: user.roomId,
           waitingReengagement: user.waitingReengagement,
           status: user.status,
-          hasAccount: true
+          hasAccount: true,
+          lastEngagementAt: user.lastEngagementAt
         },
         updatedRecordsMap: newUserPeopleUpdates,
         recordCount: totalUserRecordsCount
@@ -181,9 +181,8 @@ export async function notifyPeopleUpdates(
     const now = new Date();
 
     const reengagementExpired =
-      task.userLastEngagement == null ||
-      now.getTime() - task.userLastEngagement.getTime() >
-        WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+      now.getTime() - task.userInfo.lastEngagementAt.getTime() >
+      WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
 
     // WH user must be re-engaged before sending notifications
     if (
@@ -220,16 +219,22 @@ export async function notifyPeopleUpdates(
         }
         const templateSent = await sendWhatsAppTemplate(
           whatsAppAPI,
-          task.userInfo.chatId,
+          task.userInfo,
           "notification_meta",
           messageAppsOptions
         );
+        if (!templateSent) return;
 
-        if (templateSent)
-          await User.updateOne(
-            { _id: task.userId },
-            { $set: { waitingReengagement: true } }
+        const res = await User.updateOne(
+          { _id: task.userId },
+          { $set: { waitingReengagement: true } }
+        );
+        if (res.modifiedCount === 0) {
+          await logError(
+            task.userInfo.messageApp,
+            `No waitingReengagement updated for user ${task.userId.toString()} after sending WH template on people update`
           );
+        }
       }
 
       return;
@@ -240,42 +245,47 @@ export async function notifyPeopleUpdates(
       task.updatedRecordsMap,
       messageAppsOptions
     );
+    if (!messageSent) return;
 
-    if (messageSent) {
-      const updatedRecordsPeopleId = [...task.updatedRecordsMap.keys()]
-        .map((idStr) => peopleIdMapByStr.get(idStr))
-        .reduce((tab: Types.ObjectId[], id) => {
-          if (id === undefined) {
-            console.log(
-              "Cannot fetch people id from string during the update of user people follows"
-            );
-            return tab;
-          }
-          return tab.concat(id);
-        }, []);
-
-      await User.updateOne(
-        {
-          _id: task.userId,
-          "followedPeople.peopleId": {
-            $in: updatedRecordsPeopleId
-          }
-        },
-        { $set: { "followedPeople.$[elem].lastUpdate": now } },
-        {
-          arrayFilters: [
-            {
-              "elem.peopleId": { $in: updatedRecordsPeopleId }
-            }
-          ]
+    const updatedRecordsPeopleId = [...task.updatedRecordsMap.keys()]
+      .map((idStr) => peopleIdMapByStr.get(idStr))
+      .reduce((tab: Types.ObjectId[], id) => {
+        if (id === undefined) {
+          console.log(
+            "Cannot fetch people id from string during the update of user people follows"
+          );
+          return tab;
         }
+        return tab.concat(id);
+      }, []);
+
+    const res = await User.updateOne(
+      {
+        _id: task.userId,
+        "followedPeople.peopleId": {
+          $in: updatedRecordsPeopleId
+        }
+      },
+      { $set: { "followedPeople.$[elem].lastUpdate": now } },
+      {
+        arrayFilters: [
+          {
+            "elem.peopleId": { $in: updatedRecordsPeopleId }
+          }
+        ]
+      }
+    );
+    if (res.modifiedCount === 0) {
+      await logError(
+        task.userInfo.messageApp,
+        `No lastUpdate updated for user ${task.userId.toString()} after sending people update notifications`
       );
     }
   });
 }
 
 export async function sendPeopleUpdate(
-  userInfo: MiniUserInfo,
+  userInfo: ExtendedMiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchItem[]>,
   messageAppsOptions: ExternalMessageOptions
 ) {
@@ -341,7 +351,11 @@ export async function sendPeopleUpdate(
     updated_follows_nb: updatedRecordMap.size,
     total_records_nb: updatedRecordMap
       .values()
-      .reduce((total: number, value) => total + value.length, 0)
+      .reduce((total: number, value) => total + value.length, 0),
+    last_engagement_delay_days: timeDaysBetweenDates(
+      userInfo.lastEngagementAt,
+      new Date()
+    )
   };
 
   await umami.logAsync({

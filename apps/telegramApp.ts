@@ -21,11 +21,14 @@ await (async () => {
     const tgUser = ctx.from;
     if (tgUser.is_bot) return;
 
+    const messageSentTime = new Date(ctx.message.date * 1000);
+
     const tgSession = new TelegramSession(
       TELEGRAM_BOT_TOKEN,
       bot.telegram,
       ctx.chat.id.toString(),
-      tgUser.language_code ?? "fr"
+      tgUser.language_code ?? "fr",
+      messageSentTime
     );
 
     await handleIncomingMessage(tgSession, ctx.message.text, {

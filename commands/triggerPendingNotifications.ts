@@ -1,6 +1,6 @@
 import { ISession, JORFReference } from "../types.ts";
 import { logError } from "../utils/debugLogger.ts";
-import { daysBetweenCalendar } from "../utils/date.utils.ts";
+import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 import { notifyAllFollows } from "../notifications/runNotificationProcess.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import pLimit from "p-limit";
@@ -129,7 +129,7 @@ export const triggerPendingNotifications = async (
     session.log({
       event: "/trigger-pending-updates",
       payload: {
-        reengagement_delay_days: daysBetweenCalendar(
+        reengagement_delay_days: timeDaysBetweenDates(
           earliestInsertDate,
           new Date()
         ),

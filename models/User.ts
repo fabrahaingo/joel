@@ -157,27 +157,27 @@ const UserSchema = new Schema<IUser, UserModel>(
     lastInteractionDay: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     },
     lastInteractionWeek: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     },
     lastInteractionMonth: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     },
     lastMessageReceivedAt: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     },
     lastEngagementAt: {
       type: Date,
       required: false,
-      default: undefined
+      default: Date.now
     }
   },
   {
@@ -217,13 +217,11 @@ UserSchema.method(
   async function updateInteractionMetrics(this: IUser): Promise<void> {
     const User = this.constructor as UserModel;
 
-    const now = new Date();
-    const currentDay = new Date(now);
+    const currentDay = new Date();
     currentDay.setHours(4, 0, 0, 0);
 
     const $set: Partial<IUser> = {
-      waitingReengagement: false,
-      lastEngagementAt: now
+      waitingReengagement: false
     };
 
     if (this.status === "blocked") {
@@ -236,13 +234,9 @@ UserSchema.method(
       $set.status = "active";
     }
     this.waitingReengagement = false;
-    this.lastEngagementAt = now;
 
     // Daily active users
-    if (
-      this.lastInteractionDay === undefined ||
-      this.lastInteractionDay.toDateString() !== currentDay.toDateString()
-    ) {
+    if (this.lastInteractionDay.toDateString() !== currentDay.toDateString()) {
       this.lastInteractionDay = currentDay;
       $set.lastInteractionDay = currentDay;
       umami.log({
@@ -253,15 +247,10 @@ UserSchema.method(
     }
 
     // Weekly active users
-    const thisWeek = getISOWeek(now);
-    const lastInteractionWeek = this.lastInteractionWeek
-      ? getISOWeek(this.lastInteractionWeek)
-      : undefined;
+    const thisWeek = getISOWeek(currentDay);
+    const lastInteractionWeek = getISOWeek(this.lastInteractionWeek);
 
-    if (
-      this.lastInteractionWeek === undefined ||
-      thisWeek !== lastInteractionWeek
-    ) {
+    if (thisWeek !== lastInteractionWeek) {
       this.lastInteractionWeek = currentDay;
       $set.lastInteractionWeek = currentDay;
       umami.log({
@@ -273,9 +262,8 @@ UserSchema.method(
 
     // Monthly active users
     if (
-      this.lastInteractionMonth === undefined ||
-      this.lastInteractionMonth.getMonth() !== now.getMonth() ||
-      this.lastInteractionMonth.getFullYear() !== now.getFullYear()
+      this.lastInteractionMonth.getMonth() !== currentDay.getMonth() ||
+      this.lastInteractionMonth.getFullYear() !== currentDay.getFullYear()
     ) {
       const startMonth = new Date(currentDay);
       startMonth.setDate(1);

@@ -12,54 +12,14 @@ import {
   WhatsAppSession
 } from "../entities/WhatsAppSession.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
-import User from "../models/User.ts";
-import Organisation from "../models/Organisation.ts";
-import People from "../models/People.ts";
 import { logError, sendTelegramDebugMessage } from "../utils/debugLogger.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
+import { getCachedStats } from "../commands/stats.ts";
 
 const MAX_AGE_SEC = 5 * 60;
 const DUPLICATE_MESSAGE_TTL_MS = MAX_AGE_SEC * 1000;
 
-const STATS_REFRESH_RATE = 60 * 60 * 1000; // 1 hour
-
-interface StatsResult {
-  organisations: number;
-  people: number;
-  users: Record<string, number>;
-}
-
 const processedMessageIds = new Map<string, number>();
-let cachedStats: StatsResult | null = null;
-let cachedAt = 0;
-
-async function getCachedStats(): Promise<StatsResult> {
-  const now = Date.now();
-  if (cachedStats !== null && now - cachedAt < STATS_REFRESH_RATE) {
-    return cachedStats;
-  }
-
-  const [organisations, people, users] = await Promise.all([
-    Organisation.countDocuments().exec(),
-    People.countDocuments().exec(),
-    User.aggregate<{ _id: string; count: number }>([
-      {
-        $group: {
-          _id: "$messageApp",
-          count: { $sum: 1 }
-        }
-      }
-    ])
-  ]);
-
-  cachedStats = {
-    organisations,
-    people,
-    users: Object.fromEntries(users.map(({ _id, count }) => [_id, count]))
-  };
-  cachedAt = now;
-  return cachedStats;
-}
 
 function rememberInboundMessage(id: string | undefined): boolean {
   if (id == null) return false;
@@ -132,15 +92,21 @@ app.post("/webhook", async (req, res) => {
   try {
     const signature = req.header("x-hub-signature-256");
     if (!signature) {
+      if (process.env.ALLOW_UNSIGNED_WEBHOOKS) {
+        console.log(
+          "WhatsApp: Missing signature on incoming webhook (allowed in development)"
+        );
+        res.sendStatus(200);
+        return;
+      }
       res.sendStatus(401); // Unauthorised if the signature is missing
       return;
     }
 
-    // Refuse (ignore) events older than 5 minutes
     const incomingData = getBaseIncomingData(postData);
 
     if (incomingData.emissionTimestamp == null) {
-      await logError("WhatsApp", "Received message with null timestamp");
+      await logError("WhatsApp", "Received event with null timestamp");
       return;
     }
     if (incomingData.apiPhoneId == null) {
@@ -169,18 +135,6 @@ app.post("/webhook", async (req, res) => {
       );
     }
 
-    const now = Math.floor(Date.now() / 1000);
-    const delay = now - incomingData.emissionTimestamp;
-    if (delay > MAX_AGE_SEC) {
-      // Acknowledge but skip processing so Meta doesn't retry
-      res.sendStatus(200);
-      await umami.logAsync({
-        event: "/message-received-echo-refused",
-        messageApp: "WhatsApp"
-      });
-      return;
-    }
-
     const rawPayload = (
       (req as ExtendedRequest).rawBody ?? Buffer.from(JSON.stringify(postData))
     ).toString("utf8");
@@ -188,6 +142,17 @@ app.post("/webhook", async (req, res) => {
 
     res.sendStatus(200);
   } catch (error) {
+    if (process.env.ALLOW_UNSIGNED_WEBHOOKS) {
+      const err = error as { name?: string; message?: string };
+      if (
+        err.name === "WhatsAppAPIError" &&
+        err.message === "Signature doesn't match"
+      ) {
+        // Silent signature errors in development
+        res.sendStatus(200);
+        return;
+      }
+    }
     res.sendStatus(500);
     await logError("WhatsApp", "Webhook processing failed", error);
   }
@@ -303,16 +268,33 @@ export function textFromMessage(msg: ServerMessage): string | null {
 }
 
 whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
-  // Ignore echoes of messages the bot just sent
+  // Filter out events from the bot itself
   if (from === WHATSAPP_PHONE_ID) return;
 
-  if (!["text", "interactive", "button"].some((m) => message.type === m))
-    return;
-
+  // Filter out non-text messages
   const msgText = textFromMessage(message);
-  if (msgText == null) return;
+  if (msgText == null) return; // if no text in the message
 
+  // Filter out echo messages
   if (rememberInboundMessage(message.id)) {
+    await umami.logAsync({
+      event: "/message-received-echo-refused",
+      messageApp: "WhatsApp"
+    });
+    return;
+  }
+
+  // Filter out messages older than 5 mins
+  const messageTimeStampSeconds = Number(message.timestamp);
+  if (!Number.isFinite(messageTimeStampSeconds)) {
+    await logError(
+      "WhatsApp",
+      `Received message with invalid timestamp ${message.timestamp}`
+    );
+    return;
+  }
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (nowSeconds - messageTimeStampSeconds > MAX_AGE_SEC) {
     await umami.logAsync({
       event: "/message-received-echo-refused",
       messageApp: "WhatsApp"
@@ -323,7 +305,15 @@ whatsAppAPI.on.message = async ({ phoneID, from, message }) => {
   try {
     await whatsAppAPI.markAsRead(phoneID, message.id);
 
-    const WHSession = new WhatsAppSession(whatsAppAPI, phoneID, from, "fr");
+    const messageSentDate = new Date(messageTimeStampSeconds * 1000);
+
+    const WHSession = new WhatsAppSession(
+      whatsAppAPI,
+      phoneID,
+      from,
+      "fr",
+      messageSentDate
+    );
     await handleIncomingMessage(WHSession, msgText, {
       errorContext: "Error processing inbound message"
     });
@@ -428,6 +418,18 @@ function getBaseIncomingData(data: PostData): {
         }
       }
     }
+    if (data.entry.length > 1) {
+      void logError(
+        "WhatsApp",
+        `Received webhook with multiple changes (${String(e.changes.length)}); only the first is processed.`
+      );
+    }
+  }
+  if (data.entry.length > 1) {
+    void logError(
+      "WhatsApp",
+      `Received webhook with multiple entries (${String(data.entry.length)}); only the first is processed.`
+    );
   }
   return { apiPhoneId, apiPhoneNumber, emissionTimestamp: newest };
 }
