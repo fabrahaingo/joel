@@ -72,19 +72,20 @@ export async function getCachedStats(): Promise<StatsResult> {
     ])
   ]);
 
-  // @ts-ignore
-  cachedStats = {
+  cachedAt = now;
+  const updatedStats: StatsResult = {
     organisations,
     people,
     names: names[0].total,
     texts: texts[0].total,
     users: {
-      total: 1,
+      total: users.reduce((sum, { count }) => sum + (count || 0), 0),
       apps: Object.fromEntries(users.map(({ _id, count }) => [_id, count]))
     }
-  };
-  cachedAt = now;
-  return cachedStats;
+  } as StatsResult; // ESLInt doesn't detect the field existence;
+
+  cachedStats = updatedStats;
+  return updatedStats;
 }
 
 export const statsCommand = async (session: ISession): Promise<void> => {
@@ -114,7 +115,7 @@ export const getStatsText = async (session: ISession): Promise<string> => {
     if (stats.people > 0)
       msg += `🕵️ ${String(stats.people)} personnes suivies\n`;
 
-    if (stats.names > 0) msg += `🕵️ ${String(stats.people)} noms suivis\n`;
+    if (stats.names > 0) msg += `🕵️ ${String(stats.names)} noms suivis\n`;
 
     if (stats.organisations > 0)
       msg += `🏛️ ${String(stats.organisations)} organisations suivies\n\n`;
