@@ -342,11 +342,7 @@ whatsAppAPI.on.status = ({ id, phone, status, error }) => {
     return;
   }
   if (!["sent", "delivered", "read"].some((m) => status === m)) {
-    void logError(
-      "WhatsApp",
-      `Message ${id} to ${phone} is "${status}"`,
-      error
-    );
+    void logError("WhatsApp", `Message ${id} to ${phone} is "${status}"`);
     return;
   }
 };
