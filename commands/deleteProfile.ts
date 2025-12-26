@@ -43,7 +43,7 @@ async function handleDeleteProfileAnswer(
   }
 
   if (trimmedAnswer === "SUPPRIMER MON COMPTE") {
-    await deleteUserAndCleanup(session.user);
+    await deleteUserAndCleanup(session.user.messageApp, session.user.chatId);
     session.user = null;
     await session.sendMessage(
       `🗑 Votre profil a bien été supprimé ! 👋\\splitUn profil vierge sera créé lors de l'ajout du prochain suivi ⚠️`

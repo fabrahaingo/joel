@@ -8,6 +8,7 @@ import { PostData, ServerMessage } from "whatsapp-api-js/types";
 import { mongodbConnect } from "../db.ts";
 import umami from "../utils/umami.ts";
 import {
+  handleWhatsAppAPIErrors,
   WHATSAPP_API_VERSION,
   WhatsAppSession
 } from "../entities/WhatsAppSession.ts";
@@ -263,6 +264,7 @@ export function textFromMessage(msg: ServerMessage): string | null {
     /*  Catch-all for anything the API marks
            as unsupported or future types  */
     default:
+      void logError("WhatsApp", `Unsupported message type: ${msg.type}`);
       return null;
   }
 }
@@ -329,16 +331,22 @@ whatsAppAPI.on.sent = ({ phoneID, to }) => {
 };
 
 whatsAppAPI.on.status = ({ id, phone, status, error }) => {
+  const umamiLogger = umami.logAsync;
   if (error) {
+    void handleWhatsAppAPIErrors(
+      { errorCode: error.code, rawError: error },
+      "whatsAppAPI.on.status error",
+      phone,
+      umamiLogger
+    );
+    return;
+  }
+  if (!["sent", "delivered", "read"].some((m) => status === m)) {
     void logError(
       "WhatsApp",
       `Message ${id} to ${phone} is "${status}"`,
       error
     );
-    return;
-  }
-  if (!["sent", "delivered", "read"].some((m) => status === m)) {
-    void logError("WhatsApp", `Message ${id} to ${phone} is "${status}"`);
     return;
   }
 };
