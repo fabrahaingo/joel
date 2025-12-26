@@ -235,7 +235,7 @@ export async function callJORFSearchMetaDay(
         umami.log({
           event: "/jorfsearch-request-meta",
           payload: {
-            raw_item_nb: rawItems,
+            raw_item_nb: rawItems.length,
             clean_item_nb: cleanedItems.length,
             dropped_item_nb: rawItems.length - cleanedItems.length
           }
