@@ -78,7 +78,7 @@ export interface IUser {
 
   costHistory: {
     operationDate: Date;
-    operationType: "WH_template";
+    operationType: string;
     cost: number;
   }[];
   pendingNotifications: {

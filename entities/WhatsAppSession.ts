@@ -1,4 +1,4 @@
-import { ISession, IUser, MessageApp } from "../types.ts";
+import { ISession, IUser, MessageApp, NotificationType } from "../types.ts";
 import User from "../models/User.ts";
 import {
   ExtendedMiniUserInfo,
@@ -432,12 +432,12 @@ function replaceWHButtons(keyboard: Keyboard): Keyboard {
   );
 }
 
-type TemplateType = "notification_meta";
+const NOTIFICATION_TEMPLATE = "notification_meta";
 
 export async function sendWhatsAppTemplate(
   whatsAppAPI: WhatsAppAPI,
   userInfo: ExtendedMiniUserInfo,
-  templateType: TemplateType,
+  notificationType: NotificationType,
   options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
@@ -472,7 +472,7 @@ export async function sendWhatsAppTemplate(
   }
 
   try {
-    const template_message = new Template(templateType, "fr");
+    const template_message = new Template(NOTIFICATION_TEMPLATE, "fr");
 
     const resp: ServerMessageResponse = await whatsAppAPI.sendMessage(
       WHATSAPP_PHONE_ID,
@@ -499,7 +499,7 @@ export async function sendWhatsAppTemplate(
           return await sendWhatsAppTemplate(
             whatsAppAPI,
             userInfo,
-            templateType,
+            notificationType,
             options,
             retryNumber + 1
           );
@@ -547,7 +547,8 @@ export async function sendWhatsAppTemplate(
         last_engagement_delay_days: timeDaysBetweenDates(
           userInfo.lastEngagementAt,
           new Date()
-        )
+        ),
+        triggered_by: notificationType
       }
     });
 
