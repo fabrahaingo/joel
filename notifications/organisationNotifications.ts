@@ -242,7 +242,7 @@ export async function notifyOrganisationsUpdates(
           if (res.modifiedCount === 0) {
             await logError(
               task.userInfo.messageApp,
-              `No waitingReengagement updated for user ${task.userId.toString()} after sending function WH template on organisation update`
+              `No waitingReengagement updated for user ${task.userId.toString()} after sending WH template on organisation update`
             );
           }
         }
