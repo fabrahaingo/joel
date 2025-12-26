@@ -23,7 +23,7 @@ import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
 import {
   sendWhatsAppTemplate,
-  WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+  WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
 import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 
@@ -136,7 +136,7 @@ export async function notifyNameMentionUpdates(
 
     const reengagementExpired =
       now.getTime() - task.userInfo.lastEngagementAt.getTime() >
-      WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+      WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS;
 
     // WH user must be re-engaged before sending notifications
     if (
