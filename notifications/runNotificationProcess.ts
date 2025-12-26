@@ -137,10 +137,13 @@ async function saveNewMetaPublications(
   }
 }
 
+const NOTIFICATION_DURATION_BEFORE_WARNING_MS = 5 * 60 * 1000; // 5 minutes
+
 export async function runNotificationProcess(
   targetApps: MessageApp[],
   messageAppsOptions: ExternalMessageOptions
 ): Promise<void> {
+  const start = new Date();
   try {
     if (
       targetApps.some((a) => a === "Matrix") &&
@@ -248,6 +251,19 @@ export async function runNotificationProcess(
         messageApp: appType,
         hasAccount: true
       });
+    }
+
+    const end = new Date();
+    if (
+      end.getTime() - start.getTime() >
+      NOTIFICATION_DURATION_BEFORE_WARNING_MS
+    ) {
+      for (const appType of targetApps) {
+        await logError(
+          appType,
+          `Notification process took too long: ${String((end.getTime() - start.getTime()) / 1000)} seconds.`
+        );
+      }
     }
   } catch (err) {
     for (const appType of targetApps) {
