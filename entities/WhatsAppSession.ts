@@ -507,7 +507,7 @@ export async function handleWhatsAppAPIErrors(
         if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
           await umamiLogger({
             event: "/message-fail-too-many-requests-aborted",
-            messageApp: "Telegram"
+            messageApp: "WhatsApp"
           });
           return false;
         }
