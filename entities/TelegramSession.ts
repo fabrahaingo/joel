@@ -362,7 +362,7 @@ async function handleTelegramAPIErrors(
             messageApp: "Telegram"
           });
           await new Promise((resolve) =>
-            setTimeout(resolve, Math.pow(4, retryParameters.retryNumber) * 1000)
+            setTimeout(resolve, Math.pow(2, retryParameters.retryNumber) * 1000)
           );
           return await retryParameters.retryFunction(
             retryParameters.retryNumber + 1
