@@ -216,7 +216,7 @@ export async function sendWhatsAppMessage(
     WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
   ) {
     throw new Error(
-      `Cannot send message to WH user ${userInfo.chatId} at time ${now.toISOString()}, as his lastEngagement is ${userInfo.lastEngagementAt.toISOString()} (margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS)}mins`
+      `Cannot send message to WH user ${userInfo.chatId} at time ${now.toISOString()}, as his lastEngagement is ${userInfo.lastEngagementAt.toISOString()} (margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS)}mins)`
     );
   }
 
