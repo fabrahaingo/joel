@@ -174,7 +174,7 @@ export async function notifyNameMentionUpdates(
         const templateSent = await sendWhatsAppTemplate(
           whatsAppAPI,
           task.userInfo,
-          "notification_meta",
+          "name",
           messageAppsOptions
         );
         if (!templateSent) return;

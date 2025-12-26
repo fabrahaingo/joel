@@ -4,6 +4,7 @@ import People from "../models/People.ts";
 import User from "../models/User.ts";
 import { MessageApp, IUser } from "../types.ts";
 import umami from "./umami.ts";
+import { logError } from "./debugLogger.ts";
 
 function uniqueObjectIds(
   ids: (Types.ObjectId | undefined)[]
@@ -52,7 +53,20 @@ export async function deleteEntitiesWithNoFollowers(
   }
 }
 
-export async function deleteUserAndCleanup(user: IUser): Promise<void> {
+export async function deleteUserAndCleanup(
+  messageApp: MessageApp,
+  chatId: string
+): Promise<void> {
+  const user: IUser | null = await User.findOne({ messageApp, chatId });
+
+  if (user == null) {
+    await logError(
+      messageApp,
+      `Tried to delete non-existing user for app ${messageApp} and id ${chatId}.`
+    );
+    return;
+  }
+
   const peopleIds = uniqueObjectIds(
     user.followedPeople.map((followed) => followed.peopleId)
   );
@@ -62,18 +76,4 @@ export async function deleteUserAndCleanup(user: IUser): Promise<void> {
 
   await User.deleteOne({ _id: user._id });
   await deleteEntitiesWithNoFollowers(peopleIds, organisationIds);
-}
-
-export async function deleteUserAndCleanupByIdentifier(
-  messageApp: MessageApp,
-  chatId: string
-): Promise<void> {
-  const user = await User.findOne({ messageApp, chatId });
-
-  if (user == null) {
-    await User.deleteOne({ messageApp, chatId });
-    return;
-  }
-
-  await deleteUserAndCleanup(user);
 }

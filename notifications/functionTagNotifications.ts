@@ -226,7 +226,7 @@ export async function notifyFunctionTagsUpdates(
           const templateSent = await sendWhatsAppTemplate(
             whatsAppAPI,
             task.userInfo,
-            "notification_meta",
+            "function",
             messageAppsOptions
           );
           if (!templateSent) return;

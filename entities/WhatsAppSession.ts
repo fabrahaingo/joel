@@ -1,4 +1,4 @@
-import { ISession, IUser, MessageApp } from "../types.ts";
+import { ISession, IUser, MessageApp, NotificationType } from "../types.ts";
 import User from "../models/User.ts";
 import {
   ExtendedMiniUserInfo,
@@ -22,7 +22,7 @@ import {
   Text
 } from "whatsapp-api-js/messages";
 import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
-import { deleteUserAndCleanupByIdentifier } from "../utils/userDeletion.utils.ts";
+import { deleteUserAndCleanup } from "../utils/userDeletion.utils.ts";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
 import { logError } from "../utils/debugLogger.ts";
@@ -33,6 +33,8 @@ const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the
 const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages in burst mode
 
 const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst mode, before switching to full cooldown
+
+const MAX_MESSAGE_RETRY = 5;
 
 export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
 
@@ -216,14 +218,6 @@ export async function sendWhatsAppMessage(
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
     ? umami.logAsync
     : umami.log;
-  if (retryNumber > 5) {
-    await umamiLogger({
-      event: "/message-fail-too-many-requests-aborted",
-      messageApp: "WhatsApp",
-      hasAccount: options.hasAccount
-    });
-    return false;
-  } // give up after 5 retries
 
   if (WHATSAPP_PHONE_ID === undefined) {
     throw new Error(
@@ -304,53 +298,21 @@ export async function sendWhatsAppMessage(
         );
       }
       if (resp.error) {
-        switch (resp.error.code) {
-          // If rate limit exceeded, retry after 4^(numberRetry) seconds
-          case 4:
-          case 80007:
-          case 130429:
-          case 131048:
-          case 131056:
-            await umamiLogger({
-              event: "/message-fail-too-many-requests",
-              messageApp: "WhatsApp",
-              hasAccount: options.hasAccount
-            });
-            await new Promise((resolve) =>
-              setTimeout(resolve, Math.pow(4, retryNumber) * 1000)
-            );
-            return await sendWhatsAppMessage(
-              whatsAppAPI,
-              userInfo,
-              mArr.slice(i).join("\n"),
-              options,
-              retryNumber + 1
-            );
-
-          case 131008: // user blocked the bot
-            await umami.logAsync({
-              event: "/user-blocked-joel",
-              messageApp: "WhatsApp",
-              hasAccount: options.hasAccount
-            });
-            await User.updateOne(
-              { messageApp: "WhatsApp", chatId: userInfo.chatId },
-              { $set: { status: "blocked" } }
-            );
-            break;
-          case 131026: // user not on WhatsApp
-          case 131030:
-            await umami.logAsync({
-              event: "/user-deactivated",
-              messageApp: "WhatsApp",
-              hasAccount: options.hasAccount
-            });
-            await deleteUserAndCleanupByIdentifier("WhatsApp", userInfo.chatId);
-            break;
-          default:
-            await logError("WhatsApp", "Error sending WH message", resp.error);
-        }
-        return false;
+        const retryFunction = (nextRetryNumber: number) =>
+          sendWhatsAppMessage(
+            whatsAppAPI,
+            userInfo,
+            message,
+            options,
+            nextRetryNumber
+          );
+        return await handleWhatsAppAPIErrors(
+          { errorCode: resp.error.code, rawError: resp.error },
+          "sendWhatsAppMessage",
+          userInfo.chatId,
+          umamiLogger,
+          { retryFunction, retryNumber }
+        );
       }
       await umamiLogger({
         event: "/message-sent",
@@ -432,12 +394,12 @@ function replaceWHButtons(keyboard: Keyboard): Keyboard {
   );
 }
 
-type TemplateType = "notification_meta";
+const NOTIFICATION_TEMPLATE = "notification_meta";
 
 export async function sendWhatsAppTemplate(
   whatsAppAPI: WhatsAppAPI,
   userInfo: ExtendedMiniUserInfo,
-  templateType: TemplateType,
+  notificationType: NotificationType,
   options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
@@ -455,15 +417,6 @@ export async function sendWhatsAppTemplate(
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
     ? umami.logAsync
     : umami.log;
-  if (retryNumber > 5) {
-    await umamiLogger({
-      event: "/message-fail-too-many-requests-aborted",
-      messageApp: "WhatsApp",
-      hasAccount: options.hasAccount,
-      payload: { message_type: "wh_template" }
-    });
-    return false;
-  } // give up after 5 retries
 
   if (WHATSAPP_PHONE_ID === undefined) {
     throw new Error(
@@ -472,7 +425,7 @@ export async function sendWhatsAppTemplate(
   }
 
   try {
-    const template_message = new Template(templateType, "fr");
+    const template_message = new Template(NOTIFICATION_TEMPLATE, "fr");
 
     const resp: ServerMessageResponse = await whatsAppAPI.sendMessage(
       WHATSAPP_PHONE_ID,
@@ -481,57 +434,26 @@ export async function sendWhatsAppTemplate(
     );
 
     if (resp.error) {
-      switch (resp.error.code) {
-        // If rate limit exceeded, retry after 4^(numberRetry) seconds
-        case 4:
-        case 80007:
-        case 130429:
-        case 131048:
-        case 131056:
-          await umamiLogger({
-            event: "/message-fail-too-many-requests",
-            messageApp: "WhatsApp",
-            hasAccount: options.hasAccount
-          });
-          await new Promise((resolve) =>
-            setTimeout(resolve, Math.pow(4, retryNumber) * 1000)
-          );
-          return await sendWhatsAppTemplate(
-            whatsAppAPI,
-            userInfo,
-            templateType,
-            options,
-            retryNumber + 1
-          );
-
-        case 131008: // user blocked the bot
-          await umami.logAsync({
-            event: "/user-blocked-joel",
-            messageApp: "WhatsApp",
-            hasAccount: options.hasAccount
-          });
-          await User.updateOne(
-            { messageApp: "WhatsApp", chatId: userInfo.chatId },
-            { $set: { status: "blocked" } }
-          );
-          break;
-        case 131026: // user not on WhatsApp
-        case 131030:
-          await umami.logAsync({
-            event: "/user-deactivated",
-            messageApp: "WhatsApp",
-            hasAccount: options.hasAccount
-          });
-          await deleteUserAndCleanupByIdentifier("WhatsApp", userInfo.chatId);
-          break;
-        default:
-          await logError("WhatsApp", "Error sending WH template", resp.error);
-      }
-      return false;
+      const retryFunction = (nextRetryNumber: number) =>
+        sendWhatsAppTemplate(
+          whatsAppAPI,
+          userInfo,
+          notificationType,
+          options,
+          nextRetryNumber
+        );
+      return await handleWhatsAppAPIErrors(
+        { errorCode: resp.error.code, rawError: resp.error },
+        "sendWhatsAppTemplate",
+        userInfo.chatId,
+        umamiLogger,
+        { retryFunction, retryNumber }
+      );
     }
+
     const costOperation: IUser["costHistory"][number] = {
       operationDate: new Date(),
-      operationType: "WH_template",
+      operationType: `notification_${notificationType}`,
       cost: TEMPLATE_MESSAGE_COST_EUROS
     };
     await User.updateOne(
@@ -547,7 +469,8 @@ export async function sendWhatsAppTemplate(
         last_engagement_delay_days: timeDaysBetweenDates(
           userInfo.lastEngagementAt,
           new Date()
-        )
+        ),
+        triggered_by: notificationType
       }
     });
 
@@ -561,4 +484,74 @@ export async function sendWhatsAppTemplate(
   }
 
   return true;
+}
+
+export async function handleWhatsAppAPIErrors(
+  error: { errorCode: number; rawError?: unknown },
+  callerFunctionLabel: string,
+  userChatId: string,
+  umamiLogger: UmamiLogger,
+  retryParameters?: {
+    retryFunction: (retryNumber: number) => Promise<boolean>;
+    retryNumber: number;
+  }
+): Promise<boolean> {
+  switch (error.errorCode) {
+    // If rate limit exceeded, retry after 4^(numberRetry) seconds
+    case 4:
+    case 80007:
+    case 130429:
+    case 131048:
+    case 131056:
+      if (retryParameters != null) {
+        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
+          await umamiLogger({
+            event: "/message-fail-too-many-requests-aborted",
+            messageApp: "WhatsApp"
+          });
+          return false;
+        }
+        await umamiLogger({
+          event: "/message-fail-too-many-requests",
+          messageApp: "WhatsApp"
+        });
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(4, retryParameters.retryNumber) * 1000)
+        );
+        return await retryParameters.retryFunction(
+          retryParameters.retryNumber + 1
+        );
+      } else {
+        await logError(
+          "WhatsApp",
+          `WH API rate limit error in ${callerFunctionLabel}, but no retry parameters provided`
+        );
+        return false;
+      }
+
+    case 131008: // user blocked the bot
+      await umami.logAsync({
+        event: "/user-blocked-joel",
+        messageApp: "WhatsApp"
+      });
+      await User.updateOne(
+        { messageApp: "WhatsApp", chatId: userChatId },
+        { $set: { status: "blocked" } }
+      );
+      return false;
+    case 131026: // user not on WhatsApp
+    case 131030:
+      await umami.logAsync({
+        event: "/user-deactivated",
+        messageApp: "WhatsApp"
+      });
+      await deleteUserAndCleanup("WhatsApp", userChatId);
+      return false;
+  }
+  await logError(
+    "WhatsApp",
+    `WH API error ${String(error.errorCode)} in ${callerFunctionLabel} to ${userChatId}`,
+    error.rawError ?? undefined
+  );
+  return false;
 }

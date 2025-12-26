@@ -38,7 +38,7 @@ function shouldRetry(e: unknown): boolean {
   return !(s && s >= 400 && s < 500 && s !== 408 && s !== 429);
 }
 
-async function logJORFSearchError(
+function logJORFSearchError(
   errorType:
     | "people"
     | "organisation"
@@ -74,7 +74,7 @@ export async function callJORFSearchPeople(
       })
       .then(async (res1: AxiosResponse<JORFSearchResponse>) => {
         if (res1.data === null) {
-          await logJORFSearchError("people", messageApp);
+          logJORFSearchError("people", messageApp);
           console.log("JORFSearch request for people returned null");
           return null;
         } // If an error occurred
@@ -101,7 +101,7 @@ export async function callJORFSearchPeople(
           });
           if (res2.data && typeof res2.data !== "string")
             return cleanJORFItems(res2.data);
-          await logJORFSearchError("people", messageApp);
+          logJORFSearchError("people", messageApp);
           return null;
         }
         return null;
@@ -118,7 +118,7 @@ export async function callJORFSearchPeople(
           retryNumber + 1
         );
       } else {
-        await logJORFSearchError("people", messageApp);
+        logJORFSearchError("people", messageApp);
         console.log(
           `JORFSearch request for people aborted after ${String(RETRY_MAX)} tries`,
           error
@@ -154,9 +154,9 @@ export async function callJORFSearchDay(
           }
         }
       )
-      .then(async (res) => {
+      .then((res) => {
         if (res.data === null || typeof res.data === "string") {
-          await logJORFSearchError("date");
+          logJORFSearchError("date");
           console.log("JORFSearch request for date returned null");
           return null;
         }
@@ -172,7 +172,7 @@ export async function callJORFSearchDay(
         );
         return await callJORFSearchDay(day, messageApps, retryNumber + 1);
       } else {
-        await logJORFSearchError("date");
+        logJORFSearchError("date");
         console.log(
           `JORFSearch request for date aborted after ${String(RETRY_MAX)} tries`,
           error
@@ -212,9 +212,9 @@ export async function callJORFSearchMetaDay(
           }
         }
       )
-      .then(async (res) => {
+      .then((res) => {
         if (res.data === null || typeof res.data === "string") {
-          await logJORFSearchError("meta");
+          logJORFSearchError("meta");
           console.log("JORFSearch request for meta returned null");
           return null;
         }
@@ -230,7 +230,7 @@ export async function callJORFSearchMetaDay(
         );
         return await callJORFSearchMetaDay(day, messageApps, retryNumber + 1);
       }
-      await logJORFSearchError("meta");
+      logJORFSearchError("meta");
       console.log(
         `JORFSearch request for meta aborted after ${String(RETRY_MAX)} tries`,
         error
@@ -260,9 +260,9 @@ export async function callJORFSearchTag(
           }
         }
       )
-      .then(async (res) => {
+      .then((res) => {
         if (res.data === null || typeof res.data === "string") {
-          await logJORFSearchError("function_tag");
+          logJORFSearchError("function_tag");
           console.log("JORFSearch request for tag returned null");
           return null;
         }
@@ -281,7 +281,7 @@ export async function callJORFSearchTag(
           retryNumber + 1
         );
       } else {
-        await logJORFSearchError("function_tag", messageApp);
+        logJORFSearchError("function_tag", messageApp);
         console.log(
           `JORFSearch request for function_tag aborted after ${String(RETRY_MAX)} tries`,
           error
@@ -312,9 +312,9 @@ export async function callJORFSearchOrganisation(
           }
         }
       )
-      .then(async (res) => {
+      .then((res) => {
         if (res.data === null || typeof res.data === "string") {
-          await logJORFSearchError("organisation");
+          logJORFSearchError("organisation");
           console.log("JORFSearch request for organisation returned null");
           return null;
         }
@@ -332,7 +332,7 @@ export async function callJORFSearchOrganisation(
           retryNumber + 1
         );
       } else {
-        await logJORFSearchError("organisation", messageApp);
+        logJORFSearchError("organisation", messageApp);
         console.log(
           `JORFSearch request for organisation aborted after ${String(RETRY_MAX)} tries`,
           error
@@ -354,7 +354,8 @@ interface WikiDataAPIResponse {
 
 export async function searchOrganisationWikidataId(
   org_name: string,
-  messageApp: MessageApp
+  messageApp: MessageApp,
+  retryNumber = 0
 ): Promise<{ nom: string; wikidataId: WikidataId }[] | null> {
   if (org_name.length == 0) throw new Error("Empty org_name");
 
@@ -400,9 +401,9 @@ export async function searchOrganisationWikidataId(
           }
         }
       )
-      .then(async (res) => {
+      .then((res) => {
         if (res.data === null || typeof res.data === "string") {
-          await logJORFSearchError("wikidata");
+          logJORFSearchError("wikidata");
           console.log("JORFSearch request for wikidata returned null");
           return null;
         }
@@ -412,23 +413,37 @@ export async function searchOrganisationWikidataId(
         }));
       });
   } catch (error) {
-    umami.log({
-      event: "/jorfsearch-error",
-      messageApp,
-      payload: { wikidata_name: true }
-    });
-    await logError(
-      messageApp,
-      "Error in /searchOrganisationWikidataId command",
-      error
-    );
+    if (shouldRetry(error)) {
+      if (retryNumber < RETRY_MAX) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
+        );
+        return await searchOrganisationWikidataId(
+          org_name,
+          messageApp,
+          retryNumber + 1
+        );
+      }
+      logJORFSearchError("wikidata");
+      console.log(
+        `JORFSearch request for wikidata_id aborted after ${String(RETRY_MAX)} tries`,
+        error
+      );
+    } else {
+      await logError(
+        messageApp,
+        "Error in searchOrganisationWikidataId",
+        error
+      );
+    }
   }
   return null;
 }
 
 export async function callJORFSearchReference(
   reference: string,
-  messageApp: MessageApp
+  messageApp: MessageApp,
+  retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
     umami.log({ event: "/jorfsearch-request-reference", messageApp });
@@ -443,21 +458,34 @@ export async function callJORFSearchReference(
           }
         }
       )
-      .then(async (res) => {
+      .then((res) => {
         if (res.data === null || typeof res.data === "string") {
-          await logJORFSearchError("reference");
+          logJORFSearchError("reference");
           console.log("JORFSearch request for reference returned null");
           return null;
         }
         return cleanJORFItems(res.data);
       });
   } catch (error) {
-    umami.log({
-      event: "/jorfsearch-error",
-      messageApp,
-      payload: { reference: true }
-    });
-    await logError(messageApp, "Error in callJORFSearchReference", error);
+    if (shouldRetry(error)) {
+      if (retryNumber < RETRY_MAX) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
+        );
+        return await callJORFSearchReference(
+          reference,
+          messageApp,
+          retryNumber + 1
+        );
+      }
+      logJORFSearchError("reference");
+      console.log(
+        `JORFSearch request for reference aborted after ${String(RETRY_MAX)} tries`,
+        error
+      );
+    } else {
+      await logError(messageApp, "Error in callJORFSearchReference", error);
+    }
   }
   return null;
 }

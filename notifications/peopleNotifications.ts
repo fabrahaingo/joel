@@ -220,7 +220,7 @@ export async function notifyPeopleUpdates(
         const templateSent = await sendWhatsAppTemplate(
           whatsAppAPI,
           task.userInfo,
-          "notification_meta",
+          "people",
           messageAppsOptions
         );
         if (!templateSent) return;
