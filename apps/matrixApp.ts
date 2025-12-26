@@ -251,7 +251,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
       return;
     }
 
-    const receivedMessageTime = new Date(event.origin_server_ts); // Matrix provides ms epoch;
+    const receivedMessageTime = new Date(event.origin_server_ts); // Matrix provides ms epoch
 
     try {
       const matrixSession = new MatrixSession(
