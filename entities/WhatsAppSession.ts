@@ -538,7 +538,7 @@ export async function handleWhatsAppAPIErrors(
         { messageApp: "WhatsApp", chatId: userChatId },
         { $set: { status: "blocked" } }
       );
-      break;
+      return false;
     case 131026: // user not on WhatsApp
     case 131030:
       await umami.logAsync({
@@ -546,7 +546,7 @@ export async function handleWhatsAppAPIErrors(
         messageApp: "WhatsApp"
       });
       await deleteUserAndCleanup("WhatsApp", userChatId);
-      break;
+      return false;
   }
   await logError(
     "WhatsApp",
