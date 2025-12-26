@@ -2,6 +2,7 @@ import { ISession } from "../types.ts";
 import { processMessage } from "../commands/Commands.ts";
 import { logError } from "./debugLogger.ts";
 import { triggerPendingNotifications } from "../commands/triggerPendingNotifications.ts";
+import User from "../models/User.ts";
 
 interface MessageWorkflowOptions {
   isReply?: boolean;
@@ -18,24 +19,27 @@ export async function handleIncomingMessage(
   text: string,
   options?: MessageWorkflowOptions
 ): Promise<void> {
-  session.sendTypingAction();
-  const trimmedText = text.trim();
-  if (trimmedText === "") return;
-
   const { beforeProcessing, isReply, errorContext } = options ?? {};
   try {
     if (beforeProcessing) await beforeProcessing();
 
-    if (isReply !== undefined) {
-      session.isReply = isReply;
-    }
-
-    const user = await session.loadUser();
+    await User.updateOne(
+      { messageApp: session.messageApp, chatId: session.chatId },
+      { $set: { lastEngagementAt: session.lastEngagementAt, status: "active" } }
+    );
 
     session.log({
       event: "/message-received"
     });
+    if (isReply !== undefined) {
+      session.isReply = isReply;
+    }
+    const trimmedText = text.trim();
+    if (trimmedText === "") return;
 
+    session.sendTypingAction();
+
+    const user = await session.loadUser();
     if (user != null && user.pendingNotifications.length > 0) {
       await triggerPendingNotifications(session);
       await user.updateInteractionMetrics();

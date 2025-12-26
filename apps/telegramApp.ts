@@ -21,7 +21,7 @@ await (async () => {
     const tgUser = ctx.from;
     if (tgUser.is_bot) return;
 
-    const messageSentTime = new Date(); // TODO: use the real message timestamp
+    const messageSentTime = new Date(ctx.message.date * 1000); // TODO: use the real message timestamp
 
     const tgSession = new TelegramSession(
       TELEGRAM_BOT_TOKEN,
