@@ -62,10 +62,6 @@ export async function callJORFSearchPeople(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    umami.log({
-      event: "/jorfsearch-request-people",
-      messageApp
-    });
     return await axios
       .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true), {
         headers: {
@@ -99,8 +95,19 @@ export async function callJORFSearchPeople(
           const res2 = await axios.get<JORFSearchResponse>(url, {
             headers: { "User-Agent": USER_AGENT }
           });
-          if (res2.data && typeof res2.data !== "string")
-            return cleanJORFItems(res2.data);
+          if (res2.data && typeof res2.data !== "string") {
+            const cleanedItems = cleanJORFItems(res2.data);
+            umami.log({
+              event: "/jorfsearch-request-people",
+              messageApp,
+              payload: {
+                raw_item_nb: res2.data.length,
+                clean_item_nb: cleanedItems.length,
+                dropped_item_nb: res2.data.length - cleanedItems.length
+              }
+            });
+            return cleanedItems;
+          }
           logJORFSearchError("people", messageApp);
           return null;
         }
@@ -137,7 +144,6 @@ export async function callJORFSearchDay(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    umami.log({ event: "/jorfsearch-request-date" });
     const dateDMY = dateToString(day, "DMY");
     const dateYMD = dateToString(day, "YMD");
 
@@ -160,9 +166,17 @@ export async function callJORFSearchDay(
           console.log("JORFSearch request for date returned null");
           return null;
         }
-        return cleanJORFItems(
-          res.data.filter((m) => m.source_date === dateYMD)
-        );
+        const rawItems = res.data.filter((m) => m.source_date === dateYMD);
+        const cleanedItems = cleanJORFItems(rawItems);
+        umami.log({
+          event: "/jorfsearch-request-date",
+          payload: {
+            raw_item_nb: rawItems.length,
+            clean_item_nb: cleanedItems.length,
+            dropped_item_nb: rawItems.length - cleanedItems.length
+          }
+        });
+        return cleanedItems;
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -192,8 +206,6 @@ export async function callJORFSearchMetaDay(
   retryNumber = 0
 ): Promise<JORFSearchPublication[] | null> {
   try {
-    umami.log({ event: "/jorfsearch-request-meta" });
-
     const dateYMD = dateToString(day, "YMD");
 
     const previousDay = new Date(day);
@@ -218,9 +230,17 @@ export async function callJORFSearchMetaDay(
           console.log("JORFSearch request for meta returned null");
           return null;
         }
-        return cleanJORFPublication(
-          res.data.filter((m) => m.date === previousDayYMD)
-        );
+        const rawItems = res.data.filter((m) => m.date === previousDayYMD);
+        const cleanedItems = cleanJORFPublication(rawItems);
+        umami.log({
+          event: "/jorfsearch-request-meta",
+          payload: {
+            raw_item_nb: rawItems,
+            clean_item_nb: cleanedItems.length,
+            dropped_item_nb: rawItems.length - cleanedItems.length
+          }
+        });
+        return cleanedItems;
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -250,7 +270,6 @@ export async function callJORFSearchTag(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    umami.log({ event: "/jorfsearch-request-tag", messageApp });
     return await axios
       .get<JORFSearchResponse>(
         getJORFSearchLinkFunctionTag(tag, true, tagValue),
@@ -266,7 +285,17 @@ export async function callJORFSearchTag(
           console.log("JORFSearch request for tag returned null");
           return null;
         }
-        return cleanJORFItems(res.data);
+        const cleanedItems = cleanJORFItems(res.data);
+        umami.log({
+          event: "/jorfsearch-request-tag",
+          messageApp,
+          payload: {
+            raw_item_nb: res.data.length,
+            clean_item_nb: cleanedItems.length,
+            dropped_item_nb: res.data.length - cleanedItems.length
+          }
+        });
+        return cleanedItems;
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -300,7 +329,6 @@ export async function callJORFSearchOrganisation(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    umami.log({ event: "/jorfsearch-request-organisation", messageApp });
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
@@ -318,7 +346,17 @@ export async function callJORFSearchOrganisation(
           console.log("JORFSearch request for organisation returned null");
           return null;
         }
-        return cleanJORFItems(res.data);
+        const cleanedItems = cleanJORFItems(res.data);
+        umami.log({
+          event: "/jorfsearch-request-organisation",
+          messageApp,
+          payload: {
+            raw_item_nb: res.data.length,
+            clean_item_nb: cleanedItems.length,
+            dropped_item_nb: res.data.length - cleanedItems.length
+          }
+        });
+        return cleanedItems;
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -446,7 +484,6 @@ export async function callJORFSearchReference(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    umami.log({ event: "/jorfsearch-request-reference", messageApp });
     return await axios
       .get<JORFSearchResponse>(
         encodeURI(
@@ -464,7 +501,17 @@ export async function callJORFSearchReference(
           console.log("JORFSearch request for reference returned null");
           return null;
         }
-        return cleanJORFItems(res.data);
+        const cleanedItems = cleanJORFItems(res.data);
+        umami.log({
+          event: "/jorfsearch-request-reference",
+          messageApp,
+          payload: {
+            raw_item_nb: res.data.length,
+            clean_item_nb: cleanedItems.length,
+            dropped_item_nb: res.data.length - cleanedItems.length
+          }
+        });
+        return cleanedItems;
       });
   } catch (error) {
     if (shouldRetry(error)) {

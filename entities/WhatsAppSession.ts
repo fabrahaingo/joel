@@ -547,6 +547,24 @@ export async function handleWhatsAppAPIErrors(
       });
       await deleteUserAndCleanup("WhatsApp", userChatId);
       return false;
+    case 131047: // re-engagement expired
+      { let errorMsg = `WH API reengagement expired for ${userChatId}.`;
+      const now = new Date();
+      const user: IUser | null = await User.findOne({
+        messageApp: "WhatsApp",
+        chatId: userChatId
+      }).lean();
+      if (user == null) {
+        errorMsg += "Couldn't find an associated user record in the database.";
+      } else {
+        const delay =
+          user.lastEngagementAt.getTime() +
+          WHATSAPP_REENGAGEMENT_TIMEOUT_MS -
+          now.getTime();
+        errorMsg += `User was last active on ${user.lastEngagementAt}. Reengagement windows was off by `;
+      }
+      await logError("WhatsApp", errorMsg, error);
+      return false; }
   }
   await logError(
     "WhatsApp",
