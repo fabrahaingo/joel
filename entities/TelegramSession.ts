@@ -9,7 +9,7 @@ import {
 } from "./Session.ts";
 import umami, { UmamiEvent, UmamiLogger } from "../utils/umami.ts";
 import { splitText } from "../utils/text.utils.ts";
-import { deleteUserAndCleanupByIdentifier } from "../utils/userDeletion.utils.ts";
+import { deleteUserAndCleanup } from "../utils/userDeletion.utils.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
 import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
@@ -216,51 +216,25 @@ export async function sendTelegramMessage(
       );
     }
   } catch (err) {
-    if (isAxiosError(err)) {
-      const error = err as AxiosError<TelegramAPIError>;
-      switch (error.response?.data.description) {
-        case "Forbidden: bot was blocked by the user":
-          await umami.logAsync({
-            event: "/user-blocked-joel",
-            messageApp: "Telegram",
-            hasAccount: options.hasAccount
-          });
-          await User.updateOne(
-            { messageApp: "Telegram", chatId: chatId },
-            { $set: { status: "blocked" } }
-          );
-          return false;
-        case "Forbidden: user is deactivated":
-          await umami.logAsync({
-            event: "/user-deactivated",
-            messageApp: "Telegram",
-            hasAccount: options.hasAccount
-          });
-          await deleteUserAndCleanupByIdentifier("Telegram", chatId);
-          return false;
-        case "Too many requests":
-          await umamiLogger({
-            event: "/message-fail-too-many-requests",
-            messageApp: "Telegram",
-            hasAccount: options.hasAccount
-          });
-          await new Promise((resolve) =>
-            setTimeout(resolve, Math.pow(2, retryNumber) * 1000)
-          );
-          // retry sending the remainder of the message, indicating this is a retry
-          return sendTelegramMessage(
-            botToken,
-            chatId,
-            mArr.slice(i).join("\n"),
-            options,
-            retryNumber + 1
-          );
-        default:
-          break;
+    const retryFunction = async (k: number): Promise<boolean> => {
+      return sendTelegramMessage(
+        botToken,
+        chatId,
+        mArr.slice(i).join("\n"),
+        options,
+        k
+      );
+    };
+    return await handleTelegramAPIErrors(
+      err,
+      "sendTelegramMessage",
+      chatIdTg,
+      umamiLogger,
+      {
+        retryFunction,
+        retryNumber
       }
-    }
-    await logError("Telegram", "Error sending telegram message", err);
-    return false;
+    );
   }
 
   await recordSuccessfulDelivery("Telegram", chatId);
@@ -271,9 +245,10 @@ async function sendTelegramTypingAction(
   chatIdTg: number,
   botToken: string,
   hasAccount: boolean,
-  status: "active" | "blocked" = "active"
-): Promise<void> {
-  const chatId = chatIdTg.toString();
+  status: "active" | "blocked" = "active",
+  retryNumber = 0
+): Promise<boolean> {
+  const umamiLogger: UmamiLogger = umami.logAsync;
   try {
     await axios.post(`https://api.telegram.org/bot${botToken}/sendChatAction`, {
       chat_id: chatIdTg,
@@ -287,51 +262,34 @@ async function sendTelegramTypingAction(
         { $set: { status: "active" } }
       );
 
-      umami.log({
+      await umamiLogger({
         event: "/user-unblocked-joel",
         messageApp: "Telegram",
         hasAccount
       });
     }
   } catch (err) {
-    if (isAxiosError(err)) {
-      const error = err as AxiosError<TelegramAPIError>;
-      const description = error.response?.data.description;
-
-      switch (description) {
-        case "Forbidden: bot was blocked by the user":
-          if (status === "active") {
-            await User.updateOne(
-              { messageApp: "Telegram" },
-              { $set: { status: "blocked" } }
-            );
-
-            await umami.logAsync({
-              event: "/user-blocked-joel",
-              messageApp: "Telegram",
-              hasAccount
-            });
-          }
-          return;
-        case "Forbidden: user is deactivated":
-          await umami.logAsync({
-            event: "/user-deactivated",
-            messageApp: "Telegram",
-            hasAccount
-          });
-          await deleteUserAndCleanupByIdentifier("Telegram", chatId);
-          return;
-        default:
-          break;
+    const retryFunction = async (i: number): Promise<boolean> => {
+      return sendTelegramTypingAction(
+        chatIdTg,
+        botToken,
+        hasAccount,
+        status,
+        i
+      );
+    };
+    return await handleTelegramAPIErrors(
+      err,
+      "sendTelegramTypingAction",
+      chatIdTg,
+      umamiLogger,
+      {
+        retryFunction,
+        retryNumber
       }
-    }
-
-    await logError(
-      "Telegram",
-      `Error sending typing action to Telegram user ${chatId}`,
-      err
     );
   }
+  return true;
 }
 
 export async function refreshTelegramBlockedUsers(
@@ -362,4 +320,65 @@ export async function refreshTelegramBlockedUsers(
       )
     )
   );
+}
+
+async function handleTelegramAPIErrors(
+  error: unknown,
+  callerFunctionLabel: string,
+  chatIdTg: number,
+  umamiLogger: UmamiLogger,
+  retryParameters?: {
+    retryFunction: (retryNumber: number) => Promise<boolean>;
+    retryNumber: number;
+  }
+): Promise<boolean> {
+  if (isAxiosError(error)) {
+    const tgError = error as AxiosError<TelegramAPIError>;
+
+    switch (tgError.response?.data.description) {
+      case "Forbidden: bot was blocked by the user":
+        await umami.logAsync({
+          event: "/user-blocked-joel",
+          messageApp: "Telegram"
+        });
+        await User.updateOne(
+          { messageApp: "Telegram", chatId: chatIdTg.toString() },
+          { $set: { status: "blocked" } }
+        );
+        return false;
+      case "Forbidden: user is deactivated":
+        await umami.logAsync({
+          event: "/user-deactivated",
+          messageApp: "Telegram"
+        });
+        await deleteUserAndCleanup("Telegram", chatIdTg.toString());
+        return false;
+      case "Too many requests":
+        if (retryParameters != null) {
+          await umamiLogger({
+            event: "/message-fail-too-many-requests",
+            messageApp: "Telegram"
+          });
+          await new Promise((resolve) =>
+            setTimeout(resolve, Math.pow(4, retryParameters.retryNumber) * 1000)
+          );
+          return await retryParameters.retryFunction(
+            retryParameters.retryNumber + 1
+          );
+        } else {
+          await logError(
+            "Telegram",
+            `Telegram API rate limit error in ${callerFunctionLabel}, but no retry parameters provided`
+          );
+          return false;
+        }
+    }
+  }
+
+  await logError(
+    "Telegram",
+    `Error in sending ${callerFunctionLabel} to ${String(chatIdTg)}`,
+    error
+  );
+  return false;
 }
