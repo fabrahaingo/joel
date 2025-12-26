@@ -330,7 +330,9 @@ whatsAppAPI.on.sent = ({ phoneID, to }) => {
   //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
 };
 
-whatsAppAPI.on.status = ({ id, phone, status, error }) => {
+whatsAppAPI.on.status = async ({ id, phone, status, error }) => {
+  // Wait for current db operations from message sending workflows to be over before processing the issue
+  await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
   const umamiLogger = umami.logAsync;
   if (error) {
     void handleWhatsAppAPIErrors(

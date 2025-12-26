@@ -13,6 +13,11 @@ import { sendMatrixMessage } from "./MatrixSession.ts";
 import umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
 
+export const messageReceivedTimeHistory = new Map<
+  { messageApp: MessageApp; chatId: IUser["chatId"] },
+  Date
+>();
+
 export interface ExternalMessageOptions {
   matrixClient?: MatrixClient;
   tchapClient?: MatrixClient;
@@ -99,11 +104,23 @@ export async function migrateUser(rawUser: IRawUser): Promise<void> {
 
 export async function recordSuccessfulDelivery(
   messageApp: MessageApp,
-  chatId: string
+  chatId: IUser["chatId"]
 ): Promise<void> {
+  const now = new Date(); // save current time before db operations
+
+  const user: IUser | null = await User.findOne(
+    { messageApp, chatId },
+    { lastMessageReceivedAt: 1 }
+  ).lean();
+  if (user == null) return;
+
+  messageReceivedTimeHistory.set(
+    { messageApp, chatId },
+    user.lastMessageReceivedAt
+  );
   await User.updateOne(
     { messageApp, chatId },
-    { $set: { lastMessageReceivedAt: new Date(), status: "active" } }
+    { $set: { lastMessageReceivedAt: now, status: "active" } }
   );
 }
 

@@ -4,6 +4,7 @@ import {
   ExtendedMiniUserInfo,
   ExternalMessageOptions,
   loadUser,
+  messageReceivedTimeHistory,
   MessageSendingOptionsInternal,
   recordSuccessfulDelivery
 } from "./Session.ts";
@@ -40,8 +41,12 @@ export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second gl
 
 export const WHATSAPP_API_VERSION = "v24.0";
 
-// 24h - 2 mins
-export const WHATSAPP_REENGAGEMENT_TIMEOUT_MS = 24 * (60 - 2) * 60 * 1000;
+// MARGIN RELATIVE TO 24h REENGAGEMENT WINDOW
+export const WHATSAPP_REENGAGEMENT_MARGIN_MINS = 5; // 5 mins
+
+// 24h - MARGIN_MINS
+export const WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS =
+  1000 * 60 * (24 * 60 - WHATSAPP_REENGAGEMENT_MARGIN_MINS);
 
 const TEMPLATE_MESSAGE_COST_EUROS = 0.0248;
 
@@ -208,10 +213,10 @@ export async function sendWhatsAppMessage(
   const now = new Date();
   if (
     now.getTime() - userInfo.lastEngagementAt.getTime() >
-    WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+    WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
   ) {
     throw new Error(
-      `Cannot send message to WH user ${userInfo.chatId} with lastEngagement on ${userInfo.lastEngagementAt.toISOString()}`
+      `Cannot send message to WH user ${userInfo.chatId} at time ${now.toISOString()}, as his lastEngagement is ${userInfo.lastEngagementAt.toISOString()} (margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS)}mins`
     );
   }
 
@@ -406,7 +411,7 @@ export async function sendWhatsAppTemplate(
   const now = new Date();
   if (
     now.getTime() - userInfo.lastEngagementAt.getTime() <
-    WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+    WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
   ) {
     await logError(
       "WhatsApp",
@@ -489,7 +494,7 @@ export async function sendWhatsAppTemplate(
 export async function handleWhatsAppAPIErrors(
   error: { errorCode: number; rawError?: unknown },
   callerFunctionLabel: string,
-  userChatId: string,
+  chatId: string,
   umamiLogger: UmamiLogger,
   retryParameters?: {
     retryFunction: (retryNumber: number) => Promise<boolean>;
@@ -535,7 +540,7 @@ export async function handleWhatsAppAPIErrors(
         messageApp: "WhatsApp"
       });
       await User.updateOne(
-        { messageApp: "WhatsApp", chatId: userChatId },
+        { messageApp: "WhatsApp", chatId: chatId },
         { $set: { status: "blocked" } }
       );
       return false;
@@ -545,30 +550,59 @@ export async function handleWhatsAppAPIErrors(
         event: "/user-deactivated",
         messageApp: "WhatsApp"
       });
-      await deleteUserAndCleanup("WhatsApp", userChatId);
+      await deleteUserAndCleanup("WhatsApp", chatId);
       return false;
-    case 131047: // re-engagement expired
-      { let errorMsg = `WH API reengagement expired for ${userChatId}.`;
+    case 131047: {
+      // re-engagement expired : only triggered from the external on.status. WH API workflow
+      let errorMsg = `WH API reengagement expired for ${chatId}.`;
       const now = new Date();
       const user: IUser | null = await User.findOne({
         messageApp: "WhatsApp",
-        chatId: userChatId
+        chatId: chatId
       }).lean();
       if (user == null) {
-        errorMsg += "Couldn't find an associated user record in the database.";
+        errorMsg +=
+          "\nCouldn't find an associated user record in the database.";
       } else {
-        const delay =
-          user.lastEngagementAt.getTime() +
-          WHATSAPP_REENGAGEMENT_TIMEOUT_MS -
-          now.getTime();
-        errorMsg += `User was last active on ${user.lastEngagementAt}. Reengagement windows was off by `;
+        // The message sending time is the recorded last received message (despite being unsuccessful)
+        const delaySentMessageSeconds = Math.floor(
+          (user.lastMessageReceivedAt.getTime() -
+            user.lastEngagementAt.getTime()) /
+            1000
+        );
+        const delayNowSeconds = Math.floor(
+          (now.getTime() - user.lastEngagementAt.getTime()) / 1000
+        );
+        errorMsg += `\nUser was last active on ${user.lastEngagementAt.toISOString()}
+Last recorded message sent at ${user.lastMessageReceivedAt.toISOString()}: difference is ${String(delaySentMessageSeconds)}secs.
+Current time is ${now.toISOString()}: difference is ${String(delayNowSeconds)}secs.
+Current WH window margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS * 60)}secs)`;
+
+        // restore previous lastReceivedAt:
+        const previousMessageReceivedTimeHistory =
+          messageReceivedTimeHistory.get({ messageApp: "WhatsApp", chatId });
+        if (previousMessageReceivedTimeHistory == null) {
+          await logError(
+            "WhatsApp",
+            `Couldn't retrieve previous lastMessageReceivedAt for ${chatId}`
+          );
+          return false;
+        }
+        await User.updateOne(
+          { messageApp: "WhatsApp", chatId },
+          {
+            $set: { lastMessageReceivedAt: previousMessageReceivedTimeHistory }
+          }
+        );
+        return false;
       }
       await logError("WhatsApp", errorMsg, error);
-      return false; }
+      return false;
+    }
   }
   await logError(
     "WhatsApp",
-    `WH API error ${String(error.errorCode)} in ${callerFunctionLabel} to ${userChatId}`,
+    `WH API error ${String(error.errorCode)} in ${callerFunctionLabel} to ${chatId}`,
     error.rawError ?? undefined
   );
   return false;
