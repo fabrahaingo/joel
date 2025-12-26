@@ -3,6 +3,7 @@ import { MessageApp } from "../types.ts";
 import { runNotificationProcess } from "./runNotificationProcess.ts";
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
+import { WHATSAPP_REENGAGEMENT_MARGIN_MINS } from "../entities/WhatsAppSession.ts";
 
 interface DailyTime {
   hour: number;
@@ -29,14 +30,36 @@ function parseDailyTime(value: string): DailyTime {
   return { hour, minute };
 }
 
-function computeNextOccurrence({ hour, minute }: DailyTime): Date {
+function computeNextOccurrence(
+  { hour, minute }: DailyTime,
+  messageApps: MessageApp[]
+): Date {
   const now = new Date();
   const next = new Date(now);
   next.setHours(hour, minute, 0, 0);
   if (next.getTime() <= now.getTime()) {
     next.setDate(next.getDate() + 1);
   }
-  return next;
+
+  let timeShiftMs = 0;
+  if (messageApps.some((m) => m === "WhatsApp")) {
+    // advance next trigger time to make sure the notification from the day before was sent during the window with margin
+    const timeShiftIndex = (next.getDay() - 2) % 6;
+    timeShiftMs =
+      timeShiftIndex * WHATSAPP_REENGAGEMENT_MARGIN_MINS * 60 * 1000;
+    // Tuesday : expected time
+    // Wednesday: expected time - 1*MARGIN
+    // Thursday: expected time - 2*MARGIN
+    // Friday: expected time - 3*MARGIN
+    // Saturday: expected time - 4*MARGIN
+    // Sunday: expected time - 5*MARGIN
+    // Monday: expected time - 6*MARGIN (despite no notification being expected)
+
+    console.log(
+      `WhatsApp is part of targetApps. Advancing target time by ${String(timeShiftIndex)}*WH_REENGAGEMENT_WINDOWS_MARGIN`
+    );
+  }
+  return new Date(next.getTime() + timeShiftMs);
 }
 
 export function startDailyNotificationJobs(
@@ -57,7 +80,7 @@ export function startDailyNotificationJobs(
   let running = false;
 
   const scheduleNextRun = () => {
-    const nextRun = computeNextOccurrence(parsedTime);
+    const nextRun = computeNextOccurrence(parsedTime, messageApps);
     const delay = nextRun.getTime() - Date.now();
 
     setTimeout(() => {
