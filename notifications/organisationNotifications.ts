@@ -34,7 +34,7 @@ import { logError } from "../utils/debugLogger.ts";
 import { FilterQuery, Types } from "mongoose";
 import {
   sendWhatsAppTemplate,
-  WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+  WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "====================\n\n";
@@ -192,7 +192,7 @@ export async function notifyOrganisationsUpdates(
 
       const reengagementExpired =
         now.getTime() - task.userInfo.lastEngagementAt.getTime() >
-        WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+        WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS;
 
       // WH user must be re-engaged before sending notifications
       if (

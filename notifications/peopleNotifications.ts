@@ -24,7 +24,7 @@ import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
 import {
   sendWhatsAppTemplate,
-  WHATSAPP_REENGAGEMENT_TIMEOUT_MS
+  WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
@@ -182,7 +182,7 @@ export async function notifyPeopleUpdates(
 
     const reengagementExpired =
       now.getTime() - task.userInfo.lastEngagementAt.getTime() >
-      WHATSAPP_REENGAGEMENT_TIMEOUT_MS;
+      WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS;
 
     // WH user must be re-engaged before sending notifications
     if (
