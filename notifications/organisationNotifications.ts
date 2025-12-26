@@ -230,7 +230,7 @@ export async function notifyOrganisationsUpdates(
           const templateSent = await sendWhatsAppTemplate(
             whatsAppAPI,
             task.userInfo,
-            "notification_meta",
+            "organisation",
             messageAppsOptions
           );
           if (!templateSent) return;

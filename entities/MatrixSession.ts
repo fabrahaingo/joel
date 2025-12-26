@@ -272,81 +272,22 @@ export async function sendMatrixMessage(
       if (!res) return false;
     }
   } catch (error) {
-    const mError = error as MatrixError | NodeJS.ErrnoException;
-    let errCode: string | undefined = undefined;
-    if ("errcode" in mError) {
-      errCode = mError.errcode;
-    } else if ("code" in mError) {
-      errCode = mError.code;
-    }
-
-    switch (errCode) {
-      case "M_LIMIT_EXCEEDED": {
-        if (retryNumber > MAX_MESSAGE_RETRY) {
-          await umamiLogger({
-            event: "/message-fail-too-many-requests-aborted",
-            hasAccount: options.hasAccount
-          });
-          return false;
-        }
-        await umamiLogger({
-          event: "/message-fail-too-many-requests",
-          messageApp: client.messageApp,
-          hasAccount: options.hasAccount
-        });
-        let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
-        if ("retryAfterMs" in mError && mError.retryAfterMs)
-          retryAfterMs = mError.retryAfterMs;
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
-        );
-        return sendMatrixMessage(
-          client,
-          userInfo,
-          mArr.slice(i).join("\n"),
-          options,
-          retryNumber + 1
-        );
-      }
-      case "ECONNRESET":
-      case "EPIPE":
-      case "ETIMEDOUT":
-      case "ECONNABORTED":
-        if (retryNumber > MAX_MESSAGE_RETRY) {
-          await logError(
-            client.messageApp,
-            `Error sending ${client.messageApp} message after ${String(MAX_MESSAGE_RETRY)} retries`,
-            error
-          );
-          return false;
-        }
-        return sendMatrixMessage(
-          client,
-          userInfo,
-          mArr.slice(i).join("\n"),
-          options,
-          retryNumber + 1
-        );
-      case "M_FORBIDDEN": // user blocked the bot, user left the room ...
-        umami.log({
-          event: "/user-blocked-joel",
-          messageApp: client.messageApp,
-          hasAccount: options.hasAccount
-        });
-        directRoomCache.delete(userInfo.chatId);
-        await User.updateOne(
-          { messageApp: client.messageApp, chatId: userInfo.chatId },
-          { $set: { status: "blocked" } }
-        );
-        break;
-      default:
-        await logError(
-          client.messageApp,
-          `Error sending ${client.messageApp} message`,
-          error
-        );
-    }
-    return false;
+    const retryFunction = async (nextRetryNumber: number) =>
+      sendMatrixMessage(
+        client,
+        userInfo,
+        mArr.slice(i).join("\n"),
+        options,
+        nextRetryNumber
+      );
+    return handleMatrixAPIErrors(
+      error,
+      "sendMatrixMessage",
+      userInfo.chatId,
+      client.messageApp,
+      umamiLogger,
+      { retryFunction, retryNumber }
+    );
   }
   await recordSuccessfulDelivery(client.messageApp, userInfo.chatId);
 
@@ -425,6 +366,7 @@ async function sendMatrixReactions(
   options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
+  const umamiLogger = options.useAsyncUmamiLog ? umami.logAsync : umami.log;
   let i = 0;
   try {
     const joinedRooms = await getJoinedRooms(client.matrix);
@@ -452,71 +394,23 @@ async function sendMatrixReactions(
       await client.matrix.sendEvent(userInfo.roomId, "m.reaction", content);
     }
   } catch (error) {
-    const mError = error as MatrixError | NodeJS.ErrnoException;
-    let errCode: string | undefined = undefined;
-    if ("errcode" in mError) {
-      errCode = mError.errcode;
-    } else if ("code" in mError) {
-      errCode = mError.code;
-    }
-
-    switch (errCode) {
-      case "M_LIMIT_EXCEEDED": {
-        if (retryNumber > MAX_MESSAGE_RETRY) {
-          umami.log({
-            event: "/message-fail-too-many-requests-aborted",
-            hasAccount: options.hasAccount
-          });
-          return false;
-        }
-        umami.log({
-          event: "/message-fail-too-many-requests",
-          messageApp: client.messageApp,
-          hasAccount: options.hasAccount
-        });
-        let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
-        if ("retryAfterMs" in mError && mError.retryAfterMs)
-          retryAfterMs = mError.retryAfterMs;
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, retryNumber) * retryAfterMs)
-        );
-        return await sendMatrixReactions(
-          client,
-          userInfo,
-          reactions.slice(i),
-          eventId,
-          options,
-          retryNumber + 1
-        );
-      }
-      case "ECONNRESET":
-      case "EPIPE":
-      case "ETIMEDOUT":
-      case "ECONNABORTED":
-        if (retryNumber > MAX_MESSAGE_RETRY) {
-          await logError(
-            client.messageApp,
-            `Error sending ${client.messageApp} message after ${String(MAX_MESSAGE_RETRY)} retries`,
-            error
-          );
-          return false;
-        }
-        return await sendMatrixReactions(
-          client,
-          userInfo,
-          reactions.slice(i),
-          eventId,
-          options,
-          retryNumber + 1
-        );
-      default:
-        await logError(
-          client.messageApp,
-          "Error sending Matrix reaction",
-          error
-        );
-    }
-    return false;
+    const retryFunction = async (nextRetryNumber: number) =>
+      sendMatrixReactions(
+        client,
+        userInfo,
+        reactions.slice(i),
+        eventId,
+        options,
+        nextRetryNumber
+      );
+    return handleMatrixAPIErrors(
+      error,
+      "sendMatrixReactions",
+      userInfo.chatId,
+      client.messageApp,
+      umamiLogger,
+      { retryFunction, retryNumber }
+    );
   }
   return true;
 }
@@ -601,4 +495,100 @@ export async function extractMatrixSession(
   }
 
   return session;
+}
+
+async function handleMatrixAPIErrors(
+  error: unknown,
+  callerFunctionLabel: string,
+  chatId: string,
+  messageApp: MessageApp,
+  umamiLogger: UmamiLogger,
+  retryParameters?: {
+    retryFunction: (retryNumber: number) => Promise<boolean>;
+    retryNumber: number;
+  }
+): Promise<boolean> {
+  const mError = error as MatrixError | NodeJS.ErrnoException;
+  let errCode: string | undefined = undefined;
+  if ("errcode" in mError) {
+    errCode = mError.errcode;
+  } else if ("code" in mError) {
+    errCode = mError.code;
+  }
+
+  switch (errCode) {
+    case "M_LIMIT_EXCEEDED": {
+      if (retryParameters != null) {
+        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
+          await umamiLogger({
+            event: "/message-fail-too-many-requests-aborted",
+            messageApp
+          });
+          return false;
+        }
+        await umamiLogger({
+          event: "/message-fail-too-many-requests",
+          messageApp
+        });
+        let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
+        if ("retryAfterMs" in mError && mError.retryAfterMs)
+          retryAfterMs = mError.retryAfterMs;
+        await new Promise((resolve) =>
+          setTimeout(
+            resolve,
+            Math.pow(2, retryParameters.retryNumber) * retryAfterMs
+          )
+        );
+        return await retryParameters.retryFunction(
+          retryParameters.retryNumber + 1
+        );
+      } else {
+        await logError(
+          messageApp,
+          `Matrix API rate limit error in ${callerFunctionLabel}, but no retry parameters provided`
+        );
+        return false;
+      }
+    }
+    case "M_FORBIDDEN": // user blocked the bot, user left the room ...
+      await umamiLogger({
+        event: "/user-blocked-joel",
+        messageApp: messageApp
+      });
+      directRoomCache.delete(chatId);
+      await User.updateOne(
+        { messageApp, chatId },
+        { $set: { status: "blocked" } }
+      );
+      return false;
+    case "ECONNRESET":
+    case "EPIPE":
+    case "ETIMEDOUT":
+    case "ECONNABORTED":
+      if (retryParameters != null) {
+        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
+          await logError(
+            messageApp,
+            `Error sending ${messageApp} message after ${String(MAX_MESSAGE_RETRY)} retries`,
+            error
+          );
+          return false;
+        }
+        return await retryParameters.retryFunction(
+          retryParameters.retryNumber + 1
+        );
+      } else {
+        await logError(
+          messageApp,
+          `API ${errCode} error in ${callerFunctionLabel}, but no retry parameters provided`
+        );
+        return false;
+      }
+  }
+  await logError(
+    messageApp,
+    `Error in ${callerFunctionLabel} to ${chatId}`,
+    error
+  );
+  return false;
 }

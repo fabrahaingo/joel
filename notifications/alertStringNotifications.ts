@@ -155,7 +155,7 @@ export async function notifyAlertStringUpdates(
           const templateSent = await sendWhatsAppTemplate(
             whatsAppAPI,
             task.userInfo,
-            "notification_meta",
+            "meta",
             messageAppsOptions
           );
           if (!templateSent) return;
