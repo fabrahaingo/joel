@@ -501,6 +501,10 @@ export async function handleWhatsAppAPIErrors(
     retryNumber: number;
   }
 ): Promise<boolean> {
+  const user: IUser | null = await User.findOne({
+    messageApp: "WhatsApp",
+    chatId: chatId
+  }).lean();
   switch (error.errorCode) {
     // If rate limit exceeded, retry after 4^(numberRetry) seconds
     case 4:
@@ -536,12 +540,11 @@ export async function handleWhatsAppAPIErrors(
 
     case 131008: {
       // user blocked the bot
-      const res = await User.updateOne(
-        { messageApp: "WhatsApp", chatId: chatId },
-        { $set: { status: "blocked" } }
-      );
-      if (res.modifiedCount > 0) {
-        // user wasn't blocked before
+      if (user?.status === "active") {
+        await User.updateOne(
+          { messageApp: "WhatsApp", chatId: chatId },
+          { $set: { status: "blocked" } }
+        );
         await umami.logAsync({
           event: "/user-blocked-joel",
           messageApp: "WhatsApp"
