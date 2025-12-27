@@ -541,7 +541,7 @@ export async function handleWhatsAppAPIErrors(
         { $set: { status: "blocked" } }
       );
       if (res.modifiedCount > 0) {
-        // use wasn't blocked before
+        // user wasn't blocked before
         await umami.logAsync({
           event: "/user-blocked-joel",
           messageApp: "WhatsApp"
