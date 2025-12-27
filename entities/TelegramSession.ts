@@ -324,16 +324,20 @@ async function handleTelegramAPIErrors(
     retryNumber: number;
   }
 ): Promise<boolean> {
+  const user: IUser | null = await User.findOne({
+    messageApp: "Telegram",
+    chatId: chatIdTg.toString()
+  }).lean();
   if (isAxiosError(error)) {
     const tgError = error as AxiosError<TelegramAPIError>;
 
     switch (tgError.response?.data.description) {
       case "Forbidden: bot was blocked by the user": {
-        const res = await User.updateOne(
-          { messageApp: "Telegram", chatId: chatIdTg.toString() },
-          { $set: { status: "blocked" } }
-        );
-        if (res.modifiedCount > 0) {
+        if (user?.status === "active") {
+          await User.updateOne(
+            { messageApp: "Telegram", chatId: chatIdTg.toString() },
+            { $set: { status: "blocked" } }
+          );
           await umami.logAsync({
             event: "/user-blocked-joel",
             messageApp: "Telegram"

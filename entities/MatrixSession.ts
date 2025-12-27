@@ -508,6 +508,11 @@ async function handleMatrixAPIErrors(
     retryNumber: number;
   }
 ): Promise<boolean> {
+  const user: IUser | null = await User.findOne({
+    messageApp: "Telegram",
+    chatId: chatId
+  }).lean();
+
   const mError = error as MatrixError | NodeJS.ErrnoException;
   let errCode: string | undefined = undefined;
   if ("errcode" in mError) {
@@ -551,18 +556,18 @@ async function handleMatrixAPIErrors(
       }
     }
     case "M_FORBIDDEN": // user blocked the bot, user left the room ...
-      { const res = await User.updateOne(
-        { messageApp, chatId },
-        { $set: { status: "blocked" } }
-      );
-      if (res.modifiedCount > 0) {
+      if (user?.status === "active") {
+        await User.updateOne(
+          { messageApp, chatId },
+          { $set: { status: "blocked" } }
+        );
         await umamiLogger({
           event: "/user-blocked-joel",
           messageApp: messageApp
         });
         directRoomCache.delete(chatId);
       }
-      return false; }
+      return false;
     case "ECONNRESET":
     case "EPIPE":
     case "ETIMEDOUT":
