@@ -35,16 +35,17 @@ function computeNextOccurrence(
   messageApps: MessageApp[]
 ): Date {
   const now = new Date();
-  const next = new Date(now);
-  next.setHours(hour, minute, 0, 0);
-  if (next.getTime() <= now.getTime()) {
-    next.setDate(next.getDate() + 1);
+
+  const nextWithoutShift = new Date(now);
+  nextWithoutShift.setHours(hour, minute, 0, 0);
+  if (nextWithoutShift.getTime() <= now.getTime()) {
+    nextWithoutShift.setDate(nextWithoutShift.getDate() + 1);
   }
 
   let timeShiftMs = 0;
   if (messageApps.some((m) => m === "WhatsApp")) {
     // advance next trigger time to make sure the notification from the day before was sent during the window with margin
-    const timeShiftIndex = (next.getDay() - 2 + 6) % 6;
+    const timeShiftIndex = (nextWithoutShift.getDay() - 2 + 7) % 7;
     if (timeShiftIndex < 0) {
       void logError(
         "WhatsApp",
@@ -68,7 +69,13 @@ function computeNextOccurrence(
       `WhatsApp is part of targetApps. Advancing target time by ${String(timeShiftIndex)}*WH_REENGAGEMENT_WINDOWS_MARGIN`
     );
   }
-  return new Date(next.getTime() - timeShiftMs);
+
+  const next = new Date(nextWithoutShift.getTime() - timeShiftMs);
+
+  if (next.getTime() <= now.getTime()) {
+    next.setDate(next.getDate() + 1);
+  }
+  return next;
 }
 
 export function startDailyNotificationJobs(
