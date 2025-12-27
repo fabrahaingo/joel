@@ -115,10 +115,24 @@ export async function recordSuccessfulDelivery(
     `${messageApp}:${chatId}`,
     user.lastMessageReceivedAt
   );
-  await User.updateOne(
+  // Update lastMessageReceivedAt
+  const resUserExist = await User.updateOne(
     { messageApp, chatId },
-    { $set: { lastMessageReceivedAt: now, status: "active" } }
+    { $set: { lastMessageReceivedAt: now } }
   );
+  if (resUserExist.modifiedCount == 0) return; // no user in db
+
+  // Check if user was blocked and mark as active
+  const resUserBlocked = await User.updateOne(
+    { messageApp, chatId },
+    { $set: { status: "active" } }
+  );
+  if (resUserBlocked.modifiedCount > 0) {
+    await umami.logAsync({
+      event: "/user-unblocked-joel",
+      messageApp
+    });
+  }
 }
 
 export interface MessageSendingOptionsInternal {

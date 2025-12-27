@@ -551,16 +551,18 @@ async function handleMatrixAPIErrors(
       }
     }
     case "M_FORBIDDEN": // user blocked the bot, user left the room ...
-      await umamiLogger({
-        event: "/user-blocked-joel",
-        messageApp: messageApp
-      });
-      directRoomCache.delete(chatId);
-      await User.updateOne(
+      { const res = await User.updateOne(
         { messageApp, chatId },
         { $set: { status: "blocked" } }
       );
-      return false;
+      if (res.modifiedCount > 0) {
+        await umamiLogger({
+          event: "/user-blocked-joel",
+          messageApp: messageApp
+        });
+        directRoomCache.delete(chatId);
+      }
+      return false; }
     case "ECONNRESET":
     case "EPIPE":
     case "ETIMEDOUT":

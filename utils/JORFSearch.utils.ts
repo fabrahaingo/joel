@@ -138,11 +138,20 @@ export async function callJORFSearchPeople(
   return null;
 }
 
+export interface JORFSearchDayResult {
+  items: JORFSearchItem[];
+  stats: {
+    raw_item_nb: number;
+    clean_item_nb: number;
+    dropped_item_nb: number;
+  };
+}
+
 export async function callJORFSearchDay(
   day: Date,
   messageApps: MessageApp[],
   retryNumber = 0
-): Promise<JORFSearchItem[] | null> {
+): Promise<JORFSearchDayResult | null> {
   try {
     const dateDMY = dateToString(day, "DMY");
     const dateYMD = dateToString(day, "YMD");
@@ -168,15 +177,14 @@ export async function callJORFSearchDay(
         }
         const rawItems = res.data.filter((m) => m.source_date === dateYMD);
         const cleanedItems = cleanJORFItems(rawItems);
-        umami.log({
-          event: "/jorfsearch-request-date",
-          payload: {
+        return {
+          items: cleanedItems,
+          stats: {
             raw_item_nb: rawItems.length,
             clean_item_nb: cleanedItems.length,
             dropped_item_nb: rawItems.length - cleanedItems.length
           }
-        });
-        return cleanedItems;
+        };
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -200,11 +208,20 @@ export async function callJORFSearchDay(
   return null;
 }
 
+export interface JORFSearchMetaDayResult {
+  items: JORFSearchPublication[];
+  stats: {
+    raw_item_nb: number;
+    clean_item_nb: number;
+    dropped_item_nb: number;
+  };
+}
+
 export async function callJORFSearchMetaDay(
   day: Date,
   messageApps: MessageApp[],
   retryNumber = 0
-): Promise<JORFSearchPublication[] | null> {
+): Promise<JORFSearchMetaDayResult | null> {
   try {
     const dateYMD = dateToString(day, "YMD");
 
@@ -232,15 +249,14 @@ export async function callJORFSearchMetaDay(
         }
         const rawItems = res.data.filter((m) => m.date === previousDayYMD);
         const cleanedItems = cleanJORFPublication(rawItems);
-        umami.log({
-          event: "/jorfsearch-request-meta",
-          payload: {
+        return {
+          items: cleanedItems,
+          stats: {
             raw_item_nb: rawItems.length,
             clean_item_nb: cleanedItems.length,
             dropped_item_nb: rawItems.length - cleanedItems.length
           }
-        });
-        return cleanedItems;
+        };
       });
   } catch (error) {
     if (shouldRetry(error)) {

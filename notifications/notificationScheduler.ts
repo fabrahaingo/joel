@@ -44,7 +44,16 @@ function computeNextOccurrence(
   let timeShiftMs = 0;
   if (messageApps.some((m) => m === "WhatsApp")) {
     // advance next trigger time to make sure the notification from the day before was sent during the window with margin
-    const timeShiftIndex = (next.getDay() - 2) % 6;
+    const timeShiftIndex = (next.getDay() - 2 + 6) % 6;
+    if (timeShiftIndex < 0) {
+      void logError(
+        "WhatsApp",
+        `Computed negative timeShiftIndex: ${String(timeShiftIndex)}`
+      );
+      throw new Error(
+        `Computed negative timeShiftIndex: ${String(timeShiftIndex)}`
+      );
+    }
     timeShiftMs =
       timeShiftIndex * WHATSAPP_REENGAGEMENT_MARGIN_MINS * 60 * 1000;
     // Tuesday : expected time
