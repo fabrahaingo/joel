@@ -240,7 +240,7 @@ async function sendTelegramTypingAction(
   chatIdTg: number,
   botToken: string,
   hasAccount: boolean,
-  status: "active" | "blocked" = "active",
+  expectedStatus: "active" | "blocked" = "active",
   retryNumber = 0
 ): Promise<boolean> {
   const umamiLogger: UmamiLogger = umami.logAsync;
@@ -249,18 +249,15 @@ async function sendTelegramTypingAction(
       chat_id: chatIdTg,
       action: "typing"
     });
-
-    if (status === "blocked") {
-      status = "active";
+    // don't rely on recordSuccessfulDelivery which has higher footprint and is not necessary here
+    if (expectedStatus === "blocked") {
       await User.updateOne(
-        { messageApp: "Telegram" },
+        { messageApp: "Telegram", chatId: chatIdTg.toString() },
         { $set: { status: "active" } }
       );
-
-      await umamiLogger({
+      await umami.logAsync({
         event: "/user-unblocked-joel",
-        messageApp: "Telegram",
-        hasAccount
+        messageApp: "Telegram"
       });
     }
   } catch (err) {
@@ -269,7 +266,7 @@ async function sendTelegramTypingAction(
         chatIdTg,
         botToken,
         hasAccount,
-        status,
+        expectedStatus,
         nextRetryNumber
       );
     };
@@ -331,16 +328,19 @@ async function handleTelegramAPIErrors(
     const tgError = error as AxiosError<TelegramAPIError>;
 
     switch (tgError.response?.data.description) {
-      case "Forbidden: bot was blocked by the user":
-        await umami.logAsync({
-          event: "/user-blocked-joel",
-          messageApp: "Telegram"
-        });
-        await User.updateOne(
+      case "Forbidden: bot was blocked by the user": {
+        const res = await User.updateOne(
           { messageApp: "Telegram", chatId: chatIdTg.toString() },
           { $set: { status: "blocked" } }
         );
+        if (res.modifiedCount > 0) {
+          await umami.logAsync({
+            event: "/user-blocked-joel",
+            messageApp: "Telegram"
+          });
+        }
         return false;
+      }
       case "Forbidden: user is deactivated":
         await umami.logAsync({
           event: "/user-deactivated",
