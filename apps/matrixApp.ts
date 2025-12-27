@@ -180,12 +180,12 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
           });
           if (user != null) {
             // If a user has left the room, mark him as blocked
-            const res = await User.updateOne(
-              { _id: user._id },
-              { $set: { status: "blocked" }, $unset: { roomId: 1 } },
-              { runValidators: true }
-            );
-            if (res.modifiedCount > 0) {
+            if (user.status === "active") {
+              await User.updateOne(
+                { _id: user._id },
+                { $set: { status: "blocked" }, $unset: { roomId: 1 } },
+                { runValidators: true }
+              );
               await umami.logAsync({
                 event: "/user-blocked-joel",
                 messageApp: matrixApp,
@@ -216,11 +216,11 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
               });
               if (previousUser != null) {
                 // If a user has joined the room, mark him as active
-                const res = await User.updateOne(
-                  { _id: previousUser._id },
-                  { $set: { status: "active", roomId: roomId } }
-                );
-                if (res.modifiedCount > 0) {
+                if (previousUser.status === "blocked") {
+                  await User.updateOne(
+                    { _id: previousUser._id },
+                    { $set: { status: "active", roomId: roomId } }
+                  );
                   umami.log({
                     event: "/user-unblocked-joel",
                     messageApp: matrixApp,
