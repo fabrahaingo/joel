@@ -280,7 +280,7 @@ export async function notifyPeopleUpdates(
           });
           await logError(
             "WhatsApp",
-            `WH user reengagement near-miss: 24 hours windows (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
           );
         }
       }
