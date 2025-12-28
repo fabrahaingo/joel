@@ -33,17 +33,17 @@ function convertPeopleIdStringsToObjectIds(
   idStrings: string[],
   peopleIdMapByStr: Map<string, Types.ObjectId>
 ): Types.ObjectId[] {
-  return idStrings
+  const result = idStrings
     .map((idStr) => peopleIdMapByStr.get(idStr))
-    .reduce((tab: Types.ObjectId[], id) => {
-      if (id === undefined) {
-        console.log(
-          "Cannot fetch people id from string during the update of user people follows"
-        );
-        return tab;
-      }
-      return tab.concat(id);
-    }, []);
+    .filter((id): id is Types.ObjectId => id !== undefined);
+  
+  if (result.length !== idStrings.length) {
+    console.log(
+      "Cannot fetch people id from string during the update of user people follows"
+    );
+  }
+  
+  return result;
 }
 
 export async function notifyPeopleUpdates(
