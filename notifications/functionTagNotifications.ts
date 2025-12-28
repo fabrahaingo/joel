@@ -244,18 +244,19 @@ export async function notifyFunctionTagsUpdates(
         }
 
         // Update lastUpdate for pending notifications to avoid duplicate processing
+        const updatedTags = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
           {
             _id: task.userId,
             "followedFunctions.functionTag": {
-              $in: [...task.updatedRecordsMap.keys()]
+              $in: updatedTags
             }
           },
           { $set: { "followedFunctions.$[elem].lastUpdate": now } },
           {
             arrayFilters: [
               {
-                "elem.functionTag": { $in: [...task.updatedRecordsMap.keys()] }
+                "elem.functionTag": { $in: updatedTags }
               }
             ]
           }

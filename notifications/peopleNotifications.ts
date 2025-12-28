@@ -29,6 +29,23 @@ import {
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
+function convertPeopleIdStringsToObjectIds(
+  idStrings: string[],
+  peopleIdMapByStr: Map<string, Types.ObjectId>
+): Types.ObjectId[] {
+  return idStrings
+    .map((idStr) => peopleIdMapByStr.get(idStr))
+    .reduce((tab: Types.ObjectId[], id) => {
+      if (id === undefined) {
+        console.log(
+          "Cannot fetch people id from string during the update of user people follows"
+        );
+        return tab;
+      }
+      return tab.concat(id);
+    }, []);
+}
+
 export async function notifyPeopleUpdates(
   updatedRecords: JORFSearchItem[],
   enabledApps: MessageApp[],
@@ -238,17 +255,10 @@ export async function notifyPeopleUpdates(
       }
 
       // Update lastUpdate for pending notifications to avoid duplicate processing
-      const updatedRecordsPeopleId = [...task.updatedRecordsMap.keys()]
-        .map((idStr) => peopleIdMapByStr.get(idStr))
-        .reduce((tab: Types.ObjectId[], id) => {
-          if (id === undefined) {
-            console.log(
-              "Cannot fetch people id from string during the update of user people follows"
-            );
-            return tab;
-          }
-          return tab.concat(id);
-        }, []);
+      const updatedRecordsPeopleId = convertPeopleIdStringsToObjectIds(
+        [...task.updatedRecordsMap.keys()],
+        peopleIdMapByStr
+      );
 
       const res = await User.updateOne(
         {
@@ -283,17 +293,10 @@ export async function notifyPeopleUpdates(
     );
     if (!messageSent) return;
 
-    const updatedRecordsPeopleId = [...task.updatedRecordsMap.keys()]
-      .map((idStr) => peopleIdMapByStr.get(idStr))
-      .reduce((tab: Types.ObjectId[], id) => {
-        if (id === undefined) {
-          console.log(
-            "Cannot fetch people id from string during the update of user people follows"
-          );
-          return tab;
-        }
-        return tab.concat(id);
-      }, []);
+    const updatedRecordsPeopleId = convertPeopleIdStringsToObjectIds(
+      [...task.updatedRecordsMap.keys()],
+      peopleIdMapByStr
+    );
 
     const res = await User.updateOne(
       {

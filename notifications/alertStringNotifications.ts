@@ -173,6 +173,7 @@ export async function notifyAlertStringUpdates(
         }
 
         // Update lastUpdate for pending notifications to avoid duplicate processing
+        const updatedAlertStrings = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
           { _id: task.userId },
           {
@@ -183,7 +184,7 @@ export async function notifyAlertStringUpdates(
           {
             arrayFilters: [
               {
-                "elem.alertString": { $in: [...task.updatedRecordsMap.keys()] }
+                "elem.alertString": { $in: updatedAlertStrings }
               }
             ]
           }

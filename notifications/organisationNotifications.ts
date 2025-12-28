@@ -248,11 +248,12 @@ export async function notifyOrganisationsUpdates(
         }
 
         // Update lastUpdate for pending notifications to avoid duplicate processing
+        const updatedWikidataIds = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
           {
             _id: task.userId,
             "followedOrganisations.wikidataId": {
-              $in: [...task.updatedRecordsMap.keys()]
+              $in: updatedWikidataIds
             }
           },
           { $set: { "followedOrganisations.$[elem].lastUpdate": now } },
@@ -260,7 +261,7 @@ export async function notifyOrganisationsUpdates(
             arrayFilters: [
               {
                 "elem.wikidataId": {
-                  $in: [...task.updatedRecordsMap.keys()]
+                  $in: updatedWikidataIds
                 }
               }
             ]
