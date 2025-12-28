@@ -37,7 +37,8 @@ async function updateFollowedNamesToFollowedPeople(
   userFollowingNames: IUser[],
   now: Date,
   errorLogSuffix: string,
-  messageApp: MessageApp
+  messageApp: MessageApp,
+  source: "direct" | "pending"
 ): Promise<void> {
   const user = userFollowingNames.find(
     (u) => u._id.toString() === userId.toString()
@@ -82,7 +83,7 @@ async function updateFollowedNamesToFollowedPeople(
   if (res.modifiedCount === 0) {
     await logError(
       messageApp,
-      `No lastUpdate updated for user ${userId.toString()} ${errorLogSuffix}`
+      `No lastUpdate updated for user ${userId.toString()} ${errorLogSuffix}${source === "pending" ? ` (WH reengagement)` : ""}`
     );
   }
 }
@@ -288,7 +289,8 @@ export async function notifyNameMentionUpdates(
         userFollowingNames,
         now,
         "after storing pending name update notifications",
-        task.userInfo.messageApp
+        task.userInfo.messageApp,
+        "pending"
       );
 
       return;
@@ -308,7 +310,8 @@ export async function notifyNameMentionUpdates(
         userFollowingNames,
         now,
         "after sending name update notifications",
-        task.userInfo.messageApp
+        task.userInfo.messageApp,
+        "direct"
       );
     }
   });

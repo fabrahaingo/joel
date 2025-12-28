@@ -310,7 +310,7 @@ export async function notifyPeopleUpdates(
       if (res.modifiedCount === 0) {
         await logError(
           task.userInfo.messageApp,
-          `No lastUpdate updated for user ${task.userId.toString()} after storing pending people update notifications`
+          `No lastUpdate updated for user ${task.userId.toString()} after storing pending people update notifications (WH reengagement)`
         );
       }
 

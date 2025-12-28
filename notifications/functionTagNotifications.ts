@@ -292,7 +292,7 @@ export async function notifyFunctionTagsUpdates(
         if (res.modifiedCount === 0) {
           await logError(
             task.userInfo.messageApp,
-            `No lastUpdate updated for user ${task.userId.toString()} after storing pending tag update notifications`
+            `No lastUpdate updated for user ${task.userId.toString()} after storing pending tag update notifications (WH reengagement)`
           );
         }
 
