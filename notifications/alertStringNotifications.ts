@@ -21,7 +21,7 @@ import { FilterQuery, Types } from "mongoose";
 import { logError } from "../utils/debugLogger.ts";
 import {
   sendWhatsAppTemplate,
-  WHATSAPP_NEAR_MISS_WINDOW,
+  WHATSAPP_NEAR_MISS_WINDOW_MS,
   WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
 
@@ -175,7 +175,7 @@ export async function notifyAlertStringUpdates(
           // If near miss (user engaged very recently)
           if (
             now.getTime() - task.userInfo.lastEngagementAt.getTime() <
-            WHATSAPP_NEAR_MISS_WINDOW
+            WHATSAPP_NEAR_MISS_WINDOW_MS
           ) {
             const miss_out_delay_s = Math.floor(
               (now.getTime() -
