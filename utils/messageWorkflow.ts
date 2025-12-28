@@ -21,16 +21,17 @@ export async function handleIncomingMessage(
 ): Promise<void> {
   const { beforeProcessing, isReply, errorContext } = options ?? {};
   try {
-    if (beforeProcessing) await beforeProcessing();
-
-    await User.updateOne(
+    const res = await User.updateOne(
       { messageApp: session.messageApp, chatId: session.chatId },
       { $set: { lastEngagementAt: session.lastEngagementAt, status: "active" } }
     );
-
     session.log({
-      event: "/message-received"
+      event: "/message-received",
+      payload: { has_account: res.modifiedCount > 0 }
     });
+
+    if (beforeProcessing) await beforeProcessing();
+
     if (isReply !== undefined) {
       session.isReply = isReply;
     }
