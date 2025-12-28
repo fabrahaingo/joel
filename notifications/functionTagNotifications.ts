@@ -278,7 +278,8 @@ export async function notifyFunctionTagsUpdates(
         const updatedTags = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
           {
-            _id: task.userId
+            _id: task.userId,
+            "followedFunctions.functionTag": { $in: updatedTags }
           },
           { $set: { "followedFunctions.$[elem].lastUpdate": now } },
           {
