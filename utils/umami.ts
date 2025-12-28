@@ -120,6 +120,7 @@ export type UmamiEvent =
   | "/message-fail-too-many-requests-aborted"
   | "/message-received-echo-refused"
   | "/reengagement-notifications-sent"
+  | "/wh-reengagement-near-miss"
   | "/trigger-pending-updates"
   | "/start"
   | "/start-from-people"
