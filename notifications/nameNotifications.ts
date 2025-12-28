@@ -29,6 +29,63 @@ import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
+async function updateFollowedNamesToFollowedPeople(
+  userId: Types.ObjectId,
+  updatedRecordsMapKeys: string[],
+  peopleIdByFollowedNameMap: Map<string, Types.ObjectId>,
+  userFollowingNames: IUser[],
+  now: Date,
+  errorLogSuffix: string,
+  messageApp: string
+): Promise<void> {
+  const user = userFollowingNames.find(
+    (u) => u._id.toString() === userId.toString()
+  );
+  if (user === undefined) return;
+
+  const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
+    f.peopleId.toString()
+  );
+
+  const newFollowsIdUnique = updatedRecordsMapKeys.reduce(
+    (tab: Types.ObjectId[], idStr) => {
+      const id = peopleIdByFollowedNameMap.get(idStr);
+      if (
+        id !== undefined &&
+        !peopleIdFollowedByUserStr.includes(id.toString())
+      )
+        tab.push(id);
+      return tab;
+    },
+    []
+  );
+
+  const res = await User.updateOne(
+    { _id: user._id },
+    {
+      $pull: {
+        followedNames: {
+          $in: updatedRecordsMapKeys
+        }
+      },
+      $push: {
+        followedPeople: {
+          $each: newFollowsIdUnique.map((id) => ({
+            peopleId: id,
+            lastUpdate: now
+          }))
+        }
+      }
+    }
+  );
+  if (res.modifiedCount === 0) {
+    await logError(
+      messageApp,
+      `No lastUpdate updated for user ${userId.toString()} ${errorLogSuffix}`
+    );
+  }
+}
+
 export async function notifyNameMentionUpdates(
   updatedRecords: JORFSearchItem[],
   enabledApps: MessageApp[],
@@ -193,52 +250,15 @@ export async function notifyNameMentionUpdates(
 
       // Update lastUpdate by converting followedNames to followedPeople
       // This prevents duplicate processing of the same name updates
-      const user = userFollowingNames.find(
-        (u) => u._id.toString() === task.userId.toString()
+      await updateFollowedNamesToFollowedPeople(
+        task.userId,
+        [...task.updatedRecordsMap.keys()],
+        peopleIdByFollowedNameMap,
+        userFollowingNames,
+        now,
+        "after storing pending name update notifications",
+        task.userInfo.messageApp
       );
-      if (user === undefined) return;
-
-      const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
-        f.peopleId.toString()
-      );
-
-      const newFollowsIdUnique = [...task.updatedRecordsMap.keys()].reduce(
-        (tab: Types.ObjectId[], idStr) => {
-          const id = peopleIdByFollowedNameMap.get(idStr);
-          if (
-            id !== undefined &&
-            !peopleIdFollowedByUserStr.includes(id.toString())
-          )
-            tab.push(id);
-          return tab;
-        },
-        []
-      );
-
-      const res = await User.updateOne(
-        { _id: user._id },
-        {
-          $pull: {
-            followedNames: {
-              $in: [...task.updatedRecordsMap.keys()]
-            }
-          },
-          $push: {
-            followedPeople: {
-              $each: newFollowsIdUnique.map((id) => ({
-                peopleId: id,
-                lastUpdate: now
-              }))
-            }
-          }
-        }
-      );
-      if (res.modifiedCount === 0) {
-        await logError(
-          task.userInfo.messageApp,
-          `No lastUpdate updated for user ${task.userId.toString()} after storing pending name update notifications`
-        );
-      }
 
       return;
     }
@@ -250,52 +270,15 @@ export async function notifyNameMentionUpdates(
     );
 
     if (messageSent) {
-      const user = userFollowingNames.find(
-        (u) => u._id.toString() === task.userId.toString()
+      await updateFollowedNamesToFollowedPeople(
+        task.userId,
+        [...task.updatedRecordsMap.keys()],
+        peopleIdByFollowedNameMap,
+        userFollowingNames,
+        now,
+        "after sending name update notifications",
+        task.userInfo.messageApp
       );
-      if (user === undefined) return;
-
-      const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
-        f.peopleId.toString()
-      );
-
-      const newFollowsIdUnique = [...task.updatedRecordsMap.keys()].reduce(
-        (tab: Types.ObjectId[], idStr) => {
-          const id = peopleIdByFollowedNameMap.get(idStr);
-          if (
-            id !== undefined &&
-            !peopleIdFollowedByUserStr.includes(id.toString())
-          )
-            tab.push(id);
-          return tab;
-        },
-        []
-      );
-
-      const res = await User.updateOne(
-        { _id: user._id },
-        {
-          $pull: {
-            followedNames: {
-              $in: [...task.updatedRecordsMap.keys()]
-            }
-          },
-          $push: {
-            followedPeople: {
-              $each: newFollowsIdUnique.map((id) => ({
-                peopleId: id,
-                lastUpdate: now
-              }))
-            }
-          }
-        }
-      );
-      if (res.modifiedCount === 0) {
-        await logError(
-          task.userInfo.messageApp,
-          `No lastUpdate updated for user ${task.userId.toString()} after sending name update notifications`
-        );
-      }
     }
   });
 }
