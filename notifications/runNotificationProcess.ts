@@ -292,11 +292,16 @@ export async function runNotificationProcess(
       messageAppsOptions
     );
 
+    const duration_s = Math.ceil(
+      (new Date().getTime() - start.getTime()) / 1000
+    );
+
     for (const appType of targetApps) {
       await umami.logAsync({
         event: "/notification-process-completed",
         messageApp: appType,
-        hasAccount: true
+        hasAccount: true,
+        payload: { duration_s }
       });
     }
 
