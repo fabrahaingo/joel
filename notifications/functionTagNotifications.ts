@@ -243,6 +243,30 @@ export async function notifyFunctionTagsUpdates(
           }
         }
 
+        // Update lastUpdate for pending notifications to avoid duplicate processing
+        const res = await User.updateOne(
+          {
+            _id: task.userId,
+            "followedFunctions.functionTag": {
+              $in: [...task.updatedRecordsMap.keys()]
+            }
+          },
+          { $set: { "followedFunctions.$[elem].lastUpdate": now } },
+          {
+            arrayFilters: [
+              {
+                "elem.functionTag": { $in: [...task.updatedRecordsMap.keys()] }
+              }
+            ]
+          }
+        );
+        if (res.modifiedCount === 0) {
+          await logError(
+            task.userInfo.messageApp,
+            `No lastUpdate updated for user ${task.userId.toString()} after storing pending tag update notifications`
+          );
+        }
+
         return;
       }
 

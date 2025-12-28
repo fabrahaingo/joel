@@ -237,6 +237,42 @@ export async function notifyPeopleUpdates(
         }
       }
 
+      // Update lastUpdate for pending notifications to avoid duplicate processing
+      const updatedRecordsPeopleId = [...task.updatedRecordsMap.keys()]
+        .map((idStr) => peopleIdMapByStr.get(idStr))
+        .reduce((tab: Types.ObjectId[], id) => {
+          if (id === undefined) {
+            console.log(
+              "Cannot fetch people id from string during the update of user people follows"
+            );
+            return tab;
+          }
+          return tab.concat(id);
+        }, []);
+
+      const res = await User.updateOne(
+        {
+          _id: task.userId,
+          "followedPeople.peopleId": {
+            $in: updatedRecordsPeopleId
+          }
+        },
+        { $set: { "followedPeople.$[elem].lastUpdate": now } },
+        {
+          arrayFilters: [
+            {
+              "elem.peopleId": { $in: updatedRecordsPeopleId }
+            }
+          ]
+        }
+      );
+      if (res.modifiedCount === 0) {
+        await logError(
+          task.userInfo.messageApp,
+          `No lastUpdate updated for user ${task.userId.toString()} after storing pending people update notifications`
+        );
+      }
+
       return;
     }
 

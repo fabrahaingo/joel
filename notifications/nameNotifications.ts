@@ -191,6 +191,55 @@ export async function notifyNameMentionUpdates(
         }
       }
 
+      // Update lastUpdate by converting followedNames to followedPeople
+      // This prevents duplicate processing of the same name updates
+      const user = userFollowingNames.find(
+        (u) => u._id.toString() === task.userId.toString()
+      );
+      if (user === undefined) return;
+
+      const peopleIdFollowedByUserStr = user.followedPeople.map((f) =>
+        f.peopleId.toString()
+      );
+
+      const newFollowsIdUnique = [...task.updatedRecordsMap.keys()].reduce(
+        (tab: Types.ObjectId[], idStr) => {
+          const id = peopleIdByFollowedNameMap.get(idStr);
+          if (
+            id !== undefined &&
+            !peopleIdFollowedByUserStr.includes(id.toString())
+          )
+            tab.push(id);
+          return tab;
+        },
+        []
+      );
+
+      const res = await User.updateOne(
+        { _id: user._id },
+        {
+          $pull: {
+            followedNames: {
+              $in: [...task.updatedRecordsMap.keys()]
+            }
+          },
+          $push: {
+            followedPeople: {
+              $each: newFollowsIdUnique.map((id) => ({
+                peopleId: id,
+                lastUpdate: now
+              }))
+            }
+          }
+        }
+      );
+      if (res.modifiedCount === 0) {
+        await logError(
+          task.userInfo.messageApp,
+          `No lastUpdate updated for user ${task.userId.toString()} after storing pending name update notifications`
+        );
+      }
+
       return;
     }
 
