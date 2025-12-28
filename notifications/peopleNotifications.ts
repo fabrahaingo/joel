@@ -24,10 +24,28 @@ import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
 import {
   sendWhatsAppTemplate,
+  WHATSAPP_NEAR_MISS_WINDOW_MS,
   WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
+
+function convertPeopleIdStringsToObjectIds(
+  idStrings: string[],
+  peopleIdMapByStr: Map<string, Types.ObjectId>
+): Types.ObjectId[] {
+  const result = idStrings
+    .map((idStr) => peopleIdMapByStr.get(idStr))
+    .filter((id): id is Types.ObjectId => id !== undefined);
+
+  if (result.length !== idStrings.length) {
+    console.log(
+      "Cannot fetch people id from string during the update of user people follows"
+    );
+  }
+
+  return result;
+}
 
 export async function notifyPeopleUpdates(
   updatedRecords: JORFSearchItem[],
@@ -235,6 +253,65 @@ export async function notifyPeopleUpdates(
             `No waitingReengagement updated for user ${task.userId.toString()} after sending WH template on people update`
           );
         }
+
+        // If near miss (user engaged very recently)
+        if (
+          now.getTime() - task.userInfo.lastEngagementAt.getTime() <
+          WHATSAPP_NEAR_MISS_WINDOW_MS
+        ) {
+          const miss_out_delay_s = Math.floor(
+            (now.getTime() -
+              task.userInfo.lastEngagementAt.getTime() -
+              24 * 60 * 60 * 1000) /
+              1000
+          );
+          await umami.logAsync({
+            event: "/wh-reengagement-near-miss",
+            messageApp: "WhatsApp",
+            hasAccount: true,
+            payload: {
+              delay_s: Math.floor(
+                (now.getTime() - task.userInfo.lastEngagementAt.getTime()) /
+                  1000
+              ),
+              notification_type: "people",
+              miss_out_delay_s
+            }
+          });
+          await logError(
+            "WhatsApp",
+            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+          );
+        }
+      }
+
+      // Update lastUpdate for pending notifications to avoid duplicate processing
+      const updatedRecordsPeopleId = convertPeopleIdStringsToObjectIds(
+        [...task.updatedRecordsMap.keys()],
+        peopleIdMapByStr
+      );
+
+      const res = await User.updateOne(
+        {
+          _id: task.userId,
+          "followedPeople.peopleId": {
+            $in: updatedRecordsPeopleId
+          }
+        },
+        { $set: { "followedPeople.$[elem].lastUpdate": now } },
+        {
+          arrayFilters: [
+            {
+              "elem.peopleId": { $in: updatedRecordsPeopleId }
+            }
+          ]
+        }
+      );
+      if (res.modifiedCount === 0) {
+        await logError(
+          task.userInfo.messageApp,
+          `No lastUpdate updated for user ${task.userId.toString()} after storing pending people update notifications (WH reengagement)`
+        );
       }
 
       return;
@@ -247,17 +324,10 @@ export async function notifyPeopleUpdates(
     );
     if (!messageSent) return;
 
-    const updatedRecordsPeopleId = [...task.updatedRecordsMap.keys()]
-      .map((idStr) => peopleIdMapByStr.get(idStr))
-      .reduce((tab: Types.ObjectId[], id) => {
-        if (id === undefined) {
-          console.log(
-            "Cannot fetch people id from string during the update of user people follows"
-          );
-          return tab;
-        }
-        return tab.concat(id);
-      }, []);
+    const updatedRecordsPeopleId = convertPeopleIdStringsToObjectIds(
+      [...task.updatedRecordsMap.keys()],
+      peopleIdMapByStr
+    );
 
     const res = await User.updateOne(
       {

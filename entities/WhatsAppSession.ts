@@ -48,6 +48,10 @@ export const WHATSAPP_REENGAGEMENT_MARGIN_MINS = 5; // 5 mins
 export const WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS =
   1000 * 60 * (24 * 60 - WHATSAPP_REENGAGEMENT_MARGIN_MINS);
 
+// 24 h + 5*MARGIN_MINS (for near-miss calculations)
+export const WHATSAPP_NEAR_MISS_WINDOW_MS =
+  1000 * 60 * (24 * 60 + 5 * WHATSAPP_REENGAGEMENT_MARGIN_MINS);
+
 const TEMPLATE_MESSAGE_COST_EUROS = 0.0248;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
