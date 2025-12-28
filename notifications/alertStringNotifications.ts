@@ -21,6 +21,8 @@ import { FilterQuery, Types } from "mongoose";
 import { logError } from "../utils/debugLogger.ts";
 import {
   sendWhatsAppTemplate,
+  WHATSAPP_NEAR_MISS_WINDOWS,
+  WHATSAPP_REENGAGEMENT_MARGIN_MINS,
   WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
 
@@ -170,6 +172,36 @@ export async function notifyAlertStringUpdates(
               `No waitingReengagement updated for user ${task.userId.toString()} after sending function WH template on text update`
             );
           }
+
+          // If near miss (user engaged very recently)
+          if (
+            now.getTime() - task.userInfo.lastEngagementAt.getTime() <
+            WHATSAPP_NEAR_MISS_WINDOWS
+          ) {
+            const miss_out_delay_s = Math.floor(
+              (now.getTime() -
+                task.userInfo.lastEngagementAt.getTime() -
+                24 * 60 * 60 * 1000) /
+                10000
+            );
+            await umami.logAsync({
+              event: "/wh-reengagement-near-miss",
+              messageApp: "WhatsApp",
+              hasAccount: true,
+              payload: {
+                delay_s: Math.floor(
+                  (now.getTime() - task.userInfo.lastEngagementAt.getTime()) /
+                    1000
+                ),
+                notification_type: "meta",
+                miss_out_delay_s
+              }
+            });
+            await logError(
+              "WhatsApp",
+              `WH user reengagement near-miss: 24 hours windows (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+            );
+          }
         }
 
         // Update lastUpdate for pending notifications to avoid duplicate processing
@@ -192,7 +224,7 @@ export async function notifyAlertStringUpdates(
         if (res.modifiedCount === 0) {
           await logError(
             task.userInfo.messageApp,
-            `No lastUpdate updated for user ${task.userId.toString()} after storing pending text update notifications`
+            `No lastUpdate updated for user ${task.userId.toString()} after storing pending text update notifications (WH reengagement)`
           );
         }
 

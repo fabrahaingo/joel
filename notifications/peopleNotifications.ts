@@ -24,6 +24,7 @@ import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
 import {
   sendWhatsAppTemplate,
+  WHATSAPP_NEAR_MISS_WINDOWS,
   WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
 
@@ -36,13 +37,13 @@ function convertPeopleIdStringsToObjectIds(
   const result = idStrings
     .map((idStr) => peopleIdMapByStr.get(idStr))
     .filter((id): id is Types.ObjectId => id !== undefined);
-  
+
   if (result.length !== idStrings.length) {
     console.log(
       "Cannot fetch people id from string during the update of user people follows"
     );
   }
-  
+
   return result;
 }
 
@@ -250,6 +251,36 @@ export async function notifyPeopleUpdates(
           await logError(
             task.userInfo.messageApp,
             `No waitingReengagement updated for user ${task.userId.toString()} after sending WH template on people update`
+          );
+        }
+
+        // If near miss (user engaged very recently)
+        if (
+          now.getTime() - task.userInfo.lastEngagementAt.getTime() <
+          WHATSAPP_NEAR_MISS_WINDOWS
+        ) {
+          const miss_out_delay_s = Math.floor(
+            (now.getTime() -
+              task.userInfo.lastEngagementAt.getTime() -
+              24 * 60 * 60 * 1000) /
+              10000
+          );
+          await umami.logAsync({
+            event: "/wh-reengagement-near-miss",
+            messageApp: "WhatsApp",
+            hasAccount: true,
+            payload: {
+              delay_s: Math.floor(
+                (now.getTime() - task.userInfo.lastEngagementAt.getTime()) /
+                  1000
+              ),
+              notification_type: "people",
+              miss_out_delay_s
+            }
+          });
+          await logError(
+            "WhatsApp",
+            `WH user reengagement near-miss: 24 hours windows (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
           );
         }
       }

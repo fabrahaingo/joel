@@ -34,6 +34,7 @@ import { logError } from "../utils/debugLogger.ts";
 import { FilterQuery, Types } from "mongoose";
 import {
   sendWhatsAppTemplate,
+  WHATSAPP_NEAR_MISS_WINDOWS,
   WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
 
@@ -243,6 +244,36 @@ export async function notifyOrganisationsUpdates(
             await logError(
               task.userInfo.messageApp,
               `No waitingReengagement updated for user ${task.userId.toString()} after sending WH template on organisation update`
+            );
+          }
+
+          // If near miss (user engaged very recently)
+          if (
+            now.getTime() - task.userInfo.lastEngagementAt.getTime() <
+            WHATSAPP_NEAR_MISS_WINDOWS
+          ) {
+            const miss_out_delay_s = Math.floor(
+              (now.getTime() -
+                task.userInfo.lastEngagementAt.getTime() -
+                24 * 60 * 60 * 1000) /
+                10000
+            );
+            await umami.logAsync({
+              event: "/wh-reengagement-near-miss",
+              messageApp: "WhatsApp",
+              hasAccount: true,
+              payload: {
+                delay_s: Math.floor(
+                  (now.getTime() - task.userInfo.lastEngagementAt.getTime()) /
+                    1000
+                ),
+                notification_type: "organisation",
+                miss_out_delay_s
+              }
+            });
+            await logError(
+              "WhatsApp",
+              `WH user reengagement near-miss: 24 hours windows (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
             );
           }
         }
