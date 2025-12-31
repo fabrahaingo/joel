@@ -10,7 +10,11 @@ import { IPeople, IUser, JORFReference, MessageApp } from "../types.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
-import { JORFtoDate, timeDaysBetweenDates } from "../utils/date.utils.ts";
+import {
+  formatDuration,
+  JORFtoDate,
+  timeDaysBetweenDates
+} from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   cleanPeopleName,
@@ -259,12 +263,11 @@ export async function notifyPeopleUpdates(
           now.getTime() - task.userInfo.lastEngagementAt.getTime() <
           WHATSAPP_NEAR_MISS_WINDOW_MS
         ) {
-          const miss_out_delay_s = Math.floor(
-            (now.getTime() -
-              task.userInfo.lastEngagementAt.getTime() -
-              24 * 60 * 60 * 1000) /
-              1000
-          );
+          const miss_out_delay_ms =
+            now.getTime() -
+            task.userInfo.lastEngagementAt.getTime() -
+            24 * 60 * 60 * 1000;
+          const miss_out_delay_s = Math.floor(miss_out_delay_ms / 1000);
           await umami.logAsync({
             event: "/wh-reengagement-near-miss",
             messageApp: "WhatsApp",
@@ -280,11 +283,12 @@ export async function notifyPeopleUpdates(
           });
           await logError(
             "WhatsApp",
-            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_ms)}`
           );
         }
       }
 
+      /*
       // Update lastUpdate for pending notifications to avoid duplicate processing
       const updatedRecordsPeopleId = convertPeopleIdStringsToObjectIds(
         [...task.updatedRecordsMap.keys()],
@@ -313,6 +317,7 @@ export async function notifyPeopleUpdates(
           `No lastUpdate updated for user ${task.userId.toString()} after storing pending people update notifications (WH reengagement)`
         );
       }
+     */
 
       return;
     }

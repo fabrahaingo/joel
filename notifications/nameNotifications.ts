@@ -26,7 +26,7 @@ import {
   WHATSAPP_NEAR_MISS_WINDOW_MS,
   WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
-import { timeDaysBetweenDates } from "../utils/date.utils.ts";
+import { formatDuration, timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
@@ -254,12 +254,11 @@ export async function notifyNameMentionUpdates(
           now.getTime() - task.userInfo.lastEngagementAt.getTime() <
           WHATSAPP_NEAR_MISS_WINDOW_MS
         ) {
-          const miss_out_delay_s = Math.floor(
-            (now.getTime() -
-              task.userInfo.lastEngagementAt.getTime() -
-              24 * 60 * 60 * 1000) /
-              1000
-          );
+          const miss_out_delay_ms =
+            now.getTime() -
+            task.userInfo.lastEngagementAt.getTime() -
+            24 * 60 * 60 * 1000;
+          const miss_out_delay_s = Math.floor(miss_out_delay_ms / 1000);
           await umami.logAsync({
             event: "/wh-reengagement-near-miss",
             messageApp: "WhatsApp",
@@ -275,11 +274,12 @@ export async function notifyNameMentionUpdates(
           });
           await logError(
             "WhatsApp",
-            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_ms)}`
           );
         }
       }
 
+      /*
       // Update lastUpdate by converting followedNames to followedPeople
       // This prevents duplicate processing of the same name updates
       await updateFollowedNamesToFollowedPeople(
@@ -292,6 +292,7 @@ export async function notifyNameMentionUpdates(
         task.userInfo.messageApp,
         "pending"
       );
+      */
 
       return;
     }

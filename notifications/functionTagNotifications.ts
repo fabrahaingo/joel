@@ -8,7 +8,11 @@ import {
 } from "../entities/Session.ts";
 import { IUser, JORFReference, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { JORFtoDate, timeDaysBetweenDates } from "../utils/date.utils.ts";
+import {
+  formatDuration,
+  JORFtoDate,
+  timeDaysBetweenDates
+} from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkFunctionTag } from "../utils/JORFSearch.utils.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
@@ -248,12 +252,11 @@ export async function notifyFunctionTagsUpdates(
             now.getTime() - task.userInfo.lastEngagementAt.getTime() <
             WHATSAPP_NEAR_MISS_WINDOW_MS
           ) {
-            const miss_out_delay_s = Math.floor(
-              (now.getTime() -
-                task.userInfo.lastEngagementAt.getTime() -
-                24 * 60 * 60 * 1000) /
-                1000
-            );
+            const miss_out_delay_ms =
+              now.getTime() -
+              task.userInfo.lastEngagementAt.getTime() -
+              24 * 60 * 60 * 1000;
+            const miss_out_delay_s = Math.floor(miss_out_delay_ms / 1000);
             await umami.logAsync({
               event: "/wh-reengagement-near-miss",
               messageApp: "WhatsApp",
@@ -269,11 +272,12 @@ export async function notifyFunctionTagsUpdates(
             });
             await logError(
               "WhatsApp",
-              `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+              `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_ms)}`
             );
           }
         }
 
+        /*
         // Update lastUpdate for pending notifications to avoid duplicate processing
         const updatedTags = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
@@ -296,6 +300,7 @@ export async function notifyFunctionTagsUpdates(
             `No lastUpdate updated for user ${task.userId.toString()} after storing pending tag update notifications (WH reengagement)`
           );
         }
+        */
 
         return;
       }

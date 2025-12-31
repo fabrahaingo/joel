@@ -1,5 +1,5 @@
 import emojiRegex from "emoji-regex";
-import { MessageApp } from "../types";
+import { MessageApp } from "../types.ts";
 import { TELEGRAM_MESSAGE_CHAR_LIMIT } from "../entities/TelegramSession.ts";
 import { WHATSAPP_MESSAGE_CHAR_LIMIT } from "../entities/WhatsAppSession.ts";
 import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
