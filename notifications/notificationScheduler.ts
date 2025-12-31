@@ -4,6 +4,7 @@ import { runNotificationProcess } from "./runNotificationProcess.ts";
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
 import { formatDuration } from "../utils/date.utils.ts";
+import { WHATSAPP_REENGAGEMENT_MARGIN_MINS } from "../entities/WhatsAppSession.ts";
 
 interface DailyTime {
   hour: number;

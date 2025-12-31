@@ -204,6 +204,7 @@ export async function notifyAlertStringUpdates(
           }
         }
 
+        /*
         // Update lastUpdate for pending notifications to avoid duplicate processing
         const updatedAlertStrings = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
@@ -227,6 +228,7 @@ export async function notifyAlertStringUpdates(
             `No lastUpdate updated for user ${task.userId.toString()} after storing pending text update notifications (WH reengagement)`
           );
         }
+         */
 
         return;
       }

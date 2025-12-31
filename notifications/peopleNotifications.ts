@@ -289,6 +289,7 @@ export async function notifyPeopleUpdates(
         }
       }
 
+      /*
       // Update lastUpdate for pending notifications to avoid duplicate processing
       const updatedRecordsPeopleId = convertPeopleIdStringsToObjectIds(
         [...task.updatedRecordsMap.keys()],
@@ -317,6 +318,7 @@ export async function notifyPeopleUpdates(
           `No lastUpdate updated for user ${task.userId.toString()} after storing pending people update notifications (WH reengagement)`
         );
       }
+     */
 
       return;
     }

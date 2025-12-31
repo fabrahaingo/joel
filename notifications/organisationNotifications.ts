@@ -282,6 +282,7 @@ export async function notifyOrganisationsUpdates(
           }
         }
 
+        /*
         // Update lastUpdate for pending notifications to avoid duplicate processing
         const updatedWikidataIds = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
@@ -308,6 +309,7 @@ export async function notifyOrganisationsUpdates(
             `No lastUpdate updated for user ${task.userId.toString()} after storing pending organisation update notifications (WH reengagement)`
           );
         }
+        */
 
         return;
       }

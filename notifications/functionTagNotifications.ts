@@ -278,6 +278,7 @@ export async function notifyFunctionTagsUpdates(
           }
         }
 
+        /*
         // Update lastUpdate for pending notifications to avoid duplicate processing
         const updatedTags = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
@@ -300,6 +301,7 @@ export async function notifyFunctionTagsUpdates(
             `No lastUpdate updated for user ${task.userId.toString()} after storing pending tag update notifications (WH reengagement)`
           );
         }
+        */
 
         return;
       }
