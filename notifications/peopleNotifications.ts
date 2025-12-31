@@ -263,12 +263,11 @@ export async function notifyPeopleUpdates(
           now.getTime() - task.userInfo.lastEngagementAt.getTime() <
           WHATSAPP_NEAR_MISS_WINDOW_MS
         ) {
-          const miss_out_delay_s = Math.floor(
-            (now.getTime() -
-              task.userInfo.lastEngagementAt.getTime() -
-              24 * 60 * 60 * 1000) /
-              1000
-          );
+          const miss_out_delay_ms =
+            now.getTime() -
+            task.userInfo.lastEngagementAt.getTime() -
+            24 * 60 * 60 * 1000;
+          const miss_out_delay_s = Math.floor(miss_out_delay_ms / 1000);
           await umami.logAsync({
             event: "/wh-reengagement-near-miss",
             messageApp: "WhatsApp",
@@ -284,7 +283,7 @@ export async function notifyPeopleUpdates(
           });
           await logError(
             "WhatsApp",
-            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_s)}`
+            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_ms)}`
           );
         }
       }
