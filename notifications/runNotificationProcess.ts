@@ -19,6 +19,7 @@ import {
   getJORFMetaRecordsFromDate,
   getJORFRecordsFromDate
 } from "../utils/JORFSearch.utils.ts";
+import { formatDuration } from "../utils/date.utils.ts";
 
 async function saveNewMetaPublications(
   metaRecords: JORFSearchPublication[]
@@ -63,6 +64,7 @@ export async function runNotificationProcess(
   messageAppsOptions: ExternalMessageOptions
 ): Promise<void> {
   const start = new Date();
+  console.log("Notification started.");
   try {
     if (
       targetApps.some((a) => a === "Matrix") &&
@@ -178,6 +180,8 @@ export async function runNotificationProcess(
     }
 
     const end = new Date();
+
+    const delay = end.getTime() - start.getTime();
     if (
       end.getTime() - start.getTime() >
       NOTIFICATION_DURATION_BEFORE_WARNING_MS
@@ -185,10 +189,11 @@ export async function runNotificationProcess(
       for (const appType of targetApps) {
         await logError(
           appType,
-          `Notification process took too long: ${String((end.getTime() - start.getTime()) / 1000)} seconds.`
+          `Notification process took too long: ${formatDuration(delay)}.`
         );
       }
     }
+    console.log(`Notification ended: took ${formatDuration(delay)}.`);
   } catch (err) {
     for (const appType of targetApps) {
       await logError(appType, "Error running notification process: ", err);
