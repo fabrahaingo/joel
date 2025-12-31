@@ -97,7 +97,7 @@ function computeNextOccurrence(
   const next = new Date(nextWithoutShift.getTime() - timeShiftMs);
 
   if (next.getTime() <= now.getTime()) {
-    const errorMsg = `Failed to compute next occurrence for daily notification jobs: computed time is in the past: now (${now.toISOString()}, next ${next.toISOString()}).`;
+    const errorMsg = `Failed to compute next occurrence for daily notification jobs: computed time is in the past: now (${now.toISOString()}), next (${next.toISOString()}).`;
     for (const app of messageApps) {
       void logError(app, errorMsg);
     }
