@@ -26,7 +26,7 @@ import {
   WHATSAPP_NEAR_MISS_WINDOW_MS,
   WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
 } from "../entities/WhatsAppSession.ts";
-import { timeDaysBetweenDates } from "../utils/date.utils.ts";
+import { formatDuration, timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
@@ -275,7 +275,7 @@ export async function notifyNameMentionUpdates(
           });
           await logError(
             "WhatsApp",
-            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_s)}`
           );
         }
       }

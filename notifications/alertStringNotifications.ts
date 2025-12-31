@@ -10,6 +10,7 @@ import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
 import {
   dateToFrenchString,
+  formatDuration,
   timeDaysBetweenDates
 } from "../utils/date.utils.ts";
 import { fuzzyIncludes, getSplitTextMessageSize } from "../utils/text.utils.ts";
@@ -198,7 +199,7 @@ export async function notifyAlertStringUpdates(
             });
             await logError(
               "WhatsApp",
-              `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+              `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_s)}`
             );
           }
         }

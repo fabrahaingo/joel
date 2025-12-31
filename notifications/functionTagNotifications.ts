@@ -8,7 +8,11 @@ import {
 } from "../entities/Session.ts";
 import { IUser, JORFReference, MessageApp } from "../types.ts";
 import User from "../models/User.ts";
-import { JORFtoDate, timeDaysBetweenDates } from "../utils/date.utils.ts";
+import {
+  formatDuration,
+  JORFtoDate,
+  timeDaysBetweenDates
+} from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import { getJORFSearchLinkFunctionTag } from "../utils/JORFSearch.utils.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
@@ -269,7 +273,7 @@ export async function notifyFunctionTagsUpdates(
             });
             await logError(
               "WhatsApp",
-              `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+              `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_s)}`
             );
           }
         }

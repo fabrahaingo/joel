@@ -10,7 +10,11 @@ import { IPeople, IUser, JORFReference, MessageApp } from "../types.ts";
 import People from "../models/People.ts";
 import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
-import { JORFtoDate, timeDaysBetweenDates } from "../utils/date.utils.ts";
+import {
+  formatDuration,
+  JORFtoDate,
+  timeDaysBetweenDates
+} from "../utils/date.utils.ts";
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   cleanPeopleName,
@@ -280,7 +284,7 @@ export async function notifyPeopleUpdates(
           });
           await logError(
             "WhatsApp",
-            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+            `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_s)}`
           );
         }
       }
