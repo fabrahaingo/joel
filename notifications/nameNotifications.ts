@@ -280,6 +280,7 @@ export async function notifyNameMentionUpdates(
         }
       }
 
+      /*
       // Update lastUpdate by converting followedNames to followedPeople
       // This prevents duplicate processing of the same name updates
       await updateFollowedNamesToFollowedPeople(
@@ -292,6 +293,7 @@ export async function notifyNameMentionUpdates(
         task.userInfo.messageApp,
         "pending"
       );
+      */
 
       return;
     }

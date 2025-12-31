@@ -3,13 +3,6 @@ import { mongodbConnect } from "../db.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { MessageApp } from "../types.ts";
-import { JORFtoDate } from "../utils/date.utils.ts";
-import {
-  callJORFSearchDay,
-  callJORFSearchMetaDay,
-  JORFSearchDayResult,
-  JORFSearchMetaDayResult
-} from "../utils/JORFSearch.utils.ts";
 import { notifyOrganisationsUpdates } from "./organisationNotifications.ts";
 import { notifyPeopleUpdates } from "./peopleNotifications.ts";
 import { notifyNameMentionUpdates } from "./nameNotifications.ts";
@@ -22,131 +15,10 @@ import { ExternalMessageOptions } from "../entities/Session.ts";
 import { Publication } from "../models/Publication.ts";
 import { refreshTelegramBlockedUsers } from "../entities/TelegramSession.ts";
 import { logError } from "../utils/debugLogger.ts";
-
-async function getJORFRecordsFromDate(
-  startDate: Date,
-  messageApps: MessageApp[]
-): Promise<JORFSearchItem[]> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  startDate.setHours(0, 0, 0, 0);
-
-  const dayCount =
-    Math.floor((today.getTime() - startDate.getTime()) / 86_400_000) + 1;
-  const days: Date[] = Array.from({ length: dayCount }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    return d;
-  });
-
-  const limit = 8;
-  const chunks: Date[][] = [];
-  for (let i = 0; i < days.length; i += limit)
-    chunks.push(days.slice(i, i + limit));
-
-  const results: (JORFSearchDayResult | null)[] = [];
-  for (const sub of chunks) {
-    results.push(
-      ...(await Promise.all(
-        sub.map((day: Date) => callJORFSearchDay(day, messageApps))
-      ))
-    );
-  }
-
-  const allItems: JORFSearchItem[] = [];
-  let totalRawItems = 0;
-  let totalCleanItems = 0;
-  let totalDroppedItems = 0;
-
-  for (const result of results) {
-    if (result == null) throw new Error("JORFSearch returned a null value");
-    allItems.push(...result.items);
-    totalRawItems += result.stats.raw_item_nb;
-    totalCleanItems += result.stats.clean_item_nb;
-    totalDroppedItems += result.stats.dropped_item_nb;
-  }
-
-  // Log aggregated statistics once per app
-  for (const messageApp of messageApps) {
-    umami.log({
-      event: "/jorfsearch-request-date",
-      messageApp,
-      payload: {
-        raw_item_nb: totalRawItems,
-        clean_item_nb: totalCleanItems,
-        dropped_item_nb: totalDroppedItems,
-        day_nb: dayCount
-      }
-    });
-  }
-
-  return allItems.sort(
-    (a, b) =>
-      JORFtoDate(a.source_date).getTime() - JORFtoDate(b.source_date).getTime()
-  );
-}
-
-async function getJORFMetaRecordsFromDate(
-  startDate: Date,
-  messageApps: MessageApp[]
-): Promise<JORFSearchPublication[]> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  startDate.setHours(0, 0, 0, 0);
-
-  const dayCount =
-    Math.floor((today.getTime() - startDate.getTime()) / 86_400_000) + 1;
-  const days: Date[] = Array.from({ length: dayCount }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    return d;
-  });
-
-  const limit = 8;
-  const chunks: Date[][] = [];
-  for (let i = 0; i < days.length; i += limit)
-    chunks.push(days.slice(i, i + limit));
-
-  const results: (JORFSearchMetaDayResult | null)[] = [];
-  for (const sub of chunks) {
-    results.push(
-      ...(await Promise.all(
-        sub.map((day: Date) => callJORFSearchMetaDay(day, messageApps))
-      ))
-    );
-  }
-
-  const allItems: JORFSearchPublication[] = [];
-  let totalRawItems = 0;
-  let totalCleanItems = 0;
-  let totalDroppedItems = 0;
-
-  for (const result of results) {
-    if (result == null) throw new Error("JORFSearch returned a null value");
-    allItems.push(...result.items);
-    totalRawItems += result.stats.raw_item_nb;
-    totalCleanItems += result.stats.clean_item_nb;
-    totalDroppedItems += result.stats.dropped_item_nb;
-  }
-
-  // Log aggregated statistics once per app
-  for (const messageApp of messageApps) {
-    umami.log({
-      event: "/jorfsearch-request-meta",
-      messageApp,
-      payload: {
-        raw_item_nb: totalRawItems,
-        clean_item_nb: totalCleanItems,
-        dropped_item_nb: totalDroppedItems,
-        day_nb: dayCount
-      }
-    });
-  }
-
-  return allItems.sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
-}
+import {
+  getJORFMetaRecordsFromDate,
+  getJORFRecordsFromDate
+} from "../utils/JORFSearch.utils.ts";
 
 async function saveNewMetaPublications(
   metaRecords: JORFSearchPublication[]

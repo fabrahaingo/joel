@@ -1,4 +1,4 @@
-import { ISession } from "../types";
+import { ISession } from "../types.ts";
 import People from "../models/People.ts";
 import Organisation from "../models/Organisation.ts";
 import { logError } from "../utils/debugLogger.ts";

@@ -2,7 +2,7 @@ import "dotenv/config";
 import { runNotificationProcess } from "../notifications/runNotificationProcess.ts";
 import { loadAllMessageApps } from "../utils/loadAllMessageApps.ts";
 import { logError } from "../utils/debugLogger.ts";
-import { MessageApp } from "../types";
+import { MessageApp } from "../types.ts";
 
 await (async () => {
   try {

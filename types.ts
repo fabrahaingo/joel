@@ -16,7 +16,8 @@ export type MessageApp =
   | "WhatsApp"
   | "Signal"
   | "Matrix"
-  | "Tchap";
+  | "Tchap"
+  | "debug";
 
 export type JORFReference = string;
 
@@ -172,59 +173,64 @@ export interface IPeople {
 
 export interface PeopleModel extends Model<IPeople> {
   findOrCreate: (people: { nom: string; prenom: string }) => Promise<IPeople>;
-  deleteOne: (args) => Promise<void>;
-  collection: { insertOne: (arg) => Promise<void> };
 }
 
-export type SourceName =
-  | "JORF"
-  | "BOMI"
-  | "BOCNRS"
-  | "BOSanté"
-  | "BODD"
-  | "BOEN"
-  | "BOMJ"
-  | "BOESR"
-  | "BOAC";
+export const SOURCE_NAME_VALUES = [
+  "JORF",
+  "BOMI",
+  "BOCNRS",
+  "BOSanté",
+  "BODD",
+  "BOEN",
+  "BOMJ",
+  "BOESR",
+  "BOAC"
+] as const;
 
-export type TypeOrdre =
-  | "nomination"
-  | "réintégration"
-  | "cessation de fonction"
-  | "affectation"
-  | "délégation de signature"
-  | "promotion"
-  | "admission"
-  | "inscription"
-  | "désignation"
-  | "détachement"
-  | "radiation"
-  | "renouvellement"
-  | "reconduction"
-  | "élection"
-  | "admissibilité" // also exists in JORF as "admissibilite"
-  | "charge"
-  | "intégration"
-  | "composition"
-  | "habilitation"
-  | "titularisation"
-  | "recrutement"
-  | "disponibilité"
-  | "autorisation"
-  | "mise à disposition"
-  | "décharge"
-  | "diplome"
-  | "mutation"
-  | "décoration"
-  | "élévation"
-  | "transfert"
-  | "conféré"
-  | "citation"
-  | "démission"
-  | "attribution"
-  | "reprise de fonctions"
-  | "bourse"
-  | "fin délégation signature"
-  | "prime";
+export type SourceName = (typeof SOURCE_NAME_VALUES)[number];
+
+export const TYPE_ORDRE_VALUES = [
+  "nomination",
+  "réintégration",
+  "cessation de fonction",
+  "affectation",
+  "délégation de signature",
+  "promotion",
+  "admission",
+  "inscription",
+  "désignation",
+  "détachement",
+  "radiation",
+  "renouvellement",
+  "reconduction",
+  "élection",
+  "admissibilité", // also exists in JORF as "admissibilite"
+  "charge",
+  "intégration",
+  "composition",
+  "habilitation",
+  "titularisation",
+  "recrutement",
+  "disponibilité",
+  "autorisation",
+  "mise à disposition",
+  "décharge",
+  "diplome",
+  "mutation",
+  "décoration",
+  "élévation",
+  "transfert",
+  "conféré",
+  "citation",
+  "démission",
+  "attribution",
+  "reprise de fonctions",
+  "bourse",
+  "fin délégation signature",
+  "prime",
+  "proclamation"
+] as const;
+
+export type TypeOrdre = (typeof TYPE_ORDRE_VALUES)[number];
 
 export type WikidataId = string;

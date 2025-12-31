@@ -1,5 +1,5 @@
 import axios, { AxiosError, isAxiosError } from "axios";
-import { MessageApp } from "../types";
+import { MessageApp } from "../types.ts";
 import * as https from "node:https";
 import pLimit from "p-limit";
 
@@ -68,6 +68,12 @@ const logInternal = async (args: UmamiLogArgs) => {
     if (args.notificationData != null || args.payload != null)
       console.log({ ...args.notificationData, ...args.payload });
     return;
+  } else {
+    if (args.messageApp === "debug") {
+      throw new Error(
+        "Umami logging with messageApp 'debug' is not allowed in production."
+      );
+    }
   }
 
   const endpoint = `https://${String(process.env.UMAMI_HOST)}/api/send`;

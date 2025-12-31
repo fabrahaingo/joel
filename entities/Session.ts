@@ -225,5 +225,5 @@ export async function sendMessage(
         options
       );
   }
-  throw new Error("Unknown messageApp : ", userInfo.messageApp);
+  throw new Error(`Unknown messageApp : ${userInfo.messageApp}`);
 }
