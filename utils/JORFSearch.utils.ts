@@ -1,7 +1,9 @@
 import {
   cleanJORFItems,
   JORFSearchItem,
-  JORFSearchResponse
+  JORFSearchItemCleaningStats,
+  JORFSearchResponse,
+  mergeJORFSearchItemCleaningStats
 } from "../entities/JORFSearchResponse.ts";
 import { MessageApp, WikidataId } from "../types.ts";
 import axios, {
@@ -16,7 +18,7 @@ import {
   JORFSearchResponseMeta
 } from "../entities/JORFSearchResponseMeta.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
-import { dateToString } from "./date.utils.ts";
+import { dateToString, JORFtoDate } from "./date.utils.ts";
 import { logError } from "./debugLogger.ts";
 
 // Per Wikimedia policy, provide a descriptive agent with contact info.
@@ -74,7 +76,15 @@ export async function callJORFSearchPeople(
           console.log("JORFSearch request for people returned null");
           return null;
         } // If an error occurred
-        if (typeof res1.data !== "string") return cleanJORFItems(res1.data); // If it worked
+        if (typeof res1.data !== "string") {
+          const cleanedItems = cleanJORFItems(res1.data);
+          umami.log({
+            event: "/jorfsearch-request-people",
+            messageApp,
+            payload: { ...cleanedItems.processingStats }
+          });
+          return cleanedItems.cleanItems;
+        } // If it worked
 
         // If the peopleName had nom/prenom inverted or bad formatting:
         // we need to call JORFSearch again with the response url in the correct format
@@ -100,13 +110,9 @@ export async function callJORFSearchPeople(
             umami.log({
               event: "/jorfsearch-request-people",
               messageApp,
-              payload: {
-                raw_item_nb: res2.data.length,
-                clean_item_nb: cleanedItems.length,
-                dropped_item_nb: res2.data.length - cleanedItems.length
-              }
+              payload: { ...cleanedItems.processingStats }
             });
-            return cleanedItems;
+            return cleanedItems.cleanItems;
           }
           logJORFSearchError("people", messageApp);
           return null;
@@ -140,14 +146,10 @@ export async function callJORFSearchPeople(
 
 export interface JORFSearchDayResult {
   items: JORFSearchItem[];
-  stats: {
-    raw_item_nb: number;
-    clean_item_nb: number;
-    dropped_item_nb: number;
-  };
+  stats: JORFSearchItemCleaningStats;
 }
 
-export async function callJORFSearchDay(
+async function callJORFSearchDay(
   day: Date,
   messageApps: MessageApp[],
   retryNumber = 0
@@ -178,12 +180,8 @@ export async function callJORFSearchDay(
         const rawItems = res.data.filter((m) => m.source_date === dateYMD);
         const cleanedItems = cleanJORFItems(rawItems);
         return {
-          items: cleanedItems,
-          stats: {
-            raw_item_nb: rawItems.length,
-            clean_item_nb: cleanedItems.length,
-            dropped_item_nb: rawItems.length - cleanedItems.length
-          }
+          items: cleanedItems.cleanItems,
+          stats: cleanedItems.processingStats
         };
       });
   } catch (error) {
@@ -208,6 +206,61 @@ export async function callJORFSearchDay(
   return null;
 }
 
+export async function getJORFRecordsFromDate(
+  startDate: Date,
+  messageApps: MessageApp[]
+): Promise<JORFSearchItem[]> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  startDate.setHours(0, 0, 0, 0);
+
+  const dayCount =
+    Math.floor((today.getTime() - startDate.getTime()) / 86_400_000) + 1;
+  const days: Date[] = Array.from({ length: dayCount }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    return d;
+  });
+
+  const limit = 8;
+  const chunks: Date[][] = [];
+  for (let i = 0; i < days.length; i += limit)
+    chunks.push(days.slice(i, i + limit));
+
+  const resultTab: (JORFSearchDayResult | null)[] = [];
+  for (const sub of chunks) {
+    resultTab.push(
+      ...(await Promise.all(
+        sub.map((day: Date) => callJORFSearchDay(day, messageApps))
+      ))
+    );
+  }
+
+  const allResults: JORFSearchDayResult = {
+    items: resultTab.flatMap((r) => r?.items ?? []),
+    stats: mergeJORFSearchItemCleaningStats(
+      resultTab.flatMap((r) => r?.stats ?? [])
+    )
+  };
+
+  // Log aggregated statistics once per app
+  for (const messageApp of messageApps) {
+    umami.log({
+      event: "/jorfsearch-request-date",
+      messageApp,
+      payload: {
+        ...allResults.stats,
+        day_nb: dayCount
+      }
+    });
+  }
+
+  return allResults.items.sort(
+    (a, b) =>
+      JORFtoDate(a.source_date).getTime() - JORFtoDate(b.source_date).getTime()
+  );
+}
+
 export interface JORFSearchMetaDayResult {
   items: JORFSearchPublication[];
   stats: {
@@ -217,7 +270,7 @@ export interface JORFSearchMetaDayResult {
   };
 }
 
-export async function callJORFSearchMetaDay(
+async function callJORFSearchMetaDay(
   day: Date,
   messageApps: MessageApp[],
   retryNumber = 0
@@ -279,6 +332,68 @@ export async function callJORFSearchMetaDay(
   return null;
 }
 
+export async function getJORFMetaRecordsFromDate(
+  startDate: Date,
+  messageApps: MessageApp[]
+): Promise<JORFSearchPublication[]> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  startDate.setHours(0, 0, 0, 0);
+
+  const dayCount =
+    Math.floor((today.getTime() - startDate.getTime()) / 86_400_000) + 1;
+  const days: Date[] = Array.from({ length: dayCount }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    return d;
+  });
+
+  const limit = 8;
+  const chunks: Date[][] = [];
+  for (let i = 0; i < days.length; i += limit)
+    chunks.push(days.slice(i, i + limit));
+
+  const results: (JORFSearchMetaDayResult | null)[] = [];
+  for (const sub of chunks) {
+    results.push(
+      ...(await Promise.all(
+        sub.map((day: Date) => callJORFSearchMetaDay(day, messageApps))
+      ))
+    );
+  }
+
+  const allItems: JORFSearchPublication[] = [];
+  let totalRawItems = 0;
+  let totalCleanItems = 0;
+  let totalDroppedItems = 0;
+
+  for (const result of results) {
+    if (result == null) throw new Error("JORFSearch returned a null value");
+    allItems.push(...result.items);
+    totalRawItems += result.stats.raw_item_nb;
+    totalCleanItems += result.stats.clean_item_nb;
+    totalDroppedItems += result.stats.dropped_item_nb;
+  }
+
+  // Log aggregated statistics once per app
+  for (const messageApp of messageApps) {
+    umami.log({
+      event: "/jorfsearch-request-meta",
+      messageApp,
+      payload: {
+        raw_item_nb: totalRawItems,
+        clean_item_nb: totalCleanItems,
+        dropped_item_nb: totalDroppedItems,
+        day_nb: dayCount
+      }
+    });
+  }
+
+  return allItems.sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+}
+
 export async function callJORFSearchTag(
   tag: FunctionTags,
   messageApp: MessageApp,
@@ -305,13 +420,9 @@ export async function callJORFSearchTag(
         umami.log({
           event: "/jorfsearch-request-tag",
           messageApp,
-          payload: {
-            raw_item_nb: res.data.length,
-            clean_item_nb: cleanedItems.length,
-            dropped_item_nb: res.data.length - cleanedItems.length
-          }
+          payload: { ...cleanedItems.processingStats }
         });
-        return cleanedItems;
+        return cleanedItems.cleanItems;
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -366,13 +477,9 @@ export async function callJORFSearchOrganisation(
         umami.log({
           event: "/jorfsearch-request-organisation",
           messageApp,
-          payload: {
-            raw_item_nb: res.data.length,
-            clean_item_nb: cleanedItems.length,
-            dropped_item_nb: res.data.length - cleanedItems.length
-          }
+          payload: { ...cleanedItems.processingStats }
         });
-        return cleanedItems;
+        return cleanedItems.cleanItems;
       });
   } catch (error) {
     if (shouldRetry(error)) {
@@ -521,13 +628,9 @@ export async function callJORFSearchReference(
         umami.log({
           event: "/jorfsearch-request-reference",
           messageApp,
-          payload: {
-            raw_item_nb: res.data.length,
-            clean_item_nb: cleanedItems.length,
-            dropped_item_nb: res.data.length - cleanedItems.length
-          }
+          payload: { ...cleanedItems.processingStats }
         });
-        return cleanedItems;
+        return cleanedItems.cleanItems;
       });
   } catch (error) {
     if (shouldRetry(error)) {

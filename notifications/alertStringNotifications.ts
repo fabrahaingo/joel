@@ -10,6 +10,7 @@ import User from "../models/User.ts";
 import umami, { UmamiNotificationData } from "../utils/umami.ts";
 import {
   dateToFrenchString,
+  formatDuration,
   timeDaysBetweenDates
 } from "../utils/date.utils.ts";
 import { fuzzyIncludes, getSplitTextMessageSize } from "../utils/text.utils.ts";
@@ -177,12 +178,11 @@ export async function notifyAlertStringUpdates(
             now.getTime() - task.userInfo.lastEngagementAt.getTime() <
             WHATSAPP_NEAR_MISS_WINDOW_MS
           ) {
-            const miss_out_delay_s = Math.floor(
-              (now.getTime() -
-                task.userInfo.lastEngagementAt.getTime() -
-                24 * 60 * 60 * 1000) /
-                1000
-            );
+            const miss_out_delay_ms =
+              now.getTime() -
+              task.userInfo.lastEngagementAt.getTime() -
+              24 * 60 * 60 * 1000;
+            const miss_out_delay_s = Math.floor(miss_out_delay_ms / 1000);
             await umami.logAsync({
               event: "/wh-reengagement-near-miss",
               messageApp: "WhatsApp",
@@ -198,11 +198,12 @@ export async function notifyAlertStringUpdates(
             });
             await logError(
               "WhatsApp",
-              `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${String(miss_out_delay_s)} seconds`
+              `WH user reengagement near-miss: 24 hour window (from ${task.userInfo.lastEngagementAt.toISOString()} to now (${now.toISOString()}), missed by ${formatDuration(miss_out_delay_ms)}`
             );
           }
         }
 
+        /*
         // Update lastUpdate for pending notifications to avoid duplicate processing
         const updatedAlertStrings = [...task.updatedRecordsMap.keys()];
         const res = await User.updateOne(
@@ -226,6 +227,7 @@ export async function notifyAlertStringUpdates(
             `No lastUpdate updated for user ${task.userId.toString()} after storing pending text update notifications (WH reengagement)`
           );
         }
+         */
 
         return;
       }

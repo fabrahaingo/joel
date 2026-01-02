@@ -3,6 +3,7 @@ import { MessageApp } from "../types.ts";
 import { runNotificationProcess } from "./runNotificationProcess.ts";
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
+import { formatDuration } from "../utils/date.utils.ts";
 import { WHATSAPP_REENGAGEMENT_MARGIN_MINS } from "../entities/WhatsAppSession.ts";
 
 interface DailyTime {
@@ -37,15 +38,13 @@ function computeNextOccurrence(
   const now = new Date();
 
   const nextWithoutShift = new Date(now);
+  nextWithoutShift.setDate(nextWithoutShift.getDate() + 1);
   nextWithoutShift.setHours(hour, minute, 0, 0);
-  if (nextWithoutShift.getTime() <= now.getTime()) {
-    nextWithoutShift.setDate(nextWithoutShift.getDate() + 1);
-  }
 
   let timeShiftMs = 0;
   if (messageApps.some((m) => m === "WhatsApp")) {
     // advance next trigger time to make sure the notification from the day before was sent during the window with margin
-    const timeShiftIndex = (nextWithoutShift.getDay() - 2 + 7) % 7;
+    const timeShiftIndex = (nextWithoutShift.getDay() + 5) % 7;
     if (timeShiftIndex < 0) {
       void logError(
         "WhatsApp",
@@ -65,15 +64,44 @@ function computeNextOccurrence(
     // Sunday: expected time - 5*MARGIN
     // Monday: expected time - 6*MARGIN (despite no notification being expected)
 
+    let nextDayString = "";
+    switch (nextWithoutShift.getDay()) {
+      case 0:
+        nextDayString = "Sunday";
+        break;
+      case 1:
+        nextDayString = "Monday";
+        break;
+      case 2:
+        nextDayString = "Tuesday";
+        break;
+      case 3:
+        nextDayString = "Wednesday";
+        break;
+      case 4:
+        nextDayString = "Thursday";
+        break;
+      case 5:
+        nextDayString = "Friday";
+        break;
+      case 6:
+        nextDayString = "Saturday";
+        break;
+    }
+
     console.log(
-      `WhatsApp is part of targetApps. Advancing target time by ${String(timeShiftIndex)}*WH_REENGAGEMENT_WINDOWS_MARGIN`
+      `WhatsApp is part of targetApps. Tomorrow is ${nextDayString}. Advancing target time by ${String(timeShiftIndex)}*WH_REENGAGEMENT_WINDOWS_MARGIN`
     );
   }
 
   const next = new Date(nextWithoutShift.getTime() - timeShiftMs);
 
   if (next.getTime() <= now.getTime()) {
-    next.setDate(next.getDate() + 1);
+    const errorMsg = `Failed to compute next occurrence for daily notification jobs: computed time is in the past: now (${now.toISOString()}), next (${next.toISOString()}).`;
+    for (const app of messageApps) {
+      void logError(app, errorMsg);
+    }
+    throw new Error(errorMsg);
   }
   return next;
 }
@@ -136,19 +164,4 @@ export function startDailyNotificationJobs(
   };
 
   scheduleNextRun();
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 0) ms = -ms;
-  const time = {
-    day: Math.floor(ms / 86400000),
-    hour: Math.floor(ms / 3600000) % 24,
-    minute: Math.floor(ms / 60000) % 60,
-    second: Math.floor(ms / 1000) % 60,
-    millisecond: Math.floor(ms) % 1000
-  };
-  return Object.entries(time)
-    .filter((val) => val[1] !== 0)
-    .map(([key, val]) => `${String(val)} ${key}${val !== 1 ? "s" : ""}`)
-    .join(", ");
 }

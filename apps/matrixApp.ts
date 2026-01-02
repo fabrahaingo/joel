@@ -11,7 +11,7 @@ import umami from "../utils/umami.ts";
 import { mongodbConnect } from "../db.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import User from "../models/User.ts";
-import { IUser } from "../types";
+import { IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
