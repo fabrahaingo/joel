@@ -91,7 +91,7 @@ await (async function () {
         // Let stdout flush naturally; do not force-exit yet
         process.exitCode = 0;
       } catch (error) {
-        await logError("Telegram", `Error during ${signal} shutdown`, error);
+        await logError("WhatsApp", `Error during ${signal} shutdown`, error);
         process.exitCode = 1;
       }
 

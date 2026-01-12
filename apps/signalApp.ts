@@ -36,7 +36,7 @@ await (async () => {
       if (shuttingDown) return;
       shuttingDown = true;
 
-      console.log(`WhatsApp: Received ${signal}, shutting down...`);
+      console.log(`Signal: Received ${signal}, shutting down...`);
 
       try {
         signalCli.disconnect();
@@ -47,7 +47,7 @@ await (async () => {
         // Let stdout flush naturally; do not force-exit yet
         process.exitCode = 0;
       } catch (error) {
-        await logError("WhatsApp", `Error during ${signal} shutdown`, error);
+        await logError("Signal", `Error during ${signal} shutdown`, error);
         process.exitCode = 1;
       }
 
