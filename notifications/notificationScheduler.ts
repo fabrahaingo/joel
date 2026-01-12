@@ -45,7 +45,7 @@ function computeNextOccurrence(
   if (
     process.env.NODE_ENV !== "development" && // notify without day shift in production
     (currentDayString === lastNotificationDayString || // if already sent today, set to tomorrow
-      (lastNotificationDayString == null && now.getHours() > 6)) // very early morning restarts don't skip the day notif
+      (lastNotificationDayString == null && now.getHours() > 6)) // only restarts after 6am will skip the current day
   )
     nextWithoutShift.setDate(nextWithoutShift.getDate() + 1);
   nextWithoutShift.setHours(hour, minute, 0, 0);
