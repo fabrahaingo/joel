@@ -105,16 +105,12 @@ function computeNextOccurrence(
 
   const next = new Date(nextWithoutShift.getTime() - timeShiftMs);
 
-  if (process.env.NODE_ENV !== "development") {
-    if (next.getTime() <= now.getTime()) {
-      const errorMsg = `Failed to compute next occurrence for daily notification jobs: computed time is in the past: now (${now.toISOString()}), next (${next.toISOString()}).`;
-      for (const app of messageApps) {
-        void logError(app, errorMsg);
-      }
-      throw new Error(errorMsg);
+  if (next.getTime() <= now.getTime()) {
+    const errorMsg = `Failed to compute next occurrence for daily notification jobs: computed time is in the past: now (${now.toISOString()}), next (${next.toISOString()}).`;
+    for (const app of messageApps) {
+      void logError(app, errorMsg);
     }
-  } else {
-    next.setDate(next.getDate() + 1);
+    throw new Error(errorMsg);
   }
   return next;
 }
