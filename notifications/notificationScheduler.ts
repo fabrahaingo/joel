@@ -3,13 +3,15 @@ import { MessageApp } from "../types.ts";
 import { runNotificationProcess } from "./runNotificationProcess.ts";
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
-import { formatDuration } from "../utils/date.utils.ts";
+import { dateToString, formatDuration } from "../utils/date.utils.ts";
 import { WHATSAPP_REENGAGEMENT_MARGIN_MINS } from "../entities/WhatsAppSession.ts";
 
 interface DailyTime {
   hour: number;
   minute: number;
 }
+
+let lastNotificationDayString: string | null = null;
 
 function parseDailyTime(value: string): DailyTime {
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
@@ -37,8 +39,15 @@ function computeNextOccurrence(
 ): Date {
   const now = new Date();
 
+  const currentDayString = dateToString(now, "YMD");
+
   const nextWithoutShift = new Date(now);
-  nextWithoutShift.setDate(nextWithoutShift.getDate() + 1);
+  if (
+    process.env.NODE_ENV !== "development" && // notify without day shift in production
+    (currentDayString === lastNotificationDayString || // if already sent today, set to tomorrow
+      (lastNotificationDayString == null && now.getHours() > 6)) // only restarts after 6am will skip the current day
+  )
+    nextWithoutShift.setDate(nextWithoutShift.getDate() + 1);
   nextWithoutShift.setHours(hour, minute, 0, 0);
 
   let timeShiftMs = 0;
@@ -153,6 +162,7 @@ export function startDailyNotificationJobs(
           );
         } finally {
           running = false;
+          lastNotificationDayString = dateToString(new Date(), "YMD");
           scheduleNextRun();
         }
       })();

@@ -8,7 +8,7 @@ import {
 } from "matrix-bot-sdk";
 import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
 import umami from "../utils/umami.ts";
-import { mongodbConnect } from "../db.ts";
+import { mongodbConnect, mongodbDisconnect } from "../db.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import User from "../models/User.ts";
 import { IUser } from "../types.ts";
@@ -106,23 +106,61 @@ async function getOtherMemberCount(roomId: string) {
 }
 
 await (async function () {
-  await mongodbConnect();
+  // Register stopper
+  let shuttingDown = false;
+  try {
+    const shutdown = async (signal: string) => {
+      if (shuttingDown) return;
+      shuttingDown = true;
 
-  // Now that everything is set up, start the bot. This will start the sync loop and run until killed.
-  serverUserId = await client.getUserId();
-  await client.start();
+      console.log(`${matrixApp}: Received ${signal}, shutting down...`);
 
-  console.log("Bot device ID:", client.crypto.clientDeviceId);
-  // @ts-expect-error: clientEd25519 is not exported by the SDK
-  console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
+      try {
+        // Stop starting new work
+        client.stop(); // sets stopSyncing=true (not async)
 
-  const messageOptions =
-    matrixApp === "Matrix" ? { matrixClient: client } : { tchapClient: client };
+        // Close DB cleanly
+        await mongodbDisconnect();
 
-  startDailyNotificationJobs([matrixApp], messageOptions);
-})().then(() => {
-  console.log(`${matrixApp}: JOEL started successfully \u{2705}`);
-});
+        // Let stdout flush naturally; do not force-exit yet
+        process.exitCode = 0;
+      } catch (error) {
+        await logError(matrixApp, `Error during ${signal} shutdown`, error);
+        process.exitCode = 1;
+      }
+
+      // Safety net: if something keeps the event loop alive, force exit.
+      setTimeout(() => process.exit(process.exitCode ?? 1), 10_000).unref();
+    };
+
+    for (const sig of ["SIGINT", "SIGTERM"] as const) {
+      process.once(sig, () => {
+        void shutdown(sig);
+      });
+    }
+
+    // Start the bot by connecting to MongoDB
+    await mongodbConnect();
+
+    // Now that everything is set up, start the bot. This will start the sync loop and run until killed.
+    serverUserId = await client.getUserId();
+    await client.start();
+
+    console.log("Bot device ID:", client.crypto.clientDeviceId);
+    // @ts-expect-error: clientEd25519 is not exported by the SDK
+    console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
+
+    const messageOptions =
+      matrixApp === "Matrix"
+        ? { matrixClient: client }
+        : { tchapClient: client };
+
+    startDailyNotificationJobs([matrixApp], messageOptions);
+    console.log(`${matrixApp}: JOEL started successfully \u{2705}`);
+  } catch (error) {
+    await logError(matrixApp, "Failed to start app", error);
+  }
+})();
 
 interface MatrixRoomEvent {
   type: string;
