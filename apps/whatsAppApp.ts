@@ -390,6 +390,42 @@ await (async function () {
 
   startDailyNotificationJobs(["WhatsApp"], { whatsAppAPI: whatsAppAPI });
   console.log(`WhatsApp: JOEL started successfully \u{2705}`);
+
+  // Graceful shutdown handlers
+  const shutdown = (signal: string) => {
+    console.log(`WhatsApp: Received ${signal}, shutting down gracefully...`);
+    void (async () => {
+      try {
+        console.log("WhatsApp: Shutting down gracefully");
+        process.exit(0);
+      } catch (error) {
+        await logError("WhatsApp", `Error during ${signal} shutdown`, error);
+        process.exit(1);
+      }
+    })();
+  };
+
+  process.once("SIGINT", () => {
+    shutdown("SIGINT");
+  });
+  process.once("SIGTERM", () => {
+    shutdown("SIGTERM");
+  });
+
+  // Handle unexpected termination
+  process.on("uncaughtException", (error) => {
+    void (async () => {
+      await logError("WhatsApp", "Uncaught exception", error);
+      process.exit(1);
+    })();
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    void (async () => {
+      await logError("WhatsApp", "Unhandled promise rejection", reason);
+      process.exit(1);
+    })();
+  });
 })();
 
 // Define an interface for the potential message-containing object

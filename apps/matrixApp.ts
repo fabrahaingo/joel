@@ -120,6 +120,45 @@ await (async function () {
     matrixApp === "Matrix" ? { matrixClient: client } : { tchapClient: client };
 
   startDailyNotificationJobs([matrixApp], messageOptions);
+
+  // Graceful shutdown handlers
+  const shutdown = (signal: string) => {
+    console.log(
+      `${matrixApp}: Received ${signal}, shutting down gracefully...`
+    );
+    void (async () => {
+      try {
+        client.stop();
+        console.log(`${matrixApp}: Client stopped successfully`);
+        process.exit(0);
+      } catch (error) {
+        await logError(matrixApp, `Error during ${signal} shutdown`, error);
+        process.exit(1);
+      }
+    })();
+  };
+
+  process.once("SIGINT", () => {
+    shutdown("SIGINT");
+  });
+  process.once("SIGTERM", () => {
+    shutdown("SIGTERM");
+  });
+
+  // Handle unexpected termination
+  process.on("uncaughtException", (error) => {
+    void (async () => {
+      await logError(matrixApp, "Uncaught exception", error);
+      process.exit(1);
+    })();
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    void (async () => {
+      await logError(matrixApp, "Unhandled promise rejection", reason);
+      process.exit(1);
+    })();
+  });
 })().then(() => {
   console.log(`${matrixApp}: JOEL started successfully \u{2705}`);
 });

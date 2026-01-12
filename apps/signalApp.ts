@@ -68,6 +68,43 @@ await (async () => {
     startDailyNotificationJobs(["Signal"], { signalCli: signalCli });
     console.log(`Signal: JOEL started successfully \u{2705}`);
 
+    // Graceful shutdown handlers
+    const shutdown = (signal: string) => {
+      console.log(`Signal: Received ${signal}, shutting down gracefully...`);
+      void (async () => {
+        try {
+          signalCli.disconnect();
+          console.log("Signal: Client stopped successfully");
+          process.exit(0);
+        } catch (error) {
+          await logError("Signal", `Error during ${signal} shutdown`, error);
+          process.exit(1);
+        }
+      })();
+    };
+
+    process.once("SIGINT", () => {
+      shutdown("SIGINT");
+    });
+    process.once("SIGTERM", () => {
+      shutdown("SIGTERM");
+    });
+
+    // Handle unexpected termination
+    process.on("uncaughtException", (error) => {
+      void (async () => {
+        await logError("Signal", "Uncaught exception", error);
+        process.exit(1);
+      })();
+    });
+
+    process.on("unhandledRejection", (reason) => {
+      void (async () => {
+        await logError("Signal", "Unhandled promise rejection", reason);
+        process.exit(1);
+      })();
+    });
+
     // Graceful shutdown
     //await signal.gracefulShutdown();
   } catch (error) {

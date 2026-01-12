@@ -5,6 +5,7 @@ import { mongodbConnect } from "../db.ts";
 import { TelegramSession } from "../entities/TelegramSession.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (TELEGRAM_BOT_TOKEN === undefined) {
@@ -41,6 +42,43 @@ await (async () => {
     telegramBotToken: TELEGRAM_BOT_TOKEN
   });
   console.log(`Telegram: JOEL started successfully \u{2705}`);
+
+  // Graceful shutdown handlers
+  const shutdown = (signal: string) => {
+    console.log(`Telegram: Received ${signal}, shutting down gracefully...`);
+    void (async () => {
+      try {
+        bot.stop(signal);
+        console.log("Telegram: Bot stopped successfully");
+        process.exit(0);
+      } catch (error) {
+        await logError("Telegram", `Error during ${signal} shutdown`, error);
+        process.exit(1);
+      }
+    })();
+  };
+
+  process.once("SIGINT", () => {
+    shutdown("SIGINT");
+  });
+  process.once("SIGTERM", () => {
+    shutdown("SIGTERM");
+  });
+
+  // Handle unexpected termination
+  process.on("uncaughtException", (error) => {
+    void (async () => {
+      await logError("Telegram", "Uncaught exception", error);
+      process.exit(1);
+    })();
+  });
+
+  process.on("unhandledRejection", (reason) => {
+    void (async () => {
+      await logError("Telegram", "Unhandled promise rejection", reason);
+      process.exit(1);
+    })();
+  });
 
   await bot.launch();
 })();
