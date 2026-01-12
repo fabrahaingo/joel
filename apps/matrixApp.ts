@@ -122,35 +122,40 @@ await (async function () {
   startDailyNotificationJobs([matrixApp], messageOptions);
 
   // Graceful shutdown handlers
-  const shutdown = (signal: string) => {
+  const shutdown = async (signal: string) => {
     console.log(
       `${matrixApp}: Received ${signal}, shutting down gracefully...`
     );
-    void (async () => {
-      try {
-        client.stop();
-        console.log(`${matrixApp}: Client stopped successfully`);
-        process.exit(0);
-      } catch (error) {
-        await logError(matrixApp, `Error during ${signal} shutdown`, error);
-        process.exit(1);
-      }
-    })();
+    try {
+      await client.stop();
+      console.log(`${matrixApp}: Client stopped successfully`);
+      process.exit(0);
+    } catch (error) {
+      await logError(matrixApp, `Error during ${signal} shutdown`, error);
+      process.exit(1);
+    }
   };
 
   process.once("SIGINT", () => {
-    shutdown("SIGINT");
+    shutdown("SIGINT").catch(async (error) => {
+      await logError(matrixApp, "Error during SIGINT shutdown", error);
+      process.exit(1);
+    });
   });
   process.once("SIGTERM", () => {
-    shutdown("SIGTERM");
+    shutdown("SIGTERM").catch(async (error) => {
+      await logError(matrixApp, "Error during SIGTERM shutdown", error);
+      process.exit(1);
+    });
   });
 
   // Handle unexpected termination
-  process.on("uncaughtException", (error) => {
-    void (async () => {
+  process.on("uncaughtException", async (error) => {
+    try {
       await logError(matrixApp, "Uncaught exception", error);
+    } finally {
       process.exit(1);
-    })();
+    }
   });
 
   process.on("unhandledRejection", (reason) => {
