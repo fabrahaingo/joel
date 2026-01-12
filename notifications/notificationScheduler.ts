@@ -138,8 +138,7 @@ export function startDailyNotificationJobs(
 
   const scheduleNextRun = () => {
     const nextRun = computeNextOccurrence(parsedTime, messageApps);
-    const now = new Date();
-    const delay = nextRun.getTime() - now.getTime();
+    const delay = nextRun.getTime() - Date.now();
 
     setTimeout(() => {
       void (async () => {
@@ -167,7 +166,7 @@ export function startDailyNotificationJobs(
           );
         } finally {
           running = false;
-          lastNotificationDayString = dateToString(now, "YMD");
+          lastNotificationDayString = dateToString(new Date(), "YMD");
           scheduleNextRun();
         }
       })();
