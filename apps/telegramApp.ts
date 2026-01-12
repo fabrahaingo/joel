@@ -13,9 +13,8 @@ if (TELEGRAM_BOT_TOKEN === undefined) {
   process.exit(0);
 }
 
-const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
-
 await (async () => {
+  const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
   // Register stopper
   let shuttingDown = false;
   try {

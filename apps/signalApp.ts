@@ -29,6 +29,9 @@ interface ISignalMessage {
 }
 await (async () => {
   try {
+    // Initialize SignalCli with phone number
+    const signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
+
     // Register stopper
     let shuttingDown = false;
 
@@ -63,9 +66,6 @@ await (async () => {
 
     // Start the bot by connecting to MongoDB
     await mongodbConnect();
-
-    // Initialize SignalCli with phone number
-    const signalCli = new SignalCli(SIGNAL_BAT_PATH, SIGNAL_PHONE_NUMBER);
 
     // Connect to signal-cli daemon
     await signalCli.connect();
