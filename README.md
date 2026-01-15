@@ -55,7 +55,7 @@ Du coup, on a développé JOEL, un compagnon de veille qui nous chuchote les nom
 
 En effet, à l’heure actuelle, la version électronique du JO ne permet pas de faire une veille personnalisée des nominations. 🤷‍♂️
 </br></br>
-On a donc commencer par un bot Télégram pour être tenus au courant quotidiennement des mentions au JO des personnes qu’on voulait suivre.
+On a donc commencé par un bot Télégram pour être tenus au courant quotidiennement des mentions au JO des personnes qu’on voulait suivre.
 </br>
 
 EL parle désormais couramment **Telegram**, **WhatsApp** et **Matrix**, et son accent s’adapte à toute autre messagerie grâce à une interface d’intégration unique. Si votre équipe traîne ailleurs (Signal, Mattermost, IRC, tam-tam codé…), il suffit de brancher un nouveau connecteur et JOEL débarque !
@@ -82,7 +82,7 @@ JOEL requiert d'avoir téléchargé au moins une des applications compatibles (T
 
 ### Installation
 
-- Telegram : <a href="https://t.me/JOEL_hellofabot">Par içi !</a>
+- Telegram : <a href="https://t.me/JOEL_hellofabot">Par ici !</a>
 - WhatsApp : <a href="https://wa.me/33769441915?text=Bonjour%20JOEL%20!">Par là !</a>
 - Matrix : <a href="https://matrix.to/#/@joel_bot:matrix.org">Ici encore !</a>
 
