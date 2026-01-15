@@ -150,10 +150,14 @@ export async function runNotificationProcess(
     );
     startDate.setHours(0, 0, 0, 0);
 
-    const [JORFAllRecordsFromDate, JORFMetaRecordsFromDate] = await Promise.all([
-      getJORFRecordsFromDate(startDate, targetApps),
-      getJORFMetaRecordsFromDate(startDate, targetApps)
-    ]);
+    const JORFAllRecordsFromDate = await getJORFRecordsFromDate(
+      startDate,
+      targetApps
+    );
+    const JORFMetaRecordsFromDate = await getJORFMetaRecordsFromDate(
+      startDate,
+      targetApps
+    );
 
     await notifyAllFollows(
       JORFAllRecordsFromDate,

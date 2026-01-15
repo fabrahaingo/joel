@@ -190,7 +190,8 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     let msgText: string | undefined;
     switch (event.type) {
       case "m.room.message":
-        await client.sendReadReceipt(roomId, event.event_id);
+        // Send read receipt in parallel (don't await)
+        void client.sendReadReceipt(roomId, event.event_id);
         msgText = event.content.body;
         break;
 
