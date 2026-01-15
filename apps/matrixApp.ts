@@ -447,14 +447,16 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         const messages = await client.getMessages(roomId, {
           limit: MESSAGE_HISTORY_CHECK_LIMIT
         });
-        // Count messages from this user (excluding the current one we're processing)
+        // Check if there are any previous messages from this user
+        // Note: The current message may or may not be included in the history yet,
+        // so we check if there are 0 or 1 messages (if 1, it could be the current one)
         const userMessageCount = messages.chunk.filter(
-          (msg: { sender?: string; type?: string; event_id?: string }) =>
-            msg.sender === event.sender &&
-            msg.type === "m.room.message" &&
-            msg.event_id !== event.event_id
+          (msg: { sender?: string; type?: string }) =>
+            msg.sender === event.sender && msg.type === "m.room.message"
         ).length;
-        isFirstMessage = userMessageCount === 0;
+        // If there are 0 messages, it's definitely the first
+        // If there's 1, it's likely the current message, so also consider it first
+        isFirstMessage = userMessageCount <= 1;
       } catch (error) {
         // If we can't check messages, assume it's not the first message to avoid
         // sending unwanted welcome messages
