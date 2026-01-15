@@ -121,11 +121,15 @@ export function splitText(
       // 3) Check maxLines constraint if provided
       if (maxLines !== undefined && maxLines > 0) {
         const potentialChunk = segmentText.slice(i, end);
-        const lineCount = countLines(potentialChunk);
-
-        if (lineCount > maxLines) {
-          const newEnd = findNthNewlinePosition(segmentText, i, end, maxLines);
-          if (newEnd > i && newEnd <= end) end = newEnd;
+        // Quick check: only count lines if the chunk could potentially exceed the limit
+        // (i.e., if it has enough newline characters)
+        const couldExceedLines = potentialChunk.split(/\r?\n/).length > maxLines;
+        if (couldExceedLines) {
+          const lineCount = countLines(potentialChunk);
+          if (lineCount > maxLines) {
+            const newEnd = findNthNewlinePosition(segmentText, i, end, maxLines);
+            if (newEnd > i) end = newEnd;
+          }
         }
       }
 
