@@ -6,4 +6,4 @@ crt.pem
 .DS_STORE
 .README.md.swp
 instructions.txt
-yarn.lock
+yarn.lockdist/
