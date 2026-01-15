@@ -36,6 +36,10 @@ const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 // Global constant to check if encryption is enabled for the bot
 const ENCRYPTION_ENABLED = true;
 
+// Constants for room.join handler
+const ROOM_STATE_STABILIZATION_DELAY = 1000; // ms to wait for room state to stabilize
+const MESSAGE_HISTORY_CHECK_LIMIT = 10; // number of recent messages to check
+
 // Persist sync token + crypto state
 import fs from "node:fs";
 fs.mkdirSync("matrix", { recursive: true });
@@ -87,7 +91,9 @@ client.on("room.join", (roomId: string, _event: unknown) => {
   void (async () => {
     try {
       // Wait a moment for room state to stabilize
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await new Promise((resolve) =>
+        setTimeout(resolve, ROOM_STATE_STABILIZATION_DELAY)
+      );
 
       // Check if this is a direct message (1-on-1) room
       const otherMemberCount = await getOtherMemberCount(roomId);
@@ -105,24 +111,8 @@ client.on("room.join", (roomId: string, _event: unknown) => {
       }
 
       // Get the other member's ID
-      const stateEvents = await client.getRoomState(roomId);
-      const currentUserId = await ensureServerUserId();
-      let otherUserId: string | undefined;
-
-      for (const event of stateEvents as {
-        type?: string;
-        state_key?: string;
-        content?: { membership?: string };
-      }[]) {
-        if (event.type !== "m.room.member") continue;
-        const membership = event.content?.membership;
-        if (membership !== "join" && membership !== "invite") continue;
-        const memberId = event.state_key;
-        if (memberId != null && memberId !== currentUserId) {
-          otherUserId = memberId;
-          break;
-        }
-      }
+      const otherMembers = await getOtherMembers(roomId);
+      const otherUserId = otherMembers[0];
 
       if (!otherUserId) {
         console.log(`${matrixApp}: Could not find other user in room ${roomId}`);
@@ -132,7 +122,9 @@ client.on("room.join", (roomId: string, _event: unknown) => {
       // Check if there are any messages in the room already
       // If the user has already sent a message, the regular message handler will take care of the welcome
       try {
-        const messages = await client.getMessages(roomId, { limit: 10 });
+        const messages = await client.getMessages(roomId, {
+          limit: MESSAGE_HISTORY_CHECK_LIMIT
+        });
         const hasUserMessages = messages.chunk.some(
           (msg: { sender?: string; type?: string }) =>
             msg.sender === otherUserId && msg.type === "m.room.message"
@@ -216,7 +208,7 @@ async function ensureServerUserId() {
   return serverUserId;
 }
 
-async function getOtherMemberCount(roomId: string) {
+async function getOtherMembers(roomId: string): Promise<string[]> {
   const stateEvents = await client.getRoomState(roomId);
   const otherMembers = new Set<string>();
   const currentUserId = await ensureServerUserId();
@@ -234,7 +226,12 @@ async function getOtherMemberCount(roomId: string) {
     otherMembers.add(memberId);
   }
 
-  return otherMembers.size;
+  return Array.from(otherMembers);
+}
+
+async function getOtherMemberCount(roomId: string) {
+  const otherMembers = await getOtherMembers(roomId);
+  return otherMembers.length;
 }
 
 await (async function () {
