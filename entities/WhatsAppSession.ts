@@ -62,23 +62,23 @@ const fullMenuKeyboard: ActionList = new ActionList(
     "Recherches",
     new Row(
       "opt_1",
-      KEYBOARD_KEYS.TEXT_SEARCH.key.text,
-      "Rechercher ou suivre un texte au JORF/BO."
-    ),
-    new Row(
-      "opt_2",
       KEYBOARD_KEYS.PEOPLE_SEARCH.key.text,
       "Rechercher une personne au JORF/BO. Suivre à partir d'un texte."
     ),
     new Row(
-      "opt_3",
+      "opt_2",
       KEYBOARD_KEYS.FUNCTION_FOLLOW.key.text,
       "Suivre une fonction (ambassadeur, préfet ...)."
     ),
     new Row(
-      "opt_4",
+      "opt_3",
       KEYBOARD_KEYS.ORGANISATION_FOLLOW.key.text,
       "Suivre une organisation (Conseil constitutionnel, Conseil d'Etat ...)."
+    ),
+    new Row(
+      "opt_4",
+      KEYBOARD_KEYS.TEXT_SEARCH.key.text,
+      "Rechercher ou suivre un texte au JORF/BO."
     )
   ),
   new ListSection(
