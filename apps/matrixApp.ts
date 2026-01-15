@@ -129,6 +129,28 @@ client.on("room.join", (roomId: string, _event: unknown) => {
         return;
       }
 
+      // Check if there are any messages in the room already
+      // If the user has already sent a message, the regular message handler will take care of the welcome
+      try {
+        const messages = await client.getMessages(roomId, { limit: 10 });
+        const hasUserMessages = messages.chunk.some(
+          (msg: { sender?: string; type?: string }) =>
+            msg.sender === otherUserId && msg.type === "m.room.message"
+        );
+        if (hasUserMessages) {
+          console.log(
+            `${matrixApp}: User ${otherUserId} already sent messages in room ${roomId}, skipping proactive welcome`
+          );
+          return;
+        }
+      } catch (error) {
+        // If we can't check messages, proceed with welcome anyway
+        await logWarning(
+          matrixApp,
+          "Could not check room messages, proceeding with welcome message"
+        );
+      }
+
       // Check if user already exists in database
       const previousUser: IUser | null = await User.findOne({
         messageApp: matrixApp,
