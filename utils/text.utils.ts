@@ -56,6 +56,8 @@ export function splitText(
     return s.slice(a, b);
   }
 
+  // Count the number of lines in a string (minimum 1, even for empty strings)
+  // A string with no newlines is considered to be 1 line
   function countLines(s: string): number {
     let count = 1;
     for (let i = 0; i < s.length; i++) {
