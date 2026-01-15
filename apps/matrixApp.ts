@@ -440,8 +440,34 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         "fr",
         receivedMessageTime
       );
+
+      // Check if this is the first message from this user in this room
+      let isFirstMessage = false;
+      try {
+        const messages = await client.getMessages(roomId, {
+          limit: MESSAGE_HISTORY_CHECK_LIMIT
+        });
+        // Count messages from this user (excluding the current one we're processing)
+        const userMessageCount = messages.chunk.filter(
+          (msg: { sender?: string; type?: string; event_id?: string }) =>
+            msg.sender === event.sender &&
+            msg.type === "m.room.message" &&
+            msg.event_id !== event.event_id
+        ).length;
+        isFirstMessage = userMessageCount === 0;
+      } catch (error) {
+        // If we can't check messages, assume it's not the first message to avoid
+        // sending unwanted welcome messages
+        await logWarning(
+          matrixApp,
+          "Could not check room messages for first message detection",
+          error
+        );
+      }
+
       await handleIncomingMessage(matrixSession, msgText, {
-        errorContext: "Error processing command"
+        errorContext: "Error processing command",
+        isFirstMessage
       });
     } catch (error) {
       await logError(matrixApp, "Error processing command", error);

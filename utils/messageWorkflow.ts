@@ -8,6 +8,7 @@ interface MessageWorkflowOptions {
   isReply?: boolean;
   beforeProcessing?: () => Promise<void>;
   errorContext?: string;
+  isFirstMessage?: boolean;
 }
 
 /**
@@ -19,7 +20,7 @@ export async function handleIncomingMessage(
   text: string,
   options?: MessageWorkflowOptions
 ): Promise<void> {
-  const { beforeProcessing, isReply, errorContext } = options ?? {};
+  const { beforeProcessing, isReply, errorContext, isFirstMessage } = options ?? {};
   try {
     const res = await User.updateOne(
       { messageApp: session.messageApp, chatId: session.chatId },
@@ -46,9 +47,6 @@ export async function handleIncomingMessage(
       await user.updateInteractionMetrics();
       return;
     }
-
-    // Detect if this is the first message from this user (no user record exists)
-    const isFirstMessage = user == null;
 
     await processMessage(session, trimmedText, { isFirstMessage });
 
