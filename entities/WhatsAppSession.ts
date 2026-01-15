@@ -30,6 +30,7 @@ import { logError } from "../utils/debugLogger.ts";
 import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 export const WHATSAPP_MESSAGE_CHAR_LIMIT = 900;
+export const WHATSAPP_MAX_LINES = 18;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the same user, but we'll take 1 here
 const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages in burst mode
 
@@ -62,13 +63,13 @@ const fullMenuKeyboard: ActionList = new ActionList(
     "Recherches",
     new Row(
       "opt_1",
-      KEYBOARD_KEYS.TEXT_SEARCH.key.text,
-      "Rechercher ou suivre un texte au JORF/BO."
+      KEYBOARD_KEYS.PEOPLE_SEARCH.key.text,
+      "Rechercher une personne au JORF/BO. Suivre à partir d'un texte."
     ),
     new Row(
       "opt_2",
-      KEYBOARD_KEYS.PEOPLE_SEARCH.key.text,
-      "Rechercher une personne au JORF/BO. Suivre à partir d'un texte."
+      KEYBOARD_KEYS.ORGANISATION_FOLLOW.key.text,
+      "Suivre une organisation (Conseil constitutionnel, Conseil d'Etat ...)."
     ),
     new Row(
       "opt_3",
@@ -77,8 +78,8 @@ const fullMenuKeyboard: ActionList = new ActionList(
     ),
     new Row(
       "opt_4",
-      KEYBOARD_KEYS.ORGANISATION_FOLLOW.key.text,
-      "Suivre une organisation (Conseil constitutionnel, Conseil d'Etat ...)."
+      KEYBOARD_KEYS.TEXT_SEARCH.key.text,
+      "Rechercher ou suivre un texte au JORF/BO."
     )
   ),
   new ListSection(
@@ -275,7 +276,8 @@ export async function sendWhatsAppMessage(
   try {
     const mArr = splitText(
       markdown2WHMarkdown(message),
-      WHATSAPP_MESSAGE_CHAR_LIMIT
+      WHATSAPP_MESSAGE_CHAR_LIMIT,
+      WHATSAPP_MAX_LINES
     );
 
     const burstMode = mArr.length <= WHATSAPP_BURST_MODE_THRESHOLD; // Limit cooldown if less than 10

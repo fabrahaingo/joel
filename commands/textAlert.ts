@@ -90,7 +90,7 @@ async function handleTextAlertAnswer(
   const recentPublications = await getRecentPublications(session.messageApp);
   if (recentPublications == null) {
     await session.sendMessage(
-      "Une erreur est survenue lors de la recherche. Notre équipé a été prévenue."
+      "Une erreur est survenue lors de la recherche. Notre équipe a été prévenue."
     );
     return true;
   }

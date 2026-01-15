@@ -33,19 +33,37 @@ if (!["Matrix", "Tchap"].some((m) => m === MATRIX_BOT_TYPE)) {
 }
 const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 
+// Global constant to check if encryption is enabled for the bot
+const ENCRYPTION_ENABLED = true;
+
+// Constants for room.join handler
+const ROOM_STATE_STABILIZATION_DELAY = 1000; // ms to wait for room state to stabilize
+const MESSAGE_HISTORY_CHECK_LIMIT = 10; // number of recent messages to check
+const DEFAULT_LANGUAGE = "fr"; // default language for new users
+const MULTI_PERSON_ROOM_MESSAGE =
+  "JOEL ne permet pas de rejoindre des salons multi-personnes.";
+
 // Persist sync token + crypto state
 import fs from "node:fs";
 fs.mkdirSync("matrix", { recursive: true });
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
-const cryptoProvider = new RustSdkCryptoStorageProvider("matrix/matrix-crypto");
+const cryptoProvider = ENCRYPTION_ENABLED
+  ? new RustSdkCryptoStorageProvider("matrix/matrix-crypto")
+  : undefined;
 
 // Use the access token you got from login or registration above.
-const client = new MatrixClient(
-  "https://" + MATRIX_HOME_URL,
-  MATRIX_BOT_TOKEN,
-  storageProvider,
-  cryptoProvider
-);
+const client = ENCRYPTION_ENABLED
+  ? new MatrixClient(
+      "https://" + MATRIX_HOME_URL,
+      MATRIX_BOT_TOKEN,
+      storageProvider,
+      cryptoProvider
+    )
+  : new MatrixClient(
+      "https://" + MATRIX_HOME_URL,
+      MATRIX_BOT_TOKEN,
+      storageProvider
+    );
 
 AutojoinRoomsMixin.setupOnClient(client);
 AutojoinUpgradedRoomsMixin.setupOnClient(client); // optional but nice to have
@@ -70,12 +88,122 @@ client.on(
       );
     })()
 );
-/*
-client.on("room.join", (_roomId: string, _event: unknown) => {
-  // The client has been invited to `roomId`
-  // if only another person in the room: send a welcome message
+
+// Handle bot being invited to a new room
+client.on("room.join", (roomId: string, _event: unknown) => {
+  void (async () => {
+    try {
+      // Wait a moment for room state to stabilize
+      await new Promise((resolve) =>
+        setTimeout(resolve, ROOM_STATE_STABILIZATION_DELAY)
+      );
+
+      // Check if this is a direct message (1-on-1) room
+      const otherMemberCount = await getOtherMemberCount(roomId);
+      if (otherMemberCount !== 1) {
+        // Not a 1-on-1 room, leave it
+        console.log(
+          `${matrixApp}: leaving room ${roomId} because it has ${String(otherMemberCount)} members besides the bot`
+        );
+        await client.sendMessage(roomId, {
+          msgtype: "m.text",
+          body: MULTI_PERSON_ROOM_MESSAGE
+        });
+        await client.leaveRoom(roomId);
+        return;
+      }
+
+      // Get the other member's ID
+      const otherMembers = await getOtherMembers(roomId);
+      const otherUserId = otherMembers[0];
+
+      if (!otherUserId) {
+        console.log(`${matrixApp}: Could not find other user in room ${roomId}`);
+        return;
+      }
+
+      // Check if there are any messages in the room already
+      // If the user has already sent a message, the regular message handler will take care of the welcome
+      try {
+        const messages = await client.getMessages(roomId, {
+          limit: MESSAGE_HISTORY_CHECK_LIMIT
+        });
+        const hasUserMessages = messages.chunk.some(
+          (msg: { sender?: string; type?: string }) =>
+            msg.sender === otherUserId && msg.type === "m.room.message"
+        );
+        if (hasUserMessages) {
+          console.log(
+            `${matrixApp}: User ${otherUserId} already sent messages in room ${roomId}, skipping proactive welcome`
+          );
+          return;
+        }
+      } catch (error) {
+        // If we can't check messages, proceed with welcome anyway
+        await logWarning(
+          matrixApp,
+          "Could not check room messages, proceeding with welcome message",
+          error
+        );
+      }
+
+      // Check if user already exists in database
+      const previousUser: IUser | null = await User.findOne({
+        messageApp: matrixApp,
+        chatId: otherUserId
+      });
+
+      // Prepare welcome message
+      let msgText: string;
+      if (previousUser != null) {
+        // Existing user
+        if (previousUser.status === "blocked") {
+          await User.updateOne(
+            { _id: previousUser._id },
+            { $set: { status: "active", roomId: roomId } }
+          );
+          umami.log({
+            event: "/user-unblocked-joel",
+            messageApp: matrixApp,
+            hasAccount: true
+          });
+        } else {
+          // Update room ID for active user
+          await User.updateOne(
+            { _id: previousUser._id },
+            { $set: { roomId: roomId } }
+          );
+        }
+        msgText = !previousUser.followsNothing()
+          ? KEYBOARD_KEYS.FOLLOWS_LIST.key.text
+          : "/start";
+      } else {
+        // New user - send welcome message
+        msgText = "/start";
+      }
+
+      // Create a session and send the welcome message
+      const matrixSession = new MatrixSession(
+        matrixApp,
+        client,
+        otherUserId,
+        roomId,
+        DEFAULT_LANGUAGE,
+        new Date()
+      );
+
+      await handleIncomingMessage(matrixSession, msgText, {
+        errorContext: "Error sending welcome message"
+      });
+
+      console.log(
+        `${matrixApp}: Sent welcome message to ${otherUserId} in room ${roomId}`
+      );
+    } catch (error) {
+      await logError(matrixApp, "Error in room.join handler", error);
+    }
+  })();
 });
- */
 
 let serverUserId: string | undefined;
 
@@ -84,7 +212,7 @@ async function ensureServerUserId() {
   return serverUserId;
 }
 
-async function getOtherMemberCount(roomId: string) {
+async function getOtherMembers(roomId: string): Promise<string[]> {
   const stateEvents = await client.getRoomState(roomId);
   const otherMembers = new Set<string>();
   const currentUserId = await ensureServerUserId();
@@ -102,7 +230,12 @@ async function getOtherMemberCount(roomId: string) {
     otherMembers.add(memberId);
   }
 
-  return otherMembers.size;
+  return Array.from(otherMembers);
+}
+
+async function getOtherMemberCount(roomId: string) {
+  const otherMembers = await getOtherMembers(roomId);
+  return otherMembers.length;
 }
 
 await (async function () {
@@ -146,9 +279,11 @@ await (async function () {
     serverUserId = await client.getUserId();
     await client.start();
 
-    console.log("Bot device ID:", client.crypto.clientDeviceId);
-    // @ts-expect-error: clientEd25519 is not exported by the SDK
-    console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
+    if (ENCRYPTION_ENABLED) {
+      console.log("Bot device ID:", client.crypto.clientDeviceId);
+      // @ts-expect-error: clientEd25519 is not exported by the SDK
+      console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
+    }
 
     const messageOptions =
       matrixApp === "Matrix"
@@ -190,7 +325,8 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
     let msgText: string | undefined;
     switch (event.type) {
       case "m.room.message":
-        await client.sendReadReceipt(roomId, event.event_id);
+        // Send read receipt in parallel (don't await)
+        void client.sendReadReceipt(roomId, event.event_id);
         msgText = event.content.body;
         break;
 
