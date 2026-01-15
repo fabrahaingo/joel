@@ -150,14 +150,10 @@ export async function runNotificationProcess(
     );
     startDate.setHours(0, 0, 0, 0);
 
-    const JORFAllRecordsFromDate = await getJORFRecordsFromDate(
-      startDate,
-      targetApps
-    );
-    const JORFMetaRecordsFromDate = await getJORFMetaRecordsFromDate(
-      startDate,
-      targetApps
-    );
+    const [JORFAllRecordsFromDate, JORFMetaRecordsFromDate] = await Promise.all([
+      getJORFRecordsFromDate(startDate, targetApps),
+      getJORFMetaRecordsFromDate(startDate, targetApps)
+    ]);
 
     await notifyAllFollows(
       JORFAllRecordsFromDate,
@@ -210,35 +206,34 @@ export async function notifyAllFollows(
   forceWHMessages = false
 ) {
   if (JORFAllRecordsFromDate.length > 0) {
-    await notifyFunctionTagsUpdates(
-      JORFAllRecordsFromDate,
-      targetApps,
-      messageAppsOptions,
-      userIds,
-      forceWHMessages
-    );
-
-    await notifyOrganisationsUpdates(
-      JORFAllRecordsFromDate,
-      targetApps,
-      messageAppsOptions,
-      userIds,
-      forceWHMessages
-    );
-
-    await notifyPeopleUpdates(
-      JORFAllRecordsFromDate,
-      targetApps,
-      messageAppsOptions,
-      userIds,
-      forceWHMessages
-    );
-
-    await notifyNameMentionUpdates(
-      JORFAllRecordsFromDate,
-      targetApps,
-      messageAppsOptions
-    );
+    await Promise.all([
+      notifyFunctionTagsUpdates(
+        JORFAllRecordsFromDate,
+        targetApps,
+        messageAppsOptions,
+        userIds,
+        forceWHMessages
+      ),
+      notifyOrganisationsUpdates(
+        JORFAllRecordsFromDate,
+        targetApps,
+        messageAppsOptions,
+        userIds,
+        forceWHMessages
+      ),
+      notifyPeopleUpdates(
+        JORFAllRecordsFromDate,
+        targetApps,
+        messageAppsOptions,
+        userIds,
+        forceWHMessages
+      ),
+      notifyNameMentionUpdates(
+        JORFAllRecordsFromDate,
+        targetApps,
+        messageAppsOptions
+      )
+    ]);
   }
 
   if (JORFMetaRecordsFromDate.length > 0) {
