@@ -68,6 +68,29 @@ export function splitText(
     return count;
   }
 
+  // Find the position after the Nth newline in the text starting from startIndex
+  function findNthNewlinePosition(
+    text: string,
+    startIndex: number,
+    endIndex: number,
+    lineLimit: number
+  ): number {
+    let linesFound = 0;
+    for (let k = startIndex; k < endIndex; k++) {
+      if (text[k] === "\n" || text[k] === "\r") {
+        linesFound++;
+        // Handle \r\n as a single line break
+        const isCarriageReturn = text[k] === "\r" && text[k + 1] === "\n";
+        if (linesFound >= lineLimit) {
+          // Return position after the newline (or \r\n)
+          return isCarriageReturn ? k + 2 : k + 1;
+        }
+        if (isCarriageReturn) k++;
+      }
+    }
+    return -1; // Not found
+  }
+
   function appendSegment(segmentText: string): void {
     const n = segmentText.length;
     let i = 0;
@@ -101,21 +124,8 @@ export function splitText(
         const lineCount = countLines(potentialChunk);
 
         if (lineCount > maxLines) {
-          // Find the position of the maxLines-th newline
-          let linesFound = 0;
-          let newEnd = i;
-          for (let k = i; k < end; k++) {
-            if (segmentText[k] === "\n" || segmentText[k] === "\r") {
-              linesFound++;
-              // Handle \r\n as a single line break
-              if (segmentText[k] === "\r" && segmentText[k + 1] === "\n") k++;
-              if (linesFound >= maxLines) {
-                newEnd = k;
-                break;
-              }
-            }
-          }
-          if (newEnd > i) end = newEnd;
+          const newEnd = findNthNewlinePosition(segmentText, i, end, maxLines);
+          if (newEnd > i && newEnd <= end) end = newEnd;
         }
       }
 
