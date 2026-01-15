@@ -39,6 +39,9 @@ const ENCRYPTION_ENABLED = true;
 // Constants for room.join handler
 const ROOM_STATE_STABILIZATION_DELAY = 1000; // ms to wait for room state to stabilize
 const MESSAGE_HISTORY_CHECK_LIMIT = 10; // number of recent messages to check
+const DEFAULT_LANGUAGE = "fr"; // default language for new users
+const MULTI_PERSON_ROOM_MESSAGE =
+  "JOEL ne permet pas de rejoindre des salons multi-personnes.";
 
 // Persist sync token + crypto state
 import fs from "node:fs";
@@ -104,7 +107,7 @@ client.on("room.join", (roomId: string, _event: unknown) => {
         );
         await client.sendMessage(roomId, {
           msgtype: "m.text",
-          body: "JOEL ne permet pas de rejoindre des salons multi-personnes."
+          body: MULTI_PERSON_ROOM_MESSAGE
         });
         await client.leaveRoom(roomId);
         return;
@@ -139,7 +142,7 @@ client.on("room.join", (roomId: string, _event: unknown) => {
         // If we can't check messages, proceed with welcome anyway
         await logWarning(
           matrixApp,
-          "Could not check room messages, proceeding with welcome message"
+          `Could not check room messages, proceeding with welcome message: ${error instanceof Error ? error.message : String(error)}`
         );
       }
 
@@ -184,7 +187,7 @@ client.on("room.join", (roomId: string, _event: unknown) => {
         client,
         otherUserId,
         roomId,
-        "fr",
+        DEFAULT_LANGUAGE,
         new Date()
       );
 
