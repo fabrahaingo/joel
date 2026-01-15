@@ -47,7 +47,10 @@ export async function handleIncomingMessage(
       return;
     }
 
-    await processMessage(session, trimmedText);
+    // Detect if this is the first message from this user (no user record exists)
+    const isFirstMessage = user == null;
+
+    await processMessage(session, trimmedText, { isFirstMessage });
 
     if (user != null) await user.updateInteractionMetrics();
   } catch (error) {
