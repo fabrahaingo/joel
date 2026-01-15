@@ -142,7 +142,8 @@ client.on("room.join", (roomId: string, _event: unknown) => {
         // If we can't check messages, proceed with welcome anyway
         await logWarning(
           matrixApp,
-          `Could not check room messages, proceeding with welcome message: ${error instanceof Error ? error.message : String(error)}`
+          "Could not check room messages, proceeding with welcome message",
+          error
         );
       }
 
