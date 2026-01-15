@@ -33,19 +33,30 @@ if (!["Matrix", "Tchap"].some((m) => m === MATRIX_BOT_TYPE)) {
 }
 const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 
+// Global constant to check if encryption is enabled for the bot
+const ENCRYPTION_ENABLED = true;
+
 // Persist sync token + crypto state
 import fs from "node:fs";
 fs.mkdirSync("matrix", { recursive: true });
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
-const cryptoProvider = new RustSdkCryptoStorageProvider("matrix/matrix-crypto");
+const cryptoProvider = ENCRYPTION_ENABLED
+  ? new RustSdkCryptoStorageProvider("matrix/matrix-crypto")
+  : undefined;
 
 // Use the access token you got from login or registration above.
-const client = new MatrixClient(
-  "https://" + MATRIX_HOME_URL,
-  MATRIX_BOT_TOKEN,
-  storageProvider,
-  cryptoProvider
-);
+const client = ENCRYPTION_ENABLED
+  ? new MatrixClient(
+      "https://" + MATRIX_HOME_URL,
+      MATRIX_BOT_TOKEN,
+      storageProvider,
+      cryptoProvider
+    )
+  : new MatrixClient(
+      "https://" + MATRIX_HOME_URL,
+      MATRIX_BOT_TOKEN,
+      storageProvider
+    );
 
 AutojoinRoomsMixin.setupOnClient(client);
 AutojoinUpgradedRoomsMixin.setupOnClient(client); // optional but nice to have
@@ -70,12 +81,111 @@ client.on(
       );
     })()
 );
-/*
-client.on("room.join", (_roomId: string, _event: unknown) => {
-  // The client has been invited to `roomId`
-  // if only another person in the room: send a welcome message
+
+// Handle bot being invited to a new room
+client.on("room.join", (roomId: string, _event: unknown) => {
+  void (async () => {
+    try {
+      // Wait a moment for room state to stabilize
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Check if this is a direct message (1-on-1) room
+      const otherMemberCount = await getOtherMemberCount(roomId);
+      if (otherMemberCount !== 1) {
+        // Not a 1-on-1 room, leave it
+        console.log(
+          `${matrixApp}: leaving room ${roomId} because it has ${String(otherMemberCount)} members besides the bot`
+        );
+        await client.sendMessage(roomId, {
+          msgtype: "m.text",
+          body: "JOEL ne permet pas de rejoindre des salons multi-personnes."
+        });
+        await client.leaveRoom(roomId);
+        return;
+      }
+
+      // Get the other member's ID
+      const stateEvents = await client.getRoomState(roomId);
+      const currentUserId = await ensureServerUserId();
+      let otherUserId: string | undefined;
+
+      for (const event of stateEvents as {
+        type?: string;
+        state_key?: string;
+        content?: { membership?: string };
+      }[]) {
+        if (event.type !== "m.room.member") continue;
+        const membership = event.content?.membership;
+        if (membership !== "join" && membership !== "invite") continue;
+        const memberId = event.state_key;
+        if (memberId != null && memberId !== currentUserId) {
+          otherUserId = memberId;
+          break;
+        }
+      }
+
+      if (!otherUserId) {
+        console.log(`${matrixApp}: Could not find other user in room ${roomId}`);
+        return;
+      }
+
+      // Check if user already exists in database
+      const previousUser: IUser | null = await User.findOne({
+        messageApp: matrixApp,
+        chatId: otherUserId
+      });
+
+      // Prepare welcome message
+      let msgText: string;
+      if (previousUser != null) {
+        // Existing user
+        if (previousUser.status === "blocked") {
+          await User.updateOne(
+            { _id: previousUser._id },
+            { $set: { status: "active", roomId: roomId } }
+          );
+          umami.log({
+            event: "/user-unblocked-joel",
+            messageApp: matrixApp,
+            hasAccount: true
+          });
+        } else {
+          // Update room ID for active user
+          await User.updateOne(
+            { _id: previousUser._id },
+            { $set: { roomId: roomId } }
+          );
+        }
+        msgText = !previousUser.followsNothing()
+          ? KEYBOARD_KEYS.FOLLOWS_LIST.key.text
+          : "/start";
+      } else {
+        // New user - send welcome message
+        msgText = "/start";
+      }
+
+      // Create a session and send the welcome message
+      const matrixSession = new MatrixSession(
+        matrixApp,
+        client,
+        otherUserId,
+        roomId,
+        "fr",
+        new Date()
+      );
+
+      await handleIncomingMessage(matrixSession, msgText, {
+        errorContext: "Error sending welcome message"
+      });
+
+      console.log(
+        `${matrixApp}: Sent welcome message to ${otherUserId} in room ${roomId}`
+      );
+    } catch (error) {
+      await logError(matrixApp, "Error in room.join handler", error);
+    }
+  })();
 });
- */
 
 let serverUserId: string | undefined;
 
@@ -146,9 +256,11 @@ await (async function () {
     serverUserId = await client.getUserId();
     await client.start();
 
-    console.log("Bot device ID:", client.crypto.clientDeviceId);
-    // @ts-expect-error: clientEd25519 is not exported by the SDK
-    console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
+    if (ENCRYPTION_ENABLED) {
+      console.log("Bot device ID:", client.crypto.clientDeviceId);
+      // @ts-expect-error: clientEd25519 is not exported by the SDK
+      console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
+    }
 
     const messageOptions =
       matrixApp === "Matrix"
