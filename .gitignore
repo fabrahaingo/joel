@@ -7,3 +7,4 @@ crt.pem
 .README.md.swp
 instructions.txt
 yarn.lock
+dist/

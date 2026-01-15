@@ -1,7 +1,7 @@
 import emojiRegex from "emoji-regex";
 import { MessageApp } from "../types.ts";
 import { TELEGRAM_MESSAGE_CHAR_LIMIT } from "../entities/TelegramSession.ts";
-import { WHATSAPP_MESSAGE_CHAR_LIMIT } from "../entities/WhatsAppSession.ts";
+import { WHATSAPP_MESSAGE_CHAR_LIMIT, WHATSAPP_MAX_LINES } from "../entities/WhatsAppSession.ts";
 import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
 import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
 
@@ -12,7 +12,11 @@ export function sanitizeUserInput(input: string): string {
   return input.replace(controlCharacters, "").replace(injectionCharacters, "");
 }
 
-export function splitText(text: string, max: number): string[] {
+export function splitText(
+  text: string,
+  max: number,
+  maxLines?: number
+): string[] {
   if (!Number.isFinite(max) || max <= 0) return [text];
 
   const chunks: string[] = [];
@@ -52,6 +56,43 @@ export function splitText(text: string, max: number): string[] {
     return s.slice(a, b);
   }
 
+  // Count the number of lines in a string (minimum 1, even for empty strings)
+  // A string with no newlines is considered to be 1 line
+  function countLines(s: string): number {
+    let count = 1;
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === "\n" || s[i] === "\r") {
+        count++;
+        // Handle \r\n as a single line break
+        if (s[i] === "\r" && s[i + 1] === "\n") i++;
+      }
+    }
+    return count;
+  }
+
+  // Find the position after the Nth newline in the text starting from startIndex
+  function findNthNewlinePosition(
+    text: string,
+    startIndex: number,
+    endIndex: number,
+    lineLimit: number
+  ): number {
+    let linesFound = 0;
+    for (let k = startIndex; k < endIndex; k++) {
+      if (text[k] === "\n" || text[k] === "\r") {
+        linesFound++;
+        // Handle \r\n as a single line break
+        const isCarriageReturn = text[k] === "\r" && text[k + 1] === "\n";
+        if (linesFound >= lineLimit) {
+          // Return position after the newline (or \r\n)
+          return isCarriageReturn ? k + 2 : k + 1;
+        }
+        if (isCarriageReturn) k++;
+      }
+    }
+    return -1; // Not found
+  }
+
   function appendSegment(segmentText: string): void {
     const n = segmentText.length;
     let i = 0;
@@ -79,7 +120,22 @@ export function splitText(text: string, max: number): string[] {
         }
       }
 
-      // 3) If we couldn't find a better break, hard-cut at max to ensure progress
+      // 3) Check maxLines constraint if provided
+      if (maxLines !== undefined && maxLines > 0) {
+        const potentialChunk = segmentText.slice(i, end);
+        const lineCount = countLines(potentialChunk);
+
+        if (lineCount > maxLines) {
+          const newEnd = findNthNewlinePosition(segmentText, i, end, maxLines);
+          // If we found a valid position, use it; otherwise fall through to hard-cut
+          if (newEnd > i) {
+            end = newEnd;
+          }
+          // Note: if newEnd is -1 or invalid, we'll proceed to step 4 which does a hard-cut
+        }
+      }
+
+      // 4) If we couldn't find a better break, hard-cut at max to ensure progress
       if (end === i) end = Math.min(i + max, n);
 
       const chunk = trimEdgeNewlines(segmentText.slice(i, end));
@@ -104,7 +160,8 @@ export function getSplitTextMessageSize(text: string, app: MessageApp): number {
       return splitText(text, TELEGRAM_MESSAGE_CHAR_LIMIT).length;
 
     case "WhatsApp":
-      return splitText(text, WHATSAPP_MESSAGE_CHAR_LIMIT).length;
+      return splitText(text, WHATSAPP_MESSAGE_CHAR_LIMIT, WHATSAPP_MAX_LINES)
+        .length;
 
     case "Signal":
       return splitText(text, SIGNAL_MESSAGE_CHAR_LIMIT).length;

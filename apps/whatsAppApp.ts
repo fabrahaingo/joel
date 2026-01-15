@@ -336,7 +336,8 @@ await (async function () {
       }
 
       try {
-        await whatsAppAPI.markAsRead(phoneID, message.id);
+        // Mark as read in parallel (don't await)
+        void whatsAppAPI.markAsRead(phoneID, message.id);
 
         const messageSentDate = new Date(messageTimeStampSeconds * 1000);
 
