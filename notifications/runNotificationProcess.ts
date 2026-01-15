@@ -206,34 +206,35 @@ export async function notifyAllFollows(
   forceWHMessages = false
 ) {
   if (JORFAllRecordsFromDate.length > 0) {
-    await Promise.all([
-      notifyFunctionTagsUpdates(
-        JORFAllRecordsFromDate,
-        targetApps,
-        messageAppsOptions,
-        userIds,
-        forceWHMessages
-      ),
-      notifyOrganisationsUpdates(
-        JORFAllRecordsFromDate,
-        targetApps,
-        messageAppsOptions,
-        userIds,
-        forceWHMessages
-      ),
-      notifyPeopleUpdates(
-        JORFAllRecordsFromDate,
-        targetApps,
-        messageAppsOptions,
-        userIds,
-        forceWHMessages
-      ),
-      notifyNameMentionUpdates(
-        JORFAllRecordsFromDate,
-        targetApps,
-        messageAppsOptions
-      )
-    ]);
+    await notifyFunctionTagsUpdates(
+      JORFAllRecordsFromDate,
+      targetApps,
+      messageAppsOptions,
+      userIds,
+      forceWHMessages
+    );
+
+    await notifyOrganisationsUpdates(
+      JORFAllRecordsFromDate,
+      targetApps,
+      messageAppsOptions,
+      userIds,
+      forceWHMessages
+    );
+
+    await notifyPeopleUpdates(
+      JORFAllRecordsFromDate,
+      targetApps,
+      messageAppsOptions,
+      userIds,
+      forceWHMessages
+    );
+
+    await notifyNameMentionUpdates(
+      JORFAllRecordsFromDate,
+      targetApps,
+      messageAppsOptions
+    );
   }
 
   if (JORFMetaRecordsFromDate.length > 0) {
