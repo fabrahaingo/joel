@@ -18,7 +18,7 @@
     "dotenv": "^17.2.3",
     "emoji-regex": "^10.6.0",
     "express": "^5.2.1",
-    "matrix-bot-sdk": "^0.7.1",
+    "matrix-bot-sdk": "^0.8.0",
     "mongodb": "^7.0.0",
     "mongoose": "^9.1.4",
     "nodemon": "^3.1.11",

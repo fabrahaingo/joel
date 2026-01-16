@@ -1,10 +1,10 @@
 import "dotenv/config";
 import {
-  MatrixClient,
-  SimpleFsStorageProvider,
-  RustSdkCryptoStorageProvider,
+  AutojoinRoomsMixin,
   AutojoinUpgradedRoomsMixin,
-  AutojoinRoomsMixin
+  MatrixClient,
+  RustSdkCryptoStorageProvider,
+  SimpleFsStorageProvider
 } from "matrix-bot-sdk";
 import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
 import umami from "../utils/umami.ts";
@@ -15,6 +15,10 @@ import { IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
+// Persist sync token + crypto state
+import fs from "node:fs";
+import { StoreType } from "@matrix-org/matrix-sdk-crypto-nodejs";
+
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
 if (
   MATRIX_HOME_URL == undefined ||
@@ -43,12 +47,10 @@ const DEFAULT_LANGUAGE = "fr"; // default language for new users
 const MULTI_PERSON_ROOM_MESSAGE =
   "JOEL ne permet pas de rejoindre des salons multi-personnes.";
 
-// Persist sync token + crypto state
-import fs from "node:fs";
 fs.mkdirSync("matrix", { recursive: true });
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
 const cryptoProvider = ENCRYPTION_ENABLED
-  ? new RustSdkCryptoStorageProvider("matrix/matrix-crypto")
+  ? new RustSdkCryptoStorageProvider("matrix/matrix-crypto", StoreType.Sqlite)
   : undefined;
 
 // Use the access token you got from login or registration above.
