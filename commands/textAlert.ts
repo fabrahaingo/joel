@@ -323,9 +323,20 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
     .lean();
 
   cachedPublications = publications.map((publication) => {
-    // Use pre-computed normalized fields if available, otherwise compute them
-    const normalizedTitle = publication.normalizedTitle ?? normalizeFrenchText(publication.title);
-    const normalizedTitleWords = publication.normalizedTitleWords ?? normalizedTitle.split(" ").filter(Boolean);
+    // Use pre-computed normalized fields if both are available, otherwise compute them
+    let normalizedTitle: string;
+    let normalizedTitleWords: string[];
+    
+    if (publication.normalizedTitle && publication.normalizedTitleWords) {
+      // Both fields exist, use them directly
+      normalizedTitle = publication.normalizedTitle;
+      normalizedTitleWords = publication.normalizedTitleWords;
+    } else {
+      // One or both fields missing, recompute both to ensure consistency
+      normalizedTitle = normalizeFrenchText(publication.title);
+      normalizedTitleWords = normalizedTitle.split(" ").filter(Boolean);
+    }
+    
     return {
       ...publication,
       normalizedTitle,

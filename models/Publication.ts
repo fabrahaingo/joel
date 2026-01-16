@@ -95,7 +95,7 @@ PublicationSchema.index({ date_obj: 1 });
 
 // Pre-save hook to compute normalized title fields
 PublicationSchema.pre("save", function (next) {
-  if (this.isModified("title") || !this.normalizedTitle) {
+  if (this.isModified("title") || !this.normalizedTitle || !this.normalizedTitleWords) {
     const normalized = normalizeFrenchText(this.title);
     this.normalizedTitle = normalized;
     this.normalizedTitleWords = normalized.split(" ").filter(Boolean);
