@@ -26,7 +26,9 @@ describe("TextAlert Search Limits", () => {
       const publications = Array.from({ length: 200 }, (_, i) => ({
         title: `Publication ${i}`,
         normalizedTitle: normalizeFrenchText(`Publication ${i}`),
-        normalizedTitleWords: normalizeFrenchText(`Publication ${i}`).split(" ").filter(Boolean)
+        normalizedTitleWords: normalizeFrenchText(`Publication ${i}`)
+          .split(" ")
+          .filter(Boolean)
       }));
 
       const TEXT_RESULT_SEARCH_LIMIT = 100;
@@ -54,7 +56,10 @@ describe("TextAlert Search Limits", () => {
         title: `Publication ${i}`
       }));
 
-      const previewLimit = Math.min(TEXT_RESULT_DISPLAY_LIMIT, matchingPublications.length);
+      const previewLimit = Math.min(
+        TEXT_RESULT_DISPLAY_LIMIT,
+        matchingPublications.length
+      );
 
       expect(previewLimit).toBe(10);
     });
@@ -65,7 +70,10 @@ describe("TextAlert Search Limits", () => {
         title: `Publication ${i}`
       }));
 
-      const previewLimit = Math.min(TEXT_RESULT_DISPLAY_LIMIT, matchingPublications.length);
+      const previewLimit = Math.min(
+        TEXT_RESULT_DISPLAY_LIMIT,
+        matchingPublications.length
+      );
 
       expect(previewLimit).toBe(5);
     });

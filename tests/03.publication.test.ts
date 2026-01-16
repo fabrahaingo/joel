@@ -14,7 +14,8 @@ describe("Publication Model Test Suite", () => {
     id: "JORFTEXT000049123456",
     date: "2024-01-15",
     date_obj: new Date("2024-01-15"),
-    title: "Décret n° 2024-001 du 15 janvier 2024 relatif à la réforme de l'éducation nationale",
+    title:
+      "Décret n° 2024-001 du 15 janvier 2024 relatif à la réforme de l'éducation nationale",
     nor: "MENE2400001D",
     ministere: "Ministère de l'Éducation nationale",
     tags: {}
@@ -84,7 +85,8 @@ describe("Publication Model Test Suite", () => {
       const frenchPublication = {
         ...samplePublication,
         id: "JORFTEXT000049123457",
-        title: "Arrêté concernant les élèves de l'École nationale d'administration"
+        title:
+          "Arrêté concernant les élèves de l'École nationale d'administration"
       };
 
       const publication = await Publication.create(frenchPublication);
@@ -130,7 +132,7 @@ describe("Publication Model Test Suite", () => {
 
       expect(publication.normalizedTitleWords).toBeDefined();
       expect(publication.normalizedTitleWords!.length).toBeGreaterThan(0);
-      
+
       // Verify it's an array of non-empty strings
       expect(
         publication.normalizedTitleWords!.every(
@@ -145,20 +147,18 @@ describe("Publication Model Test Suite", () => {
       await Publication.create(samplePublication);
 
       // Attempt to create a duplicate
-      await expect(
-        Publication.create(samplePublication)
-      ).rejects.toThrow();
+      await expect(Publication.create(samplePublication)).rejects.toThrow();
     });
 
     it("should have indexes on normalizedTitle and normalizedTitleWords", async () => {
       const indexes = await Publication.collection.getIndexes();
-      
+
       // Check that normalizedTitle and normalizedTitleWords have indexes
       const indexNames = Object.keys(indexes);
-      const hasNormalizedTitleIndex = indexNames.some(
-        (name) => name.includes("normalizedTitle")
+      const hasNormalizedTitleIndex = indexNames.some((name) =>
+        name.includes("normalizedTitle")
       );
-      
+
       expect(hasNormalizedTitleIndex).toBe(true);
     });
   });
@@ -166,7 +166,7 @@ describe("Publication Model Test Suite", () => {
   describe("Query Performance", () => {
     it("should be able to query by normalizedTitle", async () => {
       await Publication.create(samplePublication);
-      
+
       const normalized = normalizeFrenchText(samplePublication.title);
       const found = await Publication.findOne({
         normalizedTitle: normalized
@@ -178,7 +178,7 @@ describe("Publication Model Test Suite", () => {
 
     it("should be able to query by normalizedTitleWords", async () => {
       await Publication.create(samplePublication);
-      
+
       const word = "decret"; // normalized version of "Décret"
       const found = await Publication.findOne({
         normalizedTitleWords: word
@@ -198,7 +198,9 @@ describe("Publication Model Test Suite", () => {
           date_obj: new Date("2024-01-15"),
           title: "Premier décret de test",
           normalizedTitle: normalizeFrenchText("Premier décret de test"),
-          normalizedTitleWords: normalizeFrenchText("Premier décret de test").split(" ").filter(Boolean),
+          normalizedTitleWords: normalizeFrenchText("Premier décret de test")
+            .split(" ")
+            .filter(Boolean),
           tags: {}
         },
         {
@@ -207,7 +209,9 @@ describe("Publication Model Test Suite", () => {
           date_obj: new Date("2024-01-16"),
           title: "Deuxième arrêté de test",
           normalizedTitle: normalizeFrenchText("Deuxième arrêté de test"),
-          normalizedTitleWords: normalizeFrenchText("Deuxième arrêté de test").split(" ").filter(Boolean),
+          normalizedTitleWords: normalizeFrenchText("Deuxième arrêté de test")
+            .split(" ")
+            .filter(Boolean),
           tags: {}
         }
       ];
@@ -225,11 +229,15 @@ describe("Publication Model Test Suite", () => {
 
       // Verify the normalized fields are present
       const pub1 = await Publication.findOne({ id: "JORF001" });
-      expect(pub1?.normalizedTitle).toBe(normalizeFrenchText("Premier décret de test"));
+      expect(pub1?.normalizedTitle).toBe(
+        normalizeFrenchText("Premier décret de test")
+      );
       expect(pub1?.normalizedTitleWords).toBeDefined();
 
       const pub2 = await Publication.findOne({ id: "JORF002" });
-      expect(pub2?.normalizedTitle).toBe(normalizeFrenchText("Deuxième arrêté de test"));
+      expect(pub2?.normalizedTitle).toBe(
+        normalizeFrenchText("Deuxième arrêté de test")
+      );
       expect(pub2?.normalizedTitleWords).toBeDefined();
     });
   });

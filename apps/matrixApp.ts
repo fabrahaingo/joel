@@ -118,7 +118,9 @@ client.on("room.join", (roomId: string, _event: unknown) => {
       const otherUserId = otherMembers[0];
 
       if (!otherUserId) {
-        console.log(`${matrixApp}: Could not find other user in room ${roomId}`);
+        console.log(
+          `${matrixApp}: Could not find other user in room ${roomId}`
+        );
         return;
       }
 
