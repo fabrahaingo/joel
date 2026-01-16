@@ -20,8 +20,7 @@ const TEXT_ALERT_PROMPT =
 const TEXT_RESULT_DISPLAY_LIMIT = 10;
 const TEXT_RESULT_SEARCH_LIMIT = 100;
 
-const twoYearsAgo = new Date();
-twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+const NB_YEAR_BACK_SEARCH = 10;
 
 function findFollowedAlertString(
   user: IUser,
@@ -82,7 +81,7 @@ async function handleTextAlertAnswer(
     return false;
   }
 
-  await session.sendMessage("Recherche en cours ...", {
+  void session.sendMessage("Recherche en cours ...", {
     forceNoKeyboard: true
   });
   session.sendTypingAction();
@@ -91,7 +90,13 @@ async function handleTextAlertAnswer(
   const normalizedAnswer = normalizeFrenchTextWithStopwords(trimmedAnswer);
   const normalizedAnswerWords = normalizedAnswer.split(" ").filter(Boolean);
 
-  const recentPublications = await getRecentPublications(session.messageApp);
+  const startDate = new Date();
+  startDate.setFullYear(startDate.getFullYear() - NB_YEAR_BACK_SEARCH);
+
+  const recentPublications = await getRecentPublications(
+    session.messageApp,
+    startDate
+  );
   if (recentPublications == null) {
     await session.sendMessage(
       "Une erreur est survenue lors de la recherche. Notre équipe a été prévenue."
@@ -130,7 +135,7 @@ async function handleTextAlertAnswer(
     matchingPublications.length
   );
 
-  const sinceText = ` depuis 2 ans (${dateToString(twoYearsAgo, "DMY").replaceAll("/", "-")})`;
+  const sinceText = ` depuis ${String(NB_YEAR_BACK_SEARCH)} ans (${dateToString(startDate, "DMY").replaceAll("/", "-")})`;
 
   if (hasResults) {
     if (hasMoreThan100) {
@@ -157,7 +162,7 @@ async function handleTextAlertAnswer(
     const publication = matchingPublications[i];
     const publicationLink = getJORFTextLink(publication.id);
     const { type, cleanedTitle } = parsePublicationTitle(publication.title);
-    
+
     // Format: Date - Type - Link
     text += `*${publication.date.replaceAll("-", "/")}*`;
     text += ` - ${type}`;
@@ -166,7 +171,7 @@ async function handleTextAlertAnswer(
     } else {
       text += ` - [Cliquer ici](${publicationLink})\n`;
     }
-    
+
     // Format: ... cleaned_title
     if (cleanedTitle) {
       text += `... ${cleanedTitle}\n\n`;
@@ -336,13 +341,12 @@ let lastFetchedAt: number | null = null;
 let inflightRefresh: Promise<PublicationPreview[]> | null = null;
 let backgroundRefreshStarted = false;
 
-async function refreshRecentPublications(): Promise<PublicationPreview[]> {
-  const twoYearsAgo = new Date();
-  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-
+async function refreshRecentPublications(
+  startDate: Date
+): Promise<PublicationPreview[]> {
   const publications: IPublication[] = await Publication.find(
     {
-      date_obj: { $gte: twoYearsAgo }
+      date_obj: { $gte: startDate }
     },
     {
       title: 1,
@@ -384,7 +388,8 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
 }
 
 async function getRecentPublications(
-  messageApp: MessageApp
+  messageApp: MessageApp,
+  startDate: Date
 ): Promise<PublicationPreview[] | null> {
   BACKGROUND_LOG_APP = messageApp;
   try {
@@ -397,7 +402,7 @@ async function getRecentPublications(
       return cachedPublications;
     }
 
-    inflightRefresh ??= refreshRecentPublications().finally(() => {
+    inflightRefresh ??= refreshRecentPublications(startDate).finally(() => {
       inflightRefresh = null;
     });
 
@@ -412,12 +417,12 @@ async function getRecentPublications(
   return null;
 }
 
-function startBackgroundRefresh(): void {
+function startBackgroundRefresh(startDate: Date): void {
   if (backgroundRefreshStarted) return;
 
   const refreshAndHandleError = async (): Promise<void> => {
     try {
-      inflightRefresh ??= refreshRecentPublications().finally(() => {
+      inflightRefresh ??= refreshRecentPublications(startDate).finally(() => {
         inflightRefresh = null;
       });
 
@@ -438,4 +443,7 @@ function startBackgroundRefresh(): void {
   backgroundRefreshStarted = true;
 }
 
-startBackgroundRefresh();
+const startDateTemp = new Date();
+startDateTemp.setFullYear(startDateTemp.getFullYear() - NB_YEAR_BACK_SEARCH);
+
+startBackgroundRefresh(startDateTemp);

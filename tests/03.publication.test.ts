@@ -74,7 +74,9 @@ describe("Publication Model Test Suite", () => {
       expect(Array.isArray(publication.normalizedTitleWords)).toBe(true);
 
       // Verify the normalization is correct (with stopwords removed)
-      const expectedNormalized = normalizeFrenchTextWithStopwords(samplePublication.title);
+      const expectedNormalized = normalizeFrenchTextWithStopwords(
+        samplePublication.title
+      );
       expect(publication.normalizedTitle).toBe(expectedNormalized);
       expect(publication.normalizedTitleWords).toEqual(
         expectedNormalized.split(" ").filter(Boolean)
@@ -97,7 +99,7 @@ describe("Publication Model Test Suite", () => {
       expect(publication.normalizedTitle).not.toContain("è");
       expect(publication.normalizedTitle).not.toContain("é");
       expect(publication.normalizedTitle).not.toContain("'");
-      
+
       // Should remove common stopwords
       expect(publication.normalizedTitle).not.toContain(" les ");
       expect(publication.normalizedTitle).not.toContain(" de ");
@@ -171,7 +173,9 @@ describe("Publication Model Test Suite", () => {
     it("should be able to query by normalizedTitle", async () => {
       await Publication.create(samplePublication);
 
-      const normalized = normalizeFrenchTextWithStopwords(samplePublication.title);
+      const normalized = normalizeFrenchTextWithStopwords(
+        samplePublication.title
+      );
       const found = await Publication.findOne({
         normalizedTitle: normalized
       });
@@ -201,8 +205,12 @@ describe("Publication Model Test Suite", () => {
           date: "2024-01-15",
           date_obj: new Date("2024-01-15"),
           title: "Premier décret de test",
-          normalizedTitle: normalizeFrenchTextWithStopwords("Premier décret de test"),
-          normalizedTitleWords: normalizeFrenchTextWithStopwords("Premier décret de test")
+          normalizedTitle: normalizeFrenchTextWithStopwords(
+            "Premier décret de test"
+          ),
+          normalizedTitleWords: normalizeFrenchTextWithStopwords(
+            "Premier décret de test"
+          )
             .split(" ")
             .filter(Boolean),
           tags: {}
@@ -212,8 +220,12 @@ describe("Publication Model Test Suite", () => {
           date: "2024-01-16",
           date_obj: new Date("2024-01-16"),
           title: "Deuxième arrêté de test",
-          normalizedTitle: normalizeFrenchTextWithStopwords("Deuxième arrêté de test"),
-          normalizedTitleWords: normalizeFrenchTextWithStopwords("Deuxième arrêté de test")
+          normalizedTitle: normalizeFrenchTextWithStopwords(
+            "Deuxième arrêté de test"
+          ),
+          normalizedTitleWords: normalizeFrenchTextWithStopwords(
+            "Deuxième arrêté de test"
+          )
             .split(" ")
             .filter(Boolean),
           tags: {}
