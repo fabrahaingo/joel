@@ -157,7 +157,7 @@ export async function runNotificationProcess(
     startDate.setHours(0, 0, 0, 0);
 
     const JORFAllRecordsFromDate = await getJORFRecordsFromDate(
-      new Date(),
+      startDate,
       targetApps
     );
     const JORFMetaRecordsFromDate = await getJORFMetaRecordsFromDate(
