@@ -1,8 +1,18 @@
 #!/usr/bin/env tsx
 /**
  * Migration script to add normalized title fields to existing publications
- * This script can be run to update all existing publications in the database
- * with the new normalizedTitle and normalizedTitleWords fields
+ * 
+ * This script updates all existing publications in the database with the new 
+ * normalizedTitle and normalizedTitleWords fields. These fields are used to 
+ * optimize text search performance in the textAlert feature.
+ * 
+ * Run with: npm run migrate-publications or tsx scripts/migratePublications.ts
+ * 
+ * The script:
+ * - Finds all publications without normalized fields
+ * - Computes normalized title and word arrays for each publication
+ * - Updates publications in batches of 1000 to avoid memory issues
+ * - Is safe to run multiple times (idempotent)
  */
 
 import "dotenv/config";

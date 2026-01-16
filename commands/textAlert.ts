@@ -16,6 +16,8 @@ const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
 
 const TEXT_RESULT_MAX = 5;
+const TEXT_RESULT_DISPLAY_LIMIT = 10;
+const TEXT_RESULT_SEARCH_LIMIT = 100;
 
 const twoYearsAgo = new Date();
 twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
@@ -95,9 +97,11 @@ async function handleTextAlertAnswer(
     return true;
   }
 
+  // Search for matching publications, stopping after TEXT_RESULT_SEARCH_LIMIT (100)
   const matchingPublications = recentPublications.reduce(
     (tab: PublicationPreview[], publication) => {
-      if (tab.length >= TEXT_RESULT_MAX) return tab;
+      // Stop searching after we've found enough matches
+      if (tab.length >= TEXT_RESULT_SEARCH_LIMIT) return tab;
       if (
         fuzzyIncludesNormalized(
           publication.normalizedTitle,
@@ -112,23 +116,26 @@ async function handleTextAlertAnswer(
     []
   );
 
-  if (matchingPublications.length > 100) {
-    await session.sendMessage(
-      "Votre saisie est trop générale (plus de 100 textes correspondants sur les deux dernières années). Merci de préciser votre demande.",
-      { keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]] }
-    );
-    await askTextAlertQuestion(session);
-    return true;
-  }
-
   let text = "";
 
   const hasResults = matchingPublications.length > 0;
-  const previewLimit = Math.min(TEXT_RESULT_MAX, matchingPublications.length);
+  const totalMatches = matchingPublications.length;
+  const hasMoreThan100 = totalMatches >= TEXT_RESULT_SEARCH_LIMIT;
+  
+  // Display only the first TEXT_RESULT_DISPLAY_LIMIT (10) results
+  const previewLimit = Math.min(TEXT_RESULT_DISPLAY_LIMIT, matchingPublications.length);
 
-  text += hasResults
-    ? `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`
-    : `Aucun texte des deux dernières années ne correspond à « ${trimmedAnswer} ».\n\n`;
+  if (hasResults) {
+    if (hasMoreThan100) {
+      text += `Plus de ${TEXT_RESULT_SEARCH_LIMIT} textes correspondent à « ${trimmedAnswer} ». Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
+    } else if (totalMatches > TEXT_RESULT_DISPLAY_LIMIT) {
+      text += `${String(totalMatches)} textes correspondent à « ${trimmedAnswer} ». Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
+    } else {
+      text += `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`;
+    }
+  } else {
+    text += `Aucun texte des deux dernières années ne correspond à « ${trimmedAnswer} ».\n\n`;
+  }
 
   for (let i = 0; i < previewLimit; i++) {
     const publication = matchingPublications[i];
