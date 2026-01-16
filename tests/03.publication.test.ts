@@ -188,4 +188,49 @@ describe("Publication Model Test Suite", () => {
       expect(found?.id).toBe(samplePublication.id);
     });
   });
+
+  describe("Bulk Operations", () => {
+    it("should handle bulkWrite insertions with normalized fields", async () => {
+      const publications = [
+        {
+          id: "JORF001",
+          date: "2024-01-15",
+          date_obj: new Date("2024-01-15"),
+          title: "Premier décret de test",
+          normalizedTitle: normalizeFrenchText("Premier décret de test"),
+          normalizedTitleWords: normalizeFrenchText("Premier décret de test").split(" ").filter(Boolean),
+          tags: {}
+        },
+        {
+          id: "JORF002",
+          date: "2024-01-16",
+          date_obj: new Date("2024-01-16"),
+          title: "Deuxième arrêté de test",
+          normalizedTitle: normalizeFrenchText("Deuxième arrêté de test"),
+          normalizedTitleWords: normalizeFrenchText("Deuxième arrêté de test").split(" ").filter(Boolean),
+          tags: {}
+        }
+      ];
+
+      const ops = publications.map((doc) => ({
+        updateOne: {
+          filter: { id: doc.id },
+          update: { $setOnInsert: doc },
+          upsert: true
+        }
+      }));
+
+      const result = await Publication.bulkWrite(ops, { ordered: false });
+      expect(result.upsertedCount).toBe(2);
+
+      // Verify the normalized fields are present
+      const pub1 = await Publication.findOne({ id: "JORF001" });
+      expect(pub1?.normalizedTitle).toBe(normalizeFrenchText("Premier décret de test"));
+      expect(pub1?.normalizedTitleWords).toBeDefined();
+
+      const pub2 = await Publication.findOne({ id: "JORF002" });
+      expect(pub2?.normalizedTitle).toBe(normalizeFrenchText("Deuxième arrêté de test"));
+      expect(pub2?.normalizedTitleWords).toBeDefined();
+    });
+  });
 });

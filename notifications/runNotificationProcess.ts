@@ -20,6 +20,7 @@ import {
   getJORFRecordsFromDate
 } from "../utils/JORFSearch.utils.ts";
 import { formatDuration } from "../utils/date.utils.ts";
+import { normalizeFrenchText } from "../utils/text.utils.ts";
 
 async function saveNewMetaPublications(
   metaRecords: JORFSearchPublication[]
@@ -31,10 +32,15 @@ async function saveNewMetaPublications(
     if (!byId.has(key)) byId.set(key, r);
   }
 
-  const records = Array.from(byId.entries()).map(([id, doc]) => ({
-    ...doc,
-    id: id
-  }));
+  const records = Array.from(byId.entries()).map(([id, doc]) => {
+    const normalizedTitle = normalizeFrenchText(doc.title);
+    return {
+      ...doc,
+      id: id,
+      normalizedTitle,
+      normalizedTitleWords: normalizedTitle.split(" ").filter(Boolean)
+    };
+  });
   if (records.length === 0) return;
 
   // 2) Upsert using $setOnInsert so repeats do not create new docs
