@@ -171,7 +171,7 @@ async function handleTextAlertAnswer(
     if (cleanedTitle) {
       text += `... ${cleanedTitle}\n\n`;
     } else {
-      text += `\n`;
+      text += `\n\n`;
     }
   }
 

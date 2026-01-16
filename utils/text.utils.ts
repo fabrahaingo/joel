@@ -310,7 +310,7 @@ export function levenshteinDistance(a: string, b: string, maxDistance?: number):
   // Early exit if length difference exceeds maxDistance
   if (maxDistance !== undefined) {
     const lengthDiff = Math.abs(a.length - b.length);
-    if (lengthDiff > maxDistance) return lengthDiff;
+    if (lengthDiff > maxDistance) return maxDistance + 1;
   }
   
   const rows = a.length + 1;
@@ -395,7 +395,6 @@ export function fuzzyIncludesNormalized(
       found = true;
     } else {
       // Check with plural canonicalization
-      const canonicalNeedle = canonicalizePlural(needleWord);
       for (const haystackWord of finalHaystackWords) {
         if (wordsEqual(haystackWord, needleWord)) {
           found = true;
