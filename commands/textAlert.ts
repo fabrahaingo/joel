@@ -15,7 +15,6 @@ import { logError } from "../utils/debugLogger.ts";
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
 
-const TEXT_RESULT_MAX = 5;
 const TEXT_RESULT_DISPLAY_LIMIT = 10;
 const TEXT_RESULT_SEARCH_LIMIT = 100;
 
