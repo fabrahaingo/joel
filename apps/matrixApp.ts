@@ -400,6 +400,12 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
                     messageApp: matrixApp,
                     hasAccount: true
                   });
+                } else {
+                  // Update room ID for active user
+                  await User.updateOne(
+                    { _id: previousUser._id },
+                    { $set: { roomId: roomId } }
+                  );
                 }
                 if (!previousUser.followsNothing())
                   msgText = KEYBOARD_KEYS.FOLLOWS_LIST.key.text;
