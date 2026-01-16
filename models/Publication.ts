@@ -46,12 +46,12 @@ const TagsSchema = new Schema<JORFSearchPublication["tags"]>(
   { _id: false }
 );
 
-interface IPublicationDocument extends JORFSearchPublication {
+export interface IPublication extends JORFSearchPublication {
   normalizedTitle?: string;
   normalizedTitleWords?: string[];
 }
 
-const PublicationSchema = new Schema<IPublicationDocument>(
+const PublicationSchema = new Schema<IPublication>(
   {
     id: {
       type: String,
@@ -95,7 +95,11 @@ PublicationSchema.index({ date_obj: 1 });
 
 // Pre-save hook to compute normalized title fields
 PublicationSchema.pre("save", function (next) {
-  if (this.isModified("title") || !this.normalizedTitle || !this.normalizedTitleWords) {
+  if (
+    this.isModified("title") ||
+    !this.normalizedTitle ||
+    !this.normalizedTitleWords
+  ) {
     const normalized = normalizeFrenchText(this.title);
     this.normalizedTitle = normalized;
     this.normalizedTitleWords = normalized.split(" ").filter(Boolean);
@@ -103,7 +107,7 @@ PublicationSchema.pre("save", function (next) {
   next();
 });
 
-export const Publication = model<IPublicationDocument>(
+export const Publication = model<IPublication>(
   "Publication",
   PublicationSchema
 );

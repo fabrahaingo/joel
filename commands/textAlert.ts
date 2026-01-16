@@ -2,15 +2,15 @@ import User from "../models/User.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import { ISession, MessageApp, IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
-import { Publication } from "../models/Publication.ts";
+import { IPublication, Publication } from "../models/Publication.ts";
 import {
   fuzzyIncludesNormalized,
   levenshteinDistance,
   normalizeFrenchText
 } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
-import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { dateToString } from "../utils/date.utils.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
@@ -120,20 +120,34 @@ async function handleTextAlertAnswer(
   const hasResults = matchingPublications.length > 0;
   const totalMatches = matchingPublications.length;
   const hasMoreThan100 = totalMatches >= TEXT_RESULT_SEARCH_LIMIT;
-  
+
   // Display only the first TEXT_RESULT_DISPLAY_LIMIT (10) results
-  const previewLimit = Math.min(TEXT_RESULT_DISPLAY_LIMIT, matchingPublications.length);
+  const previewLimit = Math.min(
+    TEXT_RESULT_DISPLAY_LIMIT,
+    matchingPublications.length
+  );
+
+  const sinceText = ` depuis 2 ans (${dateToString(twoYearsAgo, "DMY").replaceAll("/", "-")})`;
 
   if (hasResults) {
     if (hasMoreThan100) {
-      text += `Plus de ${TEXT_RESULT_SEARCH_LIMIT} textes correspondent à « ${trimmedAnswer} ». Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
+      text +=
+        `Plus de ${String(TEXT_RESULT_SEARCH_LIMIT)} textes correspondent à « ${trimmedAnswer} »` +
+        sinceText;
+      text += `\\split`;
+      text += `Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
     } else if (totalMatches > TEXT_RESULT_DISPLAY_LIMIT) {
-      text += `${String(totalMatches)} textes correspondent à « ${trimmedAnswer} ». Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
+      text +=
+        `${String(totalMatches)} textes correspondent à « ${trimmedAnswer} »` +
+        sinceText;
+      text += `\\split`;
+      text += `Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
     } else {
       text += `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`;
     }
   } else {
-    text += `Aucun texte des deux dernières années ne correspond à « ${trimmedAnswer} ».\n\n`;
+    text += `Aucun texte ne correspond à « ${trimmedAnswer} ».` + sinceText;
+    text += `\n\n`;
   }
 
   for (let i = 0; i < previewLimit; i++) {
@@ -313,11 +327,19 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
   const twoYearsAgo = new Date();
   twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
-  const publications: JORFSearchPublication[] = await Publication.find(
+  const publications: IPublication[] = await Publication.find(
     {
       date_obj: { $gte: twoYearsAgo }
     },
-    { title: 1, id: 1, date: 1, date_obj: 1, normalizedTitle: 1, normalizedTitleWords: 1, _id: 0 }
+    {
+      title: 1,
+      id: 1,
+      date: 1,
+      date_obj: 1,
+      normalizedTitle: 1,
+      normalizedTitleWords: 1,
+      _id: 0
+    }
   )
     .sort({ date_obj: -1 })
     .lean();
@@ -326,7 +348,7 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
     // Use pre-computed normalized fields if both are available, otherwise compute them
     let normalizedTitle: string;
     let normalizedTitleWords: string[];
-    
+
     if (publication.normalizedTitle && publication.normalizedTitleWords) {
       // Both fields exist, use them directly
       normalizedTitle = publication.normalizedTitle;
@@ -336,7 +358,7 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
       normalizedTitle = normalizeFrenchText(publication.title);
       normalizedTitleWords = normalizedTitle.split(" ").filter(Boolean);
     }
-    
+
     return {
       ...publication,
       normalizedTitle,
