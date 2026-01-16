@@ -38,7 +38,13 @@ if (!["Matrix", "Tchap"].some((m) => m === MATRIX_BOT_TYPE)) {
 const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 
 // Global constant to check if encryption is enabled for the bot
-const ENCRYPTION_ENABLED = true;
+const ENCRYPTION_ENABLED = Boolean(
+  process.env.MATRIX_ENCRYPTION_ENABLED ?? "TRUE"
+);
+
+if (ENCRYPTION_ENABLED) {
+  console.log(`${matrixApp}: Encryption is ENABLED for the bot \u{1F512}`);
+}
 
 // Constants for room.join handler
 const ROOM_STATE_STABILIZATION_DELAY = 1000; // ms to wait for room state to stabilize
@@ -92,7 +98,7 @@ client.on(
 );
 
 // Handle bot being invited to a new room
-client.on("room.join", (roomId: string, _event: unknown) => {
+client.on("room.join", (roomId: string) => {
   void (async () => {
     try {
       // Wait a moment for room state to stabilize
