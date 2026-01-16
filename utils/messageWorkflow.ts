@@ -20,7 +20,8 @@ export async function handleIncomingMessage(
   text: string,
   options?: MessageWorkflowOptions
 ): Promise<void> {
-  const { beforeProcessing, isReply, errorContext, isFirstMessage } = options ?? {};
+  const { beforeProcessing, isReply, errorContext, isFirstMessage } =
+    options ?? {};
   try {
     const res = await User.updateOne(
       { messageApp: session.messageApp, chatId: session.chatId },

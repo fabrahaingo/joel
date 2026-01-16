@@ -1,7 +1,10 @@
 import emojiRegex from "emoji-regex";
 import { MessageApp } from "../types.ts";
 import { TELEGRAM_MESSAGE_CHAR_LIMIT } from "../entities/TelegramSession.ts";
-import { WHATSAPP_MESSAGE_CHAR_LIMIT, WHATSAPP_MAX_LINES } from "../entities/WhatsAppSession.ts";
+import {
+  WHATSAPP_MESSAGE_CHAR_LIMIT,
+  WHATSAPP_MAX_LINES
+} from "../entities/WhatsAppSession.ts";
 import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
 import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
 
