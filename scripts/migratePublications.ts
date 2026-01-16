@@ -26,11 +26,9 @@ async function migratePublications(): Promise<void> {
   await mongodbConnect();
   
   // Find all publications that don't have normalized fields
+  // We only check for normalizedTitle since both fields are always computed together
   const publicationsToMigrate = await Publication.find({
-    $or: [
-      { normalizedTitle: { $exists: false } },
-      { normalizedTitleWords: { $exists: false } }
-    ]
+    normalizedTitle: { $exists: false }
   }).lean();
   
   console.log(`Found ${publicationsToMigrate.length} publications to migrate`);
