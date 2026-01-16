@@ -244,10 +244,10 @@ export function normalizeFrenchTextWithStopwords(text: string): string {
   
   // Filter out stopwords and date-related words (numbers and months)
   const filtered = words.filter(word => {
-    // Keep numbers that are significant (4+ digits, likely years or identifiers)
+    // Keep significant numbers (4+ digits, likely years or identifiers like decree numbers)
     if (/^\d{4,}$/.test(word)) return true;
     
-    // Remove pure numbers (likely day/year in dates)
+    // Remove short numbers (likely day/month in dates like "15" or "06")
     if (/^\d+$/.test(word)) return false;
     
     // Remove months
@@ -283,10 +283,10 @@ export function parsePublicationTitle(title: string): {
   // Try to remove the date pattern: "du XX month YYYY" or "du XX/XX/XXXX" or similar
   // Pattern: "du" followed by date-like content
   const datePatterns = [
-    /^du?\s+\d{1,2}\s+\w+\s+\d{4}\s*/i,  // "du 6 janvier 2026 "
+    /^du?\s+\d{1,2}\s+[a-zéèêû]+\s+\d{4}\s*/i,  // "du 6 janvier 2026 " (month is lowercase letters with accents)
     /^du?\s+\d{1,2}\/\d{1,2}\/\d{4}\s*/i, // "du 06/01/2026 "
     /^du?\s+\d{1,2}-\d{1,2}-\d{4}\s*/i,   // "du 06-01-2026 "
-    /^en\s+date\s+du?\s+\d{1,2}\s+\w+\s+\d{4}\s*/i, // "en date du 6 janvier 2026 "
+    /^en\s+date\s+du?\s+\d{1,2}\s+[a-zéèêû]+\s+\d{4}\s*/i, // "en date du 6 janvier 2026 "
   ];
   
   for (const pattern of datePatterns) {
