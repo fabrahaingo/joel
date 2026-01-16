@@ -1,7 +1,7 @@
 import { describe, expect, beforeEach, it } from "@jest/globals";
 import { Publication } from "../models/Publication.ts";
 import mongoose from "mongoose";
-import { normalizeFrenchText } from "../utils/text.utils.ts";
+import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
 
 describe("Publication Model Test Suite", () => {
   beforeEach(async () => {
@@ -73,8 +73,8 @@ describe("Publication Model Test Suite", () => {
       expect(publication.normalizedTitleWords).toBeDefined();
       expect(Array.isArray(publication.normalizedTitleWords)).toBe(true);
 
-      // Verify the normalization is correct
-      const expectedNormalized = normalizeFrenchText(samplePublication.title);
+      // Verify the normalization is correct (with stopwords removed)
+      const expectedNormalized = normalizeFrenchTextWithStopwords(samplePublication.title);
       expect(publication.normalizedTitle).toBe(expectedNormalized);
       expect(publication.normalizedTitleWords).toEqual(
         expectedNormalized.split(" ").filter(Boolean)
@@ -97,6 +97,10 @@ describe("Publication Model Test Suite", () => {
       expect(publication.normalizedTitle).not.toContain("è");
       expect(publication.normalizedTitle).not.toContain("é");
       expect(publication.normalizedTitle).not.toContain("'");
+      
+      // Should remove common stopwords
+      expect(publication.normalizedTitle).not.toContain(" les ");
+      expect(publication.normalizedTitle).not.toContain(" de ");
     });
 
     it("should recompute normalized fields when title is modified", async () => {
@@ -108,7 +112,7 @@ describe("Publication Model Test Suite", () => {
 
       expect(publication.normalizedTitle).not.toBe(originalNormalized);
       expect(publication.normalizedTitle).toBe(
-        normalizeFrenchText("Nouveau titre du décret modifié")
+        normalizeFrenchTextWithStopwords("Nouveau titre du décret modifié")
       );
     });
 
@@ -167,7 +171,7 @@ describe("Publication Model Test Suite", () => {
     it("should be able to query by normalizedTitle", async () => {
       await Publication.create(samplePublication);
 
-      const normalized = normalizeFrenchText(samplePublication.title);
+      const normalized = normalizeFrenchTextWithStopwords(samplePublication.title);
       const found = await Publication.findOne({
         normalizedTitle: normalized
       });
@@ -197,8 +201,8 @@ describe("Publication Model Test Suite", () => {
           date: "2024-01-15",
           date_obj: new Date("2024-01-15"),
           title: "Premier décret de test",
-          normalizedTitle: normalizeFrenchText("Premier décret de test"),
-          normalizedTitleWords: normalizeFrenchText("Premier décret de test")
+          normalizedTitle: normalizeFrenchTextWithStopwords("Premier décret de test"),
+          normalizedTitleWords: normalizeFrenchTextWithStopwords("Premier décret de test")
             .split(" ")
             .filter(Boolean),
           tags: {}
@@ -208,8 +212,8 @@ describe("Publication Model Test Suite", () => {
           date: "2024-01-16",
           date_obj: new Date("2024-01-16"),
           title: "Deuxième arrêté de test",
-          normalizedTitle: normalizeFrenchText("Deuxième arrêté de test"),
-          normalizedTitleWords: normalizeFrenchText("Deuxième arrêté de test")
+          normalizedTitle: normalizeFrenchTextWithStopwords("Deuxième arrêté de test"),
+          normalizedTitleWords: normalizeFrenchTextWithStopwords("Deuxième arrêté de test")
             .split(" ")
             .filter(Boolean),
           tags: {}
@@ -230,13 +234,13 @@ describe("Publication Model Test Suite", () => {
       // Verify the normalized fields are present
       const pub1 = await Publication.findOne({ id: "JORF001" });
       expect(pub1?.normalizedTitle).toBe(
-        normalizeFrenchText("Premier décret de test")
+        normalizeFrenchTextWithStopwords("Premier décret de test")
       );
       expect(pub1?.normalizedTitleWords).toBeDefined();
 
       const pub2 = await Publication.findOne({ id: "JORF002" });
       expect(pub2?.normalizedTitle).toBe(
-        normalizeFrenchText("Deuxième arrêté de test")
+        normalizeFrenchTextWithStopwords("Deuxième arrêté de test")
       );
       expect(pub2?.normalizedTitleWords).toBeDefined();
     });

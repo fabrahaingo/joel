@@ -6,7 +6,9 @@ import { IPublication, Publication } from "../models/Publication.ts";
 import {
   fuzzyIncludesNormalized,
   levenshteinDistance,
-  normalizeFrenchText
+  normalizeFrenchText,
+  normalizeFrenchTextWithStopwords,
+  parsePublicationTitle
 } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
@@ -85,7 +87,8 @@ async function handleTextAlertAnswer(
   });
   session.sendTypingAction();
 
-  const normalizedAnswer = normalizeFrenchText(trimmedAnswer);
+  // Normalize user query with stopword removal for better matching
+  const normalizedAnswer = normalizeFrenchTextWithStopwords(trimmedAnswer);
   const normalizedAnswerWords = normalizedAnswer.split(" ").filter(Boolean);
 
   const recentPublications = await getRecentPublications(session.messageApp);
@@ -153,13 +156,23 @@ async function handleTextAlertAnswer(
   for (let i = 0; i < previewLimit; i++) {
     const publication = matchingPublications[i];
     const publicationLink = getJORFTextLink(publication.id);
+    const { type, cleanedTitle } = parsePublicationTitle(publication.title);
+    
+    // Format: Date - Type - Link
     text += `*${publication.date.replaceAll("-", "/")}*`;
+    text += ` - ${type}`;
     if (session.messageApp === "WhatsApp") {
-      text += `\n${publicationLink}\n`;
+      text += ` - ${publicationLink}\n`;
     } else {
       text += ` - [Cliquer ici](${publicationLink})\n`;
     }
-    text += `${publication.title}\n\n`;
+    
+    // Format: ... cleaned_title
+    if (cleanedTitle) {
+      text += `... ${cleanedTitle}\n\n`;
+    } else {
+      text += `\n`;
+    }
   }
 
   text += "\\split";
@@ -355,7 +368,7 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
       normalizedTitleWords = publication.normalizedTitleWords;
     } else {
       // One or both fields missing, recompute both to ensure consistency
-      normalizedTitle = normalizeFrenchText(publication.title);
+      normalizedTitle = normalizeFrenchTextWithStopwords(publication.title);
       normalizedTitleWords = normalizedTitle.split(" ").filter(Boolean);
     }
 

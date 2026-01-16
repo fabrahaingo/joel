@@ -20,7 +20,7 @@ import {
   getJORFRecordsFromDate
 } from "../utils/JORFSearch.utils.ts";
 import { formatDuration } from "../utils/date.utils.ts";
-import { normalizeFrenchText } from "../utils/text.utils.ts";
+import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
 
 async function saveNewMetaPublications(
   metaRecords: JORFSearchPublication[]
@@ -33,7 +33,7 @@ async function saveNewMetaPublications(
   }
 
   const records = Array.from(byId.entries()).map(([id, doc]) => {
-    const normalizedTitle = normalizeFrenchText(doc.title);
+    const normalizedTitle = normalizeFrenchTextWithStopwords(doc.title);
     return {
       ...doc,
       id: id,

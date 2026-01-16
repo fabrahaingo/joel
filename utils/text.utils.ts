@@ -202,6 +202,26 @@ export function removeSpecialCharacters(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "");
 }
 
+// Common French stopwords to exclude from search indexing
+const FRENCH_STOPWORDS = new Set([
+  "le", "la", "les", "un", "une", "des", "du", "de", "d",
+  "au", "aux", "à", "a",
+  "et", "ou", "mais", "donc", "or", "ni", "car",
+  "ce", "cet", "cette", "ces",
+  "dans", "par", "pour", "sur", "sous", "avec", "sans",
+  "en", "y",
+  "il", "elle", "on", "nous", "vous", "ils", "elles",
+  "se", "sa", "son", "ses",
+  "qui", "que", "quoi", "dont", "où",
+  "l", "s", "n", "t", "m", "c", "j"
+]);
+
+// French month names (used to detect dates in titles)
+const FRENCH_MONTHS = new Set([
+  "janvier", "fevrier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "aout", "août", "septembre", "octobre", "novembre", "decembre", "décembre"
+]);
+
 export function normalizeFrenchText(text: string): string {
   return text
     .normalize("NFD")
@@ -212,6 +232,71 @@ export function normalizeFrenchText(text: string): string {
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+/**
+ * Normalize French text and remove stopwords
+ * Used for indexing publication titles for search
+ */
+export function normalizeFrenchTextWithStopwords(text: string): string {
+  const normalized = normalizeFrenchText(text);
+  const words = normalized.split(" ").filter(Boolean);
+  
+  // Filter out stopwords and date-related words (numbers and months)
+  const filtered = words.filter(word => {
+    // Keep numbers that are significant (4+ digits, likely years or identifiers)
+    if (/^\d{4,}$/.test(word)) return true;
+    
+    // Remove pure numbers (likely day/year in dates)
+    if (/^\d+$/.test(word)) return false;
+    
+    // Remove months
+    if (FRENCH_MONTHS.has(word)) return false;
+    
+    // Remove stopwords
+    if (FRENCH_STOPWORDS.has(word)) return false;
+    
+    return true;
+  });
+  
+  return filtered.join(" ");
+}
+
+/**
+ * Parse publication title to extract type and cleaned content
+ * Example: "Arrêté du 6 janvier 2026 fixant le taux..." 
+ * Returns: { type: "Arrêté", cleanedTitle: "fixant le taux..." }
+ */
+export function parsePublicationTitle(title: string): {
+  type: string;
+  cleanedTitle: string;
+} {
+  // Extract the first word as the publication type
+  const firstSpaceIndex = title.indexOf(" ");
+  if (firstSpaceIndex === -1) {
+    return { type: title, cleanedTitle: "" };
+  }
+  
+  const type = title.substring(0, firstSpaceIndex);
+  let remainingTitle = title.substring(firstSpaceIndex + 1).trim();
+  
+  // Try to remove the date pattern: "du XX month YYYY" or "du XX/XX/XXXX" or similar
+  // Pattern: "du" followed by date-like content
+  const datePatterns = [
+    /^du?\s+\d{1,2}\s+\w+\s+\d{4}\s*/i,  // "du 6 janvier 2026 "
+    /^du?\s+\d{1,2}\/\d{1,2}\/\d{4}\s*/i, // "du 06/01/2026 "
+    /^du?\s+\d{1,2}-\d{1,2}-\d{4}\s*/i,   // "du 06-01-2026 "
+    /^en\s+date\s+du?\s+\d{1,2}\s+\w+\s+\d{4}\s*/i, // "en date du 6 janvier 2026 "
+  ];
+  
+  for (const pattern of datePatterns) {
+    remainingTitle = remainingTitle.replace(pattern, "");
+  }
+  
+  return {
+    type,
+    cleanedTitle: remainingTitle.trim()
+  };
 }
 
 export function levenshteinDistance(a: string, b: string): number {

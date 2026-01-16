@@ -1,6 +1,6 @@
 import { Schema as _Schema, model } from "mongoose";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
-import { normalizeFrenchText } from "../utils/text.utils.ts";
+import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
 
 const Schema = _Schema;
 
@@ -100,7 +100,7 @@ PublicationSchema.pre("save", function (next) {
     !this.normalizedTitle ||
     !this.normalizedTitleWords
   ) {
-    const normalized = normalizeFrenchText(this.title);
+    const normalized = normalizeFrenchTextWithStopwords(this.title);
     this.normalizedTitle = normalized;
     this.normalizedTitleWords = normalized.split(" ").filter(Boolean);
   }

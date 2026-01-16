@@ -18,7 +18,7 @@
 import "dotenv/config";
 import { mongodbConnect, mongodbDisconnect } from "../db.ts";
 import { Publication } from "../models/Publication.ts";
-import { normalizeFrenchText } from "../utils/text.utils.ts";
+import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
 
 async function migratePublications(): Promise<void> {
   console.log("Starting publication migration...");
@@ -47,7 +47,7 @@ async function migratePublications(): Promise<void> {
     const batch = publicationsToMigrate.slice(i, i + BATCH_SIZE);
 
     const bulkOps = batch.map((pub) => {
-      const normalizedTitle = normalizeFrenchText(pub.title);
+      const normalizedTitle = normalizeFrenchTextWithStopwords(pub.title);
       return {
         updateOne: {
           filter: { id: pub.id },
