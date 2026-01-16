@@ -311,17 +311,19 @@ async function refreshRecentPublications(): Promise<PublicationPreview[]> {
     {
       date_obj: { $gte: twoYearsAgo }
     },
-    { title: 1, id: 1, date: 1, date_obj: 1, _id: 0 }
+    { title: 1, id: 1, date: 1, date_obj: 1, normalizedTitle: 1, normalizedTitleWords: 1, _id: 0 }
   )
     .sort({ date_obj: -1 })
     .lean();
 
   cachedPublications = publications.map((publication) => {
-    const normalizedTitle = normalizeFrenchText(publication.title);
+    // Use pre-computed normalized fields if available, otherwise compute them
+    const normalizedTitle = publication.normalizedTitle ?? normalizeFrenchText(publication.title);
+    const normalizedTitleWords = publication.normalizedTitleWords ?? normalizedTitle.split(" ").filter(Boolean);
     return {
       ...publication,
       normalizedTitle,
-      normalizedTitleWords: normalizedTitle.split(" ").filter(Boolean)
+      normalizedTitleWords
     };
   });
   lastFetchedAt = Date.now();
