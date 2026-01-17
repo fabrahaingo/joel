@@ -352,8 +352,11 @@ interface MatrixRoomEvent {
 // This is the command handler we registered a few lines up
 function handleCommand(roomId: string, event: MatrixRoomEvent) {
   void (async () => {
+    // Ensure serverUserId is initialized
+    const botUserId = await ensureServerUserId();
+    
     // ignore message from itself
-    if (event.sender === serverUserId) return;
+    if (event.sender === botUserId) return;
 
     let msgText: string | undefined;
     switch (event.type) {
@@ -408,7 +411,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         } else if (event.content.membership === "join") {
           // Skip if the bot itself is joining - this prevents duplicate welcome messages
           // as the room.join handler already processes bot joins
-          if (event.sender === serverUserId) {
+          if (event.sender === botUserId) {
             return;
           }
 
