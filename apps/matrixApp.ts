@@ -289,11 +289,13 @@ await (async function () {
     serverUserId = await client.getUserId();
     await client.start();
 
+    /*
     if (ENCRYPTION_ENABLED) {
       console.log("Bot device ID:", client.crypto.clientDeviceId);
       // @ts-expect-error: clientEd25519 is not exported by the SDK
       console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
     }
+     */
 
     const messageOptions =
       matrixApp === "Matrix"
