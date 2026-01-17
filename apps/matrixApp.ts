@@ -48,7 +48,6 @@ if (ENCRYPTION_ENABLED) {
 
 // Constants for room.join handler
 const ROOM_STATE_STABILIZATION_DELAY = 1000; // ms to wait for room state to stabilize
-const MESSAGE_HISTORY_CHECK_LIMIT = 10; // number of recent messages to check
 const DEFAULT_LANGUAGE = "fr"; // default language for new users
 const MULTI_PERSON_ROOM_MESSAGE =
   "JOEL ne permet pas de rejoindre des salons multi-personnes.";
@@ -132,30 +131,8 @@ client.on("room.join", (roomId: string) => {
         return;
       }
 
-      // Check if there are any messages in the room already
-      // If the user has already sent a message, the regular message handler will take care of the welcome
-      try {
-        const messages = await client.getMessages(roomId, {
-          limit: MESSAGE_HISTORY_CHECK_LIMIT
-        });
-        const hasUserMessages = messages.chunk.some(
-          (msg: { sender?: string; type?: string }) =>
-            msg.sender === otherUserId && msg.type === "m.room.message"
-        );
-        if (hasUserMessages) {
-          console.log(
-            `${matrixApp}: User ${otherUserId} already sent messages in room ${roomId}, skipping proactive welcome`
-          );
-          return;
-        }
-      } catch (error) {
-        // If we can't check messages, proceed with welcome anyway
-        await logWarning(
-          matrixApp,
-          "Could not check room messages, proceeding with welcome message",
-          error
-        );
-      }
+      // Add this room to the set of just-joined rooms
+      justJoinedRoomsIds.add(roomId);
 
       // Check if user already exists in database
       const previousUser: IUser | null = await User.findOne({
@@ -248,6 +225,8 @@ async function getOtherMemberCount(roomId: string) {
   return otherMembers.length;
 }
 
+const justJoinedRoomsIds = new Set<string>();
+
 await (async function () {
   // Register stopper
   let shuttingDown = false;
@@ -289,13 +268,9 @@ await (async function () {
     serverUserId = await client.getUserId();
     await client.start();
 
-    /*
     if (ENCRYPTION_ENABLED) {
       console.log("Bot device ID:", client.crypto.clientDeviceId);
-      // @ts-expect-error: clientEd25519 is not exported by the SDK
-      console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
     }
-     */
 
     const messageOptions =
       matrixApp === "Matrix"
@@ -436,7 +411,10 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
 
     // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
     if (/^@_?server:/.test(event.sender)) {
-      await logWarning(matrixApp, `${matrixApp}: message from the server`);
+      await logWarning(
+        matrixApp,
+        `${matrixApp}: message from the server: ${msgText}`
+      );
       if (event.type === "m.room.message")
         await client.sendReadReceipt(roomId, event.event_id);
       return;
@@ -459,36 +437,18 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         receivedMessageTime
       );
 
-      // Check if this is the first message from this user in this room
-      let isFirstMessage = false;
-      try {
-        const messages = await client.getMessages(roomId, {
-          limit: MESSAGE_HISTORY_CHECK_LIMIT
-        });
-        // Check if there are any previous messages from this user
-        // Note: The current message may or may not be included in the history yet,
-        // so we check if there are 0 or 1 messages (if 1, it could be the current one)
-        const userMessageCount = messages.chunk.filter(
-          (msg: { sender?: string; type?: string }) =>
-            msg.sender === event.sender && msg.type === "m.room.message"
-        ).length;
-        // If there are 0 messages, it's definitely the first
-        // If there's 1, it's likely the current message, so also consider it first
-        isFirstMessage = userMessageCount <= 1;
-      } catch (error) {
-        // If we can't check messages, assume it's not the first message to avoid
-        // sending unwanted welcome messages
-        await logWarning(
-          matrixApp,
-          "Could not check room messages for first message detection",
-          error
-        );
-      }
+      // Check if this room has just been joined
+      const isFirstMessage = justJoinedRoomsIds.has(roomId);
 
       await handleIncomingMessage(matrixSession, msgText, {
         errorContext: "Error processing command",
         isFirstMessage
       });
+
+      // Remove from just-joined set
+      if (justJoinedRoomsIds.has(roomId)) {
+        justJoinedRoomsIds.delete(roomId);
+      }
     } catch (error) {
       await logError(matrixApp, "Error processing command", error);
     }
