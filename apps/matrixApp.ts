@@ -406,7 +406,8 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
           
           return;
         } else if (event.content.membership === "join") {
-          // Skip if the bot itself is joining - this is handled by room.join event
+          // Skip if the bot itself is joining - this prevents duplicate welcome messages
+          // as the room.join handler already processes bot joins
           if (event.sender === serverUserId) {
             return;
           }
