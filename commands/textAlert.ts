@@ -147,7 +147,7 @@ async function handleTextAlertAnswer(
     matchingPublications.length
   );
 
-  const sinceText = ` depuis ${String(yearsBack)} an${yearsBack > 1 ? 's' : ''} (${dateToString(startDate, "DMY").replaceAll("/", "-")})`;
+  const sinceText = ` depuis ${String(yearsBack)} an${yearsBack > 1 ? "s" : ""} (${dateToString(startDate, "DMY").replaceAll("/", "-")})`;
 
   if (hasResults) {
     if (hasMoreThan100) {
@@ -408,9 +408,9 @@ async function getRecentPublications(
   BACKGROUND_LOG_APP = messageApp;
   try {
     // Check if cache is stale or if the date range has changed
-    const dateRangeChanged = 
+    const dateRangeChanged =
       lastStartDate && lastStartDate.getTime() !== startDate.getTime();
-    
+
     const isCacheStale =
       !cachedPublications ||
       !lastFetchedAt ||
@@ -445,7 +445,7 @@ function startBackgroundRefresh(): void {
       const yearsBack = getYearsBackSearch();
       const startDate = new Date();
       startDate.setFullYear(startDate.getFullYear() - yearsBack);
-      
+
       inflightRefresh ??= refreshRecentPublications(startDate).finally(() => {
         inflightRefresh = null;
       });
