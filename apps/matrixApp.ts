@@ -100,14 +100,12 @@ client.on("room.join", (roomId: string, _event: unknown) => {
 
       // Check if this is a direct message (1-on-1) room
       const otherMemberCount = await getOtherMemberCount(roomId);
-      if (otherMemberCount === 0) {
-        // Empty room, leave it
-        console.log(
-          `${matrixApp}: leaving empty room ${roomId}`
-        );
-        await client.leaveRoom(roomId);
+      
+      // Leave if room is empty
+      if (await leaveIfEmptyRoom(roomId)) {
         return;
       }
+      
       if (otherMemberCount !== 1) {
         // Not a 1-on-1 room, leave it
         console.log(
@@ -248,6 +246,29 @@ async function getOtherMemberCount(roomId: string) {
   return otherMembers.length;
 }
 
+/**
+ * Check if a room is empty (no other members besides the bot) and leave if so.
+ * @returns true if the room was empty and the bot left, false otherwise
+ */
+async function leaveIfEmptyRoom(roomId: string): Promise<boolean> {
+  try {
+    const otherMemberCount = await getOtherMemberCount(roomId);
+    if (otherMemberCount === 0) {
+      console.log(`${matrixApp}: leaving empty room ${roomId}`);
+      await client.leaveRoom(roomId);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    await logWarning(
+      matrixApp,
+      `Could not check if room ${roomId} is empty`,
+      error
+    );
+    return false;
+  }
+}
+
 await (async function () {
   // Register stopper
   let shuttingDown = false;
@@ -380,22 +401,8 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
             }
           }
           
-          // Check if room is now empty and leave if so
-          try {
-            const otherMemberCount = await getOtherMemberCount(roomId);
-            if (otherMemberCount === 0) {
-              console.log(
-                `${matrixApp}: leaving empty room ${roomId} after user left`
-              );
-              await client.leaveRoom(roomId);
-            }
-          } catch (error) {
-            await logWarning(
-              matrixApp,
-              "Could not check room membership after user left",
-              error
-            );
-          }
+          // Leave if room is now empty
+          await leaveIfEmptyRoom(roomId);
           
           return;
         } else if (event.content.membership === "join") {
