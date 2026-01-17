@@ -100,6 +100,9 @@ client.on(
 
 // Handle bot being invited to a new room
 client.on("room.join", (roomId: string) => {
+  // Mark this room as recently joined to avoid duplicate welcome messages
+  // from processing stale m.room.member events
+  recentlyJoinedRooms.add(roomId);
   void (async () => {
     try {
       // Wait a moment for room state to stabilize
@@ -109,12 +112,12 @@ client.on("room.join", (roomId: string) => {
 
       // Check if this is a direct message (1-on-1) room
       const otherMemberCount = await getOtherMemberCount(roomId);
-      
+
       // Leave if room is empty
       if (await leaveIfEmptyRoom(roomId)) {
         return;
       }
-      
+
       if (otherMemberCount !== 1) {
         // Not a 1-on-1 room, leave it
         console.log(
@@ -144,6 +147,9 @@ client.on("room.join", (roomId: string) => {
         messageApp: matrixApp,
         chatId: otherUserId
       });
+      setTimeout(() => {
+        recentlyJoinedRooms.delete(roomId);
+      }, ROOM_STATE_STABILIZATION_DELAY * 3); // Keep for 3x stabilization delay
 
       // Prepare welcome message
       let msgText: string;
@@ -253,6 +259,9 @@ async function leaveIfEmptyRoom(roomId: string): Promise<boolean> {
   }
 }
 
+// Track rooms the bot just joined to avoid processing stale member events
+const recentlyJoinedRooms = new Set<string>();
+
 await (async function () {
   // Register stopper
   let shuttingDown = false;
@@ -330,7 +339,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
   void (async () => {
     // Ensure serverUserId is initialized
     const botUserId = await ensureServerUserId();
-    
+
     // ignore message from itself
     if (event.sender === botUserId) return;
 
@@ -379,15 +388,29 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
               });
             }
           }
-          
+
           // Leave if room is now empty
           await leaveIfEmptyRoom(roomId);
-          
+
           return;
         } else if (event.content.membership === "join") {
           // Skip if the bot itself is joining - this prevents duplicate welcome messages
           // as the room.join handler already processes bot joins
           if (event.sender === botUserId) {
+            return;
+          }
+
+          // Wait a moment for room state to stabilize
+          await new Promise((resolve) =>
+            setTimeout(resolve, ROOM_STATE_STABILIZATION_DELAY)
+          );
+
+          // Skip if this room was recently joined by the bot to avoid processing
+          // stale member events that would trigger duplicate welcome messages
+          if (recentlyJoinedRooms.has(roomId)) {
+            console.log(
+              `${matrixApp}: Skipping member join event in recently joined room ${roomId}`
+            );
             return;
           }
 
@@ -436,7 +459,9 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
               break;
             }
           } catch {
-            // unable to inspect room membership
+            console.log(
+              `Error checking member count on member join room ${roomId}`
+            );
             return;
           }
         } else return;
