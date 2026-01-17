@@ -20,7 +20,18 @@ const TEXT_ALERT_PROMPT =
 const TEXT_RESULT_DISPLAY_LIMIT = 10;
 const TEXT_RESULT_SEARCH_LIMIT = 100;
 
-const NB_YEAR_BACK_SEARCH = 10;
+// Configurable number of years to search back (default: 2 years)
+// Can be overridden via TEXT_SEARCH_YEARS_BACK environment variable
+function getYearsBackSearch(): number {
+  const envValue = process.env.TEXT_SEARCH_YEARS_BACK;
+  if (envValue) {
+    const parsed = parseInt(envValue, 10);
+    if (!isNaN(parsed) && parsed > 0 && parsed <= 50) {
+      return parsed;
+    }
+  }
+  return 2; // Default to 2 years
+}
 
 function findFollowedAlertString(
   user: IUser,
@@ -90,8 +101,9 @@ async function handleTextAlertAnswer(
   const normalizedAnswer = normalizeFrenchTextWithStopwords(trimmedAnswer);
   const normalizedAnswerWords = normalizedAnswer.split(" ").filter(Boolean);
 
+  const yearsBack = getYearsBackSearch();
   const startDate = new Date();
-  startDate.setFullYear(startDate.getFullYear() - NB_YEAR_BACK_SEARCH);
+  startDate.setFullYear(startDate.getFullYear() - yearsBack);
 
   const recentPublications = await getRecentPublications(
     session.messageApp,
@@ -135,7 +147,7 @@ async function handleTextAlertAnswer(
     matchingPublications.length
   );
 
-  const sinceText = ` depuis ${String(NB_YEAR_BACK_SEARCH)} ans (${dateToString(startDate, "DMY").replaceAll("/", "-")})`;
+  const sinceText = ` depuis ${String(yearsBack)} an${yearsBack > 1 ? 's' : ''} (${dateToString(startDate, "DMY").replaceAll("/", "-")})`;
 
   if (hasResults) {
     if (hasMoreThan100) {
@@ -338,6 +350,7 @@ let BACKGROUND_LOG_APP: MessageApp = "Tchap";
 
 let cachedPublications: PublicationPreview[] | null = null;
 let lastFetchedAt: number | null = null;
+let lastStartDate: Date | null = null;
 let inflightRefresh: Promise<PublicationPreview[]> | null = null;
 let backgroundRefreshStarted = false;
 
@@ -383,6 +396,7 @@ async function refreshRecentPublications(
     };
   });
   lastFetchedAt = Date.now();
+  lastStartDate = startDate;
 
   return cachedPublications;
 }
@@ -393,10 +407,15 @@ async function getRecentPublications(
 ): Promise<PublicationPreview[] | null> {
   BACKGROUND_LOG_APP = messageApp;
   try {
+    // Check if cache is stale or if the date range has changed
+    const dateRangeChanged = 
+      lastStartDate && lastStartDate.getTime() !== startDate.getTime();
+    
     const isCacheStale =
       !cachedPublications ||
       !lastFetchedAt ||
-      Date.now() - lastFetchedAt > META_REFRESH_TIME_MS;
+      Date.now() - lastFetchedAt > META_REFRESH_TIME_MS ||
+      dateRangeChanged;
 
     if (!isCacheStale && cachedPublications != null) {
       return cachedPublications;
@@ -417,11 +436,16 @@ async function getRecentPublications(
   return null;
 }
 
-function startBackgroundRefresh(startDate: Date): void {
+function startBackgroundRefresh(): void {
   if (backgroundRefreshStarted) return;
 
   const refreshAndHandleError = async (): Promise<void> => {
     try {
+      // Always use the current configuration value
+      const yearsBack = getYearsBackSearch();
+      const startDate = new Date();
+      startDate.setFullYear(startDate.getFullYear() - yearsBack);
+      
       inflightRefresh ??= refreshRecentPublications(startDate).finally(() => {
         inflightRefresh = null;
       });
@@ -443,7 +467,4 @@ function startBackgroundRefresh(startDate: Date): void {
   backgroundRefreshStarted = true;
 }
 
-const startDateTemp = new Date();
-startDateTemp.setFullYear(startDateTemp.getFullYear() - NB_YEAR_BACK_SEARCH);
-
-startBackgroundRefresh(startDateTemp);
+startBackgroundRefresh();
