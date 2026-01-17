@@ -373,6 +373,11 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
           }
           return;
         } else if (event.content.membership === "join") {
+          // Skip if the bot itself is joining - this is handled by room.join event
+          if (event.sender === serverUserId) {
+            return;
+          }
+
           // leave non-direct rooms when a new member joins
           try {
             const otherMemberCount = await getOtherMemberCount(roomId);
