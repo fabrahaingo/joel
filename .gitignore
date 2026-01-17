@@ -8,3 +8,4 @@ crt.pem
 instructions.txt
 yarn.lock
 dist/
+/matrix/

@@ -70,8 +70,9 @@ const buildLogMessage = (
 ): string => {
   const levelEmoji = level === "error" ? "❌" : "⚠️";
   const errorText = formatError(error);
+  const processEnv = (process.env.NODE_ENV ?? "").trim();
   return [
-    `${levelEmoji} [${messageApp} (${process.env.NODE_ENV ?? "production"})] ${message}`,
+    `${levelEmoji} [${messageApp} (${processEnv.length > 0 ? processEnv : "production"})] ${message}`,
     errorText != null ? `Details:\n${errorText}` : null
   ]
     .filter((part): part is string => part != null)
