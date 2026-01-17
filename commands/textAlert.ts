@@ -71,7 +71,7 @@ async function askTextAlertQuestion(session: ISession): Promise<void> {
 }
 
 const TEXT_ALERT_CONFIRMATION_PROMPT = (alertString: string) =>
-  `Confirmez-vous vouloir ajouter une alerte pour « ${alertString} » ? (Oui/Non)`;
+  `Confirmez-vous vouloir ajouter une alerte pour *« ${alertString} »* ? (Oui/Non)`;
 
 async function handleTextAlertAnswer(
   session: ISession,
@@ -147,26 +147,26 @@ async function handleTextAlertAnswer(
     matchingPublications.length
   );
 
-  const sinceText = ` depuis ${String(yearsBack)} an${yearsBack > 1 ? "s" : ""} (${dateToString(startDate, "DMY").replaceAll("/", "-")})`;
+  const sinceText = ` depuis ${String(yearsBack)} an${yearsBack > 1 ? "s" : ""} (${dateToString(startDate, "DMY").replaceAll("-", "/")})`;
 
   if (hasResults) {
     if (hasMoreThan100) {
       text +=
-        `Plus de ${String(TEXT_RESULT_SEARCH_LIMIT)} textes correspondent à « ${trimmedAnswer} »` +
+        `Plus de ${String(TEXT_RESULT_SEARCH_LIMIT)} textes correspondent à *« ${trimmedAnswer} »*` +
         sinceText;
       text += `\\split`;
       text += `Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
     } else if (totalMatches > TEXT_RESULT_DISPLAY_LIMIT) {
       text +=
-        `${String(totalMatches)} textes correspondent à « ${trimmedAnswer} »` +
+        `${String(totalMatches)} textes correspondent à *« ${trimmedAnswer} »*` +
         sinceText;
       text += `\\split`;
       text += `Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
     } else {
-      text += `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`;
+      text += `Voici les ${String(previewLimit)} textes les plus récents correspondant à *« ${trimmedAnswer} »* :\n\n`;
     }
   } else {
-    text += `Aucun texte ne correspond à « ${trimmedAnswer} ».` + sinceText;
+    text += `Aucun texte ne correspond à *« ${trimmedAnswer} »*.` + sinceText;
     text += `\n\n`;
   }
 
@@ -177,7 +177,7 @@ async function handleTextAlertAnswer(
 
     // Format: Date - Type - Link
     text += `*${publication.date.replaceAll("-", "/")}*`;
-    text += ` - ${type}`;
+    text += ` - *${type}*`;
     if (session.messageApp === "WhatsApp") {
       text += ` - ${publicationLink}\n`;
     } else {
@@ -202,7 +202,7 @@ async function handleTextAlertAnswer(
     );
     foundFollow = compatibleFollow;
     if (existingFollow != null) {
-      text += `Vous suivez déjà l'expression « ${existingFollow} ». ✅`;
+      text += `Vous suivez déjà l'expression *« ${existingFollow} »*. ✅`;
       await session.sendMessage(text, {
         keyboard: [
           [KEYBOARD_KEYS.TEXT_SEARCH.key],
@@ -213,7 +213,7 @@ async function handleTextAlertAnswer(
     }
   }
   if (foundFollow != undefined) {
-    text += `Vous suivez une expression proche : « ${foundFollow} ».\n\n`;
+    text += `Vous suivez une expression proche : *« ${foundFollow} »*.\n\n`;
   }
 
   text += TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
@@ -285,9 +285,9 @@ async function handleTextAlertConfirmation(
     const wasAdded = await session.user.addFollowedAlertString(
       context.alertString
     );
-    let responseText = `Vous suivez déjà une alerte pour « ${context.alertString} ». ✅`;
+    let responseText = `Vous suivez déjà une alerte pour *« ${context.alertString} »*. ✅`;
     if (wasAdded) {
-      responseText = `Alerte enregistrée pour « ${context.alertString} » ✅`;
+      responseText = `Alerte enregistrée pour *« ${context.alertString} »* ✅`;
       session.log({ event: "/follow-meta" });
     }
 
