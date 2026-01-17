@@ -107,10 +107,16 @@ function computeNextOccurrence(
 
   if (next.getTime() <= now.getTime()) {
     const errorMsg = `Failed to compute next occurrence for daily notification jobs: computed time is in the past: now (${now.toISOString()}), next (${next.toISOString()}).`;
-    for (const app of messageApps) {
-      void logError(app, errorMsg);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(errorMsg);
+      console.log("Adding 1 day in development mode.");
+      next.setDate(next.getDate() + 1);
+    } else {
+      for (const app of messageApps) {
+        void logError(app, errorMsg);
+      }
+      throw new Error(errorMsg);
     }
-    throw new Error(errorMsg);
   }
   return next;
 }

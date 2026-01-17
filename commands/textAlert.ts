@@ -2,23 +2,36 @@ import User from "../models/User.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import { ISession, MessageApp, IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
-import { Publication } from "../models/Publication.ts";
+import { IPublication, Publication } from "../models/Publication.ts";
 import {
   fuzzyIncludesNormalized,
   levenshteinDistance,
-  normalizeFrenchText
+  normalizeFrenchText,
+  normalizeFrenchTextWithStopwords,
+  parsePublicationTitle
 } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
-import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { logError } from "../utils/debugLogger.ts";
+import { dateToString } from "../utils/date.utils.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
 
-const TEXT_RESULT_MAX = 5;
+const TEXT_RESULT_DISPLAY_LIMIT = 10;
+const TEXT_RESULT_SEARCH_LIMIT = 100;
 
-const twoYearsAgo = new Date();
-twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+// Configurable number of years to search back (default: 2 years)
+// Can be overridden via TEXT_SEARCH_YEARS_BACK environment variable
+function getYearsBackSearch(): number {
+  const envValue = process.env.TEXT_SEARCH_YEARS_BACK;
+  if (envValue) {
+    const parsed = parseInt(envValue, 10);
+    if (!isNaN(parsed) && parsed > 0 && parsed <= 50) {
+      return parsed;
+    }
+  }
+  return 2; // Default to 2 years
+}
 
 function findFollowedAlertString(
   user: IUser,
@@ -58,7 +71,7 @@ async function askTextAlertQuestion(session: ISession): Promise<void> {
 }
 
 const TEXT_ALERT_CONFIRMATION_PROMPT = (alertString: string) =>
-  `Confirmez-vous vouloir ajouter une alerte pour « ${alertString} » ? (Oui/Non)`;
+  `Confirmez-vous vouloir ajouter une alerte pour *« ${alertString} »* ? (Oui/Non)`;
 
 async function handleTextAlertAnswer(
   session: ISession,
@@ -79,15 +92,23 @@ async function handleTextAlertAnswer(
     return false;
   }
 
-  await session.sendMessage("Recherche en cours ...", {
+  void session.sendMessage("Recherche en cours ...", {
     forceNoKeyboard: true
   });
   session.sendTypingAction();
 
-  const normalizedAnswer = normalizeFrenchText(trimmedAnswer);
+  // Normalize user query with stopword removal for better matching
+  const normalizedAnswer = normalizeFrenchTextWithStopwords(trimmedAnswer);
   const normalizedAnswerWords = normalizedAnswer.split(" ").filter(Boolean);
 
-  const recentPublications = await getRecentPublications(session.messageApp);
+  const yearsBack = getYearsBackSearch();
+  const startDate = new Date();
+  startDate.setFullYear(startDate.getFullYear() - yearsBack);
+
+  const recentPublications = await getRecentPublications(
+    session.messageApp,
+    startDate
+  );
   if (recentPublications == null) {
     await session.sendMessage(
       "Une erreur est survenue lors de la recherche. Notre équipe a été prévenue."
@@ -95,9 +116,11 @@ async function handleTextAlertAnswer(
     return true;
   }
 
+  // Search for matching publications, stopping after TEXT_RESULT_SEARCH_LIMIT (100)
   const matchingPublications = recentPublications.reduce(
     (tab: PublicationPreview[], publication) => {
-      if (tab.length >= TEXT_RESULT_MAX) return tab;
+      // Stop searching after we've found enough matches
+      if (tab.length >= TEXT_RESULT_SEARCH_LIMIT) return tab;
       if (
         fuzzyIncludesNormalized(
           publication.normalizedTitle,
@@ -112,34 +135,61 @@ async function handleTextAlertAnswer(
     []
   );
 
-  if (matchingPublications.length > 100) {
-    await session.sendMessage(
-      "Votre saisie est trop générale (plus de 100 textes correspondants sur les deux dernières années). Merci de préciser votre demande.",
-      { keyboard: [[KEYBOARD_KEYS.MAIN_MENU.key]] }
-    );
-    await askTextAlertQuestion(session);
-    return true;
-  }
-
   let text = "";
 
   const hasResults = matchingPublications.length > 0;
-  const previewLimit = Math.min(TEXT_RESULT_MAX, matchingPublications.length);
+  const totalMatches = matchingPublications.length;
+  const hasMoreThan100 = totalMatches >= TEXT_RESULT_SEARCH_LIMIT;
 
-  text += hasResults
-    ? `Voici les ${String(previewLimit)} textes les plus récents correspondant à « ${trimmedAnswer} » :\n\n`
-    : `Aucun texte des deux dernières années ne correspond à « ${trimmedAnswer} ».\n\n`;
+  // Display only the first TEXT_RESULT_DISPLAY_LIMIT (10) results
+  const previewLimit = Math.min(
+    TEXT_RESULT_DISPLAY_LIMIT,
+    matchingPublications.length
+  );
+
+  const sinceText = ` depuis ${String(yearsBack)} an${yearsBack > 1 ? "s" : ""} (${dateToString(startDate, "DMY").replaceAll("-", "/")})`;
+
+  if (hasResults) {
+    if (hasMoreThan100) {
+      text +=
+        `Plus de ${String(TEXT_RESULT_SEARCH_LIMIT)} textes correspondent à *« ${trimmedAnswer} »*` +
+        sinceText;
+      text += `\\split`;
+      text += `Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
+    } else if (totalMatches > TEXT_RESULT_DISPLAY_LIMIT) {
+      text +=
+        `${String(totalMatches)} textes correspondent à *« ${trimmedAnswer} »*` +
+        sinceText;
+      text += `\\split`;
+      text += `Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
+    } else {
+      text += `Voici les ${String(previewLimit)} textes les plus récents correspondant à *« ${trimmedAnswer} »* :\n\n`;
+    }
+  } else {
+    text += `Aucun texte ne correspond à *« ${trimmedAnswer} »*.` + sinceText;
+    text += `\n\n`;
+  }
 
   for (let i = 0; i < previewLimit; i++) {
     const publication = matchingPublications[i];
     const publicationLink = getJORFTextLink(publication.id);
+    const { type, cleanedTitle } = parsePublicationTitle(publication.title);
+
+    // Format: Date - Type - Link
     text += `*${publication.date.replaceAll("-", "/")}*`;
+    text += ` - *${type}*`;
     if (session.messageApp === "WhatsApp") {
-      text += `\n${publicationLink}\n`;
+      text += ` - ${publicationLink}\n`;
     } else {
       text += ` - [Cliquer ici](${publicationLink})\n`;
     }
-    text += `${publication.title}\n\n`;
+
+    // Format: ... cleaned_title
+    if (cleanedTitle) {
+      text += `... ${cleanedTitle}\n\n`;
+    } else {
+      text += `\n\n`;
+    }
   }
 
   text += "\\split";
@@ -152,7 +202,7 @@ async function handleTextAlertAnswer(
     );
     foundFollow = compatibleFollow;
     if (existingFollow != null) {
-      text += `Vous suivez déjà l'expression « ${existingFollow} ». ✅`;
+      text += `Vous suivez déjà l'expression *« ${existingFollow} »*. ✅`;
       await session.sendMessage(text, {
         keyboard: [
           [KEYBOARD_KEYS.TEXT_SEARCH.key],
@@ -163,7 +213,7 @@ async function handleTextAlertAnswer(
     }
   }
   if (foundFollow != undefined) {
-    text += `Vous suivez une expression proche : « ${foundFollow} ».\n\n`;
+    text += `Vous suivez une expression proche : *« ${foundFollow} »*.\n\n`;
   }
 
   text += TEXT_ALERT_CONFIRMATION_PROMPT(trimmedAnswer);
@@ -235,9 +285,9 @@ async function handleTextAlertConfirmation(
     const wasAdded = await session.user.addFollowedAlertString(
       context.alertString
     );
-    let responseText = `Vous suivez déjà une alerte pour « ${context.alertString} ». ✅`;
+    let responseText = `Vous suivez déjà une alerte pour *« ${context.alertString} »*. ✅`;
     if (wasAdded) {
-      responseText = `Alerte enregistrée pour « ${context.alertString} » ✅`;
+      responseText = `Alerte enregistrée pour *« ${context.alertString} »* ✅`;
       session.log({ event: "/follow-meta" });
     }
 
@@ -300,50 +350,78 @@ let BACKGROUND_LOG_APP: MessageApp = "Tchap";
 
 let cachedPublications: PublicationPreview[] | null = null;
 let lastFetchedAt: number | null = null;
+let lastStartDate: Date | null = null;
 let inflightRefresh: Promise<PublicationPreview[]> | null = null;
 let backgroundRefreshStarted = false;
 
-async function refreshRecentPublications(): Promise<PublicationPreview[]> {
-  const twoYearsAgo = new Date();
-  twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-
-  const publications: JORFSearchPublication[] = await Publication.find(
+async function refreshRecentPublications(
+  startDate: Date
+): Promise<PublicationPreview[]> {
+  const publications: IPublication[] = await Publication.find(
     {
-      date_obj: { $gte: twoYearsAgo }
+      date_obj: { $gte: startDate }
     },
-    { title: 1, id: 1, date: 1, date_obj: 1, _id: 0 }
+    {
+      title: 1,
+      id: 1,
+      date: 1,
+      date_obj: 1,
+      normalizedTitle: 1,
+      normalizedTitleWords: 1,
+      _id: 0
+    }
   )
     .sort({ date_obj: -1 })
     .lean();
 
   cachedPublications = publications.map((publication) => {
-    const normalizedTitle = normalizeFrenchText(publication.title);
+    // Use pre-computed normalized fields if both are available, otherwise compute them
+    let normalizedTitle: string;
+    let normalizedTitleWords: string[];
+
+    if (publication.normalizedTitle && publication.normalizedTitleWords) {
+      // Both fields exist, use them directly
+      normalizedTitle = publication.normalizedTitle;
+      normalizedTitleWords = publication.normalizedTitleWords;
+    } else {
+      // One or both fields missing, recompute both to ensure consistency
+      normalizedTitle = normalizeFrenchTextWithStopwords(publication.title);
+      normalizedTitleWords = normalizedTitle.split(" ").filter(Boolean);
+    }
+
     return {
       ...publication,
       normalizedTitle,
-      normalizedTitleWords: normalizedTitle.split(" ").filter(Boolean)
+      normalizedTitleWords
     };
   });
   lastFetchedAt = Date.now();
+  lastStartDate = startDate;
 
   return cachedPublications;
 }
 
 async function getRecentPublications(
-  messageApp: MessageApp
+  messageApp: MessageApp,
+  startDate: Date
 ): Promise<PublicationPreview[] | null> {
   BACKGROUND_LOG_APP = messageApp;
   try {
+    // Check if cache is stale or if the date range has changed
+    const dateRangeChanged =
+      lastStartDate && lastStartDate.getTime() !== startDate.getTime();
+
     const isCacheStale =
       !cachedPublications ||
       !lastFetchedAt ||
-      Date.now() - lastFetchedAt > META_REFRESH_TIME_MS;
+      Date.now() - lastFetchedAt > META_REFRESH_TIME_MS ||
+      dateRangeChanged;
 
     if (!isCacheStale && cachedPublications != null) {
       return cachedPublications;
     }
 
-    inflightRefresh ??= refreshRecentPublications().finally(() => {
+    inflightRefresh ??= refreshRecentPublications(startDate).finally(() => {
       inflightRefresh = null;
     });
 
@@ -363,7 +441,12 @@ function startBackgroundRefresh(): void {
 
   const refreshAndHandleError = async (): Promise<void> => {
     try {
-      inflightRefresh ??= refreshRecentPublications().finally(() => {
+      // Always use the current configuration value
+      const yearsBack = getYearsBackSearch();
+      const startDate = new Date();
+      startDate.setFullYear(startDate.getFullYear() - yearsBack);
+
+      inflightRefresh ??= refreshRecentPublications(startDate).finally(() => {
         inflightRefresh = null;
       });
 

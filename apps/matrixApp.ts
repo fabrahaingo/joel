@@ -118,7 +118,9 @@ client.on("room.join", (roomId: string, _event: unknown) => {
       const otherUserId = otherMembers[0];
 
       if (!otherUserId) {
-        console.log(`${matrixApp}: Could not find other user in room ${roomId}`);
+        console.log(
+          `${matrixApp}: Could not find other user in room ${roomId}`
+        );
         return;
       }
 
@@ -279,11 +281,13 @@ await (async function () {
     serverUserId = await client.getUserId();
     await client.start();
 
+    /*
     if (ENCRYPTION_ENABLED) {
       console.log("Bot device ID:", client.crypto.clientDeviceId);
       // @ts-expect-error: clientEd25519 is not exported by the SDK
       console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
     }
+     */
 
     const messageOptions =
       matrixApp === "Matrix"
