@@ -35,7 +35,8 @@ import { statsCommand } from "./stats.ts";
 
 export async function processMessage(
   session: ISession,
-  msg: string
+  msg: string,
+  options?: { isFirstMessage?: boolean }
 ): Promise<void> {
   // remove all spaces and replace them with a single space
   const cleanMsg = sanitizeUserInput(
@@ -72,6 +73,14 @@ export async function processMessage(
       await command.action(session, cleanMsg);
       return;
     }
+  }
+
+  // If this is the first message and no command matched, treat it as /start
+  // This is especially important for encrypted Matrix chats where users must
+  // send a message before the room is created
+  if (options?.isFirstMessage) {
+    await startCommand(session, "/start");
+    return;
   }
 
   await defaultCommand(session);

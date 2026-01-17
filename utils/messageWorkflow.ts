@@ -8,6 +8,7 @@ interface MessageWorkflowOptions {
   isReply?: boolean;
   beforeProcessing?: () => Promise<void>;
   errorContext?: string;
+  isFirstMessage?: boolean;
 }
 
 /**
@@ -19,7 +20,8 @@ export async function handleIncomingMessage(
   text: string,
   options?: MessageWorkflowOptions
 ): Promise<void> {
-  const { beforeProcessing, isReply, errorContext } = options ?? {};
+  const { beforeProcessing, isReply, errorContext, isFirstMessage } =
+    options ?? {};
   try {
     const res = await User.updateOne(
       { messageApp: session.messageApp, chatId: session.chatId },
@@ -47,7 +49,7 @@ export async function handleIncomingMessage(
       return;
     }
 
-    await processMessage(session, trimmedText);
+    await processMessage(session, trimmedText, { isFirstMessage });
 
     if (user != null) await user.updateInteractionMetrics();
   } catch (error) {

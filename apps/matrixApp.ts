@@ -1,10 +1,10 @@
 import "dotenv/config";
 import {
-  MatrixClient,
-  SimpleFsStorageProvider,
-  RustSdkCryptoStorageProvider,
+  AutojoinRoomsMixin,
   AutojoinUpgradedRoomsMixin,
-  AutojoinRoomsMixin
+  MatrixClient,
+  RustSdkCryptoStorageProvider,
+  SimpleFsStorageProvider
 } from "matrix-bot-sdk";
 import { closePollMenu, MatrixSession } from "../entities/MatrixSession.ts";
 import umami from "../utils/umami.ts";
@@ -15,6 +15,10 @@ import { IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
+// Persist sync token + crypto state
+import fs from "node:fs";
+import { StoreType } from "@matrix-org/matrix-sdk-crypto-nodejs";
+
 const { MATRIX_HOME_URL, MATRIX_BOT_TOKEN, MATRIX_BOT_TYPE } = process.env;
 if (
   MATRIX_HOME_URL == undefined ||
@@ -34,21 +38,26 @@ if (!["Matrix", "Tchap"].some((m) => m === MATRIX_BOT_TYPE)) {
 const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 
 // Global constant to check if encryption is enabled for the bot
-const ENCRYPTION_ENABLED = true;
+const ENCRYPTION_ENABLED = Boolean(
+  process.env.MATRIX_ENCRYPTION_ENABLED ?? "TRUE"
+);
+
+if (ENCRYPTION_ENABLED) {
+  console.log(`${matrixApp}: \u{1F512} Encryption is ENABLED for the bot `);
+} else {
+  console.log(`${matrixApp}: ⚠️ Encryption is DISABLED for the bot`);
+}
 
 // Constants for room.join handler
 const ROOM_STATE_STABILIZATION_DELAY = 1000; // ms to wait for room state to stabilize
-const MESSAGE_HISTORY_CHECK_LIMIT = 10; // number of recent messages to check
 const DEFAULT_LANGUAGE = "fr"; // default language for new users
 const MULTI_PERSON_ROOM_MESSAGE =
   "JOEL ne permet pas de rejoindre des salons multi-personnes.";
 
-// Persist sync token + crypto state
-import fs from "node:fs";
 fs.mkdirSync("matrix", { recursive: true });
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
 const cryptoProvider = ENCRYPTION_ENABLED
-  ? new RustSdkCryptoStorageProvider("matrix/matrix-crypto")
+  ? new RustSdkCryptoStorageProvider("matrix/matrix-crypto", StoreType.Sqlite)
   : undefined;
 
 // Use the access token you got from login or registration above.
@@ -90,7 +99,10 @@ client.on(
 );
 
 // Handle bot being invited to a new room
-client.on("room.join", (roomId: string, _event: unknown) => {
+client.on("room.join", (roomId: string) => {
+  // Mark this room as recently joined to avoid duplicate welcome messages
+  // from processing stale m.room.member events
+  recentlyJoinedRooms.add(roomId);
   void (async () => {
     try {
       // Wait a moment for room state to stabilize
@@ -100,6 +112,12 @@ client.on("room.join", (roomId: string, _event: unknown) => {
 
       // Check if this is a direct message (1-on-1) room
       const otherMemberCount = await getOtherMemberCount(roomId);
+
+      // Leave if room is empty
+      if (await leaveIfEmptyRoom(roomId)) {
+        return;
+      }
+
       if (otherMemberCount !== 1) {
         // Not a 1-on-1 room, leave it
         console.log(
@@ -124,36 +142,14 @@ client.on("room.join", (roomId: string, _event: unknown) => {
         return;
       }
 
-      // Check if there are any messages in the room already
-      // If the user has already sent a message, the regular message handler will take care of the welcome
-      try {
-        const messages = await client.getMessages(roomId, {
-          limit: MESSAGE_HISTORY_CHECK_LIMIT
-        });
-        const hasUserMessages = messages.chunk.some(
-          (msg: { sender?: string; type?: string }) =>
-            msg.sender === otherUserId && msg.type === "m.room.message"
-        );
-        if (hasUserMessages) {
-          console.log(
-            `${matrixApp}: User ${otherUserId} already sent messages in room ${roomId}, skipping proactive welcome`
-          );
-          return;
-        }
-      } catch (error) {
-        // If we can't check messages, proceed with welcome anyway
-        await logWarning(
-          matrixApp,
-          "Could not check room messages, proceeding with welcome message",
-          error
-        );
-      }
-
       // Check if user already exists in database
       const previousUser: IUser | null = await User.findOne({
         messageApp: matrixApp,
         chatId: otherUserId
       });
+      setTimeout(() => {
+        recentlyJoinedRooms.delete(roomId);
+      }, ROOM_STATE_STABILIZATION_DELAY * 3); // Keep for 3x stabilization delay
 
       // Prepare welcome message
       let msgText: string;
@@ -240,6 +236,32 @@ async function getOtherMemberCount(roomId: string) {
   return otherMembers.length;
 }
 
+/**
+ * Check if a room is empty (no other members besides the bot) and leave if so.
+ * @returns true if the room was empty and the bot left, false otherwise
+ */
+async function leaveIfEmptyRoom(roomId: string): Promise<boolean> {
+  try {
+    const otherMemberCount = await getOtherMemberCount(roomId);
+    if (otherMemberCount === 0) {
+      console.log(`${matrixApp}: leaving empty room ${roomId}`);
+      await client.leaveRoom(roomId);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    await logWarning(
+      matrixApp,
+      `Could not check if room ${roomId} is empty`,
+      error
+    );
+    return false;
+  }
+}
+
+// Track rooms the bot just joined to avoid processing stale member events
+const recentlyJoinedRooms = new Set<string>();
+
 await (async function () {
   // Register stopper
   let shuttingDown = false;
@@ -281,14 +303,6 @@ await (async function () {
     serverUserId = await client.getUserId();
     await client.start();
 
-    /*
-    if (ENCRYPTION_ENABLED) {
-      console.log("Bot device ID:", client.crypto.clientDeviceId);
-      // @ts-expect-error: clientEd25519 is not exported by the SDK
-      console.log("Bot ed25519 fingerprint:", client.crypto.deviceEd25519);
-    }
-     */
-
     const messageOptions =
       matrixApp === "Matrix"
         ? { matrixClient: client }
@@ -323,8 +337,11 @@ interface MatrixRoomEvent {
 // This is the command handler we registered a few lines up
 function handleCommand(roomId: string, event: MatrixRoomEvent) {
   void (async () => {
+    // Ensure serverUserId is initialized
+    const botUserId = await ensureServerUserId();
+
     // ignore message from itself
-    if (event.sender === serverUserId) return;
+    if (event.sender === botUserId) return;
 
     let msgText: string | undefined;
     switch (event.type) {
@@ -371,8 +388,32 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
               });
             }
           }
+
+          // Leave if room is now empty
+          await leaveIfEmptyRoom(roomId);
+
           return;
         } else if (event.content.membership === "join") {
+          // Skip if the bot itself is joining - this prevents duplicate welcome messages
+          // as the room.join handler already processes bot joins
+          if (event.sender === botUserId) {
+            return;
+          }
+
+          // Wait a moment for room state to stabilize
+          await new Promise((resolve) =>
+            setTimeout(resolve, ROOM_STATE_STABILIZATION_DELAY)
+          );
+
+          // Skip if this room was recently joined by the bot to avoid processing
+          // stale member events that would trigger duplicate welcome messages
+          if (recentlyJoinedRooms.has(roomId)) {
+            console.log(
+              `${matrixApp}: Skipping member join event in recently joined room ${roomId}`
+            );
+            return;
+          }
+
           // leave non-direct rooms when a new member joins
           try {
             const otherMemberCount = await getOtherMemberCount(roomId);
@@ -404,6 +445,12 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
                     messageApp: matrixApp,
                     hasAccount: true
                   });
+                } else {
+                  // Update room ID for active user
+                  await User.updateOne(
+                    { _id: previousUser._id },
+                    { $set: { roomId: roomId } }
+                  );
                 }
                 if (!previousUser.followsNothing())
                   msgText = KEYBOARD_KEYS.FOLLOWS_LIST.key.text;
@@ -412,7 +459,9 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
               break;
             }
           } catch {
-            // unable to inspect room membership
+            console.log(
+              `Error checking member count on member join room ${roomId}`
+            );
             return;
           }
         } else return;
@@ -422,7 +471,10 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
 
     // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
     if (/^@_?server:/.test(event.sender)) {
-      await logWarning(matrixApp, `${matrixApp}: message from the server`);
+      await logWarning(
+        matrixApp,
+        `${matrixApp}: message from the server: ${msgText}`
+      );
       if (event.type === "m.room.message")
         await client.sendReadReceipt(roomId, event.event_id);
       return;
@@ -444,6 +496,7 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         "fr",
         receivedMessageTime
       );
+
       await handleIncomingMessage(matrixSession, msgText, {
         errorContext: "Error processing command"
       });
