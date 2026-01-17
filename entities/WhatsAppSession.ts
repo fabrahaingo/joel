@@ -79,7 +79,7 @@ const fullMenuKeyboard: ActionList = new ActionList(
     new Row(
       "opt_4",
       KEYBOARD_KEYS.TEXT_SEARCH.key.text,
-      "Rechercher ou suivre un texte au JORF/BO."
+      "Rechercher ou suivre une expression au JORF/BO."
     )
   ),
   new ListSection(
