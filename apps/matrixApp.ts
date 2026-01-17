@@ -43,7 +43,9 @@ const ENCRYPTION_ENABLED = Boolean(
 );
 
 if (ENCRYPTION_ENABLED) {
-  console.log(`${matrixApp}: Encryption is ENABLED for the bot \u{1F512}`);
+  console.log(`${matrixApp}: \u{1F512} Encryption is ENABLED for the bot `);
+} else {
+  console.log(`${matrixApp}: ⚠️ Encryption is DISABLED for the bot`);
 }
 
 // Constants for room.join handler
@@ -130,9 +132,6 @@ client.on("room.join", (roomId: string) => {
         );
         return;
       }
-
-      // Add this room to the set of just-joined rooms
-      justJoinedRoomsIds.add(roomId);
 
       // Check if user already exists in database
       const previousUser: IUser | null = await User.findOne({
@@ -225,8 +224,6 @@ async function getOtherMemberCount(roomId: string) {
   return otherMembers.length;
 }
 
-const justJoinedRoomsIds = new Set<string>();
-
 await (async function () {
   // Register stopper
   let shuttingDown = false;
@@ -267,10 +264,6 @@ await (async function () {
     // Now that everything is set up, start the bot. This will start the sync loop and run until killed.
     serverUserId = await client.getUserId();
     await client.start();
-
-    if (ENCRYPTION_ENABLED) {
-      console.log("Bot device ID:", client.crypto.clientDeviceId);
-    }
 
     const messageOptions =
       matrixApp === "Matrix"
@@ -437,18 +430,9 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
         receivedMessageTime
       );
 
-      // Check if this room has just been joined
-      const isFirstMessage = justJoinedRoomsIds.has(roomId);
-
       await handleIncomingMessage(matrixSession, msgText, {
-        errorContext: "Error processing command",
-        isFirstMessage
+        errorContext: "Error processing command"
       });
-
-      // Remove from just-joined set
-      if (justJoinedRoomsIds.has(roomId)) {
-        justJoinedRoomsIds.delete(roomId);
-      }
     } catch (error) {
       await logError(matrixApp, "Error processing command", error);
     }
