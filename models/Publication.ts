@@ -1,5 +1,6 @@
 import { Schema as _Schema, model } from "mongoose";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
+import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
 
 const Schema = _Schema;
 
@@ -45,7 +46,12 @@ const TagsSchema = new Schema<JORFSearchPublication["tags"]>(
   { _id: false }
 );
 
-const PublicationSchema = new Schema<JORFSearchPublication>(
+export interface IPublication extends JORFSearchPublication {
+  normalizedTitle?: string;
+  normalizedTitleWords?: string[];
+}
+
+const PublicationSchema = new Schema<IPublication>(
   {
     id: {
       type: String,
@@ -63,6 +69,14 @@ const PublicationSchema = new Schema<JORFSearchPublication>(
       type: String,
       required: true
     },
+    normalizedTitle: {
+      type: String,
+      index: true
+    },
+    normalizedTitleWords: {
+      type: [String],
+      index: true
+    },
     nor: String,
     ministere: String,
     autorite: String,
@@ -79,7 +93,21 @@ PublicationSchema.index({ id: 1 }, { unique: true });
 PublicationSchema.index({ title: 1 });
 PublicationSchema.index({ date_obj: 1 });
 
-export const Publication = model<JORFSearchPublication>(
+// Pre-save hook to compute normalized title fields
+PublicationSchema.pre("save", function (next) {
+  if (
+    this.isModified("title") ||
+    !this.normalizedTitle ||
+    !this.normalizedTitleWords
+  ) {
+    const normalized = normalizeFrenchTextWithStopwords(this.title);
+    this.normalizedTitle = normalized;
+    this.normalizedTitleWords = normalized.split(" ").filter(Boolean);
+  }
+  next();
+});
+
+export const Publication = model<IPublication>(
   "Publication",
   PublicationSchema
 );

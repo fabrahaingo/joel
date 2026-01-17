@@ -1,7 +1,10 @@
 import emojiRegex from "emoji-regex";
 import { MessageApp } from "../types.ts";
 import { TELEGRAM_MESSAGE_CHAR_LIMIT } from "../entities/TelegramSession.ts";
-import { WHATSAPP_MESSAGE_CHAR_LIMIT, WHATSAPP_MAX_LINES } from "../entities/WhatsAppSession.ts";
+import {
+  WHATSAPP_MESSAGE_CHAR_LIMIT,
+  WHATSAPP_MAX_LINES
+} from "../entities/WhatsAppSession.ts";
 import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
 import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
 
@@ -199,6 +202,85 @@ export function removeSpecialCharacters(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "");
 }
 
+// Common French stopwords to exclude from search indexing
+const FRENCH_STOPWORDS = new Set([
+  "le",
+  "la",
+  "les",
+  "un",
+  "une",
+  "des",
+  "du",
+  "de",
+  "d",
+  "au",
+  "aux",
+  "à",
+  "a",
+  "et",
+  "ou",
+  "mais",
+  "donc",
+  "or",
+  "ni",
+  "car",
+  "ce",
+  "cet",
+  "cette",
+  "ces",
+  "dans",
+  "par",
+  "pour",
+  "sur",
+  "sous",
+  "avec",
+  "sans",
+  "en",
+  "y",
+  "il",
+  "elle",
+  "on",
+  "nous",
+  "vous",
+  "ils",
+  "elles",
+  "se",
+  "sa",
+  "son",
+  "ses",
+  "qui",
+  "que",
+  "quoi",
+  "dont",
+  "où",
+  "l",
+  "s",
+  "n",
+  "t",
+  "m",
+  "c",
+  "j"
+]);
+
+// French month names (used to detect dates in titles)
+const FRENCH_MONTHS = new Set([
+  "janvier",
+  "fevrier",
+  "février",
+  "mars",
+  "avril",
+  "mai",
+  "juin",
+  "juillet",
+  "aout",
+  "août",
+  "septembre",
+  "octobre",
+  "novembre",
+  "decembre",
+  "décembre"
+]);
+
 export function normalizeFrenchText(text: string): string {
   return text
     .normalize("NFD")
@@ -211,35 +293,125 @@ export function normalizeFrenchText(text: string): string {
     .replace(/\s+/g, " ");
 }
 
-export function levenshteinDistance(a: string, b: string): number {
+/**
+ * Normalize French text and remove stopwords
+ * Used for indexing publication titles for search
+ */
+export function normalizeFrenchTextWithStopwords(text: string): string {
+  const normalized = normalizeFrenchText(text);
+  const words = normalized.split(" ").filter(Boolean);
+
+  // Filter out stopwords and date-related words (numbers and months)
+  const filtered = words.filter((word) => {
+    // Keep significant numbers (4+ digits, likely years or identifiers like decree numbers)
+    if (/^\d{4,}$/.test(word)) return true;
+
+    // Remove short numbers (likely day/month in dates like "15" or "06")
+    if (/^\d+$/.test(word)) return false;
+
+    // Remove months
+    if (FRENCH_MONTHS.has(word)) return false;
+
+    // Remove stopwords
+    if (FRENCH_STOPWORDS.has(word)) return false;
+
+    return true;
+  });
+
+  return filtered.join(" ");
+}
+
+/**
+ * Parse publication title to extract type and cleaned content
+ * Example: "Arrêté du 6 janvier 2026 fixant le taux..."
+ * Returns: { type: "Arrêté", cleanedTitle: "fixant le taux..." }
+ */
+export function parsePublicationTitle(title: string): {
+  type: string;
+  cleanedTitle: string;
+} {
+  // Extract the first word as the publication type
+  const firstSpaceIndex = title.indexOf(" ");
+  if (firstSpaceIndex === -1) {
+    return { type: title, cleanedTitle: "" };
+  }
+
+  const type = title.substring(0, firstSpaceIndex);
+  let remainingTitle = title.substring(firstSpaceIndex + 1).trim();
+
+  // Try to remove the date pattern: "du XX month YYYY" or "du XX/XX/XXXX" or similar
+  // Pattern: "du" followed by date-like content
+  const datePatterns = [
+    /^du?\s+\d{1,2}\s+[a-zéèêû]+\s+\d{4}\s*/i, // "du 6 janvier 2026 " (month is lowercase letters with accents)
+    /^du?\s+\d{1,2}\/\d{1,2}\/\d{4}\s*/i, // "du 06/01/2026 "
+    /^du?\s+\d{1,2}-\d{1,2}-\d{4}\s*/i, // "du 06-01-2026 "
+    /^en\s+date\s+du?\s+\d{1,2}\s+[a-zéèêû]+\s+\d{4}\s*/i // "en date du 6 janvier 2026 "
+  ];
+
+  for (const pattern of datePatterns) {
+    remainingTitle = remainingTitle.replace(pattern, "");
+  }
+
+  return {
+    type,
+    cleanedTitle: remainingTitle.trim()
+  };
+}
+
+export function levenshteinDistance(
+  a: string,
+  b: string,
+  maxDistance?: number
+): number {
+  // Early exit if strings are identical
+  if (a === b) return 0;
+
+  // Early exit if one string is empty
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+
+  // Early exit if length difference exceeds maxDistance
+  if (maxDistance !== undefined) {
+    const lengthDiff = Math.abs(a.length - b.length);
+    if (lengthDiff > maxDistance) return maxDistance + 1;
+  }
+
   const rows = a.length + 1;
   const cols = b.length + 1;
 
-  const distance = Array.from({ length: rows }, (_, i) => {
-    const row = new Array<number>(cols).fill(0);
-    row[0] = i;
-    return row;
-  });
-
-  for (let j = 0; j < cols; j++) distance[0][j] = j;
+  // Use a single array to save memory (we only need previous row)
+  let prevRow = Array.from({ length: cols }, (_, i) => i);
+  let currRow = new Array<number>(cols);
 
   for (let i = 1; i < rows; i++) {
+    currRow[0] = i;
+    let minInRow = currRow[0];
+
     for (let j = 1; j < cols; j++) {
       if (a[i - 1] === b[j - 1]) {
-        distance[i][j] = distance[i - 1][j - 1];
+        currRow[j] = prevRow[j - 1];
       } else {
-        distance[i][j] =
+        currRow[j] =
           1 +
           Math.min(
-            distance[i - 1][j],
-            distance[i][j - 1],
-            distance[i - 1][j - 1]
+            prevRow[j], // deletion
+            currRow[j - 1], // insertion
+            prevRow[j - 1] // substitution
           );
       }
+      minInRow = Math.min(minInRow, currRow[j]);
     }
+
+    // Early termination: if minimum in current row exceeds maxDistance, we can stop
+    if (maxDistance !== undefined && minInRow > maxDistance) {
+      return maxDistance + 1;
+    }
+
+    // Swap rows
+    [prevRow, currRow] = [currRow, prevRow];
   }
 
-  return distance[rows - 1][cols - 1];
+  return prevRow[cols - 1];
 }
 
 export function fuzzyIncludesNormalized(
@@ -248,8 +420,11 @@ export function fuzzyIncludesNormalized(
   haystackWords?: string[],
   needleWords?: string[]
 ): boolean {
+  // Early returns for edge cases
   if (normalizedNeedle.length === 0) return false;
+  if (normalizedHaystack.length === 0) return false;
 
+  // Fast path: exact substring match
   if (normalizedHaystack.includes(normalizedNeedle)) return true;
 
   const finalHaystackWords =
@@ -259,10 +434,52 @@ export function fuzzyIncludesNormalized(
 
   if (finalNeedleWords.length === 0) return false;
 
+  // Early exit: if needle has more words than haystack, can't match
+  if (finalNeedleWords.length > finalHaystackWords.length) {
+    // Only try fuzzy match if lengths are close
+    if (finalNeedleWords.length > finalHaystackWords.length + 2) {
+      return false;
+    }
+  }
+
   const canonicalizePlural = (word: string) =>
     word.length > 3 && /[sx]$/.test(word) ? word.slice(0, -1) : word;
   const wordsEqual = (a: string, b: string) =>
     a === b || canonicalizePlural(a) === canonicalizePlural(b);
+
+  // Optimization: Create a Set of haystack words for faster lookup in ordered matching
+  const haystackWordSet = new Set(finalHaystackWords);
+
+  // Quick check: do all needle words exist in haystack (ignoring order)?
+  let allWordsExist = true;
+  for (const needleWord of finalNeedleWords) {
+    let found = false;
+    if (haystackWordSet.has(needleWord)) {
+      found = true;
+    } else {
+      // Check with plural canonicalization
+      for (const haystackWord of finalHaystackWords) {
+        if (wordsEqual(haystackWord, needleWord)) {
+          found = true;
+          break;
+        }
+      }
+    }
+    if (!found) {
+      allWordsExist = false;
+      break;
+    }
+  }
+
+  // If not all words exist, skip expensive ordered matching
+  if (!allWordsExist) {
+    // Still try fuzzy match for typos
+    return tryFuzzyMatch(
+      normalizedNeedle,
+      finalHaystackWords,
+      finalNeedleWords
+    );
+  }
 
   // Check if all the normalized needle words appear in order in the haystack,
   // allowing other words in between (e.g. "ingénieurs armement" should match
@@ -287,16 +504,53 @@ export function fuzzyIncludesNormalized(
 
   if (orderedMatch) return true;
 
-  const windowSize = Math.max(1, finalNeedleWords.length);
+  // Only try expensive fuzzy matching if ordered match was close
+  return tryFuzzyMatch(normalizedNeedle, finalHaystackWords, finalNeedleWords);
+}
+
+/**
+ * Helper function for fuzzy matching using Levenshtein distance
+ * Separated to avoid duplicate code and allow early returns
+ */
+function tryFuzzyMatch(
+  normalizedNeedle: string,
+  haystackWords: string[],
+  needleWords: string[]
+): boolean {
+  const windowSize = Math.max(1, needleWords.length);
   const allowedDistance = Math.max(
     1,
     Math.round(normalizedNeedle.length * 0.15)
   );
 
-  for (let i = 0; i <= finalHaystackWords.length - windowSize; i++) {
-    const currentWindow = finalHaystackWords.slice(i, i + windowSize).join(" ");
-    if (levenshteinDistance(currentWindow, normalizedNeedle) <= allowedDistance)
+  // Early exit: if the allowed distance is very small and we have many words,
+  // the fuzzy match is unlikely to help
+  if (allowedDistance < 2 && needleWords.length > 3) {
+    return false;
+  }
+
+  // Optimization: limit how many windows we check
+  const maxWindowsToCheck = Math.min(
+    haystackWords.length - windowSize + 1,
+    50 // Don't check more than 50 windows
+  );
+
+  for (let i = 0; i < maxWindowsToCheck; i++) {
+    const currentWindow = haystackWords.slice(i, i + windowSize).join(" ");
+
+    // Quick length check before expensive Levenshtein calculation
+    const lengthDiff = Math.abs(currentWindow.length - normalizedNeedle.length);
+    if (lengthDiff > allowedDistance * 2) {
+      continue; // Skip this window, length difference is too large
+    }
+
+    // Pass maxDistance for early termination in Levenshtein calculation
+    if (
+      levenshteinDistance(currentWindow, normalizedNeedle, allowedDistance) <=
+      allowedDistance
+    ) {
       return true;
+    }
   }
 
   return false;
