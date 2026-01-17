@@ -100,6 +100,14 @@ client.on("room.join", (roomId: string, _event: unknown) => {
 
       // Check if this is a direct message (1-on-1) room
       const otherMemberCount = await getOtherMemberCount(roomId);
+      if (otherMemberCount === 0) {
+        // Empty room, leave it
+        console.log(
+          `${matrixApp}: leaving empty room ${roomId}`
+        );
+        await client.leaveRoom(roomId);
+        return;
+      }
       if (otherMemberCount !== 1) {
         // Not a 1-on-1 room, leave it
         console.log(
@@ -371,6 +379,24 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
               });
             }
           }
+          
+          // Check if room is now empty and leave if so
+          try {
+            const otherMemberCount = await getOtherMemberCount(roomId);
+            if (otherMemberCount === 0) {
+              console.log(
+                `${matrixApp}: leaving empty room ${roomId} after user left`
+              );
+              await client.leaveRoom(roomId);
+            }
+          } catch (error) {
+            await logWarning(
+              matrixApp,
+              "Could not check room membership after user left",
+              error
+            );
+          }
+          
           return;
         } else if (event.content.membership === "join") {
           // Skip if the bot itself is joining - this is handled by room.join event
