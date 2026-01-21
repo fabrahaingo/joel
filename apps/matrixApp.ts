@@ -38,11 +38,11 @@ if (!["Matrix", "Tchap"].some((m) => m === MATRIX_BOT_TYPE)) {
 const matrixApp = MATRIX_BOT_TYPE as "Matrix" | "Tchap";
 
 // Global constant to check if encryption is enabled for the bot
-const ENCRYPTION_ENABLED = Boolean(
+export const MATRIX_ENCRYPTION_ENABLED = Boolean(
   process.env.MATRIX_ENCRYPTION_ENABLED ?? "TRUE"
 );
 
-if (ENCRYPTION_ENABLED) {
+if (MATRIX_ENCRYPTION_ENABLED) {
   console.log(`${matrixApp}: \u{1F512} Encryption is ENABLED for the bot `);
 } else {
   console.log(`${matrixApp}: ⚠️ Encryption is DISABLED for the bot`);
@@ -56,12 +56,12 @@ const MULTI_PERSON_ROOM_MESSAGE =
 
 fs.mkdirSync("matrix", { recursive: true });
 const storageProvider = new SimpleFsStorageProvider("matrix/matrix-bot.json");
-const cryptoProvider = ENCRYPTION_ENABLED
+const cryptoProvider = MATRIX_ENCRYPTION_ENABLED
   ? new RustSdkCryptoStorageProvider("matrix/matrix-crypto", StoreType.Sqlite)
   : undefined;
 
 // Use the access token you got from login or registration above.
-const client = ENCRYPTION_ENABLED
+const client = MATRIX_ENCRYPTION_ENABLED
   ? new MatrixClient(
       "https://" + MATRIX_HOME_URL,
       MATRIX_BOT_TOKEN,
