@@ -20,10 +20,10 @@
     "express": "^5.2.1",
     "matrix-bot-sdk": "^0.8.0",
     "mongodb": "^7.0.0",
-    "mongoose": "^9.1.4",
+    "mongoose": "^9.1.5",
     "nodemon": "^3.1.11",
     "p-limit": "^7.2.0",
-    "signal-sdk": "^0.0.8",
+    "signal-sdk": "^0.0.9",
     "telegraf": "^4.16.3",
     "tsx": "^4.21.0",
     "whatsapp-api-js": "^6.2.1"
