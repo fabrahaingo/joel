@@ -18,6 +18,12 @@ import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
 import { deleteEntitiesWithNoFollowers } from "../utils/userDeletion.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
 
+/**
+ * When a list has >= this many items, we display it in "compact" mode:
+ * no blank line between items (only a single linebreak).
+ */
+const DEFAULT_COMPACT_LIST_THRESHOLD = 10;
+
 export interface UserFollows {
   functions: FunctionTags[];
   organisations: IOrganisation[];
@@ -55,76 +61,104 @@ export function buildFollowsListMessage(
   let text = "";
   let index = 0;
 
+  const appendSectionSeparatorIfNeeded = () => {
+    // Ensure a consistent blank line between sections, independent of list size.
+    if (text.length > 0) text += `\n`;
+  };
+
+  const shouldUseCompactList = (len: number) =>
+    len >= DEFAULT_COMPACT_LIST_THRESHOLD;
+
   if (userFollows.functions.length > 0) {
+    appendSectionSeparatorIfNeeded();
+
     text += `${followVerb} ${String(userFollows.functions.length)} fonction${
       userFollows.functions.length > 1 ? "s" : ""
     } : \n\n`;
+
     const functionsKeys = getFunctionsFromValues(userFollows.functions);
+    const compact = shouldUseCompactList(userFollows.functions.length);
+
     userFollows.functions.forEach((_functionTag, idx) => {
       text += `${String(index + 1)}. *${functionsKeys[idx]}*`;
 
-      if (session.messageApp === "Telegram")
-        text += ` - [JORFSearch](${getJORFSearchLinkFunctionTag(
-          userFollows.functions[idx]
-        )})`;
-      else
+      if (session.messageApp === "Telegram") {
+        text += ` - [JORFSearch](${getJORFSearchLinkFunctionTag(userFollows.functions[idx])})`;
+      } else {
         text += `\n${getJORFSearchLinkFunctionTag(userFollows.functions[idx])}`;
+      }
+
       text += `\n`;
-      if (userFollows.functions.length < 10) text += `\n`;
+      if (!compact && idx < userFollows.functions.length - 1) text += `\n`;
       index++;
     });
   }
 
   if (userFollows.organisations.length > 0) {
-    text += `${followVerb} ${String(
-      userFollows.organisations.length
-    )} organisation${userFollows.organisations.length > 1 ? "s" : ""} : \n\n`;
-    userFollows.organisations.forEach((organisation) => {
+    appendSectionSeparatorIfNeeded();
+
+    text += `${followVerb} ${String(userFollows.organisations.length)} organisation${
+      userFollows.organisations.length > 1 ? "s" : ""
+    } : \n\n`;
+
+    const compact = shouldUseCompactList(userFollows.organisations.length);
+
+    userFollows.organisations.forEach((organisation, idx) => {
       text += `${String(index + 1)}. *${organisation.nom}*`;
 
-      if (session.messageApp === "Telegram")
-        text += ` - [JORFSearch](${getJORFSearchLinkOrganisation(
-          organisation.wikidataId
-        )})`;
-      else
+      if (session.messageApp === "Telegram") {
+        text += ` - [JORFSearch](${getJORFSearchLinkOrganisation(organisation.wikidataId)})`;
+      } else {
         text += `\n${getJORFSearchLinkOrganisation(organisation.wikidataId)}`;
+      }
 
       text += `\n`;
-      if (userFollows.organisations.length < 10) text += `\n`;
+      if (!compact && idx < userFollows.organisations.length - 1) text += `\n`;
       index++;
     });
   }
 
   if (userFollows.peopleAndNames.length > 0) {
-    text += `${followVerb} ${String(
-      userFollows.peopleAndNames.length
-    )} personne${userFollows.peopleAndNames.length > 1 ? "s" : ""} : \n\n`;
-    userFollows.peopleAndNames.forEach((followedName) => {
+    appendSectionSeparatorIfNeeded();
+
+    text += `${followVerb} ${String(userFollows.peopleAndNames.length)} personne${
+      userFollows.peopleAndNames.length > 1 ? "s" : ""
+    } : \n\n`;
+
+    const compact = shouldUseCompactList(userFollows.peopleAndNames.length);
+
+    userFollows.peopleAndNames.forEach((followedName, idx) => {
       text += `${String(index + 1)}. *${followedName.nomPrenom}*`;
+
       if (followedName.JORFSearchLink !== undefined) {
-        if (session.messageApp !== "WhatsApp")
+        if (session.messageApp !== "WhatsApp") {
           text += ` - [JORFSearch](${followedName.JORFSearchLink})`;
-        else text += `\n${followedName.JORFSearchLink}`;
+        } else {
+          text += `\n${followedName.JORFSearchLink}`;
+        }
         text += `\n`;
       } else {
         text += ` - Suivi manuel\n`;
       }
-      if (userFollows.peopleAndNames.length < 10) {
-        text += `\n`;
-      }
+
+      if (!compact && idx < userFollows.peopleAndNames.length - 1) text += `\n`;
       index++;
     });
   }
 
   if (userFollows.meta.length > 0) {
-    text += `${followVerb} ${String(
-      userFollows.meta.length
-    )} expression${userFollows.meta.length > 1 ? "s" : ""} : \n\n`;
-    userFollows.meta.forEach((meta) => {
-      text += `${String(index + 1)}. *${meta.alertString}*`;
+    appendSectionSeparatorIfNeeded();
 
+    text += `${followVerb} ${String(userFollows.meta.length)} expression${
+      userFollows.meta.length > 1 ? "s" : ""
+    } : \n\n`;
+
+    const compact = shouldUseCompactList(userFollows.meta.length);
+
+    userFollows.meta.forEach((meta, idx) => {
+      text += `${String(index + 1)}. *${meta.alertString}*`;
       text += `\n`;
-      if (userFollows.meta.length < 10) text += `\n`;
+      if (!compact && idx < userFollows.meta.length - 1) text += `\n`;
       index++;
     });
   }
@@ -163,7 +197,9 @@ export async function getAllUserFollowsOrdered(
     peopleId?: Types.ObjectId;
     JORFSearchLink?: string;
   }[] = [];
+
   user.followedNames.forEach((p) => followedPeopleTab.push({ nomPrenom: p }));
+
   followedPeoples.forEach((p) =>
     followedPeopleTab.push({
       nomPrenom: `${p.nom} ${p.prenom}`,
@@ -206,6 +242,7 @@ export const listCommand = async (session: ISession) => {
       userFollows.organisations.length +
       userFollows.peopleAndNames.length +
       userFollows.meta.length;
+
     if (followTotal == 0) {
       await session.sendMessage(noDataText);
       return;
@@ -311,7 +348,9 @@ export const unfollowFromStr = async (
     let answers = parseIntAnswers(selectionUnfollowText, followTotal);
 
     if (answers.length === 0) {
-      const text = `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(followTotal)}.`;
+      const text = `Votre réponse n'a pas été reconnue: merci de renseigner une ou plusieurs options entre 1 et ${String(
+        followTotal
+      )}.`;
       if (session.messageApp === "Telegram")
         await session.sendMessage(text, {
           keyboard: [
@@ -357,6 +396,7 @@ export const unfollowFromStr = async (
       userFollows.functions.length +
       userFollows.organisations.length +
       userFollows.peopleAndNames.length;
+
     const unfollowedMetaIdx = answers
       .filter(
         (i) =>
@@ -418,9 +458,7 @@ export const unfollowFromStr = async (
     // If only 1 item unfollowed
     if (unfollowedTotal === 1) {
       if (unfollowedFunctions.length === 1) {
-        text += `Vous ne suivez plus la fonction *${
-          unfollowedFunctionsKeys[0]
-        }* 🙅‍♂️`;
+        text += `Vous ne suivez plus la fonction *${unfollowedFunctionsKeys[0]}* 🙅‍♂️`;
       } else if (unfollowedOrganisations.length === 1) {
         text += `Vous ne suivez plus l'organisation *${unfollowedOrganisations[0].nom}* 🙅‍♂️`;
       } else if (unfollowedPrenomNomTab.length === 1) {
@@ -476,7 +514,7 @@ export const unfollowFromStr = async (
       }
       if (unfollowedPrenomNomTab.length > 0) {
         if (unfollowedPrenomNomTab.length === 1) {
-          text += `\n- Personne : *${unfollowedPrenomNomTab[0]}`;
+          text += `\n- Personne : *${unfollowedPrenomNomTab[0]}*`;
         } else {
           text +=
             `\n- Personnes :` +
