@@ -23,7 +23,7 @@
     "mongoose": "^9.1.5",
     "nodemon": "^3.1.11",
     "p-limit": "^7.2.0",
-    "signal-sdk": "^0.0.9",
+    "signal-sdk": "^0.1.1",
     "telegraf": "^4.16.3",
     "tsx": "^4.21.0",
     "whatsapp-api-js": "^6.2.1"
@@ -42,7 +42,7 @@
     "mongodb-memory-server": "^11.0.1",
     "ngrok": "^5.0.0-beta.2",
     "npm-check-updates": "^19.3.1",
-    "prettier": "^3.8.0",
+    "prettier": "^3.8.1",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.53.1"
