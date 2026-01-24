@@ -9,7 +9,7 @@ import { callJORFSearchReference } from "../utils/JORFSearch.utils.ts";
 import User from "../models/User.ts";
 import { Publication } from "../models/Publication.ts";
 
-const FETCH_CONCURRENCY = 10;
+const FETCH_CONCURRENCY = 1;
 
 export const triggerPendingNotifications = async (
   session: ISession
