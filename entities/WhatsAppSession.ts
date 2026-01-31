@@ -377,7 +377,6 @@ export async function sendWhatsAppMessage(
           { retryFunction, retryNumber }
         );
       }
-      numberMessageBurst += 1;
       await umamiLogger({
         event: "/message-sent",
         messageApp: "WhatsApp",
