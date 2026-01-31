@@ -1,4 +1,7 @@
 import { JORFtoDate } from "../utils/date.utils.ts";
+import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
+import { Publication } from "../models/Publication.ts";
+import umami from "../utils/umami.ts";
 
 export type JORFSearchResponseMeta = null | string | JORFSearchPublicationRaw[];
 
@@ -84,4 +87,46 @@ export function cleanJORFPublication(
     },
     []
   );
+}
+
+export async function saveMetaPublications(
+  metaRecords: JORFSearchPublication[]
+): Promise<number> {
+  // 1) Deduplicate within the batch (by normalized JORF id)
+  const byId = new Map<string, JORFSearchPublication>();
+  for (const r of metaRecords) {
+    const key = r.id; // normalize type
+    if (!byId.has(key)) byId.set(key, r);
+  }
+
+  const records = Array.from(byId.entries()).map(([id, doc]) => {
+    const normalizedTitle = normalizeFrenchTextWithStopwords(doc.title);
+    return {
+      ...doc,
+      id: id,
+      normalizedTitle,
+      normalizedTitleWords: normalizedTitle.split(" ").filter(Boolean)
+    };
+  });
+  if (records.length === 0) return 0;
+
+  // 2) Upsert using $setOnInsert so repeats do not create new docs
+  const ops = records.map((doc) => ({
+    updateOne: {
+      filter: { id: doc.id },
+      update: { $setOnInsert: doc },
+      upsert: true
+    }
+  }));
+
+  const res = await Publication.bulkWrite(ops, { ordered: false });
+
+  // bulkWrite returns how many were actually inserted via upsert
+  if (res.upsertedCount > 0) {
+    await umami.logAsync({
+      event: "/publication-added",
+      payload: { nb: res.upsertedCount }
+    });
+  }
+  return res.upsertedCount;
 }

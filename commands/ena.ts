@@ -361,6 +361,7 @@ export async function handleReferenceAnswer(
     reference,
     session.messageApp
   );
+  await new Promise((resolve) => setTimeout(resolve, 2 * 1000)); // Wait 2s for the reference name to be checked/added in the db
   if (JORFResult == null) {
     await session.sendMessage(
       "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
