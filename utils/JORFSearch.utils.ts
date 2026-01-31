@@ -309,7 +309,7 @@ export async function callJORFSearchMetaDay(
         const cleanedItems = cleanJORFPublication(rawItems);
 
         if (saveToInternalDb) {
-          void saveMetaPublications(cleanedItems);
+          void saveMetaPublications(cleanedItems, messageApps);
         }
         return {
           items: cleanedItems,
@@ -409,7 +409,7 @@ export async function getJORFMetaRecordsFromDate(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  await saveMetaPublications(allItems);
+  await saveMetaPublications(allItems, messageApps);
 
   return allItems;
 }
@@ -626,36 +626,53 @@ async function checkReferenceInDb(
   dateYMD: string,
   messageApp: MessageApp
 ): Promise<void> {
-  const res: IPublication | null = await Publication.findOne({ id: reference });
-  if (res != null) return;
+  try {
+    const res: IPublication | null = await Publication.findOne({
+      id: reference
+    });
+    if (res != null) return;
 
-  const dateSplit = dateYMD.split("-").map((s) => parseInt(s)); // YYYY-MM-DD
-  if (dateSplit.some((s) => isNaN(s))) {
-    await logError(
-      messageApp,
-      `Error parsing date ${dateYMD} in items from reference ${reference}`
+    const dateSplit = dateYMD.split("-").map((s) => parseInt(s)); // YYYY-MM-DD
+    if (dateSplit.some((s) => isNaN(s))) {
+      await logError(
+        messageApp,
+        `Error parsing date ${dateYMD} in items from reference ${reference}`
+      );
+      return;
+    }
+    const referenceDate = new Date(
+      dateSplit[0],
+      dateSplit[1] - 1,
+      dateSplit[2]
     );
-    return;
-  }
-  const referenceDate = new Date(dateSplit[0], dateSplit[1] - 1, dateSplit[2]);
-  const publicationItem = await callJORFSearchMetaDay(
-    referenceDate,
-    [messageApp],
-    0,
-    false
-  ); // do not save to db yet
-  if (publicationItem == null) {
-    await logError(
-      messageApp,
-      `No meta publication found for reference ${reference} on date ${dateYMD}`
+    const publicationItem = await callJORFSearchMetaDay(
+      referenceDate,
+      [messageApp],
+      0,
+      false
+    ); // do not save to db yet
+    if (publicationItem == null) {
+      await logError(
+        messageApp,
+        `No meta publication found for reference ${reference} on date ${dateYMD}`
+      );
+      return;
+    }
+    const upsertedRecordsNb = await saveMetaPublications(
+      publicationItem.items,
+      [messageApp]
     );
-    return;
-  }
-  const upsertedRecordsNb = await saveMetaPublications(publicationItem.items);
-  if (upsertedRecordsNb == 0) {
+    if (upsertedRecordsNb == 0) {
+      await logError(
+        messageApp,
+        `No new publication saved for reference ${reference} on date ${dateYMD}`
+      );
+    }
+  } catch (error) {
     await logError(
       messageApp,
-      "No new publication saved for reference ${reference} on date ${dateYMD}"
+      `Error in saveMetaPublications in callJORFSearchMetaDay for reference ${reference} on date ${dateYMD}`,
+      error
     );
   }
 }
