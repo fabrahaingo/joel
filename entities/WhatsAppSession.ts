@@ -32,7 +32,7 @@ import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 export const WHATSAPP_MESSAGE_CHAR_LIMIT = 900;
 export const WHATSAPP_MAX_LINES = 18;
 const WHATSAPP_COOL_DOWN_DELAY_SECONDS = 6; // 1 message every 6 seconds for the same user, but we'll take 1 here
-const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.1; // Minimum delay between messages in burst mode
+const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.5; // Minimum delay between messages in burst mode to avoid per-user rate limits
 
 const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst mode, before switching to full cooldown
 
@@ -273,16 +273,18 @@ export async function sendWhatsAppMessage(
   }
 
   let resp: ServerMessageResponse;
+  const mArr = splitText(
+    markdown2WHMarkdown(message),
+    WHATSAPP_MESSAGE_CHAR_LIMIT,
+    WHATSAPP_MAX_LINES
+  );
+
+  const totalMessages = mArr.length + (options.separateMenuMessage ? 1 : 0);
+  const burstMode = totalMessages <= WHATSAPP_BURST_MODE_THRESHOLD; // Limit cooldown if less than 10
+
+  let i = 0;
   try {
-    const mArr = splitText(
-      markdown2WHMarkdown(message),
-      WHATSAPP_MESSAGE_CHAR_LIMIT,
-      WHATSAPP_MAX_LINES
-    );
-
-    const burstMode = mArr.length <= WHATSAPP_BURST_MODE_THRESHOLD; // Limit cooldown if less than 10
-
-    for (let i = 0; i < mArr.length; i++) {
+    for (; i < mArr.length; i++) {
       if (
         i == mArr.length - 1 &&
         interactiveKeyboard != null &&
@@ -331,7 +333,7 @@ export async function sendWhatsAppMessage(
         hasAccount: options.hasAccount
       });
 
-      if (burstMode || (i == mArr.length - 1 && options.separateMenuMessage)) {
+      if (burstMode) {
         // prevent hitting the WH API rate limit
         await new Promise((resolve) =>
           setTimeout(resolve, WHATSAPP_BURST_MODE_DELAY_SECONDS * 1000)
@@ -342,7 +344,7 @@ export async function sendWhatsAppMessage(
         );
       }
     }
-    let numberMessageBurst = burstMode ? mArr.length : 0;
+    let numberMessageBurst = burstMode ? totalMessages : 0;
 
     if (options.separateMenuMessage && interactiveKeyboard != null) {
       if (interactiveKeyboard instanceof ActionButtons) {
@@ -359,10 +361,22 @@ export async function sendWhatsAppMessage(
         );
       }
       if (resp.error) {
-        await logError("WhatsApp", "Error sending WH message", resp.error);
-        return false;
+        const retryFunction = (nextRetryNumber: number) =>
+          sendWhatsAppMessage(
+            whatsAppAPI,
+            userInfo,
+            message,
+            options,
+            nextRetryNumber
+          );
+        return await handleWhatsAppAPIErrors(
+          { errorCode: resp.error.code, rawError: resp.error },
+          "sendWhatsAppMessage",
+          userInfo.chatId,
+          umamiLogger,
+          { retryFunction, retryNumber }
+        );
       }
-      numberMessageBurst += 1;
       await umamiLogger({
         event: "/message-sent",
         messageApp: "WhatsApp",
@@ -383,7 +397,11 @@ export async function sendWhatsAppMessage(
       );
     }
   } catch (error) {
-    await logError("WhatsApp", "Error sending WH message", error);
+    await logError(
+      "WhatsApp",
+      `Error sending WH message (${String(i + 1)}/${String(mArr.length)}, burstMode=${String(burstMode)}) to user ${userInfo.chatId}`,
+      error
+    );
     return false;
   }
   await recordSuccessfulDelivery(WhatsAppMessageApp, userInfo.chatId);
