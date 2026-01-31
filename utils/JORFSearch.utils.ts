@@ -671,7 +671,7 @@ async function checkReferenceInDb(
   } catch (error) {
     await logError(
       messageApp,
-      `Error in saveMetaPublications in callJORFSearchMetaDay for reference ${reference} on date ${dateYMD}`,
+      `Error in checkReferenceInDb for reference ${reference} on date ${dateYMD}`,
       error
     );
   }
