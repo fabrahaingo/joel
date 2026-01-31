@@ -137,7 +137,7 @@ export async function saveMetaPublications(
     for (const messageApp of messageApps) {
       await logError(
         messageApp,
-        "Error in saveMetaPublications in callJORFSearchMetaDay",
+        "Error in saveMetaPublications",
         error
       );
     }
