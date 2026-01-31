@@ -15,11 +15,13 @@ import umami from "./umami.ts";
 import {
   cleanJORFPublication,
   JORFSearchPublication,
-  JORFSearchResponseMeta
+  JORFSearchResponseMeta,
+  saveMetaPublications
 } from "../entities/JORFSearchResponseMeta.ts";
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { dateToString, JORFtoDate } from "./date.utils.ts";
 import { logError } from "./debugLogger.ts";
+import { IPublication, Publication } from "../models/Publication.ts";
 
 // Per Wikimedia policy, provide a descriptive agent with contact info.
 const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
@@ -272,10 +274,11 @@ export interface JORFSearchMetaDayResult {
   };
 }
 
-async function callJORFSearchMetaDay(
+export async function callJORFSearchMetaDay(
   day: Date,
   messageApps: MessageApp[],
-  retryNumber = 0
+  retryNumber = 0,
+  saveToInternalDb = true
 ): Promise<JORFSearchMetaDayResult | null> {
   try {
     const dateYMD = dateToString(day, "YMD");
@@ -304,6 +307,10 @@ async function callJORFSearchMetaDay(
         }
         const rawItems = res.data.filter((m) => m.date === previousDayYMD);
         const cleanedItems = cleanJORFPublication(rawItems);
+
+        if (saveToInternalDb) {
+          void saveMetaPublications(cleanedItems);
+        }
         return {
           items: cleanedItems,
           stats: {
@@ -319,7 +326,12 @@ async function callJORFSearchMetaDay(
         await new Promise((resolve) =>
           setTimeout(resolve, BASE_RETRY_DELAY_MS * (retryNumber + 1))
         );
-        return await callJORFSearchMetaDay(day, messageApps, retryNumber + 1);
+        return await callJORFSearchMetaDay(
+          day,
+          messageApps,
+          retryNumber + 1,
+          saveToInternalDb
+        );
       }
       logJORFSearchError("meta");
       console.log(
@@ -359,7 +371,9 @@ export async function getJORFMetaRecordsFromDate(
   for (const sub of chunks) {
     results.push(
       ...(await Promise.all(
-        sub.map((day: Date) => callJORFSearchMetaDay(day, messageApps))
+        sub.map((day: Date) =>
+          callJORFSearchMetaDay(day, messageApps, 0, false)
+        ) // saveTodB is false to save to dB in batch
       ))
     );
   }
@@ -391,9 +405,13 @@ export async function getJORFMetaRecordsFromDate(
     });
   }
 
-  return allItems.sort(
+  allItems.sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
+
+  await saveMetaPublications(allItems);
+
+  return allItems;
 }
 
 export async function callJORFSearchTag(
@@ -603,6 +621,45 @@ export async function searchOrganisationWikidataId(
   return null;
 }
 
+async function checkReferenceInDb(
+  reference: string,
+  dateYMD: string,
+  messageApp: MessageApp
+): Promise<void> {
+  const res: IPublication | null = await Publication.findOne({ id: reference });
+  if (res != null) return;
+
+  const dateSplit = dateYMD.split("-").map((s) => parseInt(s)); // YYYY-MM-DD
+  if (dateSplit.some((s) => isNaN(s))) {
+    await logError(
+      messageApp,
+      `Error parsing date ${dateYMD} in items from reference ${reference}`
+    );
+    return;
+  }
+  const referenceDate = new Date(dateSplit[0], dateSplit[1] - 1, dateSplit[2]);
+  const publicationItem = await callJORFSearchMetaDay(
+    referenceDate,
+    [messageApp],
+    0,
+    false
+  ); // do not save to db yet
+  if (publicationItem == null) {
+    await logError(
+      messageApp,
+      `No meta publication found for reference ${reference} on date ${dateYMD}`
+    );
+    return;
+  }
+  const upsertedRecordsNb = await saveMetaPublications(publicationItem.items);
+  if (upsertedRecordsNb == 0) {
+    await logError(
+      messageApp,
+      "No new publication saved for reference ${reference} on date ${dateYMD}"
+    );
+  }
+}
+
 export async function callJORFSearchReference(
   reference: string,
   messageApp: MessageApp,
@@ -632,6 +689,13 @@ export async function callJORFSearchReference(
           messageApp,
           payload: { ...cleanedItems.processingStats }
         });
+        if (cleanedItems.cleanItems.length == 0) return [];
+
+        void checkReferenceInDb(
+          reference,
+          cleanedItems.cleanItems[0].source_date,
+          messageApp
+        ); // check db in the background
         return cleanedItems.cleanItems;
       });
   } catch (error) {

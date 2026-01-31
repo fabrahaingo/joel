@@ -12,7 +12,6 @@ import umami from "../utils/umami.ts";
 import mongoose, { Types } from "mongoose";
 
 import { ExternalMessageOptions } from "../entities/Session.ts";
-import { Publication } from "../models/Publication.ts";
 import { refreshTelegramBlockedUsers } from "../entities/TelegramSession.ts";
 import { logError } from "../utils/debugLogger.ts";
 import {
@@ -20,48 +19,6 @@ import {
   getJORFRecordsFromDate
 } from "../utils/JORFSearch.utils.ts";
 import { formatDuration } from "../utils/date.utils.ts";
-import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
-
-async function saveNewMetaPublications(
-  metaRecords: JORFSearchPublication[]
-): Promise<void> {
-  // 1) Deduplicate within the batch (by normalized JORF id)
-  const byId = new Map<string, JORFSearchPublication>();
-  for (const r of metaRecords) {
-    const key = r.id; // normalize type
-    if (!byId.has(key)) byId.set(key, r);
-  }
-
-  const records = Array.from(byId.entries()).map(([id, doc]) => {
-    const normalizedTitle = normalizeFrenchTextWithStopwords(doc.title);
-    return {
-      ...doc,
-      id: id,
-      normalizedTitle,
-      normalizedTitleWords: normalizedTitle.split(" ").filter(Boolean)
-    };
-  });
-  if (records.length === 0) return;
-
-  // 2) Upsert using $setOnInsert so repeats do not create new docs
-  const ops = records.map((doc) => ({
-    updateOne: {
-      filter: { id: doc.id },
-      update: { $setOnInsert: doc },
-      upsert: true
-    }
-  }));
-
-  const res = await Publication.bulkWrite(ops, { ordered: false });
-
-  // bulkWrite returns how many were actually inserted via upsert
-  if (res.upsertedCount > 0) {
-    await umami.logAsync({
-      event: "/publication-added",
-      payload: { nb: res.upsertedCount }
-    });
-  }
-}
 
 const NOTIFICATION_DURATION_BEFORE_WARNING_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -248,7 +205,6 @@ export async function notifyAllFollows(
   }
 
   if (JORFMetaRecordsFromDate.length > 0) {
-    await saveNewMetaPublications(JORFMetaRecordsFromDate);
     await notifyAlertStringUpdates(
       JORFMetaRecordsFromDate,
       targetApps,
