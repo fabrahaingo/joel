@@ -23,8 +23,10 @@ import { logError } from "./debugLogger.ts";
 
 // Per Wikimedia policy, provide a descriptive agent with contact info.
 const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
+
 const RETRY_MAX = 5;
 const BASE_RETRY_DELAY_MS = 1000;
+const JORFSEARCH_CALLS_CONCURRENCY = 1;
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -222,7 +224,7 @@ export async function getJORFRecordsFromDate(
     return d;
   });
 
-  const limit = 8;
+  const limit = JORFSEARCH_CALLS_CONCURRENCY;
   const chunks: Date[][] = [];
   for (let i = 0; i < days.length; i += limit)
     chunks.push(days.slice(i, i + limit));
@@ -348,7 +350,7 @@ export async function getJORFMetaRecordsFromDate(
     return d;
   });
 
-  const limit = 8;
+  const limit = JORFSEARCH_CALLS_CONCURRENCY;
   const chunks: Date[][] = [];
   for (let i = 0; i < days.length; i += limit)
     chunks.push(days.slice(i, i + limit));

@@ -10,6 +10,8 @@ import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 import { SignalCli } from "signal-sdk";
 import { WHATSAPP_API_VERSION } from "../entities/WhatsAppSession.ts";
 import { logError } from "./debugLogger.ts";
+import { StoreType } from "@matrix-org/matrix-sdk-crypto-nodejs";
+import { MATRIX_ENCRYPTION_ENABLED } from "../apps/matrixApp.ts";
 
 // Load all message apps and their options from environment variables
 export async function loadAllMessageApps(messageApps?: MessageApp[]): Promise<{
@@ -75,9 +77,12 @@ export async function loadAllMessageApps(messageApps?: MessageApp[]): Promise<{
       const storageProvider = new SimpleFsStorageProvider(
         "matrix/matrix-bot.json"
       );
-      const cryptoProvider = new RustSdkCryptoStorageProvider(
-        "matrix/matrix-crypto"
-      );
+      const cryptoProvider = MATRIX_ENCRYPTION_ENABLED
+        ? new RustSdkCryptoStorageProvider(
+            "matrix/matrix-crypto",
+            StoreType.Sqlite
+          )
+        : undefined;
 
       try {
         // Use the access token you got from login or registration above.
