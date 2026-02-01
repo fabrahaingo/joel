@@ -645,8 +645,12 @@ async function checkReferenceInDb(
       dateSplit[1] - 1,
       dateSplit[2]
     );
+    // callJORFSearchMetaDay queries the API with the given date but filters by previousDay
+    // So we need to add 1 day to get publications with date === referenceDate
+    const queryDate = new Date(referenceDate);
+    queryDate.setDate(queryDate.getDate() + 1);
     const publicationItem = await callJORFSearchMetaDay(
-      referenceDate,
+      queryDate,
       [messageApp],
       0,
       false
