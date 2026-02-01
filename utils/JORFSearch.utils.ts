@@ -647,6 +647,7 @@ async function checkReferenceInDb(
     );
     // callJORFSearchMetaDay queries the API with the given date but filters by previousDay
     // So we need to add 1 day to get publications with date === referenceDate
+    // Note: Date constructor handles day overflow correctly (e.g., Jan 32 → Feb 1)
     const queryDate = new Date(
       dateSplit[0],
       dateSplit[1] - 1,
