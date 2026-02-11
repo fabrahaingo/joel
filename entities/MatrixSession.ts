@@ -571,6 +571,7 @@ async function handleMatrixAPIErrors(
     case "ECONNRESET":
     case "EPIPE":
     case "ETIMEDOUT":
+    case "ESOCKETTIMEDOUT":
     case "ECONNABORTED":
       if (retryParameters != null) {
         if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {

@@ -670,12 +670,8 @@ async function checkReferenceInDb(
       publicationItem.items,
       [messageApp]
     );
-    if (upsertedRecordsNb == 0) {
-      await logError(
-        messageApp,
-        `No new publication saved for reference ${reference} on date ${dateYMD}`
-      );
-    }
+    // Note: upsertedRecordsNb == 0 is expected when the publication already exists in the database
+    // This is not an error condition and doesn't require logging
   } catch (error) {
     await logError(
       messageApp,
