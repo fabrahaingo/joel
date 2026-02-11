@@ -640,11 +640,6 @@ async function checkReferenceInDb(
       );
       return;
     }
-    const referenceDate = new Date(
-      dateSplit[0],
-      dateSplit[1] - 1,
-      dateSplit[2]
-    );
     // callJORFSearchMetaDay queries the API with the given date but filters by previousDay
     // So we need to add 1 day to get publications with date === referenceDate
     // Note: Date constructor handles day overflow correctly (e.g., Jan 32 → Feb 1)
@@ -666,12 +661,10 @@ async function checkReferenceInDb(
       );
       return;
     }
-    const upsertedRecordsNb = await saveMetaPublications(
+    await saveMetaPublications(
       publicationItem.items,
       [messageApp]
-    );
-    // Note: upsertedRecordsNb == 0 is expected when the publication already exists in the database
-    // This is not an error condition and doesn't require logging
+    ); // save to db (if not already saved by a previous reference)
   } catch (error) {
     await logError(
       messageApp,
