@@ -372,6 +372,8 @@ async function refreshRecentPublications(
     }
   )
     .sort({ date_obj: -1 })
+    .batchSize(5000)
+    .maxTimeMS(60000)
     .lean();
 
   cachedPublications = publications.map((publication) => {

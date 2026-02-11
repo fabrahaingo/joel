@@ -11,7 +11,12 @@ export const mongodbConnect = async () => {
   )
     return;
 
-  await mongoose.connect(process.env.MONGODB_URI);
+  await mongoose.connect(process.env.MONGODB_URI, {
+    maxPoolSize: 10,
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 45000,
+    family: 4
+  });
 };
 
 export const mongodbDisconnect = async () => {
