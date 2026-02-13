@@ -506,10 +506,10 @@ function handleCommand(roomId: string, event: MatrixRoomEvent) {
           errorContext: "Error processing command"
         });
       } catch (error) {
-        await logError(matrixApp, "Error processing command", error);
+        await logError(matrixApp, "Error in handleIncomingMessage", error);
       }
     } catch (error) {
-      await logError(matrixApp, "Unhandled error in event handler", error);
+      await logError(matrixApp, "Error in event handler setup", error);
     }
   })();
 }
