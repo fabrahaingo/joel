@@ -341,171 +341,175 @@ interface MatrixRoomEvent {
 // This is the command handler we registered a few lines up
 function handleCommand(roomId: string, event: MatrixRoomEvent) {
   void (async () => {
-    // Ensure serverUserId is initialized
-    const botUserId = await ensureServerUserId();
-
-    // ignore message from itself
-    if (event.sender === botUserId) return;
-
-    let msgText: string | undefined;
-    switch (event.type) {
-      case "m.room.message":
-        // Send read receipt in parallel (don't await)
-        void client.sendReadReceipt(roomId, event.event_id);
-        msgText = event.content.body;
-        break;
-
-      case "m.reaction":
-        msgText = event.content["m.relates_to"]?.key;
-        break;
-
-      case "m.poll.response":
-      case "org.matrix.msc3381.poll.response": {
-        const eventId = event.content["m.relates_to"]?.event_id;
-        if (eventId != null) await closePollMenu(client, roomId, eventId);
-        const payload =
-          event.content["m.poll.response"] ??
-          event.content["org.matrix.msc3381.poll.response"];
-        msgText = payload?.answers?.[0];
-        break;
-      }
-
-      case "m.room.member": {
-        if (event.content.membership === "leave") {
-          const user: IUser | null = await User.findOne({
-            messageApp: matrixApp,
-            roomId: roomId,
-            chatId: event.sender
-          });
-          if (user != null) {
-            // If a user has left the room, mark him as blocked
-            if (user.status === "active") {
-              await User.updateOne(
-                { _id: user._id },
-                { $set: { status: "blocked" }, $unset: { roomId: 1 } },
-                { runValidators: true }
-              );
-              await umami.logAsync({
-                event: "/user-blocked-joel",
-                messageApp: matrixApp,
-                hasAccount: true
-              });
-            }
-          }
-
-          // Leave if room is now empty
-          await leaveIfEmptyRoom(roomId);
-
-          return;
-        } else if (event.content.membership === "join") {
-          // Skip if the bot itself is joining - this prevents duplicate welcome messages
-          // as the room.join handler already processes bot joins
-          if (event.sender === botUserId) {
-            return;
-          }
-
-          // Wait a moment for room state to stabilize
-          await new Promise((resolve) =>
-            setTimeout(resolve, ROOM_STATE_STABILIZATION_DELAY)
-          );
-
-          // Skip if this room was recently joined by the bot to avoid processing
-          // stale member events that would trigger duplicate welcome messages
-          if (recentlyJoinedRooms.has(roomId)) {
-            console.log(
-              `${matrixApp}: Skipping member join event in recently joined room ${roomId}`
-            );
-            return;
-          }
-
-          // leave non-direct rooms when a new member joins
-          try {
-            const otherMemberCount = await getOtherMemberCount(roomId);
-            if (otherMemberCount > 1) {
-              console.log(
-                `${matrixApp}: leaving room ${roomId} because it has ${String(otherMemberCount)} members besides the bot`
-              );
-              await client.sendMessage(roomId, {
-                msgtype: "m.text",
-                body: "JOEL ne permet pas de rejoindre des salons multi-personnes."
-              });
-              await client.leaveRoom(roomId);
-              return;
-            } else {
-              // only 1 other person in the room
-              const previousUser: IUser | null = await User.findOne({
-                messageApp: matrixApp,
-                chatId: event.sender
-              });
-              if (previousUser != null) {
-                // If a user has joined the room, mark him as active
-                if (previousUser.status === "blocked") {
-                  await User.updateOne(
-                    { _id: previousUser._id },
-                    { $set: { status: "active", roomId: roomId } }
-                  );
-                  umami.log({
-                    event: "/user-unblocked-joel",
-                    messageApp: matrixApp,
-                    hasAccount: true
-                  });
-                } else {
-                  // Update room ID for active user
-                  await User.updateOne(
-                    { _id: previousUser._id },
-                    { $set: { roomId: roomId } }
-                  );
-                }
-                if (!previousUser.followsNothing())
-                  msgText = KEYBOARD_KEYS.FOLLOWS_LIST.key.text;
-                else msgText = "/start";
-              } else msgText = "/start"; // Send the welcome message to the new member
-              break;
-            }
-          } catch {
-            console.log(
-              `Error checking member count on member join room ${roomId}`
-            );
-            return;
-          }
-        } else return;
-      }
-    }
-    if (msgText == null) return;
-
-    // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
-    if (/^@_?server:/.test(event.sender)) {
-      await logWarning(
-        matrixApp,
-        `${matrixApp}: message from the server: ${msgText}`
-      );
-      if (event.type === "m.room.message")
-        await client.sendReadReceipt(roomId, event.event_id);
-      return;
-    }
-
-    if (event.origin_server_ts == null) {
-      await logError(matrixApp, "Missing origin_server_ts in received event");
-      return;
-    }
-
-    const receivedMessageTime = new Date(event.origin_server_ts); // Matrix provides ms epoch
-
     try {
-      const matrixSession = new MatrixSession(
-        matrixApp,
-        client,
-        event.sender,
-        roomId,
-        "fr",
-        receivedMessageTime
-      );
+      // Ensure serverUserId is initialized
+      const botUserId = await ensureServerUserId();
 
-      await handleIncomingMessage(matrixSession, msgText, {
-        errorContext: "Error processing command"
-      });
+      // ignore message from itself
+      if (event.sender === botUserId) return;
+
+      let msgText: string | undefined;
+      switch (event.type) {
+        case "m.room.message":
+          // Send read receipt in parallel (don't await)
+          void client.sendReadReceipt(roomId, event.event_id);
+          msgText = event.content.body;
+          break;
+
+        case "m.reaction":
+          msgText = event.content["m.relates_to"]?.key;
+          break;
+
+        case "m.poll.response":
+        case "org.matrix.msc3381.poll.response": {
+          const eventId = event.content["m.relates_to"]?.event_id;
+          if (eventId != null) await closePollMenu(client, roomId, eventId);
+          const payload =
+            event.content["m.poll.response"] ??
+            event.content["org.matrix.msc3381.poll.response"];
+          msgText = payload?.answers?.[0];
+          break;
+        }
+
+        case "m.room.member": {
+          if (event.content.membership === "leave") {
+            const user: IUser | null = await User.findOne({
+              messageApp: matrixApp,
+              roomId: roomId,
+              chatId: event.sender
+            });
+            if (user != null) {
+              // If a user has left the room, mark him as blocked
+              if (user.status === "active") {
+                await User.updateOne(
+                  { _id: user._id },
+                  { $set: { status: "blocked" }, $unset: { roomId: 1 } },
+                  { runValidators: true }
+                );
+                await umami.logAsync({
+                  event: "/user-blocked-joel",
+                  messageApp: matrixApp,
+                  hasAccount: true
+                });
+              }
+            }
+
+            // Leave if room is now empty
+            await leaveIfEmptyRoom(roomId);
+
+            return;
+          } else if (event.content.membership === "join") {
+            // Skip if the bot itself is joining - this prevents duplicate welcome messages
+            // as the room.join handler already processes bot joins
+            if (event.sender === botUserId) {
+              return;
+            }
+
+            // Wait a moment for room state to stabilize
+            await new Promise((resolve) =>
+              setTimeout(resolve, ROOM_STATE_STABILIZATION_DELAY)
+            );
+
+            // Skip if this room was recently joined by the bot to avoid processing
+            // stale member events that would trigger duplicate welcome messages
+            if (recentlyJoinedRooms.has(roomId)) {
+              console.log(
+                `${matrixApp}: Skipping member join event in recently joined room ${roomId}`
+              );
+              return;
+            }
+
+            // leave non-direct rooms when a new member joins
+            try {
+              const otherMemberCount = await getOtherMemberCount(roomId);
+              if (otherMemberCount > 1) {
+                console.log(
+                  `${matrixApp}: leaving room ${roomId} because it has ${String(otherMemberCount)} members besides the bot`
+                );
+                await client.sendMessage(roomId, {
+                  msgtype: "m.text",
+                  body: "JOEL ne permet pas de rejoindre des salons multi-personnes."
+                });
+                await client.leaveRoom(roomId);
+                return;
+              } else {
+                // only 1 other person in the room
+                const previousUser: IUser | null = await User.findOne({
+                  messageApp: matrixApp,
+                  chatId: event.sender
+                });
+                if (previousUser != null) {
+                  // If a user has joined the room, mark him as active
+                  if (previousUser.status === "blocked") {
+                    await User.updateOne(
+                      { _id: previousUser._id },
+                      { $set: { status: "active", roomId: roomId } }
+                    );
+                    umami.log({
+                      event: "/user-unblocked-joel",
+                      messageApp: matrixApp,
+                      hasAccount: true
+                    });
+                  } else {
+                    // Update room ID for active user
+                    await User.updateOne(
+                      { _id: previousUser._id },
+                      { $set: { roomId: roomId } }
+                    );
+                  }
+                  if (!previousUser.followsNothing())
+                    msgText = KEYBOARD_KEYS.FOLLOWS_LIST.key.text;
+                  else msgText = "/start";
+                } else msgText = "/start"; // Send the welcome message to the new member
+                break;
+              }
+            } catch {
+              console.log(
+                `Error checking member count on member join room ${roomId}`
+              );
+              return;
+            }
+          } else return;
+        }
+      }
+      if (msgText == null) return;
+
+      // ignore server-notices user; actual ID varies by server (@server:domain or @_server:domain)
+      if (/^@_?server:/.test(event.sender)) {
+        await logWarning(
+          matrixApp,
+          `${matrixApp}: message from the server: ${msgText}`
+        );
+        if (event.type === "m.room.message")
+          await client.sendReadReceipt(roomId, event.event_id);
+        return;
+      }
+
+      if (event.origin_server_ts == null) {
+        await logError(matrixApp, "Missing origin_server_ts in received event");
+        return;
+      }
+
+      const receivedMessageTime = new Date(event.origin_server_ts); // Matrix provides ms epoch
+
+      try {
+        const matrixSession = new MatrixSession(
+          matrixApp,
+          client,
+          event.sender,
+          roomId,
+          "fr",
+          receivedMessageTime
+        );
+
+        await handleIncomingMessage(matrixSession, msgText, {
+          errorContext: "Error processing command"
+        });
+      } catch (error) {
+        await logError(matrixApp, "Error in handleIncomingMessage", error);
+      }
     } catch (error) {
-      await logError(matrixApp, "Error processing command", error);
+      await logError(matrixApp, "Error in event handler setup", error);
     }
   })();
 }
