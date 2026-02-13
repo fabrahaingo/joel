@@ -135,11 +135,7 @@ export async function saveMetaPublications(
     return res.upsertedCount;
   } catch (error) {
     for (const messageApp of messageApps) {
-      await logError(
-        messageApp,
-        "Error in saveMetaPublications",
-        error
-      );
+      await logError(messageApp, "Error in saveMetaPublications", error);
     }
   }
   return 0;
