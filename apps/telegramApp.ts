@@ -71,6 +71,12 @@ await (async () => {
       });
     });
 
+    // Global error handler for Telegraf
+    bot.catch(async (error, ctx) => {
+      console.error("Unhandled error while processing", ctx.update);
+      await logError("Telegram", "Unhandled error in bot handler", error);
+    });
+
     startDailyNotificationJobs(["Telegram"], {
       telegramBotToken: TELEGRAM_BOT_TOKEN
     });

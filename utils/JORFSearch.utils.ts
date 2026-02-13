@@ -661,10 +661,7 @@ async function checkReferenceInDb(
       );
       return;
     }
-    await saveMetaPublications(
-      publicationItem.items,
-      [messageApp]
-    ); // save to db (if not already saved by a previous reference)
+    await saveMetaPublications(publicationItem.items, [messageApp]); // save to db (if not already saved by a previous reference)
   } catch (error) {
     await logError(
       messageApp,
