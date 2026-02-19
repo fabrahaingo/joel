@@ -659,11 +659,17 @@ export function markdown2html(input: string): string {
     let out = escapeHtml(input);
      */
 
-  // Links: [text](url)
+  // Extract links first and replace with null-byte-delimited placeholders so
+  // that underscores inside URLs are not mistakenly treated as italic markers
+  // when the bold/italic regexes run.
+  const links: string[] = [];
   let out = input.replace(
     /\[([^\]]+)\]\(([^)\s]+)\)/g,
-    (_m, text: string, url: string) =>
-      `<a href="${url}" rel="noopener noreferrer">${text}</a>`
+    (_m, text: string, url: string) => {
+      const idx = links.length;
+      links.push(`<a href="${url}" rel="noopener noreferrer">${text}</a>`);
+      return `\x00${idx}\x00`;
+    }
   );
 
   // Bold: *text*
@@ -672,8 +678,10 @@ export function markdown2html(input: string): string {
     (_m, t: string) => `<strong>${t}</strong>`
   );
   // Italic: _text_
-
   out = out.replace(/_([^_\s][^_]*?)_/g, (_m, t: string) => `<em>${t}</em>`);
+
+  // Restore links
+  out = out.replace(/\x00(\d+)\x00/g, (_m, i: string) => links[parseInt(i)]);
 
   out = out.replace(/\n/g, `<br />`);
 
