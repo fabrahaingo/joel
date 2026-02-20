@@ -21,7 +21,7 @@
     "matrix-bot-sdk": "^0.8.0",
     "mongodb": "^7.1.0",
     "mongoose": "^9.2.1",
-    "nodemon": "^3.1.11",
+    "nodemon": "^3.1.13",
     "p-limit": "^7.3.0",
     "signal-sdk": "^0.1.4",
     "telegraf": "^4.16.3",
@@ -41,10 +41,10 @@
     "jest": "^30.2.0",
     "mongodb-memory-server": "^11.0.1",
     "ngrok": "^5.0.0-beta.2",
-    "npm-check-updates": "^19.3.2",
+    "npm-check-updates": "^19.4.1",
     "prettier": "^3.8.1",
     "ts-jest": "^29.4.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.55.0"
+    "typescript-eslint": "^8.56.0"
   }
 }
