@@ -10,9 +10,13 @@ import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
 
 const injectionCharacters = /[<>`{}\[\]\$]/g;
 const controlCharacters = /[\u0000-\u001F\u007F]+/g;
+const markdownCharacters = /[*_]/g;
 
 export function sanitizeUserInput(input: string): string {
-  return input.replace(controlCharacters, "").replace(injectionCharacters, "");
+  return input
+    .replace(controlCharacters, "")
+    .replace(injectionCharacters, "")
+    .replace(markdownCharacters, "");
 }
 
 export function splitText(
@@ -200,6 +204,25 @@ export function removeSpecialCharacters(text: string): string {
   // $& in the replacement expands to the whole match, so each metacharacter
   // is prefixed with a backslash.
   return text.replace(/[.*+?^${}()|[\]\\]/g, "");
+}
+
+// Recursively strip Telegram Markdown formatting characters from all strings
+// in a value (string, array, or plain object).
+export function stripMarkdown<T>(value: T): T {
+  if (typeof value === "string") {
+    return value.replace(/[*_`\[\]]/g, "") as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map(stripMarkdown) as unknown as T;
+  }
+  if (value !== null && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      result[k] = stripMarkdown(v);
+    }
+    return result as T;
+  }
+  return value;
 }
 
 // Common French stopwords to exclude from search indexing
