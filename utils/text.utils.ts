@@ -196,6 +196,12 @@ export function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+export function escapeMarkdown(text: string): string {
+  // Escape Telegram Markdown special characters to prevent parse errors
+  // when inserting dynamic text inside *bold* or _italic_ markers.
+  return text.replace(/[*_`[]/g, "\\$&");
+}
+
 export function removeSpecialCharacters(text: string): string {
   // $& in the replacement expands to the whole match, so each metacharacter
   // is prefixed with a backslash.

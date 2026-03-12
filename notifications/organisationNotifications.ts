@@ -33,7 +33,7 @@ import {
   groupRecordsBy,
   SeparatorSelector
 } from "./grouping.ts";
-import { getSplitTextMessageSize } from "../utils/text.utils.ts";
+import { getSplitTextMessageSize, escapeMarkdown } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
 import { FilterQuery, Types } from "mongoose";
 import {
@@ -387,7 +387,7 @@ export async function sendOrganisationUpdate(
     notification_text += `Nouvelle${pluralHandler} publication${pluralHandler} pour ${
       markdownLinkEnabled
         ? `[${orgName}](${getJORFSearchLinkOrganisation(orgId)})`
-        : `*${orgName}*`
+        : `*${escapeMarkdown(orgName)}*`
     }\n\n`;
 
     const groupedByReference = groupRecordsBy(
