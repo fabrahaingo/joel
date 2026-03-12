@@ -29,6 +29,16 @@ const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
 const RETRY_MAX = 5;
 const BASE_RETRY_DELAY_MS = 1000;
 const JORFSEARCH_CALLS_CONCURRENCY = 1;
+// Prevent individual HTTP requests from hanging indefinitely.
+// With RETRY_MAX=5 the worst-case wall-time per call-site is:
+//   (RETRY_MAX+1) × REQUEST_TIMEOUT_MS + Σ(1..RETRY_MAX)×BASE_RETRY_DELAY_MS
+//   = 6 × 10 000 + 15 000 = 75 000 ms  (< Telegraf's 90 s handler timeout)
+const REQUEST_TIMEOUT_MS = 10_000;
+
+const jorfAxios = axios.create({
+  timeout: REQUEST_TIMEOUT_MS,
+  headers: { "User-Agent": USER_AGENT }
+});
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
