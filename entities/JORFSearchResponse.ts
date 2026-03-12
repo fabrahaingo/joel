@@ -1,4 +1,4 @@
-import { trimStrings } from "../utils/text.utils.ts";
+import { trimStrings, stripMarkdown } from "../utils/text.utils.ts";
 import {
   SOURCE_NAME_VALUES,
   SourceName,
@@ -274,9 +274,10 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): {
       const clean_organisations = item_raw.organisations.reduce(
         (tab: JORFSearchOrganisation[], org_raw) => {
           if (org_raw.nom === undefined) return tab;
+          const strippedOrg = stripMarkdown(trimStrings(org_raw));
           const org: JORFSearchOrganisation = {
-            ...trimStrings(org_raw),
-            nom: org_raw.nom.trim(),
+            ...strippedOrg,
+            nom: strippedOrg.nom!,
             wikidata_id: org_raw.wikidata_id?.toUpperCase()
           };
           tab.push(org);
@@ -308,10 +309,11 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): {
         item_raw.ambassadeur = true;
       }
 
+      const strippedItem = stripMarkdown(trimStrings(item_raw));
       const clean_item: JORFSearchItem = {
-        ...trimStrings(item_raw),
-        prenom: item_raw.prenom.trim(),
-        nom: item_raw.nom.trim(),
+        ...strippedItem,
+        prenom: strippedItem.prenom!,
+        nom: strippedItem.nom!,
         type_ordre: type_ordre_clean,
         source_date: item_raw.source_date,
         source_name: source_name_clean,
