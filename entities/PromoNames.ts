@@ -9,6 +9,12 @@ export interface Promo_ENA_INSP {
 export const List_Promos_INSP_ENA: Promo_ENA_INSP[] = [
   // INSP promotions
   {
+    name: null,
+    period: "2026-2028",
+    school: "INSP",
+    onJORF: true
+  },
+  {
     name: "Gisèle Halimi",
     period: "2025-2027",
     school: "INSP",
