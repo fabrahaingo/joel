@@ -12,6 +12,58 @@ type LogLevel = "warning" | "error";
 const DEBUG_CHAT_ID = process.env.DEBUG_CHAT_ID;
 const TELEGRAM_DEBUG_BOT_TOKEN = process.env.TELEGRAM_DEBUG_BOT_TOKEN;
 
+/**
+ * Replaces all `process.env` values (with at least 8 characters) found in the
+ * given string with their variable name as a placeholder (e.g. `<TELEGRAM_BOT_TOKEN>`).
+ * This prevents accidental secret leakage in logs.
+ */
+export const sanitizeSecrets = (input: string): string => {
+  const entries = Object.entries(process.env)
+    .filter(
+      (entry): entry is [string, string] =>
+        entry[1] != null && entry[1].trim().length >= 8
+    )
+    // Sort by value length descending so longer values are replaced first,
+    // avoiding partial replacements when one secret is a prefix of another.
+    .sort(([, a], [, b]) => b.length - a.length);
+
+  let result = input;
+  for (const [key, value] of entries) {
+    result = result.split(value).join(`<${key}>`);
+  }
+  return result;
+};
+
+// Patch console methods so that all string arguments are sanitized before output,
+// preventing secrets from leaking through ad-hoc console.log calls.
+const _consoleLog = console.log.bind(console);
+const _consoleWarn = console.warn.bind(console);
+const _consoleError = console.error.bind(console);
+const _consoleInfo = console.info.bind(console);
+
+const sanitizeArg = (arg: unknown): unknown => {
+  if (typeof arg === "string") return sanitizeSecrets(arg);
+  if (arg instanceof Error) {
+    return sanitizeSecrets(
+      `${arg.name}: ${arg.message}${arg.stack ? `\n${arg.stack}` : ""}`
+    );
+  }
+  return arg;
+};
+
+console.log = (...args: unknown[]) => {
+  _consoleLog(...args.map(sanitizeArg));
+};
+console.warn = (...args: unknown[]) => {
+  _consoleWarn(...args.map(sanitizeArg));
+};
+console.error = (...args: unknown[]) => {
+  _consoleError(...args.map(sanitizeArg));
+};
+console.info = (...args: unknown[]) => {
+  _consoleInfo(...args.map(sanitizeArg));
+};
+
 const formatError = (error: unknown): string | null => {
   if (error == null) return null;
   if (error instanceof Error) {
@@ -53,12 +105,17 @@ const logToConsole = (
   message: string,
   error?: unknown
 ): void => {
+  const sanitizedMessage = sanitizeSecrets(message);
+  const errorText = formatError(error);
+  const sanitizedError =
+    errorText != null ? sanitizeSecrets(errorText) : undefined;
+
   if (level === "warning") {
-    console.warn(message);
-    if (error) console.warn(error);
+    _consoleWarn(sanitizedMessage);
+    if (sanitizedError != null) _consoleWarn(sanitizedError);
   } else {
-    console.error(message);
-    if (error) console.error(error);
+    _consoleError(sanitizedMessage);
+    if (sanitizedError != null) _consoleError(sanitizedError);
   }
 };
 
@@ -72,8 +129,8 @@ const buildLogMessage = (
   const errorText = formatError(error);
   const processEnv = (process.env.NODE_ENV ?? "").trim();
   return [
-    `${levelEmoji} [${messageApp} (${processEnv.length > 0 ? processEnv : "production"})] ${message}`,
-    errorText != null ? `Details:\n${errorText}` : null
+    `${levelEmoji} [${messageApp} (${processEnv.length > 0 ? processEnv : "production"})] ${sanitizeSecrets(message)}`,
+    errorText != null ? `Details:\n${sanitizeSecrets(errorText)}` : null
   ]
     .filter((part): part is string => part != null)
     .join("\n");
