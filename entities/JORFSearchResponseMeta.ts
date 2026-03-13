@@ -1,5 +1,5 @@
 import { JORFtoDate } from "../utils/date.utils.ts";
-import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
+import { normalizeFrenchTextWithStopwords, stripMarkdown } from "../utils/text.utils.ts";
 import { Publication } from "../models/Publication.ts";
 import umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";
@@ -81,7 +81,7 @@ export function cleanJORFPublication(
         ...publication_raw,
         id: publication_raw.id,
         date: publication_raw.date,
-        title: publication_raw.title,
+        title: stripMarkdown(publication_raw.title),
         tags: publication_raw.tags ?? {},
         date_obj: JORFtoDate(publication_raw.date)
       });
