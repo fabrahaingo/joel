@@ -29,6 +29,16 @@ const USER_AGENT = "JOEL/1.0 (contact@joel-officiel.fr)";
 const RETRY_MAX = 5;
 const BASE_RETRY_DELAY_MS = 1000;
 const JORFSEARCH_CALLS_CONCURRENCY = 1;
+// Prevent individual HTTP requests from hanging indefinitely.
+// With RETRY_MAX=5 the worst-case wall-time per call-site is:
+//   (RETRY_MAX+1) × REQUEST_TIMEOUT_MS + Σ(1..RETRY_MAX)×BASE_RETRY_DELAY_MS
+//   = 6 × 10 000 + 15 000 = 75 000 ms  (< Telegraf's 90 s handler timeout)
+const REQUEST_TIMEOUT_MS = 10_000;
+
+const jorfAxios = axios.create({
+  timeout: REQUEST_TIMEOUT_MS,
+  headers: { "User-Agent": USER_AGENT }
+});
 
 // Extend the InternalAxiosRequestConfig with the res field
 interface CustomInternalAxiosRequestConfig extends InternalAxiosRequestConfig {
@@ -68,12 +78,8 @@ export async function callJORFSearchPeople(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    return await axios
-      .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true), {
-        headers: {
-          "User-Agent": USER_AGENT
-        }
-      })
+    return await jorfAxios
+      .get<JORFSearchResponse>(getJORFSearchLinkPeople(peopleName, true))
       .then(async (res1: AxiosResponse<JORFSearchResponse>) => {
         if (res1.data === null) {
           logJORFSearchError("people", messageApp);
@@ -106,9 +112,7 @@ export async function callJORFSearchPeople(
             event: "/jorfsearch-request-people-formatted",
             messageApp
           });
-          const res2 = await axios.get<JORFSearchResponse>(url, {
-            headers: { "User-Agent": USER_AGENT }
-          });
+          const res2 = await jorfAxios.get<JORFSearchResponse>(url);
           if (res2.data && typeof res2.data !== "string") {
             const cleanedItems = cleanJORFItems(res2.data);
             umami.log({
@@ -136,7 +140,8 @@ export async function callJORFSearchPeople(
         );
       } else {
         logJORFSearchError("people", messageApp);
-        console.log(
+        await logError(
+          messageApp,
           `JORFSearch request for people aborted after ${String(RETRY_MAX)} tries`,
           error
         );
@@ -162,18 +167,13 @@ async function callJORFSearchDay(
     const dateDMY = dateToString(day, "DMY");
     const dateYMD = dateToString(day, "YMD");
 
-    return await axios
+    return await jorfAxios
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/${
             dateDMY // format day = "18-02-2024";
           }?format=JSON`
-        ),
-        {
-          headers: {
-            "User-Agent": USER_AGENT
-          }
-        }
+        )
       )
       .then((res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -197,10 +197,12 @@ async function callJORFSearchDay(
         return await callJORFSearchDay(day, messageApps, retryNumber + 1);
       } else {
         logJORFSearchError("date");
-        console.log(
-          `JORFSearch request for date aborted after ${String(RETRY_MAX)} tries`,
-          error
-        );
+        for (const messageApp of messageApps)
+          await logError(
+            messageApp,
+            `JORFSearch request for date aborted after ${String(RETRY_MAX)} tries`,
+            error
+          );
       }
     } else {
       for (const messageApp of messageApps)
@@ -288,16 +290,11 @@ export async function callJORFSearchMetaDay(
     previousDay.setDate(previousDay.getDate() - 1);
     const previousDayYMD = dateToString(previousDay, "YMD");
 
-    return await axios
+    return await jorfAxios
       .get<JORFSearchResponseMeta>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/meta/search?date=${dateYMD}`
-        ),
-        {
-          headers: {
-            "User-Agent": USER_AGENT
-          }
-        }
+        )
       )
       .then((res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -334,10 +331,12 @@ export async function callJORFSearchMetaDay(
         );
       }
       logJORFSearchError("meta");
-      console.log(
-        `JORFSearch request for meta aborted after ${String(RETRY_MAX)} tries`,
-        error
-      );
+      for (const messageApp of messageApps)
+        await logError(
+          messageApp,
+          `JORFSearch request for meta aborted after ${String(RETRY_MAX)} tries`,
+          error
+        );
     } else {
       for (const messageApp of messageApps)
         await logError(messageApp, "Error in callJORFSearchMetaDay", error);
@@ -421,14 +420,9 @@ export async function callJORFSearchTag(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    return await axios
+    return await jorfAxios
       .get<JORFSearchResponse>(
-        getJORFSearchLinkFunctionTag(tag, true, tagValue),
-        {
-          headers: {
-            "User-Agent": USER_AGENT
-          }
-        }
+        getJORFSearchLinkFunctionTag(tag, true, tagValue)
       )
       .then((res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -458,7 +452,8 @@ export async function callJORFSearchTag(
         );
       } else {
         logJORFSearchError("function_tag", messageApp);
-        console.log(
+        await logError(
+          messageApp,
           `JORFSearch request for function_tag aborted after ${String(RETRY_MAX)} tries`,
           error
         );
@@ -476,16 +471,11 @@ export async function callJORFSearchOrganisation(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    return await axios
+    return await jorfAxios
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/${wikiId.toUpperCase()}?format=JSON`
-        ),
-        {
-          headers: {
-            "User-Agent": USER_AGENT
-          }
-        }
+        )
       )
       .then((res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -514,7 +504,8 @@ export async function callJORFSearchOrganisation(
         );
       } else {
         logJORFSearchError("organisation", messageApp);
-        console.log(
+        await logError(
+          messageApp,
           `JORFSearch request for organisation aborted after ${String(RETRY_MAX)} tries`,
           error
         );
@@ -546,16 +537,11 @@ export async function searchOrganisationWikidataId(
       messageApp
     });
 
-    const wikidataIds_raw: WikidataId[] | null = await axios
+    const wikidataIds_raw: WikidataId[] | null = await jorfAxios
       .get<string | null | WikiDataAPIResponse>(
         encodeURI(
           `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`
-        ),
-        {
-          headers: {
-            "User-Agent": USER_AGENT
-          }
-        }
+        )
       )
       .then(async (r) => {
         if (r.data === null || typeof r.data === "string") {
@@ -571,16 +557,11 @@ export async function searchOrganisationWikidataId(
     if (wikidataIds_raw === null) return null;
     if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
 
-    return await axios
+    return await jorfAxios
       .get<{ name: string; id: WikidataId }[] | null>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`
-        ),
-        {
-          headers: {
-            "User-Agent": USER_AGENT
-          }
-        }
+        )
       )
       .then((res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -606,7 +587,8 @@ export async function searchOrganisationWikidataId(
         );
       }
       logJORFSearchError("wikidata");
-      console.log(
+      await logError(
+        messageApp,
         `JORFSearch request for wikidata_id aborted after ${String(RETRY_MAX)} tries`,
         error
       );
@@ -677,16 +659,11 @@ export async function callJORFSearchReference(
   retryNumber = 0
 ): Promise<JORFSearchItem[] | null> {
   try {
-    return await axios
+    return await jorfAxios
       .get<JORFSearchResponse>(
         encodeURI(
           `https://jorfsearch.steinertriples.ch/doc/${reference.toUpperCase()}?format=JSON`
-        ),
-        {
-          headers: {
-            "User-Agent": USER_AGENT
-          }
-        }
+        )
       )
       .then((res) => {
         if (res.data === null || typeof res.data === "string") {
@@ -722,7 +699,8 @@ export async function callJORFSearchReference(
         );
       }
       logJORFSearchError("reference");
-      console.log(
+      await logError(
+        messageApp,
         `JORFSearch request for reference aborted after ${String(RETRY_MAX)} tries`,
         error
       );
