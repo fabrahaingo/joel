@@ -1,5 +1,8 @@
 import { JORFtoDate } from "../utils/date.utils.ts";
-import { normalizeFrenchTextWithStopwords, stripMarkdown } from "../utils/text.utils.ts";
+import {
+  normalizeFrenchTextWithStopwords,
+  stripMarkdown
+} from "../utils/text.utils.ts";
 import { Publication } from "../models/Publication.ts";
 import umami from "../utils/umami.ts";
 import { logError } from "../utils/debugLogger.ts";

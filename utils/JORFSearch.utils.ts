@@ -538,11 +538,9 @@ export async function searchOrganisationWikidataId(
     });
 
     const wikidataIds_raw: WikidataId[] | null = await jorfAxios
-      .get<string | null | WikiDataAPIResponse>(
-        encodeURI(
-          `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`
-        )
-      )
+      .get<
+        string | null | WikiDataAPIResponse
+      >(encodeURI(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`))
       .then(async (r) => {
         if (r.data === null || typeof r.data === "string") {
           await logError(
@@ -558,11 +556,9 @@ export async function searchOrganisationWikidataId(
     if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
 
     return await jorfAxios
-      .get<{ name: string; id: WikidataId }[] | null>(
-        encodeURI(
-          `https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`
-        )
-      )
+      .get<
+        { name: string; id: WikidataId }[] | null
+      >(encodeURI(`https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`))
       .then((res) => {
         if (res.data === null || typeof res.data === "string") {
           logJORFSearchError("wikidata");
