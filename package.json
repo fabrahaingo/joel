@@ -13,9 +13,9 @@
   "license": "MIT",
   "dependencies": {
     "@babel/preset-env": "^7.29.2",
-    "axios": "^1.14.0",
+    "axios": "^1.15.0",
     "concurrently": "^9.2.1",
-    "dotenv": "^17.4.1",
+    "dotenv": "^17.4.2",
     "emoji-regex": "^10.6.0",
     "express": "^5.2.1",
     "matrix-bot-sdk": "^0.8.0",
@@ -41,8 +41,8 @@
     "jest": "^30.3.0",
     "mongodb-memory-server": "^11.0.1",
     "ngrok": "^5.0.0-beta.2",
-    "npm-check-updates": "^20.0.0",
-    "prettier": "^3.8.1",
+    "npm-check-updates": "^20.0.1",
+    "prettier": "^3.8.2",
     "ts-jest": "^29.4.9",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.58.1"
