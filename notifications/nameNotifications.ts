@@ -1,4 +1,4 @@
-import { FilterQuery, Types } from "mongoose";
+import { QueryFilter, Types } from "mongoose";
 import {
   ExtendedMiniUserInfo,
   ExternalMessageOptions,
@@ -95,7 +95,7 @@ export async function notifyNameMentionUpdates(
   userIds?: Types.ObjectId[],
   forceWHMessages = false
 ) {
-  let dbFilters: FilterQuery<IUser> = {
+  let dbFilters: QueryFilter<IUser> = {
     "followedNames.0": { $exists: true },
     status: "active",
     messageApp: { $in: enabledApps }

@@ -35,7 +35,7 @@ import {
 } from "./grouping.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
-import { FilterQuery, Types } from "mongoose";
+import { QueryFilter, Types } from "mongoose";
 import {
   sendWhatsAppTemplate,
   WHATSAPP_NEAR_MISS_WINDOW_MS,
@@ -85,7 +85,7 @@ export async function notifyOrganisationsUpdates(
   }).lean();
   if (updatedOrgsInDb.length === 0) return;
 
-  let dbFilters: FilterQuery<IUser> = {
+  let dbFilters: QueryFilter<IUser> = {
     followedOrganisations: {
       $exists: true,
       $not: { $size: 0 },

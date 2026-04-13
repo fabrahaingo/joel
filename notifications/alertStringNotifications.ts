@@ -18,7 +18,7 @@ import {
   NotificationTask,
   dispatchTasksToMessageApps
 } from "./notificationDispatch.ts";
-import { FilterQuery, Types } from "mongoose";
+import { QueryFilter, Types } from "mongoose";
 import { logError } from "../utils/debugLogger.ts";
 import {
   sendWhatsAppTemplate,
@@ -37,7 +37,7 @@ export async function notifyAlertStringUpdates(
 ) {
   if (metaRecords.length === 0) return;
 
-  let dbFilters: FilterQuery<IUser> = {
+  let dbFilters: QueryFilter<IUser> = {
     "followedMeta.0": { $exists: true },
     status: "active",
     messageApp: { $in: enabledApps }

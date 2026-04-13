@@ -31,7 +31,7 @@ import {
 } from "./grouping.ts";
 import { getSplitTextMessageSize } from "../utils/text.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
-import { FilterQuery, Types } from "mongoose";
+import { QueryFilter, Types } from "mongoose";
 import {
   sendWhatsAppTemplate,
   WHATSAPP_NEAR_MISS_WINDOW_MS,
@@ -108,7 +108,7 @@ export async function notifyFunctionTagsUpdates(
 
   const updatedTagSet = new Set<FunctionTags>(updatedTagMap.keys());
 
-  let dbFilters: FilterQuery<IUser> = {
+  let dbFilters: QueryFilter<IUser> = {
     followedFunctions: {
       $exists: true,
       $not: { $size: 0 },

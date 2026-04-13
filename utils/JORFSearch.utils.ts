@@ -531,16 +531,19 @@ export async function searchOrganisationWikidataId(
 ): Promise<{ nom: string; wikidataId: WikidataId }[] | null> {
   if (org_name.length == 0) throw new Error("Empty org_name");
 
+  let url: string | null = null;
   try {
     umami.log({
       event: "/jorfsearch-request-wikidata-names",
       messageApp
     });
 
+    url = encodeURI(
+      `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`
+    );
+
     const wikidataIds_raw: WikidataId[] | null = await jorfAxios
-      .get<
-        string | null | WikiDataAPIResponse
-      >(encodeURI(`https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`))
+      .get<string | null | WikiDataAPIResponse>(url)
       .then(async (r) => {
         if (r.data === null || typeof r.data === "string") {
           await logError(
@@ -555,10 +558,11 @@ export async function searchOrganisationWikidataId(
     if (wikidataIds_raw === null) return null;
     if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
 
+    url = encodeURI(
+      `https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`
+    );
     return await jorfAxios
-      .get<
-        { name: string; id: WikidataId }[] | null
-      >(encodeURI(`https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.join("&ids[]=")}`))
+      .get<{ name: string; id: WikidataId }[] | null>(url)
       .then((res) => {
         if (res.data === null || typeof res.data === "string") {
           logJORFSearchError("wikidata");
@@ -591,7 +595,9 @@ export async function searchOrganisationWikidataId(
     } else {
       await logError(
         messageApp,
-        "Error in searchOrganisationWikidataId",
+        url
+          ? `Error in searchOrganisationWikidataId when fetching url ${url} with search term ${org_name}`
+          : `Error in searchOrganisationWikidataId with search term ${org_name}`,
         error
       );
     }
