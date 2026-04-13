@@ -1,4 +1,4 @@
-import { FilterQuery, Types } from "mongoose";
+import { QueryFilter, Types } from "mongoose";
 import {
   ExtendedMiniUserInfo,
   ExternalMessageOptions,
@@ -89,7 +89,7 @@ export async function notifyPeopleUpdates(
     .lean();
   if (updatedPeopleList.length === 0) return;
 
-  let dbFilters: FilterQuery<IUser> = {
+  let dbFilters: QueryFilter<IUser> = {
     followedPeople: {
       $elemMatch: {
         peopleId: {

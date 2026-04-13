@@ -509,13 +509,13 @@ async function handleMatrixAPIErrors(
   }
 ): Promise<boolean> {
   const user: IUser | null = await User.findOne({
-    messageApp: "Telegram",
+    messageApp: messageApp,
     chatId: chatId
   }).lean();
 
   const mError = error as MatrixError | NodeJS.ErrnoException;
   let errCode: string | undefined = undefined;
-  if ("errcode" in mError) {
+  if ("errcode" in mError && mError.errcode) {
     errCode = mError.errcode;
   } else if ("code" in mError) {
     errCode = mError.code;
