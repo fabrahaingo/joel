@@ -157,16 +157,13 @@ describe("Publication Model Test Suite", () => {
     });
 
     it("should have indexes on normalizedTitle and normalizedTitleWords", async () => {
-      const indexes = await Publication.collection.getIndexes();
-
-      // Check that normalizedTitle and normalizedTitleWords have indexes
-      const indexNames = Object.keys(indexes);
-      const hasNormalizedTitleIndex = indexNames.some((name) =>
-        name.includes("normalizedTitle")
+      const indexes = await Publication.collection.indexes();
+      const hasNormalizedTitleIndex = indexes.some(
+        (index) => index.key.normalizedTitle === 1
       );
-      const hasNormalizedTitleWordsDateIndex = indexNames.some(
-        (name) =>
-          name.includes("normalizedTitleWords") && name.includes("date_obj")
+      const hasNormalizedTitleWordsDateIndex = indexes.some(
+        (index) =>
+          index.key.normalizedTitleWords === 1 && index.key.date_obj === -1
       );
 
       expect(hasNormalizedTitleIndex).toBe(true);

@@ -16,9 +16,10 @@ describe("textAlert indexed search planning", () => {
     );
   });
 
-  it("falls back to non-stopword normalization when stopwords-only query is provided", () => {
+  it("returns an empty plan when stopwords-only query is provided", () => {
     const plan = buildTextAlertKeywordSearchPlan("de la et ou");
-    expect(plan.keywords.length).toBeGreaterThan(0);
+    expect(plan.normalizedQuery).toBe("");
+    expect(plan.keywords).toEqual([]);
   });
 
   it("deduplicates and limits long keyword lists deterministically", () => {

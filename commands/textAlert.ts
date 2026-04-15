@@ -4,8 +4,10 @@ import { ISession, MessageApp, IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { IPublication, Publication } from "../models/Publication.ts";
 import {
+  fuzzyIncludesNormalized,
   levenshteinDistance,
   normalizeFrenchText,
+  normalizeFrenchTextWithStopwords,
   parsePublicationTitle
 } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
@@ -319,6 +321,8 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
 
 interface PublicationPreview {
   title: string;
+  normalizedTitle: string;
+  normalizedTitleWords: string[];
   date: string;
   id: string;
   date_obj: Date;
@@ -339,11 +343,13 @@ async function searchRecentPublicationsByKeywords(
       };
     }
 
-    const publications: IPublication[] = await Publication.find(filter, {
+    const strictPublications: IPublication[] = await Publication.find(filter, {
       title: 1,
       id: 1,
       date: 1,
       date_obj: 1,
+      normalizedTitle: 1,
+      normalizedTitleWords: 1,
       _id: 0
     })
       .sort({ date_obj: -1 })
@@ -352,16 +358,83 @@ async function searchRecentPublicationsByKeywords(
       .maxTimeMS(30000)
       .lean();
 
-    const hasMore = publications.length > TEXT_RESULT_SEARCH_LIMIT;
-    return {
-      publications: publications
-        .slice(0, TEXT_RESULT_SEARCH_LIMIT)
-        .map((publication) => ({
+    const publicationsMap = new Map<string, PublicationPreview>();
+    for (const publication of strictPublications) {
+      if (publicationsMap.size > TEXT_RESULT_SEARCH_LIMIT) break;
+      publicationsMap.set(publication.id, {
+        title: publication.title,
+        normalizedTitle:
+          publication.normalizedTitle ??
+          normalizeFrenchTextWithStopwords(publication.title),
+        normalizedTitleWords:
+          publication.normalizedTitleWords ??
+          normalizeFrenchTextWithStopwords(publication.title)
+            .split(" ")
+            .filter(Boolean),
+        date: publication.date,
+        id: publication.id,
+        date_obj: publication.date_obj
+      });
+    }
+
+    if (publicationsMap.size <= TEXT_RESULT_SEARCH_LIMIT) {
+      const broadCandidates: IPublication[] = await Publication.find(
+        {
+          date_obj: { $gte: startDate },
+          normalizedTitleWords: { $in: plan.keywords }
+        },
+        {
+          title: 1,
+          id: 1,
+          date: 1,
+          date_obj: 1,
+          normalizedTitle: 1,
+          normalizedTitleWords: 1,
+          _id: 0
+        }
+      )
+        .sort({ date_obj: -1 })
+        .limit(TEXT_RESULT_SEARCH_LIMIT * 15)
+        .maxTimeMS(30000)
+        .lean();
+
+      for (const publication of broadCandidates) {
+        if (publicationsMap.has(publication.id)) continue;
+
+        const normalizedTitle =
+          publication.normalizedTitle ??
+          normalizeFrenchTextWithStopwords(publication.title);
+        const normalizedTitleWords =
+          publication.normalizedTitleWords ??
+          normalizedTitle.split(" ").filter(Boolean);
+
+        if (
+          !fuzzyIncludesNormalized(
+            normalizedTitle,
+            plan.normalizedQuery,
+            normalizedTitleWords,
+            plan.keywords
+          )
+        ) {
+          continue;
+        }
+
+        publicationsMap.set(publication.id, {
           title: publication.title,
+          normalizedTitle,
+          normalizedTitleWords,
           date: publication.date,
           id: publication.id,
           date_obj: publication.date_obj
-        })),
+        });
+        if (publicationsMap.size > TEXT_RESULT_SEARCH_LIMIT) break;
+      }
+    }
+
+    const collectedPublications = Array.from(publicationsMap.values());
+    const hasMore = collectedPublications.length > TEXT_RESULT_SEARCH_LIMIT;
+    return {
+      publications: collectedPublications.slice(0, TEXT_RESULT_SEARCH_LIMIT),
       hasMore
     };
   } catch (error) {

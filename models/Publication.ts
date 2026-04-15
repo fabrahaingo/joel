@@ -74,8 +74,7 @@ const PublicationSchema = new Schema<IPublication>(
       index: true
     },
     normalizedTitleWords: {
-      type: [String],
-      index: true
+      type: [String]
     },
     nor: String,
     ministere: String,

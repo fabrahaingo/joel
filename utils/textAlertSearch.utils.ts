@@ -1,9 +1,6 @@
 import { QueryFilter } from "mongoose";
 import { IPublication } from "../models/Publication.ts";
-import {
-  normalizeFrenchText,
-  normalizeFrenchTextWithStopwords
-} from "./text.utils.ts";
+import { normalizeFrenchTextWithStopwords } from "./text.utils.ts";
 
 const DEFAULT_MAX_KEYWORDS = 8;
 
@@ -19,8 +16,6 @@ export function buildTextAlertKeywordSearchPlan(
   const normalizedWithStopwords = normalizeFrenchTextWithStopwords(query);
 
   if (normalizedWithStopwords.length === 0) {
-    normalizeFrenchText(query);
-
     return {
       normalizedQuery: "",
       keywords: []
