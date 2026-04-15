@@ -1,4 +1,4 @@
-import { FilterQuery } from "mongoose";
+import { QueryFilter } from "mongoose";
 import { IPublication } from "../models/Publication.ts";
 import {
   normalizeFrenchText,
@@ -57,7 +57,7 @@ export function buildTextAlertKeywordSearchPlan(
 export function buildTextAlertSearchFilter(
   plan: TextAlertKeywordSearchPlan,
   startDate: Date
-): FilterQuery<IPublication> | null {
+): QueryFilter<IPublication> | null {
   if (plan.keywords.length === 0) return null;
 
   return {
