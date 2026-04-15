@@ -333,12 +333,18 @@ type PublicationPreview = Pick<
 function buildPublicationPreview(
   publication: IPublication
 ): PublicationPreview {
-  const normalizedTitle =
-    publication.normalizedTitle ??
-    normalizeFrenchTextWithStopwords(publication.title);
-  const normalizedTitleWords =
-    publication.normalizedTitleWords ??
-    normalizedTitle.split(" ").filter(Boolean);
+  let normalizedTitle: string;
+  let normalizedTitleWords: string[];
+  if (
+    typeof publication.normalizedTitle === "string" &&
+    Array.isArray(publication.normalizedTitleWords)
+  ) {
+    normalizedTitle = publication.normalizedTitle;
+    normalizedTitleWords = publication.normalizedTitleWords;
+  } else {
+    normalizedTitle = normalizeFrenchTextWithStopwords(publication.title);
+    normalizedTitleWords = normalizedTitle.split(" ").filter(Boolean);
+  }
 
   return {
     title: publication.title,
@@ -387,52 +393,59 @@ async function searchRecentPublicationsByKeywords(
       publicationsMap.set(preview.id, preview);
     }
 
-    if (publicationsMap.size < TEXT_RESULT_SEARCH_LIMIT) {
-      const fuzzyCandidateLimit = Math.min(
-        TEXT_RESULT_SEARCH_LIMIT * TEXT_FUZZY_CANDIDATE_MULTIPLIER,
-        TEXT_FUZZY_CANDIDATE_MAX
-      );
-      const broadCandidates: IPublication[] = await Publication.find(
-        {
-          date_obj: { $gte: startDate },
-          normalizedTitleWords: { $in: plan.keywords }
-        },
-        {
-          title: 1,
-          id: 1,
-          date: 1,
-          date_obj: 1,
-          normalizedTitle: 1,
-          normalizedTitleWords: 1,
-          _id: 0
-        }
-      )
-        .sort({ date_obj: -1 })
-        .limit(fuzzyCandidateLimit)
-        .maxTimeMS(30000)
-        .lean();
-      fuzzyCandidateLimitReached =
-        broadCandidates.length === fuzzyCandidateLimit;
-
-      for (const publication of broadCandidates) {
-        if (publicationsMap.has(publication.id)) continue;
-
-        const preview = buildPublicationPreview(publication);
-
-        if (
-          !fuzzyIncludesNormalized(
-            preview.normalizedTitle,
-            plan.normalizedQuery,
-            preview.normalizedTitleWords,
-            plan.keywords
-          )
-        ) {
-          continue;
-        }
-
-        publicationsMap.set(preview.id, preview);
-        if (publicationsMap.size >= TEXT_RESULT_COLLECT_LIMIT) break;
+    const fuzzyCandidateLimit = Math.min(
+      TEXT_RESULT_SEARCH_LIMIT * TEXT_FUZZY_CANDIDATE_MULTIPLIER,
+      TEXT_FUZZY_CANDIDATE_MAX
+    );
+    const broadCandidates: IPublication[] = await Publication.find(
+      {
+        date_obj: { $gte: startDate },
+        normalizedTitleWords: { $in: plan.keywords }
+      },
+      {
+        title: 1,
+        id: 1,
+        date: 1,
+        date_obj: 1,
+        normalizedTitle: 1,
+        normalizedTitleWords: 1,
+        _id: 0
       }
+    )
+      .sort({ date_obj: -1 })
+      .limit(fuzzyCandidateLimit)
+      .maxTimeMS(30000)
+      .lean();
+    fuzzyCandidateLimitReached = broadCandidates.length === fuzzyCandidateLimit;
+
+    for (const publication of broadCandidates) {
+      if (publicationsMap.has(publication.id)) continue;
+
+      const preview = buildPublicationPreview(publication);
+
+      if (
+        !fuzzyIncludesNormalized(
+          preview.normalizedTitle,
+          plan.normalizedQuery,
+          preview.normalizedTitleWords,
+          plan.keywords
+        )
+      ) {
+        continue;
+      }
+
+      if (publicationsMap.size >= TEXT_RESULT_COLLECT_LIMIT) {
+        const oldestCollectedTimestamp = Math.min(
+          ...Array.from(publicationsMap.values(), (result) =>
+            result.date_obj.getTime()
+          )
+        );
+        if (preview.date_obj.getTime() <= oldestCollectedTimestamp) {
+          break;
+        }
+      }
+
+      publicationsMap.set(preview.id, preview);
     }
 
     const collectedPublications = Array.from(publicationsMap.values()).sort(

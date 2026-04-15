@@ -163,7 +163,7 @@ describe("Publication Model Test Suite", () => {
       );
       const hasNormalizedTitleWordsDateIndex = indexes.some(
         (index) =>
-          index.key.normalizedTitleWords === 1 && index.key.date_obj === -1
+          index.key.date_obj === -1 && index.key.normalizedTitleWords === 1
       );
 
       expect(hasNormalizedTitleIndex).toBe(true);
