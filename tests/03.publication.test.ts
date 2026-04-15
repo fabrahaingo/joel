@@ -156,7 +156,7 @@ describe("Publication Model Test Suite", () => {
       await expect(Publication.create(samplePublication)).rejects.toThrow();
     });
 
-    it("should have indexes on normalizedTitle and normalizedTitleWords", async () => {
+    it("should have indexes on normalizedTitle and compound { date_obj: -1, normalizedTitleWords: 1 }", async () => {
       const indexes = await Publication.collection.indexes();
       const hasNormalizedTitleIndex = indexes.some(
         (index) => index.key.normalizedTitle === 1
