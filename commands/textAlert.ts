@@ -23,6 +23,9 @@ const TEXT_ALERT_PROMPT =
 
 const TEXT_RESULT_DISPLAY_LIMIT = 10;
 const TEXT_RESULT_SEARCH_LIMIT = 100;
+const TEXT_RESULT_COLLECT_LIMIT = TEXT_RESULT_SEARCH_LIMIT + 1;
+const TEXT_FUZZY_CANDIDATE_MULTIPLIER = 15;
+const TEXT_FUZZY_CANDIDATE_MAX = 1000;
 
 // Configurable number of years to search back (default: 2 years)
 // Can be overridden via TEXT_SEARCH_YEARS_BACK environment variable
@@ -319,13 +322,32 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
   }
 };
 
-interface PublicationPreview {
-  title: string;
+type PublicationPreview = Pick<
+  IPublication,
+  "title" | "date" | "id" | "date_obj"
+> & {
   normalizedTitle: string;
   normalizedTitleWords: string[];
-  date: string;
-  id: string;
-  date_obj: Date;
+};
+
+function buildPublicationPreview(
+  publication: IPublication
+): PublicationPreview {
+  const normalizedTitle =
+    publication.normalizedTitle ??
+    normalizeFrenchTextWithStopwords(publication.title);
+  const normalizedTitleWords =
+    publication.normalizedTitleWords ??
+    normalizedTitle.split(" ").filter(Boolean);
+
+  return {
+    title: publication.title,
+    normalizedTitle,
+    normalizedTitleWords,
+    date: publication.date,
+    id: publication.id,
+    date_obj: publication.date_obj
+  };
 }
 
 async function searchRecentPublicationsByKeywords(
@@ -354,30 +376,21 @@ async function searchRecentPublicationsByKeywords(
     })
       .sort({ date_obj: -1 })
       // Fetch one extra record to know if there are more than the user-facing cap.
-      .limit(TEXT_RESULT_SEARCH_LIMIT + 1)
+      .limit(TEXT_RESULT_COLLECT_LIMIT)
       .maxTimeMS(30000)
       .lean();
 
     const publicationsMap = new Map<string, PublicationPreview>();
     for (const publication of strictPublications) {
-      if (publicationsMap.size > TEXT_RESULT_SEARCH_LIMIT) break;
-      publicationsMap.set(publication.id, {
-        title: publication.title,
-        normalizedTitle:
-          publication.normalizedTitle ??
-          normalizeFrenchTextWithStopwords(publication.title),
-        normalizedTitleWords:
-          publication.normalizedTitleWords ??
-          normalizeFrenchTextWithStopwords(publication.title)
-            .split(" ")
-            .filter(Boolean),
-        date: publication.date,
-        id: publication.id,
-        date_obj: publication.date_obj
-      });
+      const preview = buildPublicationPreview(publication);
+      publicationsMap.set(preview.id, preview);
     }
 
-    if (publicationsMap.size <= TEXT_RESULT_SEARCH_LIMIT) {
+    if (publicationsMap.size < TEXT_RESULT_SEARCH_LIMIT) {
+      const fuzzyCandidateLimit = Math.min(
+        TEXT_RESULT_SEARCH_LIMIT * TEXT_FUZZY_CANDIDATE_MULTIPLIER,
+        TEXT_FUZZY_CANDIDATE_MAX
+      );
       const broadCandidates: IPublication[] = await Publication.find(
         {
           date_obj: { $gte: startDate },
@@ -394,44 +407,34 @@ async function searchRecentPublicationsByKeywords(
         }
       )
         .sort({ date_obj: -1 })
-        .limit(TEXT_RESULT_SEARCH_LIMIT * 15)
+        .limit(fuzzyCandidateLimit)
         .maxTimeMS(30000)
         .lean();
 
       for (const publication of broadCandidates) {
         if (publicationsMap.has(publication.id)) continue;
 
-        const normalizedTitle =
-          publication.normalizedTitle ??
-          normalizeFrenchTextWithStopwords(publication.title);
-        const normalizedTitleWords =
-          publication.normalizedTitleWords ??
-          normalizedTitle.split(" ").filter(Boolean);
+        const preview = buildPublicationPreview(publication);
 
         if (
           !fuzzyIncludesNormalized(
-            normalizedTitle,
+            preview.normalizedTitle,
             plan.normalizedQuery,
-            normalizedTitleWords,
+            preview.normalizedTitleWords,
             plan.keywords
           )
         ) {
           continue;
         }
 
-        publicationsMap.set(publication.id, {
-          title: publication.title,
-          normalizedTitle,
-          normalizedTitleWords,
-          date: publication.date,
-          id: publication.id,
-          date_obj: publication.date_obj
-        });
-        if (publicationsMap.size > TEXT_RESULT_SEARCH_LIMIT) break;
+        publicationsMap.set(preview.id, preview);
+        if (publicationsMap.size >= TEXT_RESULT_COLLECT_LIMIT) break;
       }
     }
 
-    const collectedPublications = Array.from(publicationsMap.values());
+    const collectedPublications = Array.from(publicationsMap.values()).sort(
+      (a, b) => b.date_obj.getTime() - a.date_obj.getTime()
+    );
     const hasMore = collectedPublications.length > TEXT_RESULT_SEARCH_LIMIT;
     return {
       publications: collectedPublications.slice(0, TEXT_RESULT_SEARCH_LIMIT),
