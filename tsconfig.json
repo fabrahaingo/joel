@@ -5,6 +5,7 @@
     "target": "ESNext",
     "moduleResolution": "node",
     "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
     "resolveJsonModule": true,
     "moduleDetection": "force",
     "preserveConstEnums": true,

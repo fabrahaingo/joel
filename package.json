@@ -6,6 +6,12 @@
     "start-tg": "tsx apps/telegramApp.ts",
     "start-wh": "tsx apps/whatsAppApp.ts",
     "start-si": "tsx apps/signalApp.ts",
+    "build": "tsc",
+    "start:prod": "concurrently \"npm run start-tg:prod\" \"npm run start-wh:prod\" \"npm run start-mx:prod\"",
+    "start-mx:prod": "node dist/apps/matrixApp.js",
+    "start-tg:prod": "node dist/apps/telegramApp.js",
+    "start-wh:prod": "node dist/apps/whatsAppApp.js",
+    "start-si:prod": "node dist/apps/signalApp.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "jest --config=jest.config.js"
