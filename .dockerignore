@@ -1,0 +1,31 @@
+.git/
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+
+# Logs and local runtime output
+*.log
+logs/
+build.log
+
+# Package manager debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor/OS noise
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Common build/test caches
+*.tsbuildinfo
+.nyc_output/
+.cache/
+tmp/
+
