@@ -41,16 +41,9 @@ export function buildTextAlertKeywordSearchPlan(
     };
   }
 
-  const rankedKeywords = keywords
-    .map((word, index) => ({ word, index }))
-    .sort((a, b) => b.word.length - a.word.length || a.index - b.index)
-    .slice(0, maxKeywords)
-    .sort((a, b) => a.index - b.index)
-    .map((item) => item.word);
-
   return {
     normalizedQuery: baseQuery,
-    keywords: rankedKeywords
+    keywords: keywords.slice(0, maxKeywords)
   };
 }
 

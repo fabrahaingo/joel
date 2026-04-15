@@ -347,13 +347,21 @@ async function searchRecentPublicationsByKeywords(
       _id: 0
     })
       .sort({ date_obj: -1 })
+      // Fetch one extra record to know if there are more than the user-facing cap.
       .limit(TEXT_RESULT_SEARCH_LIMIT + 1)
       .maxTimeMS(30000)
       .lean();
 
     const hasMore = publications.length > TEXT_RESULT_SEARCH_LIMIT;
     return {
-      publications: publications.slice(0, TEXT_RESULT_SEARCH_LIMIT),
+      publications: publications
+        .slice(0, TEXT_RESULT_SEARCH_LIMIT)
+        .map((publication) => ({
+          title: publication.title,
+          date: publication.date,
+          id: publication.id,
+          date_obj: publication.date_obj
+        })),
       hasMore
     };
   } catch (error) {
