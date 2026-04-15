@@ -14,7 +14,7 @@
 <br />
 <p align="center">
   <a href="./img/logo.png">
-    <img src="img/logo.png" alt="Logo" width="100" height="100">
+    <img src="img/logo.png" alt="Logo" width="1142" height="1099">
   </a>
   <h3 align="center">Restez informé·e des nominations au JO de votre réseau, où que vous chattiez 💬</h3>
 </p>
@@ -94,7 +94,7 @@ Pour rechercher une personne, vous pouvez cliquer sur le bouton "🔍 Rechercher
 
 <p align="center">
   <a href="./img/tuto/search.png">
-    <img src="img/tuto/search.png" alt="Logo" width=40% height=40%>
+    <img src="img/tuto/search.png" alt="Logo" width=1125 height=2436>
   </a>
 </p>
 

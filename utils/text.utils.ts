@@ -8,7 +8,8 @@ import {
 import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
 import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
 
-const injectionCharacters = /[<>`{}\[\]\$]/g;
+const injectionCharacters = /[<>`{}\[\]$]/g;
+// eslint-disable-next-line no-control-regex
 const controlCharacters = /[\u0000-\u001F\u007F]+/g;
 const markdownCharacters = /[*_]/g;
 
@@ -31,6 +32,7 @@ export function splitText(
   const segments: string[] = [];
 
   let start = 0;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   while (true) {
     const idx = text.indexOf(FORCE_SPLIT, start);
     if (idx === -1) {
@@ -210,7 +212,7 @@ export function removeSpecialCharacters(text: string): string {
 // in a value (string, array, or plain object).
 export function stripMarkdown<T>(value: T): T {
   if (typeof value === "string") {
-    return value.replace(/[*_`\[\]]/g, "") as T;
+    return value.replace(/[*_`[\]]/g, "") as T;
   }
   if (Array.isArray(value)) {
     return value.map(stripMarkdown) as unknown as T;
@@ -336,9 +338,7 @@ export function normalizeFrenchTextWithStopwords(text: string): string {
     if (FRENCH_MONTHS.has(word)) return false;
 
     // Remove stopwords
-    if (FRENCH_STOPWORDS.has(word)) return false;
-
-    return true;
+    return !FRENCH_STOPWORDS.has(word);
   });
 
   return filtered.join(" ");
@@ -691,7 +691,7 @@ export function markdown2html(input: string): string {
     (_m, text: string, url: string) => {
       const idx = links.length;
       links.push(`<a href="${url}" rel="noopener noreferrer">${text}</a>`);
-      return `\x00${idx}\x00`;
+      return `\x00${String(idx)}\x00`;
     }
   );
 
@@ -704,6 +704,7 @@ export function markdown2html(input: string): string {
   out = out.replace(/_([^_\s][^_]*?)_/g, (_m, t: string) => `<em>${t}</em>`);
 
   // Restore links
+  // eslint-disable-next-line no-control-regex
   out = out.replace(/\x00(\d+)\x00/g, (_m, i: string) => links[parseInt(i)]);
 
   out = out.replace(/\n/g, `<br />`);

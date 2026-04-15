@@ -4,7 +4,7 @@ import { normalizeFrenchText } from "../utils/text.utils.ts";
 /**
  * Tests for the textAlert search behavior with the new limits:
  * - Stop searching after 100 matches
- * - Display only first 10 results
+ * - Display only the first 10 results
  * - Inform user when there are more than 100 results
  */
 describe("TextAlert Search Limits", () => {
@@ -24,9 +24,9 @@ describe("TextAlert Search Limits", () => {
     it("should limit search to 100 publications", () => {
       // Simulate publications array
       const publications = Array.from({ length: 200 }, (_, i) => ({
-        title: `Publication ${i}`,
-        normalizedTitle: normalizeFrenchText(`Publication ${i}`),
-        normalizedTitleWords: normalizeFrenchText(`Publication ${i}`)
+        title: `Publication ${String(i)}`,
+        normalizedTitle: normalizeFrenchText(`Publication ${String(i)}`),
+        normalizedTitleWords: normalizeFrenchText(`Publication ${String(i)}`)
           .split(" ")
           .filter(Boolean)
       }));
@@ -53,7 +53,7 @@ describe("TextAlert Search Limits", () => {
     it("should display only 10 results even when 100 are found", () => {
       const TEXT_RESULT_DISPLAY_LIMIT = 10;
       const matchingPublications = Array.from({ length: 100 }, (_, i) => ({
-        title: `Publication ${i}`
+        title: `Publication ${String(i)}`
       }));
 
       const previewLimit = Math.min(
@@ -67,7 +67,7 @@ describe("TextAlert Search Limits", () => {
     it("should display all results when fewer than 10 are found", () => {
       const TEXT_RESULT_DISPLAY_LIMIT = 10;
       const matchingPublications = Array.from({ length: 5 }, (_, i) => ({
-        title: `Publication ${i}`
+        title: `Publication ${String(i)}`
       }));
 
       const previewLimit = Math.min(
@@ -90,7 +90,7 @@ describe("TextAlert Search Limits", () => {
 
       let text = "";
       if (hasMoreThan100) {
-        text = `Plus de ${TEXT_RESULT_SEARCH_LIMIT} textes correspondent à « ${trimmedAnswer} ». Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
+        text = `Plus de ${String(TEXT_RESULT_SEARCH_LIMIT)} textes correspondent à « ${trimmedAnswer} ». Voici les ${String(previewLimit)} textes les plus récents :\n\n`;
       }
 
       expect(text).toContain("Plus de 100 textes correspondent");
