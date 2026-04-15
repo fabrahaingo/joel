@@ -31,7 +31,9 @@ async function migratePublications(): Promise<void> {
     normalizedTitle: { $exists: false }
   }).lean();
 
-  console.log(`Found ${publicationsToMigrate.length} publications to migrate`);
+  console.log(
+    `Found ${String(publicationsToMigrate.length)} publications to migrate`
+  );
 
   if (publicationsToMigrate.length === 0) {
     console.log("No publications to migrate. Exiting...");
@@ -65,7 +67,7 @@ async function migratePublications(): Promise<void> {
     processed += batch.length;
 
     console.log(
-      `Processed ${processed} / ${publicationsToMigrate.length} publications`
+      `Processed ${String(processed)} / ${String(publicationsToMigrate.length)} publications`
     );
   }
 
@@ -73,7 +75,7 @@ async function migratePublications(): Promise<void> {
   await mongodbDisconnect();
 }
 
-migratePublications().catch((error) => {
+migratePublications().catch((error: unknown) => {
   console.error("Migration failed:", error);
   process.exit(1);
 });

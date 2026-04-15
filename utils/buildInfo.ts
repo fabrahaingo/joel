@@ -37,10 +37,10 @@ function formatDuration(seconds: number): string {
   const secs = duration % 60;
 
   const parts = [] as string[];
-  if (days > 0) parts.push(`${days}j`);
-  if (hours > 0 || parts.length > 0) parts.push(`${hours}h`);
-  if (minutes > 0 || parts.length > 0) parts.push(`${minutes}m`);
-  parts.push(`${secs}s`);
+  if (days > 0) parts.push(`${String(days)}j`);
+  if (hours > 0 || parts.length > 0) parts.push(`${String(hours)}h`);
+  if (minutes > 0 || parts.length > 0) parts.push(`${String(minutes)}m`);
+  parts.push(`${String(secs)}s`);
 
   return parts.join(" ");
 }
