@@ -4,15 +4,17 @@ import { ISession, MessageApp, IUser } from "../types.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { IPublication, Publication } from "../models/Publication.ts";
 import {
-  fuzzyIncludesNormalized,
   levenshteinDistance,
   normalizeFrenchText,
-  normalizeFrenchTextWithStopwords,
   parsePublicationTitle
 } from "../utils/text.utils.ts";
 import { getJORFTextLink } from "../utils/JORFSearch.utils.ts";
 import { logError } from "../utils/debugLogger.ts";
 import { dateToString } from "../utils/date.utils.ts";
+import {
+  buildTextAlertKeywordSearchPlan,
+  buildTextAlertSearchFilter
+} from "../utils/textAlertSearch.utils.ts";
 
 const TEXT_ALERT_PROMPT =
   "Quel texte souhaitez-vous rechercher ? Renseignez un mot ou une expression.";
@@ -97,49 +99,29 @@ async function handleTextAlertAnswer(
   });
   session.sendTypingAction();
 
-  // Normalize user query with stopword removal for better matching
-  const normalizedAnswer = normalizeFrenchTextWithStopwords(trimmedAnswer);
-  const normalizedAnswerWords = normalizedAnswer.split(" ").filter(Boolean);
-
   const yearsBack = getYearsBackSearch();
   const startDate = new Date();
   startDate.setFullYear(startDate.getFullYear() - yearsBack);
 
-  const recentPublications = await getRecentPublications(
+  const searchResult = await searchRecentPublicationsByKeywords(
     session.messageApp,
+    trimmedAnswer,
     startDate
   );
-  if (recentPublications == null) {
+  if (searchResult == null) {
     await session.sendMessage(
       "Une erreur est survenue lors de la recherche. Notre équipe a été prévenue."
     );
     return true;
   }
 
-  // Search for matching publications, stopping after TEXT_RESULT_SEARCH_LIMIT (100)
-  const matchingPublications = recentPublications.reduce(
-    (tab: PublicationPreview[], publication) => {
-      // Stop searching after we've found enough matches
-      if (tab.length >= TEXT_RESULT_SEARCH_LIMIT) return tab;
-      if (
-        fuzzyIncludesNormalized(
-          publication.normalizedTitle,
-          normalizedAnswer,
-          publication.normalizedTitleWords,
-          normalizedAnswerWords
-        )
-      )
-        tab.push(publication);
-      return tab;
-    },
-    []
-  );
+  const matchingPublications = searchResult.publications;
 
   let text = "";
 
   const hasResults = matchingPublications.length > 0;
   const totalMatches = matchingPublications.length;
-  const hasMoreThan100 = totalMatches >= TEXT_RESULT_SEARCH_LIMIT;
+  const hasMoreThan100 = searchResult.hasMore;
 
   // Display only the first TEXT_RESULT_DISPLAY_LIMIT (10) results
   const previewLimit = Math.min(
@@ -337,136 +319,49 @@ export const textAlertCommand = async (session: ISession): Promise<void> => {
 
 interface PublicationPreview {
   title: string;
-  normalizedTitle: string;
-  normalizedTitleWords: string[];
   date: string;
   id: string;
   date_obj: Date;
 }
 
-// 4 hours
-const META_REFRESH_TIME_MS = 4 * 60 * 60 * 1000;
-let BACKGROUND_LOG_APP: MessageApp = "Tchap";
-
-let cachedPublications: PublicationPreview[] | null = null;
-let lastFetchedAt: number | null = null;
-let lastStartDate: Date | null = null;
-let inflightRefresh: Promise<PublicationPreview[]> | null = null;
-let backgroundRefreshStarted = false;
-
-async function refreshRecentPublications(
+async function searchRecentPublicationsByKeywords(
+  messageApp: MessageApp,
+  query: string,
   startDate: Date
-): Promise<PublicationPreview[]> {
-  const publications: IPublication[] = await Publication.find(
-    {
-      date_obj: { $gte: startDate }
-    },
-    {
+): Promise<{ publications: PublicationPreview[]; hasMore: boolean } | null> {
+  try {
+    const plan = buildTextAlertKeywordSearchPlan(query);
+    const filter = buildTextAlertSearchFilter(plan, startDate);
+    if (filter == null) {
+      return {
+        publications: [],
+        hasMore: false
+      };
+    }
+
+    const publications: IPublication[] = await Publication.find(filter, {
       title: 1,
       id: 1,
       date: 1,
       date_obj: 1,
-      normalizedTitle: 1,
-      normalizedTitleWords: 1,
       _id: 0
-    }
-  )
-    .sort({ date_obj: -1 })
-    .batchSize(5000)
-    .maxTimeMS(60000)
-    .lean();
+    })
+      .sort({ date_obj: -1 })
+      .limit(TEXT_RESULT_SEARCH_LIMIT + 1)
+      .maxTimeMS(30000)
+      .lean();
 
-  cachedPublications = publications.map((publication) => {
-    // Use pre-computed normalized fields if both are available, otherwise compute them
-    let normalizedTitle: string;
-    let normalizedTitleWords: string[];
-
-    if (publication.normalizedTitle && publication.normalizedTitleWords) {
-      // Both fields exist, use them directly
-      normalizedTitle = publication.normalizedTitle;
-      normalizedTitleWords = publication.normalizedTitleWords;
-    } else {
-      // One or both fields missing, recompute both to ensure consistency
-      normalizedTitle = normalizeFrenchTextWithStopwords(publication.title);
-      normalizedTitleWords = normalizedTitle.split(" ").filter(Boolean);
-    }
-
+    const hasMore = publications.length > TEXT_RESULT_SEARCH_LIMIT;
     return {
-      ...publication,
-      normalizedTitle,
-      normalizedTitleWords
+      publications: publications.slice(0, TEXT_RESULT_SEARCH_LIMIT),
+      hasMore
     };
-  });
-  lastFetchedAt = Date.now();
-  lastStartDate = startDate;
-
-  return cachedPublications;
-}
-
-async function getRecentPublications(
-  messageApp: MessageApp,
-  startDate: Date
-): Promise<PublicationPreview[] | null> {
-  BACKGROUND_LOG_APP = messageApp;
-  try {
-    // Check if cache is stale or if the date range has changed
-    const dateRangeChanged =
-      lastStartDate && lastStartDate.getTime() !== startDate.getTime();
-
-    const isCacheStale =
-      !cachedPublications ||
-      !lastFetchedAt ||
-      Date.now() - lastFetchedAt > META_REFRESH_TIME_MS ||
-      dateRangeChanged;
-
-    if (!isCacheStale && cachedPublications != null) {
-      return cachedPublications;
-    }
-
-    inflightRefresh ??= refreshRecentPublications(startDate).finally(() => {
-      inflightRefresh = null;
-    });
-
-    return await inflightRefresh;
   } catch (error) {
     await logError(
       messageApp,
-      "Failed to refresh recent publications cache",
+      "Failed to search publications by indexed keywords",
       error
     );
   }
   return null;
 }
-
-function startBackgroundRefresh(): void {
-  if (backgroundRefreshStarted) return;
-
-  const refreshAndHandleError = async (): Promise<void> => {
-    try {
-      // Always use the current configuration value
-      const yearsBack = getYearsBackSearch();
-      const startDate = new Date();
-      startDate.setFullYear(startDate.getFullYear() - yearsBack);
-
-      inflightRefresh ??= refreshRecentPublications(startDate).finally(() => {
-        inflightRefresh = null;
-      });
-
-      await inflightRefresh;
-    } catch (error) {
-      await logError(
-        BACKGROUND_LOG_APP,
-        "Failed to refresh recent publications cache in background",
-        error
-      );
-    }
-  };
-
-  // Prime the cache immediately, then keep it warm at the same interval as manual refreshes.
-  void refreshAndHandleError();
-  setInterval(() => void refreshAndHandleError(), META_REFRESH_TIME_MS);
-
-  backgroundRefreshStarted = true;
-}
-
-startBackgroundRefresh();

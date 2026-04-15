@@ -164,8 +164,13 @@ describe("Publication Model Test Suite", () => {
       const hasNormalizedTitleIndex = indexNames.some((name) =>
         name.includes("normalizedTitle")
       );
+      const hasNormalizedTitleWordsDateIndex = indexNames.some(
+        (name) =>
+          name.includes("normalizedTitleWords") && name.includes("date_obj")
+      );
 
       expect(hasNormalizedTitleIndex).toBe(true);
+      expect(hasNormalizedTitleWordsDateIndex).toBe(true);
     });
   });
 
