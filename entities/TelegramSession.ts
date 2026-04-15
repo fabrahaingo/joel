@@ -12,7 +12,6 @@ import { splitText } from "../utils/text.utils.ts";
 import { deleteUserAndCleanup } from "../utils/userDeletion.utils.ts";
 import axios, { AxiosError, isAxiosError } from "axios";
 import { Keyboard, KEYBOARD_KEYS } from "./Keyboard.ts";
-import { ExtraReplyMessage } from "telegraf/typings/telegram-types";
 import { logError } from "../utils/debugLogger.ts";
 import pLimit from "p-limit";
 
@@ -28,18 +27,6 @@ const mainMenuKeyboardTelegram: Keyboard = [
   [KEYBOARD_KEYS.ORGANISATION_FOLLOW.key, KEYBOARD_KEYS.TEXT_SEARCH.key],
   [KEYBOARD_KEYS.FOLLOWS_LIST.key, KEYBOARD_KEYS.HELP.key]
 ];
-
-export const telegramMessageOptions: ExtraReplyMessage = {
-  parse_mode: "Markdown",
-  link_preview_options: {
-    is_disabled: true
-  },
-  reply_markup: {
-    selective: true,
-    resize_keyboard: true,
-    keyboard: []
-  }
-};
 
 const TelegramMessageApp: MessageApp = "Telegram";
 
