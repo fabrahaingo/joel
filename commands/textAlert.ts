@@ -381,6 +381,7 @@ async function searchRecentPublicationsByKeywords(
       .lean();
 
     const publicationsMap = new Map<string, PublicationPreview>();
+    let fuzzyCandidateLimitReached = false;
     for (const publication of strictPublications) {
       const preview = buildPublicationPreview(publication);
       publicationsMap.set(preview.id, preview);
@@ -410,6 +411,8 @@ async function searchRecentPublicationsByKeywords(
         .limit(fuzzyCandidateLimit)
         .maxTimeMS(30000)
         .lean();
+      fuzzyCandidateLimitReached =
+        broadCandidates.length === fuzzyCandidateLimit;
 
       for (const publication of broadCandidates) {
         if (publicationsMap.has(publication.id)) continue;
@@ -435,7 +438,13 @@ async function searchRecentPublicationsByKeywords(
     const collectedPublications = Array.from(publicationsMap.values()).sort(
       (a, b) => b.date_obj.getTime() - a.date_obj.getTime()
     );
-    const hasMore = collectedPublications.length > TEXT_RESULT_SEARCH_LIMIT;
+    const hasMoreFromCollected =
+      collectedPublications.length > TEXT_RESULT_SEARCH_LIMIT;
+    const hasMoreDueToFuzzyCandidateLimit =
+      !hasMoreFromCollected &&
+      fuzzyCandidateLimitReached &&
+      collectedPublications.length === TEXT_RESULT_SEARCH_LIMIT;
+    const hasMore = hasMoreFromCollected || hasMoreDueToFuzzyCandidateLimit;
     return {
       publications: collectedPublications.slice(0, TEXT_RESULT_SEARCH_LIMIT),
       hasMore

@@ -13,18 +13,17 @@ export function buildTextAlertKeywordSearchPlan(
   query: string,
   maxKeywords = DEFAULT_MAX_KEYWORDS
 ): TextAlertKeywordSearchPlan {
-  const normalizedWithStopwords = normalizeFrenchTextWithStopwords(query);
+  const normalizedQuery = normalizeFrenchTextWithStopwords(query);
 
-  if (normalizedWithStopwords.length === 0) {
+  if (normalizedQuery.length === 0) {
     return {
       normalizedQuery: "",
       keywords: []
     };
   }
 
-  const baseQuery = normalizedWithStopwords;
   const seen = new Set<string>();
-  const keywords = baseQuery
+  const keywords = normalizedQuery
     .split(" ")
     .filter(Boolean)
     .filter((word) => {
@@ -33,16 +32,11 @@ export function buildTextAlertKeywordSearchPlan(
       return true;
     });
 
-  if (keywords.length <= maxKeywords) {
-    return {
-      normalizedQuery: baseQuery,
-      keywords
-    };
-  }
+  const selectedKeywords = keywords.slice(0, maxKeywords);
 
   return {
-    normalizedQuery: baseQuery,
-    keywords: keywords.slice(0, maxKeywords)
+    normalizedQuery: selectedKeywords.join(" "),
+    keywords: selectedKeywords
   };
 }
 

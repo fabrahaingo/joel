@@ -29,6 +29,8 @@ describe("textAlert indexed search planning", () => {
     );
     expect(plan.keywords.length).toBe(5);
     expect(new Set(plan.keywords).size).toBe(plan.keywords.length);
+    expect(plan.normalizedQuery).toBe("alpha beta gamma delta epsilon");
+    expect(plan.normalizedQuery.split(" ")).toEqual(plan.keywords);
   });
 
   it("builds a Mongo filter using date range and keyword all-match", () => {
