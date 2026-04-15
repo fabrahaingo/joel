@@ -17,13 +17,17 @@ export function buildTextAlertKeywordSearchPlan(
   maxKeywords = DEFAULT_MAX_KEYWORDS
 ): TextAlertKeywordSearchPlan {
   const normalizedWithStopwords = normalizeFrenchTextWithStopwords(query);
-  const normalizedFallback = normalizeFrenchText(query);
 
-  const baseQuery =
-    normalizedWithStopwords.length > 0
-      ? normalizedWithStopwords
-      : normalizedFallback;
+  if (normalizedWithStopwords.length === 0) {
+    normalizeFrenchText(query);
 
+    return {
+      normalizedQuery: "",
+      keywords: []
+    };
+  }
+
+  const baseQuery = normalizedWithStopwords;
   const seen = new Set<string>();
   const keywords = baseQuery
     .split(" ")
