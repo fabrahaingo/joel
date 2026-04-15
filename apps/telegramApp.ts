@@ -72,7 +72,7 @@ await (async () => {
     });
 
     // Global error handler for Telegraf
-    bot.catch(async (error, _ctx) => {
+    bot.catch(async (error) => {
       await logError("Telegram", "Unhandled error in bot handler", error);
     });
 
