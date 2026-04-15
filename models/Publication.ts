@@ -74,8 +74,7 @@ const PublicationSchema = new Schema<IPublication>(
       index: true
     },
     normalizedTitleWords: {
-      type: [String],
-      index: true
+      type: [String]
     },
     nor: String,
     ministere: String,
@@ -92,6 +91,7 @@ const PublicationSchema = new Schema<IPublication>(
 PublicationSchema.index({ id: 1 }, { unique: true });
 PublicationSchema.index({ title: 1 });
 PublicationSchema.index({ date_obj: 1 });
+PublicationSchema.index({ date_obj: -1, normalizedTitleWords: 1 });
 
 // Pre-save hook to compute normalized title fields
 PublicationSchema.pre("save", function () {
