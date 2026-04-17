@@ -390,7 +390,10 @@ async function handleTelegramAPIErrors(
       }
     }
 
-    if (tgError.code != null && TELEGRAM_NETWORK_RETRYABLE_ERRORS.has(tgError.code)) {
+    if (
+      tgError.code != null &&
+      TELEGRAM_NETWORK_RETRYABLE_ERRORS.has(tgError.code)
+    ) {
       if (retryParameters != null) {
         if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
           await logError(
