@@ -398,7 +398,7 @@ async function handleTelegramAPIErrors(
         if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
           await logError(
             "Telegram",
-            `Error sending Telegram message after ${String(MAX_MESSAGE_RETRY)} retries`,
+            `Error sending ${callerFunctionLabel} after ${String(retryParameters.retryNumber)} retries (retry budget: ${String(MAX_MESSAGE_RETRY)})`,
             error
           );
           return false;
