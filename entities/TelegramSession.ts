@@ -21,6 +21,13 @@ export const TELEGRAM_COOL_DOWN_DELAY_SECONDS = 1; // 1 message per second for t
 export const TELEGRAM_API_SENDING_CONCURRENCY = 30; // 30 messages per second global
 
 const MAX_MESSAGE_RETRY = 5;
+const TELEGRAM_NETWORK_RETRYABLE_ERRORS = new Set([
+  "ECONNRESET",
+  "EPIPE",
+  "ETIMEDOUT",
+  "ESOCKETTIMEDOUT",
+  "ECONNABORTED"
+]);
 
 const mainMenuKeyboardTelegram: Keyboard = [
   [KEYBOARD_KEYS.PEOPLE_SEARCH.key, KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
@@ -317,54 +324,85 @@ async function handleTelegramAPIErrors(
   }).lean();
   if (isAxiosError(error)) {
     const tgError = error as AxiosError<TelegramAPIError>;
+    const description = tgError.response?.data.description;
 
-    switch (tgError.response?.data.description) {
-      case "Forbidden: bot was blocked by the user": {
-        if (user?.status === "active") {
-          await User.updateOne(
-            { messageApp: "Telegram", chatId: chatIdTg.toString() },
-            { $set: { status: "blocked" } }
-          );
-          await umami.logAsync({
-            event: "/user-blocked-joel",
-            messageApp: "Telegram"
-          });
-        }
-        return false;
-      }
-      case "Forbidden: user is deactivated":
+    if (description === "Forbidden: bot was blocked by the user") {
+      if (user?.status === "active") {
+        await User.updateOne(
+          { messageApp: "Telegram", chatId: chatIdTg.toString() },
+          { $set: { status: "blocked" } }
+        );
         await umami.logAsync({
-          event: "/user-deactivated",
+          event: "/user-blocked-joel",
           messageApp: "Telegram"
         });
-        await deleteUserAndCleanup("Telegram", chatIdTg.toString());
-        return false;
-      case "Too many requests":
-        if (retryParameters != null) {
-          if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
-            await umamiLogger({
-              event: "/message-fail-too-many-requests-aborted",
-              messageApp: "Telegram"
-            });
-            return false;
-          }
+      }
+      return false;
+    }
+
+    if (description === "Forbidden: user is deactivated") {
+      await umami.logAsync({
+        event: "/user-deactivated",
+        messageApp: "Telegram"
+      });
+      await deleteUserAndCleanup("Telegram", chatIdTg.toString());
+      return false;
+    }
+
+    if (description?.toLowerCase().startsWith("too many requests")) {
+      if (retryParameters != null) {
+        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
           await umamiLogger({
-            event: "/message-fail-too-many-requests",
+            event: "/message-fail-too-many-requests-aborted",
             messageApp: "Telegram"
           });
-          await new Promise((resolve) =>
-            setTimeout(resolve, Math.pow(2, retryParameters.retryNumber) * 1000)
-          );
-          return await retryParameters.retryFunction(
-            retryParameters.retryNumber + 1
-          );
-        } else {
+          return false;
+        }
+        await umamiLogger({
+          event: "/message-fail-too-many-requests",
+          messageApp: "Telegram"
+        });
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, retryParameters.retryNumber) * 1000)
+        );
+        return await retryParameters.retryFunction(
+          retryParameters.retryNumber + 1
+        );
+      } else {
+        await logError(
+          "Telegram",
+          `Telegram API rate limit error in ${callerFunctionLabel}, but no retry parameters provided`
+        );
+        return false;
+      }
+    }
+
+    if (
+      tgError.code != null &&
+      TELEGRAM_NETWORK_RETRYABLE_ERRORS.has(tgError.code)
+    ) {
+      if (retryParameters != null) {
+        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
           await logError(
             "Telegram",
-            `Telegram API rate limit error in ${callerFunctionLabel}, but no retry parameters provided`
+            `Error sending ${callerFunctionLabel} after ${String(retryParameters.retryNumber)} retries (retry budget: ${String(MAX_MESSAGE_RETRY)})`,
+            error
           );
           return false;
         }
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.pow(2, retryParameters.retryNumber) * 1000)
+        );
+        return await retryParameters.retryFunction(
+          retryParameters.retryNumber + 1
+        );
+      } else {
+        await logError(
+          "Telegram",
+          `API ${tgError.code} error in ${callerFunctionLabel}, but no retry parameters provided`
+        );
+        return false;
+      }
     }
   }
 
