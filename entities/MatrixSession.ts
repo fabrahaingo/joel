@@ -450,7 +450,7 @@ async function findUserDMRoomId(
 
   const data = (await client
     .getAccountData("m.direct")
-    .catch(() => ({}) as DirectRoomData)) as DirectRoomData;
+    .catch(() => ({}))) as DirectRoomData;
   const rooms = Array.isArray(data[userId]) ? data[userId] : [];
   if (!rooms.length) {
     directRoomCache.delete(userId);

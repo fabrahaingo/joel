@@ -274,10 +274,11 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): {
       const clean_organisations = item_raw.organisations.reduce(
         (tab: JORFSearchOrganisation[], org_raw) => {
           if (org_raw.nom === undefined) return tab;
+          const validatedOrgNom = org_raw.nom;
           const strippedOrg = stripMarkdown(trimStrings(org_raw));
           const org: JORFSearchOrganisation = {
             ...strippedOrg,
-            nom: strippedOrg.nom!,
+            nom: strippedOrg.nom ?? validatedOrgNom,
             wikidata_id: org_raw.wikidata_id?.toUpperCase()
           };
           tab.push(org);
@@ -309,11 +310,13 @@ export function cleanJORFItems(jorf_items_raw: JORFSearchRawItem[]): {
         item_raw.ambassadeur = true;
       }
 
+      const validatedNom = item_raw.nom;
+      const validatedPrenom = item_raw.prenom;
       const strippedItem = stripMarkdown(trimStrings(item_raw));
       const clean_item: JORFSearchItem = {
         ...strippedItem,
-        prenom: strippedItem.prenom!,
-        nom: strippedItem.nom!,
+        prenom: strippedItem.prenom ?? validatedPrenom,
+        nom: strippedItem.nom ?? validatedNom,
         type_ordre: type_ordre_clean,
         source_date: item_raw.source_date,
         source_name: source_name_clean,
