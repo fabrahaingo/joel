@@ -136,14 +136,13 @@ describe("Publication Model Test Suite", () => {
         title: "Arrêté du 15 janvier 2024"
       });
 
-      expect(publication.normalizedTitleWords).toBeDefined();
-      expect(publication.normalizedTitleWords!.length).toBeGreaterThan(0);
+      const words = publication.normalizedTitleWords;
+      expect(words).toBeDefined();
+      expect(words?.length).toBeGreaterThan(0);
 
       // Verify it's an array of non-empty strings
       expect(
-        publication.normalizedTitleWords!.every(
-          (word) => typeof word === "string" && word.length > 0
-        )
+        words?.every((word) => typeof word === "string" && word.length > 0)
       ).toBe(true);
     });
   });

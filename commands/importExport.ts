@@ -129,10 +129,7 @@ async function handleImporterCode(
     return true;
   }
 
-  if (
-    session.user != null &&
-    sourceUser._id.toString() === session.user._id.toString()
-  ) {
+  if (sourceUser._id.toString() === session.user?._id.toString()) {
     await session.sendMessage(
       "Ce code correspond à votre compte actuel. Générez un code depuis le compte à exporter et réessayez sur le compte destinataire."
     );

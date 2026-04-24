@@ -8,7 +8,7 @@ import {
 import { SIGNAL_MESSAGE_CHAR_LIMIT } from "../entities/SignalSession.ts";
 import { MATRIX_MESSAGE_CHAR_LIMIT } from "../entities/MatrixSession.ts";
 
-const injectionCharacters = /[<>`{}\[\]$]/g;
+const injectionCharacters = /[<>`{}[\]$]/g;
 // eslint-disable-next-line no-control-regex
 const controlCharacters = /[\u0000-\u001F\u007F]+/g;
 const markdownCharacters = /[*_]/g;

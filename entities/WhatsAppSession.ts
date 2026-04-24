@@ -411,8 +411,8 @@ export async function sendWhatsAppMessage(
 function replaceWHButtons(keyboard: Keyboard): Keyboard {
   if (!Array.isArray(keyboard)) return keyboard;
 
-  const replacements: Record<string, KeyboardKey> = {
-    //[KEYBOARD_KEYS.MAIN_MENU.key.text]: KEYBOARD_KEYS.COMMAND_LIST.key,
+  const replacements: Partial<Record<string, KeyboardKey>> = {
+    // [KEYBOARD_KEYS.MAIN_MENU.key.text]: KEYBOARD_KEYS.COMMAND_LIST.key,
   };
 
   return keyboard.map((row) =>
