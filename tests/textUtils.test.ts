@@ -4,6 +4,7 @@ import {
   normalizeFrenchTextWithStopwords,
   parsePublicationTitle
 } from "../utils/text.utils.ts";
+import { cleanPeopleName } from "../utils/JORFSearch.utils.ts";
 
 describe("Text Utils - Stopwords and Title Parsing", () => {
   describe("normalizeFrenchTextWithStopwords", () => {
@@ -171,5 +172,40 @@ describe("Text Utils - Stopwords and Title Parsing", () => {
         (standardWordCount - stopwordsWordCount) / standardWordCount;
       expect(reduction).toBeGreaterThanOrEqual(0.4);
     });
+  });
+});
+
+describe("cleanPeopleName", () => {
+  it("returns empty string for empty input", () => {
+    expect(cleanPeopleName("")).toBe("");
+  });
+
+  it("title-cases a simple lowercase name", () => {
+    expect(cleanPeopleName("dupont")).toBe("Dupont");
+  });
+
+  it("strips diacritics", () => {
+    expect(cleanPeopleName("élodie")).toBe("Elodie");
+    expect(cleanPeopleName("Françoise")).toBe("Francoise");
+  });
+
+  it("trims leading and trailing whitespace", () => {
+    expect(cleanPeopleName("  Dupont  ")).toBe("Dupont");
+  });
+
+  it("title-cases after hyphen", () => {
+    expect(cleanPeopleName("jean-luc")).toBe("Jean-Luc");
+  });
+
+  it("title-cases after apostrophe", () => {
+    expect(cleanPeopleName("d'alembert")).toBe("D'Alembert");
+  });
+
+  it("handles all-uppercase input", () => {
+    expect(cleanPeopleName("DUPONT")).toBe("Dupont");
+  });
+
+  it("handles multi-word names", () => {
+    expect(cleanPeopleName("jean pierre martin")).toBe("Jean Pierre Martin");
   });
 });
