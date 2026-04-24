@@ -14,7 +14,9 @@ export default {
   moduleNameMapper: { "^(\\.{1,2}/.*)\\.js$": "$1" },
 
   /* Re‑transform the ESM‑only dependency that started all this */
-  transformIgnorePatterns: ["/node_modules/(?!(whatsapp-api-js)/)"],
+  transformIgnorePatterns: [
+    "/node_modules/(?!(whatsapp-api-js|p-limit|yocto-queue)/)"
+  ],
 
   /* ---- your original hooks & coverage settings ---- */
   globalSetup: "<rootDir>/tests/globalSetup.ts",
