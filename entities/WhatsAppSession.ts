@@ -344,7 +344,7 @@ export async function sendWhatsAppMessage(
         );
       }
     }
-    let numberMessageBurst = burstMode ? totalMessages : 0;
+    const numberMessageBurst = burstMode ? totalMessages : 0;
 
     if (options.separateMenuMessage && interactiveKeyboard != null) {
       if (interactiveKeyboard instanceof ActionButtons) {
@@ -418,7 +418,7 @@ function replaceWHButtons(keyboard: Keyboard): Keyboard {
   return keyboard.map((row) =>
     row.map((k) => {
       const r = replacements[k.text];
-      return r ? r : k;
+      return r ?? k;
     })
   );
 }
