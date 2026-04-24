@@ -124,7 +124,7 @@ describe("Text Utils - Stopwords and Title Parsing", () => {
         "Arrêté du 6 janvier 2026 fixant le taux de promotion dans le corps des ingénieurs de l'armement";
 
       // Parse to extract type and cleaned title
-      const { type, cleanedTitle } = parsePublicationTitle(title);
+      const { type } = parsePublicationTitle(title);
       expect(type).toBe("Arrêté");
 
       // Normalize with stopwords

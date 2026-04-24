@@ -1,7 +1,8 @@
 {
   "type": "module",
   "scripts": {
-    "start": "concurrently \"npm run start-tg\" \"npm run start-wh\" \"npm run start-mx\"",
+    "start": "npm start:prod",
+    "start:dev": "concurrently \"npm run start-tg\" \"npm run start-wh\" \"npm run start-mx\"",
     "start-mx": "tsx apps/matrixApp.ts",
     "start-tg": "tsx apps/telegramApp.ts",
     "start-wh": "tsx apps/whatsAppApp.ts",
@@ -19,17 +20,17 @@
   "license": "MIT",
   "dependencies": {
     "@babel/preset-env": "^7.29.2",
-    "axios": "^1.15.0",
+    "axios": "^1.15.2",
     "concurrently": "^9.2.1",
     "dotenv": "^17.4.2",
     "emoji-regex": "^10.6.0",
     "express": "^5.2.1",
     "matrix-bot-sdk": "^0.8.0",
-    "mongodb": "^7.1.1",
-    "mongoose": "^9.4.1",
+    "mongodb": "^7.2.0",
+    "mongoose": "^9.5.0",
     "nodemon": "^3.1.14",
     "p-limit": "^7.3.0",
-    "signal-sdk": "^0.2.2",
+    "signal-sdk": "^0.2.4",
     "telegraf": "^4.16.3",
     "tsx": "^4.21.0",
     "whatsapp-api-js": "^6.2.1"
@@ -41,16 +42,16 @@
     "@tsconfig/node24": "^24.0.4",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
-    "eslint": "^10.2.0",
+    "eslint": "^10.2.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "jest": "^30.3.0",
     "mongodb-memory-server": "^11.0.1",
     "ngrok": "^5.0.0-beta.2",
-    "npm-check-updates": "^21.0.0",
+    "npm-check-updates": "^21.0.3",
     "prettier": "^3.8.3",
     "ts-jest": "^29.4.9",
-    "typescript": "^6.0.2",
-    "typescript-eslint": "^8.58.2"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.0"
   }
 }
