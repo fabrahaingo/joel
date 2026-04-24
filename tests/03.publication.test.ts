@@ -3,11 +3,16 @@ import { Publication } from "../models/Publication.ts";
 import mongoose from "mongoose";
 import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
 
+// Mongoose does not re-create indexes after dropDatabase() because it
+// considers them already initialized. Calling createIndexes() after drop
+// restores all schema-defined indexes for reliable per-test isolation.
+
 describe("Publication Model Test Suite", () => {
   beforeEach(async () => {
     if (!mongoose.connection.db)
       throw new Error("MongoDB connection not established");
     await mongoose.connection.db.dropDatabase();
+    await Publication.createIndexes();
   });
 
   const samplePublication = {
