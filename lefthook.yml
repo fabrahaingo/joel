@@ -10,7 +10,7 @@ pre-commit:
   jobs:
     - name: lint
       glob: "*.{js,jsx,ts,tsx,mjs,cjs,json}"
-      run: ./scripts/with-safe-chain.sh npx eslint {staged_files}
+      run: ./scripts/with-safe-chain.sh npm run lint
 
     - name: tests
       glob: "*.{js,jsx,ts,tsx,mjs,cjs}"
