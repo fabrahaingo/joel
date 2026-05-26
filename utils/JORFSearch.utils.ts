@@ -521,6 +521,7 @@ interface WikiDataAPIResponse {
   success: number;
   search: {
     id: WikidataId;
+    match: { language?: string; text?: string };
   }[];
 }
 
@@ -542,18 +543,22 @@ export async function searchOrganisationWikidataId(
       `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${org_name}&language=fr&origin=*&format=json&limit=50`
     );
 
-    const wikidataIds_raw: WikidataId[] | null = await jorfAxios
-      .get<string | null | WikiDataAPIResponse>(url)
-      .then(async (r) => {
-        if (r.data === null || typeof r.data === "string") {
-          await logError(
-            messageApp,
-            `Wikidata API error when fetching organisation: ${org_name}`
-          );
-          return null;
-        }
-        return r.data.search.map((o) => o.id);
-      });
+    const wikidataIds_raw: { nom: string; id: WikidataId }[] | null =
+      await jorfAxios
+        .get<string | null | WikiDataAPIResponse>(url)
+        .then(async (r) => {
+          if (r.data === null || typeof r.data === "string") {
+            await logError(
+              messageApp,
+              `Wikidata API error when fetching organisation: ${org_name}`
+            );
+            return null;
+          }
+          return r.data.search.reduce((item: WikiDataAPIResponse, tab) => {
+            if (item.match?.language === "fr" && item.match.text != null)
+              return tab.concat([{ nom: item.match.text, id: item.id }]);
+          }, []);
+        });
 
     if (wikidataIds_raw === null) return null;
     if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event

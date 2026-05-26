@@ -9,3 +9,4 @@ instructions.txt
 yarn.lock
 dist/
 /matrix/
+coverage-summary.json

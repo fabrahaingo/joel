@@ -3,24 +3,85 @@ name: Build
 on:
   pull_request:
     branches: ["main"]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: ["main"]
 
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  changes:
+    name: Detect build-relevant changes
     runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.filter.outputs.build }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Detect changed files
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          predicate-quantifier: "every"
+          filters: |
+            build:
+              - "**"
+              - "!README.md"
+              - "!docs/**"
+              - "!**/*.md"
+              - "!LICENSE"
+              - "!.github/dependabot.yml"
+
+  build:
+    name: Build app
+    needs: changes
+    if: ${{ needs.changes.outputs.build == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Use Node.js 24.x
+      - name: Use Node.js 24
         uses: actions/setup-node@v6
         with:
-          node-version: 24.x
+          node-version: 24
           cache: "npm"
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Run build
         run: npm run build
+
+  build-required:
+    name: Build required
+    needs: [changes, build]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate build result
+        run: |
+          echo "changes result: ${{ needs.changes.result }}"
+          echo "build needed: ${{ needs.changes.outputs.build }}"
+          echo "build result: ${{ needs.build.result }}"
+
+          if [ "${{ needs.changes.result }}" != "success" ]; then
+            echo "Change detection failed."
+            exit 1
+          fi
+
+          if [ "${{ needs.changes.outputs.build }}" = "true" ] && [ "${{ needs.build.result }}" != "success" ]; then
+            echo "Build failed or did not complete."
+            exit 1
+          fi
+
+          echo "Required build check passed."
