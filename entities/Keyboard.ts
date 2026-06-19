@@ -133,3 +133,15 @@ export const KEYBOARD_KEYS: Record<
     keepFollowUpAlive: true
   }
 };
+
+// Shared main-menu option list rendered as a poll on platforms that support it
+// (Matrix/Tchap and Signal). Keep ≤ 10 entries: Signal polls cap at 10 options.
+export const POLL_MENU_KEYS: KeyboardKey[] = [
+  KEYBOARD_KEYS.PEOPLE_SEARCH.key,
+  KEYBOARD_KEYS.ORGANISATION_FOLLOW.key,
+  KEYBOARD_KEYS.FUNCTION_FOLLOW.key,
+  KEYBOARD_KEYS.TEXT_SEARCH.key,
+  KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH_LONG_NO_KEYBOARD.key,
+  KEYBOARD_KEYS.FOLLOWS_LIST.key,
+  KEYBOARD_KEYS.HELP.key
+];
