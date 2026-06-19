@@ -5,13 +5,17 @@ import { mongodbConnect, mongodbDisconnect } from "../db.ts";
 import { TelegramSession } from "../entities/TelegramSession.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
-import { logError } from "../utils/debugLogger.ts";
+import { logError, logTelegramDebugStatus } from "../utils/debugLogger.ts";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (TELEGRAM_BOT_TOKEN === undefined) {
   console.log("Telegram: env is not set, bot did not start \u{1F6A9}");
   process.exit(0);
 }
+
+// Report whether debug notifications are usable (env set and not left as an
+// unresolved Coolify "{{...}}" placeholder) before the bot starts.
+logTelegramDebugStatus();
 
 await (async () => {
   const bot = new Telegraf(TELEGRAM_BOT_TOKEN);

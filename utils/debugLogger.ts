@@ -77,8 +77,55 @@ const formatError = (error: unknown): string | null => {
   }
 };
 
+// Coolify substitutes shared/global variables at deploy time; when one fails to
+// resolve it leaves the literal "{{ ... }}" placeholder in the value instead of
+// the real secret. Such a value is unusable (e.g. a "{{...}}" bot token yields a
+// bad API URL → 400s), so treat it the same as unset.
+const isUnresolvedPlaceholder = (value: string): boolean =>
+  /\{\{.*?\}\}/.test(value);
+
+const describeEnvIssue = (
+  name: string,
+  value: string | undefined
+): string | null => {
+  if (value == null || value.trim().length === 0) return `${name} is not set`;
+  if (isUnresolvedPlaceholder(value))
+    return `${name} is unresolved ({{...}} placeholder)`;
+  return null;
+};
+
+/**
+ * Logs at boot whether Telegram debug notifications are usable, naming any env
+ * var that is unset or left as an unresolved Coolify placeholder.
+ */
+export const logTelegramDebugStatus = (): void => {
+  const issues = [
+    describeEnvIssue("DEBUG_CHAT_ID", DEBUG_CHAT_ID),
+    describeEnvIssue("TELEGRAM_DEBUG_BOT_TOKEN", TELEGRAM_DEBUG_BOT_TOKEN)
+  ].filter((issue): issue is string => issue != null);
+
+  if (issues.length === 0) {
+    console.log("Telegram debug notifications: ENABLED ✅");
+  } else {
+    console.warn(
+      `Telegram debug notifications: DISABLED — ${issues.join("; ")}`
+    );
+  }
+};
+
 export const sendTelegramDebugMessage = async (text: string): Promise<void> => {
-  if (DEBUG_CHAT_ID == null || TELEGRAM_DEBUG_BOT_TOKEN == null) return;
+  // Skip (and narrow types) when either var is unset, empty, or an unresolved
+  // Coolify "{{...}}" placeholder.
+  if (
+    DEBUG_CHAT_ID == null ||
+    DEBUG_CHAT_ID.trim().length === 0 ||
+    isUnresolvedPlaceholder(DEBUG_CHAT_ID) ||
+    TELEGRAM_DEBUG_BOT_TOKEN == null ||
+    TELEGRAM_DEBUG_BOT_TOKEN.trim().length === 0 ||
+    isUnresolvedPlaceholder(TELEGRAM_DEBUG_BOT_TOKEN)
+  ) {
+    return;
+  }
 
   const endpoint = `https://api.telegram.org/bot${TELEGRAM_DEBUG_BOT_TOKEN}/sendMessage`;
 

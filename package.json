@@ -13,6 +13,7 @@
     "start-tg:prod": "node dist/apps/telegramApp.js",
     "start-wh:prod": "node dist/apps/whatsAppApp.js",
     "start-si:prod": "node dist/apps/signalApp.js",
+    "debug:notify": "tsx scripts/testDebugNotification.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "security:audit": "npm audit --omit=dev --audit-level=high",
