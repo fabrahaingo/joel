@@ -96,7 +96,15 @@ export const sendTelegramDebugMessage = async (text: string): Promise<void> => {
       );
     }
   } catch (sendError) {
-    console.error("Failed to send debug log to Telegram:", sendError);
+    if (axios.isAxiosError(sendError)) {
+      console.error(
+        "Failed to send debug log to Telegram:",
+        sendError.response?.status,
+        JSON.stringify(sendError.response?.data)
+      );
+    } else {
+      console.error("Failed to send debug log to Telegram:", sendError);
+    }
   }
 };
 
