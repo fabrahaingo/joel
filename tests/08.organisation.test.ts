@@ -1,4 +1,4 @@
-import { describe, expect, beforeEach, it } from "@jest/globals";
+import { describe, expect, beforeEach, it } from "vitest";
 import mongoose from "mongoose";
 import Organisation from "../models/Organisation.ts";
 

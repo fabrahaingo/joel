@@ -1,4 +1,4 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it } from "vitest";
 import { textTypeOrdre } from "../utils/formatting.utils.ts";
 import { TYPE_ORDRE_VALUES } from "../types.ts";
 

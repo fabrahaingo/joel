@@ -20,11 +20,10 @@
     "security:deps:prod": "npm ls --omit=dev",
     "security:sbom": "npx @cyclonedx/cyclonedx-npm --omit dev --output-file sbom.cdx.json",
     "security:ci": "npm run security:audit && npm run security:deps:prod && npm run security:sbom",
-    "test": "jest --config=jest.config.js --runInBand"
+    "test": "vitest run --coverage"
   },
   "license": "MIT",
   "dependencies": {
-    "@babel/preset-env": "^8.0.2",
     "axios": "^1.18.0",
     "concurrently": "^10.0.3",
     "dotenv": "^17.4.2",
@@ -41,30 +40,24 @@
     "whatsapp-api-js": "^6.2.1"
   },
   "overrides": {
-    "form-data": "^4.0.4",
-    "ts-jest": {
-      "@babel/core": "$@babel/core"
-    }
+    "form-data": "^4.0.4"
   },
   "devDependencies": {
-    "@babel/core": "^8.0.1",
     "@eslint/js": "^10.0.1",
-    "@jest/globals": "^30.4.1",
     "@telegraf/types": "^9.2.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/express": "^5.0.6",
-    "@types/jest": "^30.0.0",
+    "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
-    "jest": "^30.4.2",
     "lefthook": "^2.1.9",
     "mongodb-memory-server": "^11.2.0",
     "@ngrok/ngrok": "^1.5.1",
     "npm-check-updates": "^22.2.3",
     "prettier": "^3.8.4",
-    "ts-jest": "^29.4.11",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.1"
+    "typescript-eslint": "^8.61.1",
+    "vitest": "^4.1.8"
   }
 }
