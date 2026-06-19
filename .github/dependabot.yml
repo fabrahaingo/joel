@@ -1,0 +1,68 @@
+version: 2
+
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Madrid"
+    open-pull-requests-limit: 5
+    # Hold back versions newer than 7 days so dependabot's PRs match
+    # what Aikido safe-chain will actually let us install. Safe-chain
+    # quarantines fresh npm releases (its minimum-package-age policy)
+    # to defend against compromised-then-yanked publishes; without
+    # this cooldown dependabot proposes versions safe-chain rejects
+    # locally and in pre-push.
+    # `semver-major-days` is bumped to 14 because majors are riskier
+    # and the wider community usually catches breakage in week two.
+    # Security updates skip the cooldown — leaving a known CVE open
+    # is worse than the freshness risk.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      include:
+        - "*"
+    # `include: scope` makes dependabot append the dependency
+    # relationship as the commit scope: `chore(deps):` for runtime
+    # deps, `chore(deps-dev):` for devDependencies. The prefix stays
+    # bare (`chore`, no scope) — putting a scope in `prefix` *and*
+    # setting `include: scope` produces a doubled `chore(deps)(deps):`.
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    groups:
+      production-deps:
+        dependency-type: "production"
+      dev-deps:
+        dependency-type: "development"
+      security-production-deps:
+        applies-to: "security-updates"
+        dependency-type: "production"
+      security-dev-deps:
+        applies-to: "security-updates"
+        dependency-type: "development"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Europe/Madrid"
+    open-pull-requests-limit: 5
+    # Short cooldown for actions — most regressions surface in the
+    # first few days post-release.
+    cooldown:
+      default-days: 7
+    # `chore(ci):` — GH Actions are CI tooling. No `include: scope`
+    # here: it would append `(deps)` and produce a doubled
+    # `chore(ci)(deps):`. Scope lives in the prefix instead.
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      github-actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
