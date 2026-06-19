@@ -1,4 +1,4 @@
-import { describe, expect, beforeEach, it } from "@jest/globals";
+import { describe, expect, beforeEach, it } from "vitest";
 import mongoose, { Types } from "mongoose";
 import User, { USER_SCHEMA_VERSION } from "../models/User.ts";
 import { NotificationType, JORFReference } from "../types.ts";
