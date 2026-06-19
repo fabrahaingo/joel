@@ -1,0 +1,27 @@
+# Local mirror of pre-merge checks so failures surface before CI/review.
+# Skip with `LEFTHOOK=0 git commit` or `git commit --no-verify` when needed.
+#
+# Every npm-using job runs through scripts/with-safe-chain.sh, which
+# fails fast with install instructions if Aikido safe-chain is missing —
+# no silent skips that would let an unscreened npm install slip through.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs,json}"
+      run: ./scripts/with-safe-chain.sh npm run lint
+
+    - name: tests
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs}"
+      run: ./scripts/with-safe-chain.sh npm run test
+
+    - name: gitleaks
+      run: gitleaks protect --staged --redact --verbose
+
+pre-push:
+  parallel: true
+  jobs:
+    - name: security
+      glob: "{package.json,package-lock.json,.npmrc}"
+      run: ./scripts/with-safe-chain.sh npm audit --audit-level=high
