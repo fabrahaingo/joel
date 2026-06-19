@@ -23,44 +23,47 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@babel/preset-env": "^7.29.5",
-    "axios": "^1.16.1",
-    "concurrently": "^9.2.1",
+    "@babel/preset-env": "^8.0.2",
+    "axios": "^1.18.0",
+    "concurrently": "^10.0.3",
     "dotenv": "^17.4.2",
     "emoji-regex": "^10.6.0",
     "express": "^5.2.1",
     "matrix-bot-sdk": "^0.8.0",
-    "mongodb": "^7.2.0",
-    "mongoose": "^9.6.2",
+    "mongodb": "^7.3.0",
+    "mongoose": "^9.7.1",
     "nodemon": "^3.1.14",
     "p-limit": "^7.3.0",
     "signal-sdk": "^0.2.4",
     "telegraf": "^4.16.3",
-    "tsx": "^4.22.2",
+    "tsx": "^4.22.4",
     "whatsapp-api-js": "^6.2.1"
   },
   "overrides": {
-    "@babel/compat-data": "7.29.3",
-    "@babel/plugin-transform-modules-systemjs": "7.29.4"
+    "form-data": "^4.0.4",
+    "ts-jest": {
+      "@babel/core": "$@babel/core"
+    }
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
     "@eslint/js": "^10.0.1",
     "@jest/globals": "^30.4.1",
     "@telegraf/types": "^9.2.1",
     "@tsconfig/node24": "^24.0.4",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
-    "eslint": "^10.4.0",
+    "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-prettier": "^5.5.6",
     "jest": "^30.4.2",
-    "lefthook": "^2.1.8",
-    "mongodb-memory-server": "^11.1.0",
-    "ngrok": "^5.0.0-beta.2",
-    "npm-check-updates": "^22.2.0",
-    "prettier": "^3.8.3",
-    "ts-jest": "^29.4.9",
+    "lefthook": "^2.1.9",
+    "mongodb-memory-server": "^11.2.0",
+    "@ngrok/ngrok": "^1.5.1",
+    "npm-check-updates": "^22.2.3",
+    "prettier": "^3.8.4",
+    "ts-jest": "^29.4.11",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.4"
+    "typescript-eslint": "^8.61.1"
   }
 }

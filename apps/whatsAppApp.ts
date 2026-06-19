@@ -126,15 +126,19 @@ await (async function () {
         );
       }
 
-      const { connect } = await import("ngrok");
+      const { forward } = await import("@ngrok/ngrok");
 
       console.log("WhatsApp: Initializing Ngrok tunnel...");
-      const ngrokUrl = await connect({
+      const listener = await forward({
         proto: "http",
         authtoken: NGROK_AUTH_TOKEN,
-        hostname: NGROK_DEV_HOOK,
+        domain: NGROK_DEV_HOOK,
         addr: WHATSAPP_APP_PORT
       });
+      const ngrokUrl = listener.url();
+      if (ngrokUrl == null) {
+        throw new Error("Ngrok tunnel did not return a public URL");
+      }
 
       console.log(`WhatsApp: Listening on url ${ngrokUrl}`);
       console.log("WhatsApp: Ngrok tunnel initialized!");
