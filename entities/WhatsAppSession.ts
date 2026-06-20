@@ -53,6 +53,11 @@ export const WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS =
 export const WHATSAPP_NEAR_MISS_WINDOW_MS =
   1000 * 60 * (24 * 60 + 5 * WHATSAPP_REENGAGEMENT_MARGIN_MINS);
 
+// Weekly re-engagement reminder for users with pending notifications.
+// Resend the template at most once per interval, capped per pending cycle.
+export const REENGAGEMENT_REMINDER_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+export const MAX_REENGAGEMENT_REMINDERS = 8;
+
 const TEMPLATE_MESSAGE_COST_EUROS = 0.0248;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
@@ -487,7 +492,11 @@ export async function sendWhatsAppTemplate(
     };
     await User.updateOne(
       { messageApp: "WhatsApp", chatId: userInfo.chatId },
-      { $push: { costHistory: costOperation } }
+      {
+        $push: { costHistory: costOperation },
+        $set: { lastReengagementSentAt: new Date() },
+        $inc: { reengagementReminderCount: 1 }
+      }
     );
 
     await umamiLogger({

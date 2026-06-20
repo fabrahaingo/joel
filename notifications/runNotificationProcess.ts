@@ -8,6 +8,7 @@ import { notifyPeopleUpdates } from "./peopleNotifications.ts";
 import { notifyNameMentionUpdates } from "./nameNotifications.ts";
 import { notifyFunctionTagsUpdates } from "./functionTagNotifications.ts";
 import { notifyAlertStringUpdates } from "./alertStringNotifications.ts";
+import { runReengagementReminderSweep } from "./reengagementReminderSweep.ts";
 import umami from "../utils/umami.ts";
 import mongoose, { Types } from "mongoose";
 
@@ -128,6 +129,11 @@ export async function runNotificationProcess(
       targetApps,
       messageAppsOptions
     );
+
+    // Weekly reminder for WhatsApp users sitting on pending notifications.
+    if (targetApps.includes("WhatsApp")) {
+      await runReengagementReminderSweep(messageAppsOptions);
+    }
 
     const duration_s = Math.ceil(
       (new Date().getTime() - start.getTime()) / 1000

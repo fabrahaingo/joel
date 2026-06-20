@@ -114,7 +114,13 @@ export const triggerPendingNotifications = async (
 
     await User.updateOne(
       { _id: session.user._id },
-      { $set: { waitingReengagement: false, pendingNotifications: [] } }
+      {
+        $set: {
+          waitingReengagement: false,
+          pendingNotifications: [],
+          reengagementReminderCount: 0
+        }
+      }
     );
 
     const earliestInsertDate = session.user.pendingNotifications.reduce(

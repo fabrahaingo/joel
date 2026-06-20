@@ -20,6 +20,10 @@ import { logError } from "../utils/debugLogger.ts";
 
 export const USER_SCHEMA_VERSION = 3;
 
+// Cap on pending notification records (source_ids) kept per user.
+// Oldest records are dropped when this limit is exceeded.
+export const MAX_PENDING_NOTIFICATION_RECORDS = 300;
+
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -50,6 +54,8 @@ const UserSchema = new Schema<IUser, UserModel>(
       required: true
     },
     waitingReengagement: { type: Boolean, default: false, required: false },
+    lastReengagementSentAt: { type: Date, required: false },
+    reengagementReminderCount: { type: Number, default: 0, required: false },
     followedPeople: {
       type: [
         {
@@ -698,16 +704,62 @@ UserSchema.static(
       items_nb
     };
 
+    // Build the full list (oldest first, new batch is newest) and keep only the
+    // latest MAX_PENDING_NOTIFICATION_RECORDS records, dropping oldest batches first.
+    // "people" and "name" follows are specific and must never be dropped, so they
+    // are always kept and excluded from the cap accounting.
+    const fullList = [...user.pendingNotifications, newNotification];
+    const trimmed: IUser["pendingNotifications"] = [];
+    let kept = 0;
+    for (let i = fullList.length - 1; i >= 0; i--) {
+      const batch = fullList[i];
+
+      if (
+        batch.notificationType === "people" ||
+        batch.notificationType === "name"
+      ) {
+        trimmed.unshift(batch);
+        continue;
+      }
+
+      if (kept >= MAX_PENDING_NOTIFICATION_RECORDS) continue; // drop oldest capped batches
+
+      const remaining = MAX_PENDING_NOTIFICATION_RECORDS - kept;
+      if (batch.source_ids.length <= remaining) {
+        trimmed.unshift(batch);
+        kept += batch.source_ids.length;
+      } else {
+        // boundary batch: keep only the newest `remaining` source_ids
+        const slicedIds = batch.source_ids.slice(
+          batch.source_ids.length - remaining
+        );
+        trimmed.unshift({
+          ...batch,
+          source_ids: slicedIds,
+          items_nb: Math.round(
+            (batch.items_nb * remaining) / batch.source_ids.length
+          )
+        });
+        kept += remaining;
+      }
+    }
+
     await this.updateOne(
       { _id: userId },
       {
-        $push: {
-          pendingNotifications: newNotification
+        $set: {
+          pendingNotifications: trimmed
         }
       }
     );
   }
 );
+
+UserSchema.index({
+  messageApp: 1,
+  waitingReengagement: 1,
+  lastReengagementSentAt: 1
+});
 
 UserSchema.index({ "followedPeople.peopleId": 1 });
 UserSchema.index({ "followedFunctions.functionTag": 1 });
