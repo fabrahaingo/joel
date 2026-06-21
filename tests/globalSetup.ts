@@ -1,18 +1,27 @@
+import type { TestProject } from "vitest/node";
 import { MongoMemoryServer } from "mongodb-memory-server";
 import * as mongoose from "mongoose";
 
-export default async function globalSetup() {
-  // it's needed in global space, because we don't want to create a new instance every test-suite
+export default async function setup(project: TestProject) {
+  // Spin up a single in-memory MongoDB shared across every test suite.
   const instance = await MongoMemoryServer.create();
   const uri = instance.getUri();
-  (
-    global as unknown as { __MONGOINSTANCE: MongoMemoryServer }
-  ).__MONGOINSTANCE = instance;
-  process.env.MONGO_URI_TEST = uri.slice(0, uri.lastIndexOf("/"));
+  const base = uri.slice(0, uri.lastIndexOf("/"));
+  project.provide("mongoUri", base);
 
-  // The following is to make sure the database is clean before a test suite starts
-  const conn = await mongoose.connect(`${process.env.MONGO_URI_TEST}/test`);
+  // Make sure the database is clean before any suite starts.
+  const conn = await mongoose.connect(`${base}/test`);
   if (!conn.connection.db) throw new Error("No db connection found.");
   await conn.connection.db.dropDatabase();
   await mongoose.disconnect();
+
+  return async () => {
+    await instance.stop();
+  };
+}
+
+declare module "vitest" {
+  export interface ProvidedContext {
+    mongoUri: string;
+  }
 }

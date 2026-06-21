@@ -1,10 +1,11 @@
-import { afterAll, beforeAll } from "@jest/globals";
+import { afterAll, beforeAll, inject } from "vitest";
 import mongoose from "mongoose";
+
+const mongoUri = inject("mongoUri");
 
 beforeAll(async () => {
   // put your client connection code here, example with mongoose:
-  if (!process.env.MONGO_URI_TEST) throw new Error("MONGO_URI_TEST not set");
-  await mongoose.connect(process.env.MONGO_URI_TEST);
+  await mongoose.connect(mongoUri);
 });
 
 afterAll(async () => {

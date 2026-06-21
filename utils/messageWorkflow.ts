@@ -23,9 +23,18 @@ export async function handleIncomingMessage(
   const { beforeProcessing, isReply, errorContext, isFirstMessage } =
     options ?? {};
   try {
+    // Any inbound reopens the 24h window: clear re-engagement state so a future
+    // pending cycle starts fresh (reminder cadence + cap reset from here).
     const res = await User.updateOne(
       { messageApp: session.messageApp, chatId: session.chatId },
-      { $set: { lastEngagementAt: session.lastEngagementAt, status: "active" } }
+      {
+        $set: {
+          lastEngagementAt: session.lastEngagementAt,
+          status: "active",
+          waitingReengagement: false,
+          reengagementReminderCount: 0
+        }
+      }
     );
     session.log({
       event: "/message-received",

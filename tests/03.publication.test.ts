@@ -1,4 +1,4 @@
-import { describe, expect, beforeEach, it } from "@jest/globals";
+import { describe, expect, beforeEach, it } from "vitest";
 import { Publication } from "../models/Publication.ts";
 import mongoose from "mongoose";
 import { normalizeFrenchTextWithStopwords } from "../utils/text.utils.ts";
