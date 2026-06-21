@@ -9,7 +9,10 @@ import { callJORFSearchReference } from "../utils/JORFSearch.utils.ts";
 import User from "../models/User.ts";
 import { Publication } from "../models/Publication.ts";
 
-const FETCH_CONCURRENCY = 1;
+// Pending refs are re-fetched from JORFSearch on re-engagement. A pending pile
+// can hold hundreds of refs, so fetch a few in parallel rather than serially.
+// callJORFSearchReference already retries with backoff on transient failures.
+const FETCH_CONCURRENCY = 4;
 
 export const triggerPendingNotifications = async (
   session: ISession
@@ -114,7 +117,13 @@ export const triggerPendingNotifications = async (
 
     await User.updateOne(
       { _id: session.user._id },
-      { $set: { waitingReengagement: false, pendingNotifications: [] } }
+      {
+        $set: {
+          waitingReengagement: false,
+          pendingNotifications: [],
+          reengagementReminderCount: 0
+        }
+      }
     );
 
     const earliestInsertDate = session.user.pendingNotifications.reduce(

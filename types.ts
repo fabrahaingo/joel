@@ -59,6 +59,8 @@ export interface IUser {
   language_code: string;
   status: "active" | "blocked";
   waitingReengagement: boolean;
+  lastReengagementSentAt?: Date;
+  reengagementReminderCount?: number;
   followedPeople: {
     peopleId: Types.ObjectId;
     lastUpdate: Date;

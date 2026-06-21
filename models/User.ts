@@ -20,6 +20,18 @@ import { logError } from "../utils/debugLogger.ts";
 
 export const USER_SCHEMA_VERSION = 3;
 
+// Cap on pending notification records (source_ids) kept per user for the broad
+// "function"/"organisation"/"meta" types. Oldest records are dropped past this.
+export const MAX_PENDING_NOTIFICATION_RECORDS = 300;
+
+// Capped-type pending records older than this are dropped: stale broad updates
+// are likely irrelevant by the time the user eventually re-engages.
+export const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+
+// Safety net for the exempt "people"/"name" types: they are never aged-out, but
+// a pathological user can't grow them without bound. Far above any normal usage.
+export const MAX_PEOPLE_NAME_RECORDS = 2000;
+
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -50,6 +62,8 @@ const UserSchema = new Schema<IUser, UserModel>(
       required: true
     },
     waitingReengagement: { type: Boolean, default: false, required: false },
+    lastReengagementSentAt: { type: Date, required: false },
+    reengagementReminderCount: { type: Number, default: 0, required: false },
     followedPeople: {
       type: [
         {
@@ -698,15 +712,76 @@ UserSchema.static(
       items_nb
     };
 
+    // Build the full list (oldest first, new batch is newest) and walk it
+    // newest-first, keeping each type within its budget and dropping the oldest
+    // records beyond it. "people"/"name" follows are specific: never aged-out,
+    // only bounded by a large safety cap. Capped types are bounded by record
+    // count AND dropped once older than MAX_PENDING_AGE_MS.
+    const fullList = [...user.pendingNotifications, newNotification];
+    const trimmed: IUser["pendingNotifications"] = [];
+    const ageCutoffMs = now.getTime() - MAX_PENDING_AGE_MS;
+    let keptCapped = 0;
+    let keptExempt = 0;
+
+    // Keep only the newest `remaining` source_ids of a batch (proportional items_nb).
+    const sliceBatch = (
+      batch: IUser["pendingNotifications"][number],
+      remaining: number
+    ): IUser["pendingNotifications"][number] => {
+      const slicedIds = batch.source_ids.slice(
+        batch.source_ids.length - remaining
+      );
+      return {
+        ...batch,
+        source_ids: slicedIds,
+        items_nb: Math.round(
+          (batch.items_nb * remaining) / batch.source_ids.length
+        )
+      };
+    };
+
+    for (let i = fullList.length - 1; i >= 0; i--) {
+      const batch = fullList[i];
+      const isExempt =
+        batch.notificationType === "people" ||
+        batch.notificationType === "name";
+
+      const budget = isExempt
+        ? MAX_PEOPLE_NAME_RECORDS - keptExempt
+        : MAX_PENDING_NOTIFICATION_RECORDS - keptCapped;
+
+      // Drop stale capped records, and anything beyond its type budget.
+      if (!isExempt && batch.insertDate.getTime() < ageCutoffMs) continue;
+      if (budget <= 0) continue;
+
+      if (batch.source_ids.length <= budget) {
+        trimmed.unshift(batch);
+        if (isExempt) keptExempt += batch.source_ids.length;
+        else keptCapped += batch.source_ids.length;
+      } else {
+        // boundary batch: keep only the newest `budget` source_ids
+        trimmed.unshift(sliceBatch(batch, budget));
+        if (isExempt) keptExempt += budget;
+        else keptCapped += budget;
+      }
+    }
+
     await this.updateOne(
       { _id: userId },
       {
-        $push: {
-          pendingNotifications: newNotification
+        $set: {
+          pendingNotifications: trimmed
         }
       }
     );
   }
+);
+
+// Partial index: only docs waiting for re-engagement are indexed, keeping the
+// sweep query's index small (the vast majority of users are not waiting).
+UserSchema.index(
+  { messageApp: 1, lastReengagementSentAt: 1 },
+  { partialFilterExpression: { waitingReengagement: true } }
 );
 
 UserSchema.index({ "followedPeople.peopleId": 1 });

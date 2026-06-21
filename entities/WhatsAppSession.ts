@@ -53,7 +53,12 @@ export const WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS =
 export const WHATSAPP_NEAR_MISS_WINDOW_MS =
   1000 * 60 * (24 * 60 + 5 * WHATSAPP_REENGAGEMENT_MARGIN_MINS);
 
-const TEMPLATE_MESSAGE_COST_EUROS = 0.0248;
+// Weekly re-engagement reminder for users with pending notifications.
+// Resend the template at most once per interval, capped per pending cycle.
+export const REENGAGEMENT_REMINDER_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+export const MAX_REENGAGEMENT_REMINDERS = 8;
+
+export const TEMPLATE_MESSAGE_COST_EUROS = 0.0248;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
 
@@ -423,13 +428,20 @@ function replaceWHButtons(keyboard: Keyboard): Keyboard {
   );
 }
 
-const NOTIFICATION_TEMPLATE = "notification_meta";
+export const NOTIFICATION_TEMPLATE = "notification_meta";
+
+// Distinct "last nudge" template used on the final allowed reminder so the user
+// knows it's the last one. Falls back to the standard template when no separate
+// (approved) template is configured, preserving current behavior.
+export const FINAL_NOTIFICATION_TEMPLATE =
+  process.env.WHATSAPP_FINAL_NOTIFICATION_TEMPLATE ?? NOTIFICATION_TEMPLATE;
 
 export async function sendWhatsAppTemplate(
   whatsAppAPI: WhatsAppAPI,
   userInfo: ExtendedMiniUserInfo,
   notificationType: NotificationType,
   options: MessageSendingOptionsInternal,
+  templateName: string = NOTIFICATION_TEMPLATE,
   retryNumber = 0
 ): Promise<boolean> {
   const now = new Date();
@@ -454,7 +466,7 @@ export async function sendWhatsAppTemplate(
   }
 
   try {
-    const template_message = new Template(NOTIFICATION_TEMPLATE, "fr");
+    const template_message = new Template(templateName, "fr");
 
     const resp: ServerMessageResponse = await whatsAppAPI.sendMessage(
       WHATSAPP_PHONE_ID,
@@ -469,6 +481,7 @@ export async function sendWhatsAppTemplate(
           userInfo,
           notificationType,
           options,
+          templateName,
           nextRetryNumber
         );
       return await handleWhatsAppAPIErrors(
@@ -487,7 +500,11 @@ export async function sendWhatsAppTemplate(
     };
     await User.updateOne(
       { messageApp: "WhatsApp", chatId: userInfo.chatId },
-      { $push: { costHistory: costOperation } }
+      {
+        $push: { costHistory: costOperation },
+        $set: { lastReengagementSentAt: new Date() },
+        $inc: { reengagementReminderCount: 1 }
+      }
     );
 
     await umamiLogger({
