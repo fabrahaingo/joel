@@ -569,7 +569,7 @@ export async function searchOrganisationWikidataId(
     if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
 
     url = encodeURI(
-      `https://jorfsearch.steinertriples.ch/wikidata_id_to_name?ids[]=${wikidataIds_raw.map((o) => o.id).join("&ids[]=")}`
+      `https://jorfsearch.steinertriples.ch/wikidata/contains?ids[]=${wikidataIds_raw.map((o) => o.id).join("&ids[]=")}`
     );
     return await jorfAxios
       .get<{ name: string; id: WikidataId }[] | null>(url)

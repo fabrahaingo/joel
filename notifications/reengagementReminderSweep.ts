@@ -1,6 +1,7 @@
 import "dotenv/config";
-import User from "../models/User.ts";
+import User, { MAX_PENDING_AGE_MS } from "../models/User.ts";
 import { IUser } from "../types.ts";
+import type { QueryFilter } from "mongoose";
 import {
   ExtendedMiniUserInfo,
   ExternalMessageOptions
@@ -9,6 +10,7 @@ import {
   FINAL_NOTIFICATION_TEMPLATE,
   MAX_REENGAGEMENT_REMINDERS,
   NOTIFICATION_TEMPLATE,
+  REENGAGEMENT_MAX_SENDS_PER_SWEEP,
   REENGAGEMENT_REMINDER_INTERVAL_MS,
   sendWhatsAppTemplate,
   TEMPLATE_MESSAGE_COST_EUROS,
@@ -43,42 +45,88 @@ export async function runReengagementReminderSweep(
   const reminderCutoff = new Date(
     Date.now() - REENGAGEMENT_REMINDER_INTERVAL_MS
   );
+  const pendingAgeCutoff = new Date(Date.now() - MAX_PENDING_AGE_MS);
 
-  const dueUsers: IUser[] = await User.find(
+  // A user has "live" pending only if at least one batch holds real, current
+  // records: non-empty source_ids AND either an exempt type (people/name, never
+  // aged out) or recent enough that the capped age-out hasn't dropped it. Gating
+  // on mere array presence let legacy users sitting on empty/stale pending qualify
+  // forever, which blasted the whole backlog on the first sweep.
+  const livePendingClause: QueryFilter<IUser> = {
+    pendingNotifications: {
+      $elemMatch: {
+        "source_ids.0": { $exists: true },
+        $or: [
+          { notificationType: { $in: ["people", "name"] } },
+          { insertDate: { $gte: pendingAgeCutoff } }
+        ]
+      }
+    }
+  };
+
+  // Self-heal: drain the legacy backlog without a migration. Any user still
+  // flagged waiting but with no live pending (empty or fully stale) can never be
+  // legitimately reminded, so clear the flag/cycle so it stops matching future
+  // sweeps and never fires a false reminder.
+  const healed = await User.updateMany(
     {
       messageApp: "WhatsApp",
-      status: "active",
       waitingReengagement: true,
-      "pendingNotifications.0": { $exists: true },
-      $and: [
-        {
-          $or: [
-            { reengagementReminderCount: { $exists: false } },
-            { reengagementReminderCount: { $lt: MAX_REENGAGEMENT_REMINDERS } }
-          ]
-        },
-        {
-          $or: [
-            { lastReengagementSentAt: { $exists: false } },
-            { lastReengagementSentAt: { $lte: reminderCutoff } }
-          ]
-        }
-      ]
+      $nor: [livePendingClause]
     },
-    {
-      chatId: 1,
-      roomId: 1,
-      status: 1,
-      lastEngagementAt: 1,
-      waitingReengagement: 1,
-      reengagementReminderCount: 1
-    }
-  ).lean();
+    { $set: { waitingReengagement: false, reengagementReminderCount: 0 } }
+  );
+  if (healed.modifiedCount > 0) {
+    console.log(
+      `Re-engagement reminder sweep: cleared ${String(healed.modifiedCount)} stale waiting flag(s).`
+    );
+  }
 
-  if (dueUsers.length === 0) return;
+  const dueFilter: QueryFilter<IUser> = {
+    messageApp: "WhatsApp",
+    status: "active",
+    waitingReengagement: true,
+    ...livePendingClause,
+    $and: [
+      {
+        $or: [
+          { reengagementReminderCount: { $exists: false } },
+          { reengagementReminderCount: { $lt: MAX_REENGAGEMENT_REMINDERS } }
+        ]
+      },
+      {
+        $or: [
+          { lastReengagementSentAt: { $exists: false } },
+          { lastReengagementSentAt: { $lte: reminderCutoff } }
+        ]
+      }
+    ]
+  };
 
+  const dueCount = await User.countDocuments(dueFilter);
+  if (dueCount === 0) return;
+
+  // Cap sends per run and serve least-recently-reminded first (missing
+  // lastReengagementSentAt sorts first), so a large backlog is staggered across
+  // daily sweeps instead of blasted at once. Overflow rolls over to the next run.
+  const dueUsers: IUser[] = await User.find(dueFilter, {
+    chatId: 1,
+    roomId: 1,
+    status: 1,
+    lastEngagementAt: 1,
+    waitingReengagement: 1,
+    reengagementReminderCount: 1
+  })
+    .sort({ lastReengagementSentAt: 1 })
+    .limit(REENGAGEMENT_MAX_SENDS_PER_SWEEP)
+    .lean();
+
+  const deferred = dueCount - dueUsers.length;
   console.log(
-    `Re-engagement reminder sweep: ${String(dueUsers.length)} WhatsApp user(s) due.`
+    `Re-engagement reminder sweep: ${String(dueUsers.length)} WhatsApp user(s) due` +
+      (deferred > 0
+        ? `, ${String(deferred)} deferred to next sweep (cap ${String(REENGAGEMENT_MAX_SENDS_PER_SWEEP)}).`
+        : ".")
   );
 
   const limit = pLimit(WHATSAPP_API_SENDING_CONCURRENCY);
