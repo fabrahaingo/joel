@@ -27,11 +27,11 @@ export const triggerPendingNotifications = async (
       await session.sendMessage("Veuillez ajouter un suivi.");
       return;
     }
-    if (session.user.waitingReengagement)
-      await User.updateOne(
-        { _id: session.user._id },
-        { $set: { waitingReengagement: false } }
-      );
+    // Note: the re-engagement flag is cleared atomically together with pending +
+    // reminder count in the single $set below, after notifyAllFollows succeeds.
+    // Clearing it separately up-front left flag:false but pending intact whenever
+    // notifyAllFollows threw. The inbound reset in handleIncomingMessage already
+    // clears the flag on the normal path.
     if (session.user.pendingNotifications.length == 0) {
       await session.sendMessage("Aucune notification en attente.");
       return;

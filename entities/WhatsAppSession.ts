@@ -58,6 +58,11 @@ export const WHATSAPP_NEAR_MISS_WINDOW_MS =
 export const REENGAGEMENT_REMINDER_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 export const MAX_REENGAGEMENT_REMINDERS = 8;
 
+// Hard ceiling on reminders sent per sweep run. Caps the cost/throughput spike
+// when a large backlog of pending users all come due at once (e.g. first run
+// after deploy); the rest roll over to the next daily sweep, oldest pending first.
+export const REENGAGEMENT_MAX_SENDS_PER_SWEEP = 500;
+
 export const TEMPLATE_MESSAGE_COST_EUROS = 0.0248;
 
 const WhatsAppMessageApp: MessageApp = "WhatsApp";
