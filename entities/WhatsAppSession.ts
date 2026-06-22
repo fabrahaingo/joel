@@ -547,7 +547,9 @@ export async function handleWhatsAppAPIErrors(
     chatId: chatId
   }).lean();
   switch (error.errorCode) {
-    // If rate limit exceeded, retry after 4^(numberRetry) seconds
+    // Transient Meta-side outage (#2 Service temporarily unavailable) and rate
+    // limits: retry after 4^(numberRetry) seconds
+    case 2:
     case 4:
     case 80007:
     case 130429:
@@ -559,6 +561,11 @@ export async function handleWhatsAppAPIErrors(
             event: "/message-fail-too-many-requests-aborted",
             messageApp: "WhatsApp"
           });
+          await logError(
+            "WhatsApp",
+            `WH API error ${String(error.errorCode)} aborted after ${String(MAX_MESSAGE_RETRY)} retries in ${callerFunctionLabel} to ${chatId}`,
+            error.rawError ?? undefined
+          );
           return false;
         }
         await umamiLogger({
