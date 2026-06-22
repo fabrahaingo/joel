@@ -28,6 +28,21 @@ import {
 } from "../entities/WhatsAppSession.ts";
 
 const EIGHT_DAYS_MS = 8 * 24 * 60 * 60 * 1000;
+const NINETY_ONE_DAYS_MS = 91 * 24 * 60 * 60 * 1000;
+
+const pendingBatch = (overrides: Record<string, unknown> = {}) => ({
+  notificationType: "function",
+  source_ids: ["JORFTEXT000001"],
+  insertDate: new Date(),
+  items_nb: 1,
+  ...overrides
+});
+
+const isWaiting = async (chatId: string): Promise<boolean> => {
+  const u = await User.findOne({ chatId }, { waitingReengagement: 1 }).lean();
+  if (u == null) throw new Error(`user ${chatId} not found`);
+  return u.waitingReengagement;
+};
 
 const fakeOptions = {
   whatsAppAPI: {} as unknown
@@ -80,6 +95,61 @@ describe("runReengagementReminderSweep", () => {
     await runReengagementReminderSweep(fakeOptions);
 
     expect(sendSpy).toHaveBeenCalledTimes(1);
+    expect(sentChatIds()).toEqual([due.chatId]);
+  });
+
+  it("excludes users whose only pending is a stale capped batch", async () => {
+    await createWAUser({
+      pendingNotifications: [
+        pendingBatch({ insertDate: new Date(Date.now() - NINETY_ONE_DAYS_MS) })
+      ]
+    });
+
+    await runReengagementReminderSweep(fakeOptions);
+
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  it("still reminds when stale pending is an exempt people/name batch", async () => {
+    const due = await createWAUser({
+      pendingNotifications: [
+        pendingBatch({
+          notificationType: "people",
+          insertDate: new Date(Date.now() - NINETY_ONE_DAYS_MS)
+        })
+      ]
+    });
+
+    await runReengagementReminderSweep(fakeOptions);
+
+    expect(sentChatIds()).toEqual([due.chatId]);
+  });
+
+  it("excludes batches with no source_ids", async () => {
+    await createWAUser({
+      pendingNotifications: [pendingBatch({ source_ids: [], items_nb: 0 })]
+    });
+
+    await runReengagementReminderSweep(fakeOptions);
+
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  it("self-heals: clears the waiting flag on users with no live pending", async () => {
+    const empty = await createWAUser({ pendingNotifications: [] });
+    const stale = await createWAUser({
+      pendingNotifications: [
+        pendingBatch({ insertDate: new Date(Date.now() - NINETY_ONE_DAYS_MS) })
+      ]
+    });
+    const due = await createWAUser();
+
+    await runReengagementReminderSweep(fakeOptions);
+
+    expect(await isWaiting(empty.chatId)).toBe(false);
+    expect(await isWaiting(stale.chatId)).toBe(false);
+    // A genuinely-due user keeps the flag (the send loop drives its lifecycle).
+    expect(await isWaiting(due.chatId)).toBe(true);
     expect(sentChatIds()).toEqual([due.chatId]);
   });
 
