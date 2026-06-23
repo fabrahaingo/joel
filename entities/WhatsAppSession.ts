@@ -43,7 +43,17 @@ export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second gl
 export const WHATSAPP_API_VERSION = "v24.0";
 
 // MARGIN RELATIVE TO 24h REENGAGEMENT WINDOW
+// Safety buffer before the real 24h limit: only needs to cover the
+// snapshot->actual-send latency for an edge-first user plus WhatsApp API time.
 export const WHATSAPP_REENGAGEMENT_MARGIN_MINS = 5; // 5 mins
+
+// Per-day advance applied by the daily scheduler to keep a user who interacted
+// yesterday inside their 24h window today (see notificationScheduler.ts). Kept
+// separate from the cutoff margin above so each can be tuned independently:
+// historically both were the same constant, which is why margin == step ==
+// process-latency all read as "5 min". Keep >= margin so the chained window
+// never closes before the next run.
+export const WHATSAPP_SHIFT_STEP_MINS = 5; // 5 mins
 
 // 24h - MARGIN_MINS
 export const WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS =
