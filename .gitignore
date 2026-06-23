@@ -10,3 +10,4 @@ yarn.lock
 dist/
 /matrix/
 coverage-summary.json
+/coverage/

@@ -50,8 +50,21 @@ export async function dispatchTasksToMessageApps<T, R = JORFSearchItem>(
   const appPromises = [...tasksByMessageApp.keys()].map(async (messageApp) => {
     const appTasks = tasksByMessageApp.get(messageApp) ?? [];
 
-    // this ensures coherent size within batches, so they don't wait too much for each other
-    appTasks.sort((a, b) => b.recordCount - a.recordCount);
+    if (messageApp === "WhatsApp") {
+      // Edge-first: send the users closest to their 24h re-engagement window edge
+      // first, so the slow run reaches them in its first seconds and they keep the
+      // benefit of the scheduler's day-of-week start-advance instead of losing it to
+      // queue latency. Record count is only a tiebreaker here. (lastEngagementAt asc)
+      appTasks.sort(
+        (a, b) =>
+          a.userInfo.lastEngagementAt.getTime() -
+            b.userInfo.lastEngagementAt.getTime() ||
+          b.recordCount - a.recordCount
+      );
+    } else {
+      // this ensures coherent size within batches, so they don't wait too much for each other
+      appTasks.sort((a, b) => b.recordCount - a.recordCount);
+    }
 
     const app_concurrency_limit =
       concurrencyLimitByMessageApp.get(messageApp) ?? 1;

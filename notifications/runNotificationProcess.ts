@@ -127,7 +127,9 @@ export async function runNotificationProcess(
       JORFAllRecordsFromDate,
       JORFMetaRecordsFromDate,
       targetApps,
-      messageAppsOptions
+      messageAppsOptions,
+      // `start` is the process-start snapshot; reuse it as the single window clock.
+      start
     );
 
     // Weekly reminder for WhatsApp users sitting on pending notifications.
@@ -175,6 +177,10 @@ export async function notifyAllFollows(
   JORFMetaRecordsFromDate: JORFSearchPublication[],
   targetApps: MessageApp[],
   messageAppsOptions: ExternalMessageOptions,
+  // One clock for the whole run: every handler judges the 24h window against the
+  // same instant, so a user can't be in-window for handler 1 and expired by
+  // handler 5 just because the run is slow.
+  windowNow: Date,
   userIds?: Types.ObjectId[],
   forceWHMessages = false
 ) {
@@ -183,6 +189,7 @@ export async function notifyAllFollows(
       JORFAllRecordsFromDate,
       targetApps,
       messageAppsOptions,
+      windowNow,
       userIds,
       forceWHMessages
     );
@@ -191,6 +198,7 @@ export async function notifyAllFollows(
       JORFAllRecordsFromDate,
       targetApps,
       messageAppsOptions,
+      windowNow,
       userIds,
       forceWHMessages
     );
@@ -199,6 +207,7 @@ export async function notifyAllFollows(
       JORFAllRecordsFromDate,
       targetApps,
       messageAppsOptions,
+      windowNow,
       userIds,
       forceWHMessages
     );
@@ -206,7 +215,8 @@ export async function notifyAllFollows(
     await notifyNameMentionUpdates(
       JORFAllRecordsFromDate,
       targetApps,
-      messageAppsOptions
+      messageAppsOptions,
+      windowNow
     );
   }
 
@@ -214,7 +224,8 @@ export async function notifyAllFollows(
     await notifyAlertStringUpdates(
       JORFMetaRecordsFromDate,
       targetApps,
-      messageAppsOptions
+      messageAppsOptions,
+      windowNow
     );
   }
 }
