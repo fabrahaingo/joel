@@ -4,7 +4,7 @@ import { runNotificationProcess } from "./runNotificationProcess.ts";
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { logError, logWarning } from "../utils/debugLogger.ts";
 import { dateToString, formatDuration } from "../utils/date.utils.ts";
-import { WHATSAPP_REENGAGEMENT_MARGIN_MINS } from "../entities/WhatsAppSession.ts";
+import { WHATSAPP_SHIFT_STEP_MINS } from "../entities/WhatsAppSession.ts";
 
 interface DailyTime {
   hour: number;
@@ -33,12 +33,12 @@ function parseDailyTime(value: string): DailyTime {
   return { hour, minute };
 }
 
-function computeNextOccurrence(
+export function computeNextOccurrence(
   { hour, minute }: DailyTime,
-  messageApps: MessageApp[]
+  messageApps: MessageApp[],
+  // Injectable for tests; defaults to wall-clock in production.
+  now: Date = new Date()
 ): Date {
-  const now = new Date();
-
   const currentDayString = dateToString(now, "YMD");
 
   const nextWithoutShift = new Date(now);
@@ -63,8 +63,7 @@ function computeNextOccurrence(
         `Computed negative timeShiftIndex: ${String(timeShiftIndex)}`
       );
     }
-    timeShiftMs =
-      timeShiftIndex * WHATSAPP_REENGAGEMENT_MARGIN_MINS * 60 * 1000;
+    timeShiftMs = timeShiftIndex * WHATSAPP_SHIFT_STEP_MINS * 60 * 1000;
     // Tuesday : expected time
     // Wednesday: expected time - 1*MARGIN
     // Thursday: expected time - 2*MARGIN

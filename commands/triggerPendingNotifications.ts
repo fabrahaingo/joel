@@ -111,6 +111,9 @@ export const triggerPendingNotifications = async (
       candidateJORFPublications,
       [session.messageApp],
       session.extractMessageAppsOptions(),
+      // Immediate re-engagement trigger: window clock is now. (forceWHMessages
+      // below skips the window check anyway, but the param is required.)
+      new Date(),
       [session.user._id],
       true
     );

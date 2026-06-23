@@ -32,6 +32,9 @@ export async function notifyAlertStringUpdates(
   metaRecords: JORFSearchPublication[],
   enabledApps: MessageApp[],
   messageAppsOptions: ExternalMessageOptions,
+  // Single clock snapshotted at process start, threaded through every handler so
+  // the 24h-window decision can't drift as the (slow) run progresses.
+  windowNow: Date,
   userIds?: Types.ObjectId[],
   forceWHMessages = false
 ) {
@@ -115,7 +118,7 @@ export async function notifyAlertStringUpdates(
   await dispatchTasksToMessageApps<string, JORFSearchPublication>(
     userUpdateTasks,
     async (task) => {
-      const now = new Date();
+      const now = windowNow;
 
       const reengagementExpired =
         now.getTime() - task.userInfo.lastEngagementAt.getTime() >
