@@ -128,6 +128,11 @@ export interface MessageSendingOptionsInternal {
   separateMenuMessage?: boolean;
   useAsyncUmamiLog?: boolean;
   hasAccount?: boolean;
+  // Single run-wide clock for the WhatsApp re-engagement guard. When set (daily
+  // notification path), the guard judges the 24h window against the same instant
+  // the handler used to route free-message-vs-template, so the two can't disagree
+  // mid-run. Left undefined on interactive replies → guard uses new Date().
+  windowNow?: Date;
 }
 
 export interface MessageSendingOptionsExternal {
@@ -141,6 +146,9 @@ export interface MessageSendingOptionsExternal {
   separateMenuMessage?: boolean;
   useAsyncUmamiLog: boolean;
   hasAccount: boolean;
+  // See MessageSendingOptionsInternal.windowNow — passed through sendMessage to
+  // the WhatsApp guard by the notification path.
+  windowNow?: Date;
 }
 
 export interface MiniUserInfo {

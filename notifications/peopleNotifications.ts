@@ -328,7 +328,8 @@ export async function notifyPeopleUpdates(
     const messageSent = await sendPeopleUpdate(
       task.userInfo,
       task.updatedRecordsMap,
-      messageAppsOptions
+      messageAppsOptions,
+      now
     );
     if (!messageSent) return;
 
@@ -365,7 +366,10 @@ export async function notifyPeopleUpdates(
 export async function sendPeopleUpdate(
   userInfo: ExtendedMiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchItem[]>,
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  // Run-wide clock from the notification path; forwarded to the WH guard so it
+  // agrees with the routing decision. Undefined elsewhere → guard uses new Date().
+  windowNow?: Date
 ) {
   if (updatedRecordMap.size === 0) return true;
 
@@ -414,7 +418,8 @@ export async function sendPeopleUpdate(
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
     useAsyncUmamiLog: true,
-    hasAccount: true
+    hasAccount: true,
+    windowNow
   };
 
   const messageSent = await sendMessage(

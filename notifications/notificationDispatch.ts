@@ -7,6 +7,7 @@ import { Types } from "mongoose";
 import pLimit from "p-limit";
 import { MATRIX_API_SENDING_CONCURRENCY } from "../entities/MatrixSession.ts";
 import { ExtendedMiniUserInfo } from "../entities/Session.ts";
+import { logError } from "../utils/debugLogger.ts";
 
 /**
  * Schedules the sendMessage to respect per-app throttling rules.
@@ -66,19 +67,32 @@ export async function dispatchTasksToMessageApps<T, R = JORFSearchItem>(
       appTasks.sort((a, b) => b.recordCount - a.recordCount);
     }
 
+    // Isolate each task: a single send that throws must never reject the
+    // app-level Promise.all and abort the whole run (and every later handler)
+    // for all remaining users. Log and drop only the failing user.
+    const runTask = async (task: NotificationTask<T, R>) => {
+      try {
+        await taskFunction(task);
+      } catch (err) {
+        await logError(
+          messageApp,
+          `Notification task failed for user ${task.userInfo.chatId}`,
+          err
+        );
+      }
+    };
+
     const app_concurrency_limit =
       concurrencyLimitByMessageApp.get(messageApp) ?? 1;
     if (app_concurrency_limit > 1) {
       const limit = pLimit(concurrencyLimitByMessageApp.get(messageApp) ?? 1);
 
       // Wrap each delivery in the limiter
-      await Promise.all(
-        appTasks.map((task) => limit(() => taskFunction(task)))
-      );
+      await Promise.all(appTasks.map((task) => limit(() => runTask(task))));
     } else {
       // if appLimit is 1, just run the taskFunction directly
       for (const task of appTasks) {
-        await taskFunction(task);
+        await runTask(task);
       }
     }
   });
