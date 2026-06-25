@@ -45,6 +45,10 @@ export const WHATSAPP_API_VERSION = "v24.0";
 // MARGIN RELATIVE TO 24h REENGAGEMENT WINDOW
 // Safety buffer before the real 24h limit: only needs to cover the
 // snapshot->actual-send latency for an edge-first user plus WhatsApp API time.
+// INVARIANT: margin >= max(windowNow snapshot -> actual send latency). The guard
+// decides on the run-start snapshot; the real send happens up to one run-length
+// later, so the margin must cover that gap to keep real sends < 24h (no WH error
+// 131047). Keeping NOTIFICATIONS_SHIFT_DAYS small bounds the run length here.
 export const WHATSAPP_REENGAGEMENT_MARGIN_MINS = 5; // 5 mins
 
 // Per-day advance applied by the daily scheduler to keep a user who interacted
@@ -235,14 +239,21 @@ export async function sendWhatsAppMessage(
   options: MessageSendingOptionsInternal,
   retryNumber = 0
 ): Promise<boolean> {
-  const now = new Date();
+  // Judge the window against the run-wide snapshot when the notification path
+  // supplies one, so this guard agrees with the routing decision the handler
+  // already made on the same instant. Without it (interactive replies) fall back
+  // to real time. Degrade, never throw: a thrown guard here is uncaught through
+  // the dispatch Promise.all and aborts the entire run for every queued user.
+  const now = options.windowNow ?? new Date();
   if (
     now.getTime() - userInfo.lastEngagementAt.getTime() >
     WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS
   ) {
-    throw new Error(
-      `Cannot send message to WH user ${userInfo.chatId} at time ${now.toISOString()}, as his lastEngagement is ${userInfo.lastEngagementAt.toISOString()} (margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS)}mins)`
+    await logError(
+      "WhatsApp",
+      `Skipped free message to WH user ${userInfo.chatId} at time ${now.toISOString()}, as his lastEngagement is ${userInfo.lastEngagementAt.toISOString()} (margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS)}mins). User picked up by re-engagement next run/sweep.`
     );
+    return false;
   }
 
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog

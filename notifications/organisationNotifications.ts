@@ -320,7 +320,8 @@ export async function notifyOrganisationsUpdates(
         task.userInfo,
         task.updatedRecordsMap,
         orgNameById,
-        messageAppsOptions
+        messageAppsOptions,
+        now
       );
       if (!messageSent) return;
 
@@ -356,7 +357,9 @@ export async function sendOrganisationUpdate(
   userInfo: ExtendedMiniUserInfo,
   organisationsUpdateRecordsMap: Map<WikidataId, JORFSearchItem[]>,
   orgNameById: Map<WikidataId, string>,
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  // Run-wide clock from the notification path; forwarded to the WH guard.
+  windowNow?: Date
 ): Promise<boolean> {
   if (organisationsUpdateRecordsMap.size === 0) return true;
 
@@ -423,7 +426,8 @@ export async function sendOrganisationUpdate(
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
     useAsyncUmamiLog: true,
-    hasAccount: true
+    hasAccount: true,
+    windowNow
   };
 
   const messageSent = await sendMessage(

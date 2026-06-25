@@ -311,7 +311,8 @@ export async function notifyFunctionTagsUpdates(
       const messageSent = await sendTagUpdates(
         task.userInfo,
         task.updatedRecordsMap,
-        messageAppsOptions
+        messageAppsOptions,
+        now
       );
       if (!messageSent) return;
 
@@ -344,7 +345,9 @@ export async function notifyFunctionTagsUpdates(
 export async function sendTagUpdates(
   userInfo: ExtendedMiniUserInfo,
   tagMap: Map<FunctionTags, JORFSearchItem[]>,
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  // Run-wide clock from the notification path; forwarded to the WH guard.
+  windowNow?: Date
 ): Promise<boolean> {
   const tagList = [...tagMap.keys()];
 
@@ -405,7 +408,8 @@ export async function sendTagUpdates(
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
     useAsyncUmamiLog: true,
-    hasAccount: true
+    hasAccount: true,
+    windowNow
   };
 
   const messageSent = await sendMessage(

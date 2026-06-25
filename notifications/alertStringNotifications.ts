@@ -238,7 +238,8 @@ export async function notifyAlertStringUpdates(
       const messageSent = await sendAlertStringUpdate(
         task.userInfo,
         task.updatedRecordsMap,
-        messageAppsOptions
+        messageAppsOptions,
+        now
       );
       if (!messageSent) return;
 
@@ -270,7 +271,9 @@ export async function notifyAlertStringUpdates(
 async function sendAlertStringUpdate(
   userInfo: ExtendedMiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchPublication[]>,
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  // Run-wide clock from the notification path; forwarded to the WH guard.
+  windowNow?: Date
 ): Promise<boolean> {
   if (updatedRecordMap.size === 0) return true;
 
@@ -308,7 +311,8 @@ async function sendAlertStringUpdate(
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
     useAsyncUmamiLog: true,
-    hasAccount: true
+    hasAccount: true,
+    windowNow
   };
 
   const messageSent = await sendMessage(

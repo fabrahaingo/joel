@@ -78,6 +78,31 @@ describe("dispatchTasksToMessageApps — WhatsApp edge-first ordering", () => {
   });
 });
 
+describe("dispatchTasksToMessageApps — a failing task can't abort the run", () => {
+  it("logs and skips a throwing task, still processing the rest", async () => {
+    const tasks = [
+      makeTask("wh-edge", "WhatsApp", DAY_MS, 1), // processed first (edge), throws
+      makeTask("wh-mid", "WhatsApp", 12 * 60 * 60 * 1000, 1),
+      makeTask("wh-fresh", "WhatsApp", 1 * 60 * 60 * 1000, 1)
+    ];
+
+    const processed: string[] = [];
+    // No try/catch here: if the dispatcher re-threw, this await would reject and
+    // the test would fail — which is exactly the regression we're guarding.
+    await dispatchTasksToMessageApps<string>(tasks, async (task) => {
+      if (task.userInfo.chatId === "wh-edge") {
+        await Promise.resolve();
+        throw new Error("send blew up");
+      }
+      processed.push(task.userInfo.chatId);
+      await Promise.resolve();
+    });
+
+    // The throwing user is dropped; every sibling still got processed.
+    expect(processed).toEqual(["wh-mid", "wh-fresh"]);
+  });
+});
+
 describe("dispatchTasksToMessageApps — non-WhatsApp ordering unchanged", () => {
   it("orders Telegram users by record count (largest first), ignoring window edge", async () => {
     const tasks = [

@@ -303,7 +303,8 @@ export async function notifyNameMentionUpdates(
     const messageSent = await sendNameMentionUpdates(
       task.userInfo,
       task.updatedRecordsMap,
-      messageAppsOptions
+      messageAppsOptions,
+      now
     );
 
     if (messageSent) {
@@ -324,7 +325,9 @@ export async function notifyNameMentionUpdates(
 export async function sendNameMentionUpdates(
   userInfo: ExtendedMiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchItem[]>,
-  messageAppsOptions: ExternalMessageOptions
+  messageAppsOptions: ExternalMessageOptions,
+  // Run-wide clock from the notification path; forwarded to the WH guard.
+  windowNow?: Date
 ): Promise<boolean> {
   if (updatedRecordMap.size === 0) return true;
 
@@ -370,7 +373,8 @@ export async function sendNameMentionUpdates(
     ...messageAppsOptions,
     separateMenuMessage: userInfo.messageApp === "WhatsApp",
     useAsyncUmamiLog: true,
-    hasAccount: true
+    hasAccount: true,
+    windowNow
   };
 
   const messageSent = await sendMessage(
