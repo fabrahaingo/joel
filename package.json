@@ -55,7 +55,7 @@
     "lefthook": "^2.1.9",
     "mongodb-memory-server": "^11.2.0",
     "@ngrok/ngrok": "^1.5.1",
-    "npm-check-updates": "^22.2.3",
+    "npm-check-updates": "^22.2.7",
     "prettier": "^3.8.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.61.1",
