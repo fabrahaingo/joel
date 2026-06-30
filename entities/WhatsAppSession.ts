@@ -336,11 +336,21 @@ export async function sendWhatsAppMessage(
         interactiveKeyboard != null &&
         !options.separateMenuMessage
       ) {
-        resp = await whatsAppAPI.sendMessage(
-          WHATSAPP_PHONE_ID,
-          userInfo.chatId,
-          new Interactive(interactiveKeyboard, new Body(mArr[i]))
-        );
+        // The if/else narrows the ActionList | ActionButtons union so each
+        // Interactive() call resolves a concrete constructor overload.
+        if (interactiveKeyboard instanceof ActionButtons) {
+          resp = await whatsAppAPI.sendMessage(
+            WHATSAPP_PHONE_ID,
+            userInfo.chatId,
+            new Interactive(interactiveKeyboard, new Body(mArr[i]))
+          );
+        } else {
+          resp = await whatsAppAPI.sendMessage(
+            WHATSAPP_PHONE_ID,
+            userInfo.chatId,
+            new Interactive(interactiveKeyboard, new Body(mArr[i]))
+          );
+        }
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
@@ -389,11 +399,20 @@ export async function sendWhatsAppMessage(
     const numberMessageBurst = burstMode ? totalMessages : 0;
 
     if (options.separateMenuMessage && interactiveKeyboard != null) {
-      resp = await whatsAppAPI.sendMessage(
-        WHATSAPP_PHONE_ID,
-        userInfo.chatId,
-        new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
-      );
+      // Narrow the union so Interactive() resolves a concrete overload.
+      if (interactiveKeyboard instanceof ActionButtons) {
+        resp = await whatsAppAPI.sendMessage(
+          WHATSAPP_PHONE_ID,
+          userInfo.chatId,
+          new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
+        );
+      } else {
+        resp = await whatsAppAPI.sendMessage(
+          WHATSAPP_PHONE_ID,
+          userInfo.chatId,
+          new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
+        );
+      }
       if (resp.error) {
         // The chunks already sent; resume at the separate menu (skip chunk loop)
         // by starting past the last chunk so we don't resend delivered chunks.

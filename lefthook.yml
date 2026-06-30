@@ -22,6 +22,10 @@ pre-push:
       glob: "*.{js,jsx,ts,tsx,mjs,cjs}"
       run: ./scripts/with-safe-chain.sh npm run test
 
+    - name: build
+      glob: "*.{ts,tsx,json}"
+      run: ./scripts/with-safe-chain.sh npm run build
+
     - name: security
       glob: "{package.json,package-lock.json,.npmrc}"
       run: ./scripts/with-safe-chain.sh npm audit --audit-level=high
