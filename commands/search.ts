@@ -358,7 +358,10 @@ export const followCommand = async (
       return;
     }
 
-    session.user ??= await User.findOrCreate(session);
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    if (session.user == null) {
+      session.user = await User.findOrCreate(session);
+    }
 
     const people = await People.findOrCreate({
       nom: JORFRes[0].nom,
