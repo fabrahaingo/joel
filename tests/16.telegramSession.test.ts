@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const { postSpy, logErrorSpy, deleteSpy, userState } = vi.hoisted(() => ({
-  postSpy: vi.fn(() => Promise.resolve({ data: {} })),
-  logErrorSpy: vi.fn(() => Promise.resolve()),
-  deleteSpy: vi.fn(() => Promise.resolve()),
-  userState: { current: null }
-}));
+const { postSpy, logErrorSpy, deleteSpy, userState, findOrCreateSpy } =
+  vi.hoisted(() => ({
+    postSpy: vi.fn(() => Promise.resolve({ data: {} })),
+    logErrorSpy: vi.fn(() => Promise.resolve()),
+    deleteSpy: vi.fn(() => Promise.resolve()),
+    userState: { current: null, blocked: [] as { chatId: string }[] },
+    findOrCreateSpy: vi.fn(() => Promise.resolve({ _id: "u1" }))
+  }));
 
 vi.mock("axios", async (orig) => {
   const actual = await orig<typeof import("axios")>();
@@ -25,16 +27,18 @@ vi.mock("../utils/userDeletion.utils.ts", () => ({
 vi.mock("../models/User.ts", () => ({
   default: {
     find: vi.fn(() => ({
-      select: () => ({ lean: () => Promise.resolve([]) })
+      select: () => ({ lean: () => Promise.resolve(userState.blocked) })
     })),
     findOne: vi.fn(() => ({ lean: () => Promise.resolve(userState.current) })),
-    updateOne: vi.fn(() => Promise.resolve({}))
+    updateOne: vi.fn(() => Promise.resolve({})),
+    findOrCreate: findOrCreateSpy
   }
 }));
 
 import {
   sendTelegramMessage,
   extractTelegramSession,
+  refreshTelegramBlockedUsers,
   TelegramSession,
   TELEGRAM_MESSAGE_CHAR_LIMIT
 } from "../entities/TelegramSession.ts";
@@ -57,6 +61,8 @@ const baseOpt = { useAsyncUmamiLog: false, hasAccount: true };
 
 beforeEach(() => {
   userState.current = null;
+  userState.blocked = [];
+  postSpy.mockResolvedValue({ data: {} });
   vi.stubGlobal("setTimeout", (fn: () => void) => {
     fn();
     return 0 as unknown as ReturnType<typeof setTimeout>;
@@ -166,8 +172,85 @@ describe("extractTelegramSession", () => {
     expect(await extractTelegramSession(s)).toBeUndefined();
   });
 
+  it("sends the unavailable notice when userFacingError is set", async () => {
+    const s = fakeSession({ messageApp: "Signal" });
+    await extractTelegramSession(s, true);
+    expect(s.sendMessage).toHaveBeenCalledTimes(1);
+  });
+
   it("returns undefined when app is Telegram but not a TelegramSession instance", async () => {
     const s = fakeSession({ messageApp: "Telegram" });
     expect(await extractTelegramSession(s)).toBeUndefined();
+  });
+});
+
+describe("refreshTelegramBlockedUsers", () => {
+  it("returns immediately when the bot token is undefined", async () => {
+    await refreshTelegramBlockedUsers(undefined);
+    expect(postSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns when there are no blocked users", async () => {
+    userState.blocked = [];
+    await refreshTelegramBlockedUsers("TOK");
+    expect(postSpy).not.toHaveBeenCalled();
+  });
+
+  it("pings each blocked user and unblocks those that respond", async () => {
+    userState.blocked = [{ chatId: "111" }, { chatId: "222" }];
+    await refreshTelegramBlockedUsers("TOK");
+    // One sendChatAction per blocked user.
+    expect(postSpy).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(User.updateOne)).toHaveBeenCalledWith(
+      { messageApp: "Telegram", chatId: "111" },
+      { $set: { status: "active" } }
+    );
+  });
+
+  it("retries a rate-limited typing ping through the handler then gives up", async () => {
+    userState.blocked = [{ chatId: "333" }];
+    // Retryable error -> handler invokes the typing-action retry function.
+    postSpy.mockRejectedValue(axiosErr("Too Many Requests: retry later"));
+    await expect(refreshTelegramBlockedUsers("TOK")).resolves.toBeUndefined();
+    expect(postSpy.mock.calls.length).toBeGreaterThan(1);
+  });
+});
+
+describe("TelegramSession — instance methods", () => {
+  const tg = {} as unknown as Telegram;
+  const make = () => new TelegramSession("TOK", tg, "123", "fr", new Date());
+
+  it("loadUser delegates to the shared loader", async () => {
+    expect(await make().loadUser()).toBeNull();
+  });
+
+  it("createUser sets the user from findOrCreate", async () => {
+    const s = make();
+    await s.createUser();
+    expect(findOrCreateSpy).toHaveBeenCalledWith(s);
+  });
+
+  it("sendTypingAction does not throw", () => {
+    expect(() => {
+      make().sendTypingAction();
+    }).not.toThrow();
+  });
+
+  it("log forwards to umami without throwing", () => {
+    expect(() => {
+      make().log({ event: "/message-sent" });
+    }).not.toThrow();
+  });
+
+  it("sendMessage forwards to sendTelegramMessage", async () => {
+    const res = await make().sendMessage("hi", { forceNoKeyboard: true });
+    expect(res).toBe(true);
+    expect(postSpy).toHaveBeenCalled();
+  });
+
+  it("extractMessageAppsOptions returns the bot token", () => {
+    expect(make().extractMessageAppsOptions()).toEqual({
+      telegramBotToken: "TOK"
+    });
   });
 });

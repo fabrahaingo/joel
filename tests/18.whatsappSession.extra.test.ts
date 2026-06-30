@@ -4,11 +4,14 @@ vi.hoisted(() => {
   process.env.WHATSAPP_PHONE_ID = "TEST_PHONE_ID";
 });
 
-const { logErrorSpy, deleteSpy, userState } = vi.hoisted(() => ({
-  logErrorSpy: vi.fn(() => Promise.resolve()),
-  deleteSpy: vi.fn(() => Promise.resolve()),
-  userState: { current: null }
-}));
+const { logErrorSpy, deleteSpy, userState, findOrCreateSpy } = vi.hoisted(
+  () => ({
+    logErrorSpy: vi.fn(() => Promise.resolve()),
+    deleteSpy: vi.fn(() => Promise.resolve()),
+    userState: { current: null },
+    findOrCreateSpy: vi.fn(() => Promise.resolve({ _id: "u1" }))
+  })
+);
 
 vi.mock("../utils/umami.ts", () => ({
   default: { log: vi.fn(), logAsync: vi.fn() }
@@ -19,8 +22,10 @@ vi.mock("../utils/userDeletion.utils.ts", () => ({
 }));
 vi.mock("../models/User.ts", () => ({
   default: {
+    find: vi.fn(() => Promise.resolve([])),
     findOne: vi.fn(() => ({ lean: () => Promise.resolve(userState.current) })),
-    updateOne: vi.fn(() => Promise.resolve({}))
+    updateOne: vi.fn(() => Promise.resolve({})),
+    findOrCreate: findOrCreateSpy
   }
 }));
 
@@ -111,6 +116,33 @@ describe("handleWhatsAppAPIErrors — terminal user-state codes", () => {
       { $set: { lastMessageReceivedAt: prev } }
     );
   });
+
+  it("logs and returns false on 131047 when the user is missing", async () => {
+    userState.current = null;
+    const res = await handleWhatsAppAPIErrors(
+      { errorCode: 131047 },
+      "test",
+      "chat-no-user",
+      vi.fn()
+    );
+    expect(res).toBe(false);
+    expect(logErrorSpy).toHaveBeenCalled();
+  });
+
+  it("logs and returns false on 131047 when no receive-time snapshot exists", async () => {
+    messageReceivedTimeHistory.delete("WhatsApp:chat-no-hist");
+    userState.current = {
+      lastMessageReceivedAt: new Date(),
+      lastEngagementAt: new Date(Date.now() - 25 * HOUR)
+    };
+    const res = await handleWhatsAppAPIErrors(
+      { errorCode: 131047 },
+      "test",
+      "chat-no-hist",
+      vi.fn()
+    );
+    expect(res).toBe(false);
+  });
 });
 
 describe("handleWhatsAppAPIErrors — transient codes", () => {
@@ -187,9 +219,10 @@ describe("sendWhatsAppTemplate", () => {
     );
   });
 
-  it("routes a template send error through the error handler", async () => {
+  it("routes a template send error through the retrying error handler", async () => {
+    // Transient code -> the handler invokes the template retry function.
     const sendMessage = vi.fn(() =>
-      Promise.resolve({ error: { code: 999999 } })
+      Promise.resolve({ error: { code: 131056 } })
     );
     const api = { sendMessage } as unknown as WhatsAppAPI;
     const res = await sendWhatsAppTemplate(
@@ -199,6 +232,8 @@ describe("sendWhatsAppTemplate", () => {
       { useAsyncUmamiLog: false, hasAccount: true }
     );
     expect(res).toBe(false);
+    // initial + retries (capped by MAX_MESSAGE_RETRY)
+    expect(sendMessage.mock.calls.length).toBeGreaterThan(1);
   });
 });
 
@@ -267,5 +302,167 @@ describe("extractWhatsAppSession", () => {
     expect(
       await extractWhatsAppSession(fakeSession({ messageApp: "WhatsApp" }))
     ).toBeUndefined();
+  });
+
+  it("sends the unavailable notice when userFacingError is set", async () => {
+    const s = fakeSession({ messageApp: "Signal" });
+    await extractWhatsAppSession(s, true);
+    expect(s.sendMessage).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("sendWhatsAppMessage — message variants", () => {
+  const okResp = { messages: [{ id: "x" }] };
+
+  it("sends with the default full menu when no keyboard is given", async () => {
+    const sendMessage = vi.fn(() => Promise.resolve(okResp));
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+    const res = await sendWhatsAppMessage(api, waUser(), "hello", {
+      useAsyncUmamiLog: false,
+      hasAccount: true
+    });
+    expect(res).toBe(true);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("builds reply buttons for a small keyboard", async () => {
+    const sendMessage = vi.fn(() => Promise.resolve(okResp));
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+    const res = await sendWhatsAppMessage(api, waUser(), "hello", {
+      useAsyncUmamiLog: false,
+      hasAccount: true,
+      keyboard: [[{ text: "Oui" }, { text: "Non" }]]
+    });
+    expect(res).toBe(true);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends a separate menu message after the content", async () => {
+    const sendMessage = vi.fn(() => Promise.resolve(okResp));
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+    const res = await sendWhatsAppMessage(api, waUser(), "hello", {
+      useAsyncUmamiLog: false,
+      hasAccount: true,
+      separateMenuMessage: true
+    });
+    expect(res).toBe(true);
+    // content chunk + separate menu message
+    expect(sendMessage).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses the full cooldown (non-burst) for messages over the burst threshold", async () => {
+    const sendMessage = vi.fn(() => Promise.resolve(okResp));
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+    // >180 short lines -> >10 chunks (18-line cap) -> non-burst path.
+    const body = Array.from(
+      { length: 240 },
+      (_, n) => `line ${String(n)}`
+    ).join("\n");
+    const res = await sendWhatsAppMessage(api, waUser(), body, {
+      useAsyncUmamiLog: false,
+      hasAccount: true,
+      forceNoKeyboard: true
+    });
+    expect(res).toBe(true);
+    expect(sendMessage.mock.calls.length).toBeGreaterThan(10);
+  });
+
+  it("resumes the separate menu send via the retry path after a transient error", async () => {
+    let n = 0;
+    const sendMessage = vi.fn(() => {
+      n++;
+      // content chunk ok (1), menu transient-fails (2), menu retry ok (3)
+      return Promise.resolve(n === 2 ? { error: { code: 131056 } } : okResp);
+    });
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+    const res = await sendWhatsAppMessage(api, waUser(), "hello", {
+      useAsyncUmamiLog: false,
+      hasAccount: true,
+      separateMenuMessage: true
+    });
+    expect(res).toBe(true);
+    expect(sendMessage).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("sendWhatsAppTemplate — extra branches", () => {
+  it("logs when sending a template to a still-in-window user", async () => {
+    const sendMessage = vi.fn(() =>
+      Promise.resolve({ messages: [{ id: "x" }] })
+    );
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+    // In-window (1h ago) -> the "non reengagement user" warning path.
+    const res = await sendWhatsAppTemplate(
+      api,
+      waUser({ chatId: "inw" }),
+      "people",
+      {
+        useAsyncUmamiLog: false,
+        hasAccount: true
+      }
+    );
+    expect(res).toBe(true);
+    expect(logErrorSpy).toHaveBeenCalled();
+  });
+
+  it("returns false when the template send throws", async () => {
+    const sendMessage = vi.fn(() => Promise.reject(new Error("network")));
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+    const res = await sendWhatsAppTemplate(
+      api,
+      waUser({ lastEngagementAt: new Date(Date.now() - 30 * HOUR) }),
+      "people",
+      { useAsyncUmamiLog: false, hasAccount: true }
+    );
+    expect(res).toBe(false);
+  });
+});
+
+describe("WhatsAppSession — instance methods", () => {
+  const make = () => {
+    const sendMessage = vi.fn(() =>
+      Promise.resolve({ messages: [{ id: "x" }] })
+    );
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+    const session = new WhatsAppSession(
+      api,
+      "BOT",
+      "33600000000",
+      "fr",
+      new Date()
+    );
+    return { session, sendMessage };
+  };
+
+  it("loadUser delegates to the shared loader", async () => {
+    expect(await make().session.loadUser()).toBeNull();
+  });
+
+  it("createUser sets the user from findOrCreate", async () => {
+    const { session } = make();
+    await session.createUser();
+    expect(findOrCreateSpy).toHaveBeenCalledWith(session);
+  });
+
+  it("sendTypingAction and log do not throw", () => {
+    const { session } = make();
+    expect(() => {
+      session.sendTypingAction();
+    }).not.toThrow();
+    expect(() => {
+      session.log({ event: "/message-sent" });
+    }).not.toThrow();
+  });
+
+  it("sendMessage forwards to sendWhatsAppMessage", async () => {
+    const { session, sendMessage } = make();
+    const res = await session.sendMessage("hi", { forceNoKeyboard: true });
+    expect(res).toBe(true);
+    expect(sendMessage).toHaveBeenCalled();
+  });
+
+  it("extractMessageAppsOptions returns the whatsAppAPI", () => {
+    const { session } = make();
+    expect(session.extractMessageAppsOptions()).toHaveProperty("whatsAppAPI");
   });
 });

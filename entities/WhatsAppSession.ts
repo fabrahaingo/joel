@@ -336,19 +336,11 @@ export async function sendWhatsAppMessage(
         interactiveKeyboard != null &&
         !options.separateMenuMessage
       ) {
-        if (interactiveKeyboard instanceof ActionButtons) {
-          resp = await whatsAppAPI.sendMessage(
-            WHATSAPP_PHONE_ID,
-            userInfo.chatId,
-            new Interactive(interactiveKeyboard, new Body(mArr[i]))
-          );
-        } else {
-          resp = await whatsAppAPI.sendMessage(
-            WHATSAPP_PHONE_ID,
-            userInfo.chatId,
-            new Interactive(interactiveKeyboard, new Body(mArr[i]))
-          );
-        }
+        resp = await whatsAppAPI.sendMessage(
+          WHATSAPP_PHONE_ID,
+          userInfo.chatId,
+          new Interactive(interactiveKeyboard, new Body(mArr[i]))
+        );
       } else {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
@@ -397,19 +389,11 @@ export async function sendWhatsAppMessage(
     const numberMessageBurst = burstMode ? totalMessages : 0;
 
     if (options.separateMenuMessage && interactiveKeyboard != null) {
-      if (interactiveKeyboard instanceof ActionButtons) {
-        resp = await whatsAppAPI.sendMessage(
-          WHATSAPP_PHONE_ID,
-          userInfo.chatId,
-          new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
-        );
-      } else {
-        resp = await whatsAppAPI.sendMessage(
-          WHATSAPP_PHONE_ID,
-          userInfo.chatId,
-          new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
-        );
-      }
+      resp = await whatsAppAPI.sendMessage(
+        WHATSAPP_PHONE_ID,
+        userInfo.chatId,
+        new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
+      );
       if (resp.error) {
         // The chunks already sent; resume at the separate menu (skip chunk loop)
         // by starting past the last chunk so we don't resend delivered chunks.
@@ -463,8 +447,6 @@ export async function sendWhatsAppMessage(
 }
 
 function replaceWHButtons(keyboard: Keyboard): Keyboard {
-  if (!Array.isArray(keyboard)) return keyboard;
-
   const replacements: Partial<Record<string, KeyboardKey>> = {
     // [KEYBOARD_KEYS.MAIN_MENU.key.text]: KEYBOARD_KEYS.COMMAND_LIST.key,
   };

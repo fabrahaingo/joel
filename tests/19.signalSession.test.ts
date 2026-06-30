@@ -8,10 +8,15 @@ vi.mock("../utils/umami.ts", () => ({
 vi.mock("../utils/debugLogger.ts", () => ({
   logError: logErrorSpy
 }));
+const { findOrCreateSpy } = vi.hoisted(() => ({
+  findOrCreateSpy: vi.fn(() => Promise.resolve({ _id: "u1" }))
+}));
 vi.mock("../models/User.ts", () => ({
   default: {
+    find: vi.fn(() => Promise.resolve([])),
     findOne: vi.fn(() => ({ lean: () => Promise.resolve(null) })),
-    updateOne: vi.fn(() => Promise.resolve({}))
+    updateOne: vi.fn(() => Promise.resolve({})),
+    findOrCreate: findOrCreateSpy
   }
 }));
 
@@ -130,5 +135,27 @@ describe("SignalSession.sendMessage wrapper", () => {
     const { cli } = makeSignalCli();
     const session = new SignalSession(cli, "BOT", "1", "fr", new Date());
     expect(session.extractMessageAppsOptions()).toEqual({ signalCli: cli });
+  });
+
+  it("loadUser delegates to the shared loader (null when none found)", async () => {
+    const { cli } = makeSignalCli();
+    const session = new SignalSession(cli, "BOT", "1", "fr", new Date());
+    expect(await session.loadUser()).toBeNull();
+    expect(session.user).toBeNull();
+  });
+
+  it("createUser sets the user from findOrCreate", async () => {
+    const { cli } = makeSignalCli();
+    const session = new SignalSession(cli, "BOT", "1", "fr", new Date());
+    await session.createUser();
+    expect(findOrCreateSpy).toHaveBeenCalledWith(session);
+  });
+
+  it("log forwards to umami", () => {
+    const { cli } = makeSignalCli();
+    const session = new SignalSession(cli, "BOT", "1", "fr", new Date());
+    expect(() => {
+      session.log({ event: "/message-sent" });
+    }).not.toThrow();
   });
 });

@@ -13,6 +13,20 @@ const h = vi.hoisted(() => ({
   notifyAlert: vi.fn(() => Promise.resolve())
 }));
 
+vi.mock("mongoose", () => {
+  const m = {
+    connection: { readyState: 0 },
+    Types: {
+      ObjectId: class {
+        readonly id = "stub";
+      }
+    },
+    connect: vi.fn(() => Promise.resolve()),
+    disconnect: vi.fn(() => Promise.resolve())
+  };
+  return { default: m, ...m };
+});
+vi.mock("../db.ts", () => ({ mongodbConnect: vi.fn(() => Promise.resolve()) }));
 vi.mock("../utils/umami.ts", () => ({
   default: { log: vi.fn(), logAsync: vi.fn(() => Promise.resolve()) }
 }));
@@ -81,6 +95,58 @@ describe("runNotificationProcess — full run", () => {
       whatsAppAPI: {} as unknown as WhatsAppAPI
     });
     expect(h.reengagement).toHaveBeenCalledTimes(1);
+  });
+
+  it("logs a warning when NOTIFICATIONS_SHIFT_DAYS is unset", async () => {
+    const saved = process.env.NOTIFICATIONS_SHIFT_DAYS;
+    delete process.env.NOTIFICATIONS_SHIFT_DAYS;
+    await runNotificationProcess(["Telegram"], { telegramBotToken: "TOK" });
+    expect(h.logErrorSpy).toHaveBeenCalledWith(
+      "Telegram",
+      expect.stringContaining("NOTIFICATIONS_SHIFT_DAYS")
+    );
+    if (saved !== undefined) process.env.NOTIFICATIONS_SHIFT_DAYS = saved;
+  });
+
+  it("logs a warning when NOTIFICATIONS_SHIFT_DAYS is not a number", async () => {
+    const saved = process.env.NOTIFICATIONS_SHIFT_DAYS;
+    process.env.NOTIFICATIONS_SHIFT_DAYS = "not-a-number";
+    await runNotificationProcess(["Telegram"], { telegramBotToken: "TOK" });
+    expect(h.logErrorSpy).toHaveBeenCalledWith(
+      "Telegram",
+      expect.stringContaining("Invalid NOTIFICATIONS_SHIFT_DAYS")
+    );
+    if (saved !== undefined) process.env.NOTIFICATIONS_SHIFT_DAYS = saved;
+    else delete process.env.NOTIFICATIONS_SHIFT_DAYS;
+  });
+
+  it("catches and logs an error thrown mid-run", async () => {
+    h.getRecords.mockRejectedValueOnce(new Error("JORF down"));
+    await runNotificationProcess(["Telegram"], { telegramBotToken: "TOK" });
+    expect(h.logErrorSpy).toHaveBeenCalledWith(
+      "Telegram",
+      "Error running notification process: ",
+      expect.any(Error)
+    );
+  });
+
+  it("warns when the run exceeds the duration threshold", async () => {
+    vi.useFakeTimers();
+    // Advance the clock past the 5-minute warning threshold mid-run so the
+    // end-of-run duration check trips the "took too long" warning.
+    h.getRecords.mockImplementationOnce(() => {
+      vi.advanceTimersByTime(6 * 60 * 1000);
+      return Promise.resolve([]);
+    });
+    try {
+      await runNotificationProcess(["Telegram"], { telegramBotToken: "TOK" });
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(h.logErrorSpy).toHaveBeenCalledWith(
+      "Telegram",
+      expect.stringContaining("took too long")
+    );
   });
 });
 

@@ -313,7 +313,8 @@ async function handleTelegramAPIErrors(
   callerFunctionLabel: string,
   chatIdTg: number,
   umamiLogger: UmamiLogger,
-  retryParameters?: {
+  // Always supplied by both callers (message + typing-action sends).
+  retryParameters: {
     retryFunction: (retryNumber: number) => Promise<boolean>;
     retryNumber: number;
   }
@@ -350,59 +351,43 @@ async function handleTelegramAPIErrors(
     }
 
     if (description?.toLowerCase().startsWith("too many requests")) {
-      if (retryParameters != null) {
-        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
-          await umamiLogger({
-            event: "/message-fail-too-many-requests-aborted",
-            messageApp: "Telegram"
-          });
-          return false;
-        }
+      if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
         await umamiLogger({
-          event: "/message-fail-too-many-requests",
+          event: "/message-fail-too-many-requests-aborted",
           messageApp: "Telegram"
         });
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, retryParameters.retryNumber) * 1000)
-        );
-        return await retryParameters.retryFunction(
-          retryParameters.retryNumber + 1
-        );
-      } else {
-        await logError(
-          "Telegram",
-          `Telegram API rate limit error in ${callerFunctionLabel}, but no retry parameters provided`
-        );
         return false;
       }
+      await umamiLogger({
+        event: "/message-fail-too-many-requests",
+        messageApp: "Telegram"
+      });
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.pow(2, retryParameters.retryNumber) * 1000)
+      );
+      return await retryParameters.retryFunction(
+        retryParameters.retryNumber + 1
+      );
     }
 
     if (
       tgError.code != null &&
       TELEGRAM_NETWORK_RETRYABLE_ERRORS.has(tgError.code)
     ) {
-      if (retryParameters != null) {
-        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
-          await logError(
-            "Telegram",
-            `Error sending ${callerFunctionLabel} after ${String(retryParameters.retryNumber)} retries (retry budget: ${String(MAX_MESSAGE_RETRY)})`,
-            error
-          );
-          return false;
-        }
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, retryParameters.retryNumber) * 1000)
-        );
-        return await retryParameters.retryFunction(
-          retryParameters.retryNumber + 1
-        );
-      } else {
+      if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
         await logError(
           "Telegram",
-          `API ${tgError.code} error in ${callerFunctionLabel}, but no retry parameters provided`
+          `Error sending ${callerFunctionLabel} after ${String(retryParameters.retryNumber)} retries (retry budget: ${String(MAX_MESSAGE_RETRY)})`,
+          error
         );
         return false;
       }
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.pow(2, retryParameters.retryNumber) * 1000)
+      );
+      return await retryParameters.retryFunction(
+        retryParameters.retryNumber + 1
+      );
     }
   }
 
