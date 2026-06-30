@@ -25,5 +25,14 @@ export default defineConfig(
     }
   },
   prettierConfig,
-  eslintPluginPrettierRecommended
+  eslintPluginPrettierRecommended,
+  // Test files: `expect(obj.method)` reads a method without calling it, which
+  // trips unbound-method even though vitest never re-binds `this`. This is a
+  // known false positive in assertion code, so relax it for tests only.
+  {
+    files: ["tests/**/*.ts"],
+    rules: {
+      "@typescript-eslint/unbound-method": "off"
+    }
+  }
 );

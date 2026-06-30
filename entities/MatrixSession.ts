@@ -49,6 +49,14 @@ const directRoomCache = new Map<
 let joinedRoomsCache: { rooms: Set<string>; expiresAt: number } | undefined =
   undefined;
 
+// Clears the module-level DM-room and joined-rooms caches. Exposed so callers
+// (and tests) can force a fresh lookup; without it these process-lived caches
+// leak state between independent send flows.
+export function resetMatrixSessionCaches(): void {
+  directRoomCache.clear();
+  joinedRoomsCache = undefined;
+}
+
 export class MatrixSession implements ISession {
   messageApp: MessageApp;
   client: ExtendedMatrixClient;
@@ -477,7 +485,7 @@ export async function extractMatrixSession(
   session: ISession,
   userFacingError?: boolean
 ): Promise<MatrixSession | undefined> {
-  if (["Matrix", "Tchap"].some((m) => m !== session.messageApp)) {
+  if (!["Matrix", "Tchap"].some((m) => m === session.messageApp)) {
     await logError(session.messageApp, "Session is not a MatrixSession");
     if (userFacingError) {
       await session.sendMessage(
