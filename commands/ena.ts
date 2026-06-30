@@ -53,24 +53,21 @@ async function getJORFPromoSearchResult(
   promo: Promo_ENA_INSP,
   messageApp: MessageApp
 ): Promise<JORFSearchItem[] | null> {
-  switch (promo.school) {
-    case "ENA": // If ENA, we can use the associated tag with the year as value
-      return callJORFSearchTag(
-        "eleve_ena" as FunctionTags,
-        messageApp,
-        promo.period
-      );
-
-    case "INSP": // If INSP, we can rely on the associated organisation
-      return (
-        (await callJORFSearchOrganisation(inspId, messageApp))
-          // We filter to keep admissions to the INSP organisation from the relevant year
-          ?.filter((publication) => publication.eleve_ena === promo.period) ??
-        null
-      );
-    default:
-      return [];
+  // If ENA, use the associated tag with the year as value.
+  if (promo.school === "ENA") {
+    return callJORFSearchTag(
+      "eleve_ena" as FunctionTags,
+      messageApp,
+      promo.period
+    );
   }
+
+  // Otherwise (INSP), rely on the associated organisation, filtered to the year.
+  return (
+    (await callJORFSearchOrganisation(inspId, messageApp))?.filter(
+      (publication) => publication.eleve_ena === promo.period
+    ) ?? null
+  );
 }
 
 const PROMO_PROMPT_TEXT =
@@ -233,7 +230,10 @@ async function handlePromoConfirmation(
     await session.sendMessage(`Ajout en cours... ⏰`, {
       forceNoKeyboard: true
     });
-    session.user ??= await User.findOrCreate(session);
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    if (session.user == null) {
+      session.user = await User.findOrCreate(session);
+    }
 
     const peopleTab: IPeople[] = [];
 
@@ -448,7 +448,10 @@ async function handleReferenceConfirmation(
   }
 
   if (/oui/i.test(trimmedAnswer)) {
-    session.user ??= await User.findOrCreate(session);
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    if (session.user == null) {
+      session.user = await User.findOrCreate(session);
+    }
 
     const peopleTab: IPeople[] = [];
 
