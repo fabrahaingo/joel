@@ -15,6 +15,11 @@ const SignalMessageApp: MessageApp = "Signal";
 
 export const SIGNAL_MESSAGE_CHAR_LIMIT = 2000;
 const SIGNAL_COOL_DOWN_DELAY_SECONDS = 6;
+// signal-sdk exposes no error taxonomy, so a send failure is treated as transient:
+// resume from the failed chunk for a few capped-backoff attempts, then give up
+// (return false -> notification retried on a later run, user state unchanged).
+const MAX_SIGNAL_MESSAGE_RETRY = 3;
+const SIGNAL_MAX_BACKOFF_MS = 60_000;
 
 export const SIGNAL_API_SENDING_CONCURRENCY = 1;
 
@@ -111,19 +116,27 @@ export async function sendSignalAppMessage(
   signalCli: SignalCli,
   userPhoneId: string,
   message: string,
-  options: MessageSendingOptionsInternal
+  options: MessageSendingOptionsInternal,
+  retryNumber = 0,
+  // Resume state for retries: reuse the already-split chunks and start at the
+  // failed chunk so previously delivered chunks are not resent.
+  preSplitChunks?: string[],
+  startChunk = 0
 ): Promise<boolean> {
   const umamiLogger: UmamiLogger = options.useAsyncUmamiLog
     ? umami.logAsync
     : umami.log;
+  const userPhoneIdInt = userPhoneId.startsWith("+")
+    ? userPhoneId
+    : "+" + userPhoneId;
+  // On a retry, reuse the chunks split on the first attempt (don't re-convert).
+  const mArr =
+    preSplitChunks ??
+    splitText(markdown2plainText(message), SIGNAL_MESSAGE_CHAR_LIMIT);
+  let i = startChunk;
   try {
-    const cleanMessage = markdown2plainText(message);
-    const userPhoneIdInt = userPhoneId.startsWith("+")
-      ? userPhoneId
-      : "+" + userPhoneId;
-    const mArr = splitText(cleanMessage, SIGNAL_MESSAGE_CHAR_LIMIT);
-    for (const elem of mArr) {
-      await signalCli.sendMessage(userPhoneIdInt, elem);
+    for (; i < mArr.length; i++) {
+      await signalCli.sendMessage(userPhoneIdInt, mArr[i]);
 
       await umamiLogger({
         event: "/message-sent",
@@ -138,7 +151,27 @@ export async function sendSignalAppMessage(
     }
     await recordSuccessfulDelivery(SignalMessageApp, userPhoneId);
   } catch (error) {
-    await logError("Signal", "Error sending signal message", error);
+    if (retryNumber < MAX_SIGNAL_MESSAGE_RETRY) {
+      const backoffMs =
+        Math.min(Math.pow(2, retryNumber) * 1000, SIGNAL_MAX_BACKOFF_MS) +
+        Math.random() * 1000;
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      // Resume from the failed chunk i, reusing mArr.
+      return await sendSignalAppMessage(
+        signalCli,
+        userPhoneId,
+        message,
+        options,
+        retryNumber + 1,
+        mArr,
+        i
+      );
+    }
+    await logError(
+      "Signal",
+      `Error sending signal message aborted after ${String(MAX_SIGNAL_MESSAGE_RETRY)} retries (chunk ${String(i + 1)}/${String(mArr.length)}) to ${userPhoneId}`,
+      error
+    );
     return false;
   }
   return true;
