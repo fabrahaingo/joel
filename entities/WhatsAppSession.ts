@@ -37,6 +37,9 @@ const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.5; // Minimum delay between messages
 const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst mode, before switching to full cooldown
 
 const MAX_MESSAGE_RETRY = 5;
+// Cap the exponential backoff so a single send can't hold a dispatch slot for
+// minutes (4^5 = 1024s uncapped). Jitter de-syncs concurrent retries.
+const MAX_BACKOFF_MS = 60_000;
 
 export const WHATSAPP_API_SENDING_CONCURRENCY = 80; // 80 messages per second global
 
@@ -237,7 +240,15 @@ export async function sendWhatsAppMessage(
   userInfo: ExtendedMiniUserInfo,
   message: string,
   options: MessageSendingOptionsInternal,
-  retryNumber = 0
+  retryNumber = 0,
+  // Resume state for retries: when a chunk send fails, the retry re-enters with
+  // the already-split/already-converted chunks (preSplitChunks) and the index of
+  // the failed chunk (startChunk), so previously delivered chunks are NOT resent.
+  // Resending the whole message from chunk 0 duplicated delivered chunks and
+  // amplified the pair rate limit (#131056). startChunk >= chunks.length skips the
+  // chunk loop entirely and resumes at the separate menu message.
+  preSplitChunks?: string[],
+  startChunk = 0
 ): Promise<boolean> {
   // Judge the window against the run-wide snapshot when the notification path
   // supplies one, so this guard agrees with the routing decision the handler
@@ -304,16 +315,20 @@ export async function sendWhatsAppMessage(
   }
 
   let resp: ServerMessageResponse;
-  const mArr = splitText(
-    markdown2WHMarkdown(message),
-    WHATSAPP_MESSAGE_CHAR_LIMIT,
-    WHATSAPP_MAX_LINES
-  );
+  // On a retry, reuse the chunks split on the first attempt. Re-splitting here
+  // would re-run markdown2WHMarkdown on already-converted text (double conversion).
+  const mArr =
+    preSplitChunks ??
+    splitText(
+      markdown2WHMarkdown(message),
+      WHATSAPP_MESSAGE_CHAR_LIMIT,
+      WHATSAPP_MAX_LINES
+    );
 
   const totalMessages = mArr.length + (options.separateMenuMessage ? 1 : 0);
   const burstMode = totalMessages <= WHATSAPP_BURST_MODE_THRESHOLD; // Limit cooldown if less than 10
 
-  let i = 0;
+  let i = startChunk;
   try {
     for (; i < mArr.length; i++) {
       if (
@@ -342,13 +357,17 @@ export async function sendWhatsAppMessage(
         );
       }
       if (resp.error) {
+        // Resume from the failed chunk i, reusing mArr (no re-split/re-convert).
+        const failedChunk = i;
         const retryFunction = (nextRetryNumber: number) =>
           sendWhatsAppMessage(
             whatsAppAPI,
             userInfo,
             message,
             options,
-            nextRetryNumber
+            nextRetryNumber,
+            mArr,
+            failedChunk
           );
         return await handleWhatsAppAPIErrors(
           { errorCode: resp.error.code, rawError: resp.error },
@@ -392,13 +411,17 @@ export async function sendWhatsAppMessage(
         );
       }
       if (resp.error) {
+        // The chunks already sent; resume at the separate menu (skip chunk loop)
+        // by starting past the last chunk so we don't resend delivered chunks.
         const retryFunction = (nextRetryNumber: number) =>
           sendWhatsAppMessage(
             whatsAppAPI,
             userInfo,
             message,
             options,
-            nextRetryNumber
+            nextRetryNumber,
+            mArr,
+            mArr.length
           );
         return await handleWhatsAppAPIErrors(
           { errorCode: resp.error.code, rawError: resp.error },
@@ -582,7 +605,7 @@ export async function handleWhatsAppAPIErrors(
     case 131048:
     case 131056:
       if (retryParameters != null) {
-        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
+        if (retryParameters.retryNumber >= MAX_MESSAGE_RETRY) {
           await umamiLogger({
             event: "/message-fail-too-many-requests-aborted",
             messageApp: "WhatsApp"
@@ -598,9 +621,13 @@ export async function handleWhatsAppAPIErrors(
           event: "/message-fail-too-many-requests",
           messageApp: "WhatsApp"
         });
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(4, retryParameters.retryNumber) * 1000)
-        );
+        const backoffMs =
+          Math.min(
+            Math.pow(4, retryParameters.retryNumber) * 1000,
+            MAX_BACKOFF_MS
+          ) +
+          Math.random() * 1000;
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
         return await retryParameters.retryFunction(
           retryParameters.retryNumber + 1
         );
