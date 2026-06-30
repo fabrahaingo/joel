@@ -268,7 +268,7 @@ export async function notifyAlertStringUpdates(
   );
 }
 
-async function sendAlertStringUpdate(
+export async function sendAlertStringUpdate(
   userInfo: ExtendedMiniUserInfo,
   updatedRecordMap: Map<string, JORFSearchPublication[]>,
   messageAppsOptions: ExternalMessageOptions,

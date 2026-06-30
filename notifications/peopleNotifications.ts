@@ -38,17 +38,9 @@ function convertPeopleIdStringsToObjectIds(
   idStrings: string[],
   peopleIdMapByStr: Map<string, Types.ObjectId>
 ): Types.ObjectId[] {
-  const result = idStrings
+  return idStrings
     .map((idStr) => peopleIdMapByStr.get(idStr))
     .filter((id): id is Types.ObjectId => id !== undefined);
-
-  if (result.length !== idStrings.length) {
-    console.log(
-      "Cannot fetch people id from string during the update of user people follows"
-    );
-  }
-
-  return result;
 }
 
 export async function notifyPeopleUpdates(
