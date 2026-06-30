@@ -11,3 +11,6 @@ dist/
 /matrix/
 coverage-summary.json
 /coverage/
+
+# Coverage badge is generated in CI and published to the badges branch
+.github/badges/
