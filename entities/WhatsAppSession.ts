@@ -336,6 +336,8 @@ export async function sendWhatsAppMessage(
         interactiveKeyboard != null &&
         !options.separateMenuMessage
       ) {
+        // The if/else narrows the ActionList | ActionButtons union so each
+        // Interactive() call resolves a concrete constructor overload.
         if (interactiveKeyboard instanceof ActionButtons) {
           resp = await whatsAppAPI.sendMessage(
             WHATSAPP_PHONE_ID,
@@ -397,6 +399,7 @@ export async function sendWhatsAppMessage(
     const numberMessageBurst = burstMode ? totalMessages : 0;
 
     if (options.separateMenuMessage && interactiveKeyboard != null) {
+      // Narrow the union so Interactive() resolves a concrete overload.
       if (interactiveKeyboard instanceof ActionButtons) {
         resp = await whatsAppAPI.sendMessage(
           WHATSAPP_PHONE_ID,
@@ -463,8 +466,6 @@ export async function sendWhatsAppMessage(
 }
 
 function replaceWHButtons(keyboard: Keyboard): Keyboard {
-  if (!Array.isArray(keyboard)) return keyboard;
-
   const replacements: Partial<Record<string, KeyboardKey>> = {
     // [KEYBOARD_KEYS.MAIN_MENU.key.text]: KEYBOARD_KEYS.COMMAND_LIST.key,
   };

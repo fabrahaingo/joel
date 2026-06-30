@@ -14,9 +14,23 @@ export default defineConfig({
     fileParallelism: false, // == jest --runInBand (forces maxWorkers 1)
     coverage: {
       provider: "v8",
-      reporter: ["json-summary"],
+      reporter: ["text", "json-summary"],
       include: ["**/*.{ts,tsx}"],
-      exclude: ["**/*.d.ts"]
+      // Entrypoints (start a server / bot loop on import), one-off ops scripts,
+      // dev tools, and the Signal device-linking script (top-level process.exit)
+      // are run-on-import / dev-only — not sensible unit-test targets. Exclude
+      // them so coverage reflects the testable business logic.
+      exclude: [
+        "**/*.d.ts",
+        "apps/**",
+        "scripts/**",
+        "local_tools/**",
+        "utils/connectSignal.ts",
+        "tests/**",
+        "eslint.config.js",
+        "dist/**",
+        "matrix/**"
+      ]
     }
   }
 });

@@ -267,13 +267,19 @@ async function handleTextAlertConfirmation(
   }
 
   if (/oui/i.test(trimmedAnswer)) {
-    session.user ??= await User.findOrCreate(session);
+    // Explicit guard (rather than `??=`) so both branches are individually
+    // covered; the awaited `??=` form also confuses v8 statement coverage.
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    if (session.user == null) {
+      session.user = await User.findOrCreate(session);
+    }
 
-    const wasAdded = await session.user.addFollowedAlertString(
+    const alreadyFollowed = session.user.checkFollowedAlertString(
       context.alertString
     );
+    await session.user.addFollowedAlertString(context.alertString);
     let responseText = `Vous suivez déjà une alerte pour *« ${context.alertString} »*. ✅`;
-    if (wasAdded) {
+    if (!alreadyFollowed) {
       responseText = `Alerte enregistrée pour *« ${context.alertString} »* ✅`;
       session.log({ event: "/follow-meta" });
     }

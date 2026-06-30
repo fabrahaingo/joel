@@ -49,6 +49,14 @@ const directRoomCache = new Map<
 let joinedRoomsCache: { rooms: Set<string>; expiresAt: number } | undefined =
   undefined;
 
+// Clears the module-level DM-room and joined-rooms caches. Exposed so callers
+// (and tests) can force a fresh lookup; without it these process-lived caches
+// leak state between independent send flows.
+export function resetMatrixSessionCaches(): void {
+  directRoomCache.clear();
+  joinedRoomsCache = undefined;
+}
+
 export class MatrixSession implements ISession {
   messageApp: MessageApp;
   client: ExtendedMatrixClient;
@@ -84,12 +92,9 @@ export class MatrixSession implements ISession {
 
   // try to fetch user from db
   async loadUser(): Promise<IUser | null> {
+    // Shared loadUser() already syncs a changed roomId (session.roomId is always
+    // set for Matrix), so no extra reconciliation is needed here.
     this.user = await loadUser(this);
-    // If the roomId has changed, update the user's roomId'
-    if (this.user && this.user.roomId !== this.roomId) {
-      this.user.roomId = this.roomId;
-      await this.user.save();
-    }
     return this.user;
   }
 
@@ -265,6 +270,7 @@ export async function sendMatrixMessage(
       const res = await sendMatrixReactions(
         client,
         userInfo,
+        userInfo.roomId,
         keyboard.flat().map((k) => k.text),
         promptId,
         options
@@ -359,8 +365,10 @@ async function sendMatrixReactions(
   userInfo: {
     messageApp: IUser["messageApp"];
     chatId: IUser["chatId"];
-    roomId?: IUser["roomId"];
   },
+  // The caller resolves and verifies the DM room before sending reactions, so it
+  // is passed in already-validated rather than re-resolved here.
+  roomId: string,
   reactions: string[],
   eventId: string,
   options: MessageSendingOptionsInternal,
@@ -369,20 +377,6 @@ async function sendMatrixReactions(
   const umamiLogger = options.useAsyncUmamiLog ? umami.logAsync : umami.log;
   let i = 0;
   try {
-    const joinedRooms = await getJoinedRooms(client.matrix);
-    userInfo.roomId ??= await findUserDMRoomId(
-      client.matrix,
-      userInfo.chatId,
-      joinedRooms
-    );
-    if (!userInfo.roomId) {
-      await logError(
-        userInfo.messageApp,
-        "Could not find DM room for user " + userInfo.chatId
-      );
-      return false;
-    }
-
     for (; i < reactions.length; i++) {
       const content = {
         "m.relates_to": {
@@ -391,13 +385,14 @@ async function sendMatrixReactions(
           key: reactions[i]
         }
       };
-      await client.matrix.sendEvent(userInfo.roomId, "m.reaction", content);
+      await client.matrix.sendEvent(roomId, "m.reaction", content);
     }
   } catch (error) {
     const retryFunction = async (nextRetryNumber: number) =>
       sendMatrixReactions(
         client,
         userInfo,
+        roomId,
         reactions.slice(i),
         eventId,
         options,
@@ -460,24 +455,23 @@ async function findUserDMRoomId(
   let joinedRooms = joinedRoomIds;
   joinedRooms ??= await getJoinedRooms(client);
 
-  const roomId = rooms.find((id) => joinedRooms.has(id));
-  if (roomId == null) {
-    directRoomCache.delete(userId);
-    return undefined;
+  const matchedRoomId = rooms.find((id) => joinedRooms.has(id));
+  if (matchedRoomId !== undefined) {
+    directRoomCache.set(userId, {
+      roomId: matchedRoomId,
+      expiresAt: now + DIRECT_ROOM_CACHE_TTL_MS
+    });
+    return matchedRoomId;
   }
 
-  directRoomCache.set(userId, {
-    roomId,
-    expiresAt: now + DIRECT_ROOM_CACHE_TTL_MS
-  });
-
-  return roomId;
+  directRoomCache.delete(userId);
+  return undefined;
 }
 export async function extractMatrixSession(
   session: ISession,
   userFacingError?: boolean
 ): Promise<MatrixSession | undefined> {
-  if (["Matrix", "Tchap"].some((m) => m !== session.messageApp)) {
+  if (!["Matrix", "Tchap"].some((m) => m === session.messageApp)) {
     await logError(session.messageApp, "Session is not a MatrixSession");
     if (userFacingError) {
       await session.sendMessage(
@@ -503,7 +497,8 @@ async function handleMatrixAPIErrors(
   chatId: string,
   messageApp: MessageApp,
   umamiLogger: UmamiLogger,
-  retryParameters?: {
+  // Always supplied by both callers (message + reaction sends).
+  retryParameters: {
     retryFunction: (retryNumber: number) => Promise<boolean>;
     retryNumber: number;
   }
@@ -523,37 +518,29 @@ async function handleMatrixAPIErrors(
 
   switch (errCode) {
     case "M_LIMIT_EXCEEDED": {
-      if (retryParameters != null) {
-        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
-          await umamiLogger({
-            event: "/message-fail-too-many-requests-aborted",
-            messageApp
-          });
-          return false;
-        }
+      if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
         await umamiLogger({
-          event: "/message-fail-too-many-requests",
+          event: "/message-fail-too-many-requests-aborted",
           messageApp
         });
-        let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
-        if ("retryAfterMs" in mError && mError.retryAfterMs)
-          retryAfterMs = mError.retryAfterMs;
-        await new Promise((resolve) =>
-          setTimeout(
-            resolve,
-            Math.pow(2, retryParameters.retryNumber) * retryAfterMs
-          )
-        );
-        return await retryParameters.retryFunction(
-          retryParameters.retryNumber + 1
-        );
-      } else {
-        await logError(
-          messageApp,
-          `Matrix API rate limit error in ${callerFunctionLabel}, but no retry parameters provided`
-        );
         return false;
       }
+      await umamiLogger({
+        event: "/message-fail-too-many-requests",
+        messageApp
+      });
+      let retryAfterMs = MATRIX_COOL_DOWN_DELAY_MS;
+      if ("retryAfterMs" in mError && mError.retryAfterMs)
+        retryAfterMs = mError.retryAfterMs;
+      await new Promise((resolve) =>
+        setTimeout(
+          resolve,
+          Math.pow(2, retryParameters.retryNumber) * retryAfterMs
+        )
+      );
+      return await retryParameters.retryFunction(
+        retryParameters.retryNumber + 1
+      );
     }
     case "M_FORBIDDEN": // user blocked the bot, user left the room ...
       if (user?.status === "active") {
@@ -573,25 +560,17 @@ async function handleMatrixAPIErrors(
     case "ETIMEDOUT":
     case "ESOCKETTIMEDOUT":
     case "ECONNABORTED":
-      if (retryParameters != null) {
-        if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
-          await logError(
-            messageApp,
-            `Error sending ${messageApp} message after ${String(MAX_MESSAGE_RETRY)} retries`,
-            error
-          );
-          return false;
-        }
-        return await retryParameters.retryFunction(
-          retryParameters.retryNumber + 1
-        );
-      } else {
+      if (retryParameters.retryNumber > MAX_MESSAGE_RETRY) {
         await logError(
           messageApp,
-          `API ${errCode} error in ${callerFunctionLabel}, but no retry parameters provided`
+          `Error sending ${messageApp} message after ${String(MAX_MESSAGE_RETRY)} retries`,
+          error
         );
         return false;
       }
+      return await retryParameters.retryFunction(
+        retryParameters.retryNumber + 1
+      );
   }
   await logError(
     messageApp,

@@ -25,6 +25,13 @@ interface StatsResult {
 let cachedStats: StatsResult | null = null;
 let cachedAt = 0;
 
+// Clears the in-process stats cache. Exposed so callers (and tests) can force a
+// fresh reccount instead of serving a stale snapshot.
+export function resetStatsCache(): void {
+  cachedStats = null;
+  cachedAt = 0;
+}
+
 export async function getCachedStats(): Promise<StatsResult> {
   const now = Date.now();
   if (cachedStats !== null && now - cachedAt < STATS_REFRESH_RATE) {

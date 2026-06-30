@@ -130,7 +130,6 @@ export async function notifyOrganisationsUpdates(
       ({ wikidata_id }) => !!wikidata_id && orgNameById.has(wikidata_id)
     )
   );
-  if (updatedRecordsWithOrgsInDb.length === 0) return;
 
   const updatedOrganisationsbyIdMap = new Map<WikidataId, JORFSearchItem[]>();
 

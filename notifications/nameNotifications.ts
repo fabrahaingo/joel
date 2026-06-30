@@ -30,7 +30,7 @@ import { formatDuration, timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 const DEFAULT_GROUP_SEPARATOR = "\n====================\n\n";
 
-async function updateFollowedNamesToFollowedPeople(
+export async function updateFollowedNamesToFollowedPeople(
   userId: Types.ObjectId,
   updatedRecordsMapKeys: string[],
   peopleIdByFollowedNameMap: Map<string, Types.ObjectId>,

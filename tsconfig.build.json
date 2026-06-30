@@ -1,0 +1,7 @@
+{
+  // Production build config: compiles only shippable source into dist/.
+  // Test files are validated by ESLint (type-aware rules) and executed by
+  // vitest, so they don't need to be part of the emitted build.
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "**/*.spec.ts", "tests/**"]
+}
