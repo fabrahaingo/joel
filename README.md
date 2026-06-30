@@ -1,5 +1,7 @@
 [![TypeScript](https://badges.frapsoft.com/typescript/code/typescript.svg?v=101)](https://github.com/microsoft/TypeScript)
-[![ESLint](https://github.com/DanyPM/joel_fork/actions/workflows/main.yml/badge.svg?branch=main)](https://github.com/fabrahaingo/joel/actions/workflows/main.yml)
+[![Lint](https://github.com/DanyPM/joel/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/DanyPM/joel/actions/workflows/lint.yml)
+[![Tests](https://github.com/DanyPM/joel/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/DanyPM/joel/actions/workflows/tests.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/DanyPM/joel/main/.github/badges/coverage.json)](https://github.com/DanyPM/joel/actions/workflows/coverage.yml)
 [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
 <br />
 [![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
