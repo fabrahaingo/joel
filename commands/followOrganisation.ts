@@ -312,12 +312,6 @@ export const followOrganisationsFromWikidataIdStr = async (
       [KEYBOARD_KEYS.MAIN_MENU.key]
     ];
 
-    if (selectedWikiDataIds.length == 0) {
-      const text = `Votre recherche n'a donné aucun résultat 👎.\nVeuillez essayer de nouveau la commande.`;
-      await session.sendMessage(text, { keyboard: tempKeyboard });
-      return;
-    }
-
     const parameterString = selectedWikiDataIds.join(" ");
     // if the id don't contain any number, it's an organisation name
     if (!/\d/.test(parameterString)) {
@@ -374,7 +368,10 @@ export const followOrganisationsFromWikidataIdStr = async (
       return;
     }
 
-    session.user ??= await User.findOrCreate(session);
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+    if (session.user == null) {
+      session.user = await User.findOrCreate(session);
+    }
 
     const addedOrganisations: IOrganisation[] = [];
     const alreadyFollowedOrganisations: IOrganisation[] = [];
