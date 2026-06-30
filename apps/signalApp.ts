@@ -2,7 +2,8 @@ import "dotenv/config";
 
 import { SignalCli } from "signal-sdk";
 import { mongodbConnect, mongodbDisconnect } from "../db.ts";
-import { SignalSession } from "../entities/SignalSession.ts";
+import { SignalSession, toSignalRecipient } from "../entities/SignalSession.ts";
+import { resolvePollVote } from "../entities/SignalPollRegistry.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import { logError } from "../utils/debugLogger.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
@@ -18,11 +19,22 @@ if (SIGNAL_BAT_PATH === undefined) {
   throw new Error("SIGNAL_BAT_PATH env variable not set");
 }
 
+interface ISignalPollVote {
+  author?: string;
+  authorNumber?: string;
+  authorUuid?: string;
+  targetSentTimestamp: number;
+  optionIndexes: number[];
+  voteCount: number;
+}
+
 interface ISignalMessage {
   envelope: {
     sourceNumber: string;
+    timestamp?: number;
     dataMessage?: {
       message?: string;
+      pollVote?: ISignalPollVote;
     };
     receiptMessage?: never;
   };
@@ -67,31 +79,58 @@ await (async () => {
     // Start the bot by connecting to MongoDB
     await mongodbConnect();
 
-    // Connect to signal-cli daemon
-    await signalCli.connect();
+    // Connect to signal-cli daemon, sending read receipts for incoming messages
+    await signalCli.connect({ sendReadReceipts: true });
 
     // Listen for incoming messages
     signalCli.on("message", (message: ISignalMessage) => {
       void (async () => {
         try {
-          if (message.envelope.sourceNumber === SIGNAL_PHONE_NUMBER) return;
+          const { envelope } = message;
+          if (envelope.sourceNumber === SIGNAL_PHONE_NUMBER) return;
 
-          const msgText = message.envelope.dataMessage?.message;
+          const messageSentTime =
+            envelope.timestamp != null
+              ? new Date(envelope.timestamp)
+              : new Date();
+
+          const buildSession = (text: string) =>
+            handleIncomingMessage(
+              new SignalSession(
+                signalCli,
+                SIGNAL_PHONE_NUMBER,
+                envelope.sourceNumber,
+                "fr",
+                messageSentTime
+              ),
+              text,
+              { errorContext: "Error processing command" }
+            );
+
+          // A vote on a poll menu: map the selected option index back to its
+          // menu label, close the poll, then dispatch as a normal command.
+          const pollVote = envelope.dataMessage?.pollVote;
+          if (pollVote !== undefined) {
+            const optionText = resolvePollVote(
+              pollVote.targetSentTimestamp,
+              pollVote.optionIndexes
+            );
+            if (optionText === undefined) return;
+
+            await signalCli
+              .sendPollTerminate(toSignalRecipient(envelope.sourceNumber), {
+                pollTimestamp: pollVote.targetSentTimestamp
+              })
+              .catch(() => undefined);
+
+            await buildSession(optionText);
+            return;
+          }
+
+          const msgText = envelope.dataMessage?.message;
           if (msgText === undefined) return;
 
-          const messageSentTime = new Date(); // TODO: use the real message timestamp
-
-          const signalSession = new SignalSession(
-            signalCli,
-            SIGNAL_PHONE_NUMBER,
-            message.envelope.sourceNumber,
-            "fr",
-            messageSentTime
-          );
-
-          await handleIncomingMessage(signalSession, msgText, {
-            errorContext: "Error processing command"
-          });
+          await buildSession(msgText);
         } catch (error) {
           await logError("Signal", "Error processing command", error);
         }

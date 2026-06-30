@@ -1,5 +1,4 @@
 import { ISession } from "../types.ts";
-import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import {
   ExternalMessageOptions,
   MiniUserInfo,
@@ -53,7 +52,6 @@ export async function sendMainMenu(
     let message = MAIN_MENU_MESSAGE;
     let separateMenuMessage = undefined;
 
-    let keyboard: Keyboard | undefined = undefined;
     switch (userInfo.messageApp) {
       case "Tchap":
       case "Matrix":
@@ -65,22 +63,18 @@ export async function sendMainMenu(
         break;
 
       case "Signal":
-        keyboard = [
-          [KEYBOARD_KEYS.FOLLOWS_LIST.key],
-          [KEYBOARD_KEYS.FUNCTION_FOLLOW.key],
-          [KEYBOARD_KEYS.HELP.key]
-        ];
+        // Poll buttons (analog to Matrix) are added on top of the body; the
+        // text-command menu stays as guidance and as the polls-off fallback.
+        separateMenuMessage = true;
         message += "\n\n" + TEXT_COMMANDS_MENU;
     }
     if (options.session != null)
       await options.session.sendMessage(message, {
-        keyboard,
         separateMenuMessage
       });
     else if (options.externalOptions != null)
       await sendMessage(userInfo, message, {
         ...options.externalOptions,
-        keyboard,
         separateMenuMessage,
         useAsyncUmamiLog: true,
         hasAccount: userInfo.hasAccount

@@ -13,7 +13,7 @@ import {
   splitText
 } from "../utils/text.utils.ts";
 import { MatrixClient, MatrixError } from "matrix-bot-sdk";
-import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
+import { Keyboard, KEYBOARD_KEYS, POLL_MENU_KEYS } from "./Keyboard.ts";
 import { logError } from "../utils/debugLogger.ts";
 
 export const MATRIX_MESSAGE_CHAR_LIMIT = 5000;
@@ -26,16 +26,6 @@ export const MATRIX_API_SENDING_CONCURRENCY = 1;
 const MAX_MESSAGE_RETRY = 5;
 
 const mainMenuKeyboardMatrix: Keyboard = [[KEYBOARD_KEYS.MAIN_MENU.key]];
-
-const fullMenuKeyboard: KeyboardKey[] = [
-  KEYBOARD_KEYS.PEOPLE_SEARCH.key,
-  KEYBOARD_KEYS.ORGANISATION_FOLLOW.key,
-  KEYBOARD_KEYS.FUNCTION_FOLLOW.key,
-  KEYBOARD_KEYS.TEXT_SEARCH.key,
-  KEYBOARD_KEYS.ENA_INSP_PROMO_SEARCH_LONG_NO_KEYBOARD.key,
-  KEYBOARD_KEYS.FOLLOWS_LIST.key,
-  KEYBOARD_KEYS.HELP.key
-];
 
 interface ExtendedMatrixClient {
   matrix: MatrixClient;
@@ -257,7 +247,7 @@ export async function sendMatrixMessage(
         userInfo.roomId,
         {
           title: KEYBOARD_KEYS.MAIN_MENU.key.text,
-          options: fullMenuKeyboard.map((k) => ({ text: k.text }))
+          options: POLL_MENU_KEYS.map((k) => ({ text: k.text }))
         },
         options.hasAccount
       );
