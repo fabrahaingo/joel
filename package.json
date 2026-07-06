@@ -48,16 +48,16 @@
     "@tsconfig/node24": "^24.0.4",
     "@types/express": "^5.0.6",
     "@vitest/coverage-v8": "^4.1.8",
-    "eslint": "^10.5.0",
+    "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "lefthook": "^2.1.9",
     "mongodb-memory-server": "^11.2.0",
     "@ngrok/ngrok": "^1.5.1",
-    "npm-check-updates": "^22.2.7",
-    "prettier": "^3.8.4",
+    "npm-check-updates": "^22.2.9",
+    "prettier": "^3.9.1",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.1",
+    "typescript-eslint": "^8.62.0",
     "vitest": "^4.1.8"
   }
 }
