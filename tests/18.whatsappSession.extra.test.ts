@@ -16,7 +16,10 @@ const { logErrorSpy, deleteSpy, userState, findOrCreateSpy } = vi.hoisted(
 vi.mock("../utils/umami.ts", () => ({
   default: { log: vi.fn(), logAsync: vi.fn() }
 }));
-vi.mock("../utils/debugLogger.ts", () => ({ logError: logErrorSpy }));
+vi.mock("../utils/debugLogger.ts", () => ({
+  logError: logErrorSpy,
+  logWarning: vi.fn(() => Promise.resolve())
+}));
 vi.mock("../utils/userDeletion.utils.ts", () => ({
   deleteUserAndCleanup: deleteSpy
 }));

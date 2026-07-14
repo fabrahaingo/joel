@@ -12,6 +12,34 @@ type LogLevel = "warning" | "error";
 const DEBUG_CHAT_ID = process.env.DEBUG_CHAT_ID;
 const TELEGRAM_DEBUG_BOT_TOKEN = process.env.TELEGRAM_DEBUG_BOT_TOKEN;
 
+const DEFAULT_ALERT_DEDUP_WINDOW_SECONDS = 300; // 5 min
+
+// Read at call-time (not module load) so the window can be tuned via env without
+// a restart, and so tests can override it.
+const getDedupWindowSeconds = (): number => {
+  const raw = process.env.DEBUG_ALERT_DEDUP_WINDOW_SECONDS;
+  const parsed = raw != null ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_ALERT_DEDUP_WINDOW_SECONDS;
+};
+
+// Collapse the volatile parts of an alert (chatIds, counts, timestamps — all
+// digits) so repeats of the "same" alert during an outage share one key.
+const alertSignature = (text: string): string => text.replace(/\d+/g, "#");
+
+// In-memory de-dup state, keyed by alert signature. Only the Telegram send is
+// throttled — console logging (upstream, in logToConsole) is never suppressed.
+const alertDedupState = new Map<
+  string,
+  { lastSentAt: number; suppressed: number }
+>();
+
+// Exposed for tests: clears the in-memory de-dup state between cases.
+export const resetAlertDedupState = (): void => {
+  alertDedupState.clear();
+};
+
 /**
  * Replaces all `process.env` values (with at least 8 characters) found in the
  * given string with their variable name as a placeholder (e.g. `<TELEGRAM_BOT_TOKEN>`).
@@ -127,10 +155,28 @@ export const sendTelegramDebugMessage = async (text: string): Promise<void> => {
     return;
   }
 
+  // De-dup: during an outage the same alert fires once per affected user/request.
+  // Suppress repeats of an identical-signature alert within the window; surface
+  // the suppressed count on the next alert that gets through.
+  const windowSeconds = getDedupWindowSeconds();
+  const signature = alertSignature(text);
+  const now = Date.now();
+  const prev = alertDedupState.get(signature);
+  if (prev != null && now - prev.lastSentAt < windowSeconds * 1000) {
+    prev.suppressed += 1;
+    return;
+  }
+  let outText = text;
+  if (prev != null && prev.suppressed > 0) {
+    const windowMinutes = Math.max(1, Math.round(windowSeconds / 60));
+    outText = `(${String(prev.suppressed)} similar suppressed in last ${String(windowMinutes)}m)\n${text}`;
+  }
+  alertDedupState.set(signature, { lastSentAt: now, suppressed: 0 });
+
   const endpoint = `https://api.telegram.org/bot${TELEGRAM_DEBUG_BOT_TOKEN}/sendMessage`;
 
   try {
-    const mArr = splitText(text, TELEGRAM_MESSAGE_CHAR_LIMIT);
+    const mArr = splitText(outText, TELEGRAM_MESSAGE_CHAR_LIMIT);
 
     for (const m of mArr) {
       await axios.post(endpoint, {

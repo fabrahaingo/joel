@@ -25,7 +25,7 @@ import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
 import { deleteUserAndCleanup } from "../utils/userDeletion.utils.ts";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
-import { logError } from "../utils/debugLogger.ts";
+import { logError, logWarning } from "../utils/debugLogger.ts";
 import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 export const WHATSAPP_MESSAGE_CHAR_LIMIT = 900;
@@ -232,7 +232,64 @@ export async function extractWhatsAppSession(
 
 const { WHATSAPP_PHONE_ID } = process.env;
 
+// Per-recipient send serialization. Meta enforces a pair rate limit (#131056)
+// when too many messages hit one number in a short window; overlapping sends to
+// the same chatId from independent flows (notification run, a manual command,
+// the re-engagement sweep) are the main trigger. This in-process promise-chain
+// mutex serializes sends per chatId so at most one is in flight to a given
+// number at a time. Orthogonal to WHATSAPP_API_SENDING_CONCURRENCY, which caps
+// total throughput across all recipients. Single-instance deployment assumed.
+const recipientSendChains = new Map<string, Promise<unknown>>();
+
+async function withRecipientLock<T>(
+  chatId: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const prev = recipientSendChains.get(chatId) ?? Promise.resolve();
+  // Run once the previous send to this chatId settles, regardless of its outcome.
+  const run = prev.then(fn, fn);
+  const tail = run.then(
+    () => undefined,
+    () => undefined
+  );
+  recipientSendChains.set(chatId, tail);
+  // Bound Map growth: drop the entry once this is the settled tail (i.e. no newer
+  // send has chained on behind it).
+  void tail.then(() => {
+    if (recipientSendChains.get(chatId) === tail) {
+      recipientSendChains.delete(chatId);
+    }
+  });
+  return run;
+}
+
+// Public entry: acquires the per-recipient lock, then runs the send. The retry
+// path re-enters sendWhatsAppMessageInner directly (already holding the lock),
+// so a rate-limited user's backoff holds the lock — intended back-pressure — and
+// never deadlocks by re-acquiring.
 export async function sendWhatsAppMessage(
+  whatsAppAPI: WhatsAppAPI,
+  userInfo: ExtendedMiniUserInfo,
+  message: string,
+  options: MessageSendingOptionsInternal,
+  retryNumber = 0,
+  preSplitChunks?: string[],
+  startChunk = 0
+): Promise<boolean> {
+  return withRecipientLock(userInfo.chatId, () =>
+    sendWhatsAppMessageInner(
+      whatsAppAPI,
+      userInfo,
+      message,
+      options,
+      retryNumber,
+      preSplitChunks,
+      startChunk
+    )
+  );
+}
+
+async function sendWhatsAppMessageInner(
   whatsAppAPI: WhatsAppAPI,
   userInfo: ExtendedMiniUserInfo,
   message: string,
@@ -366,7 +423,7 @@ export async function sendWhatsAppMessage(
         // Resume from the failed chunk i, reusing mArr (no re-split/re-convert).
         const failedChunk = i;
         const retryFunction = (nextRetryNumber: number) =>
-          sendWhatsAppMessage(
+          sendWhatsAppMessageInner(
             whatsAppAPI,
             userInfo,
             message,
@@ -421,7 +478,7 @@ export async function sendWhatsAppMessage(
         // The chunks already sent; resume at the separate menu (skip chunk loop)
         // by starting past the last chunk so we don't resend delivered chunks.
         const retryFunction = (nextRetryNumber: number) =>
-          sendWhatsAppMessage(
+          sendWhatsAppMessageInner(
             whatsAppAPI,
             userInfo,
             message,
@@ -501,6 +558,28 @@ export async function sendWhatsAppTemplate(
   templateName: string = NOTIFICATION_TEMPLATE,
   retryNumber = 0
 ): Promise<boolean> {
+  // Share the per-recipient lock with sendWhatsAppMessage so a re-engagement
+  // template and a notification to the same number never fire simultaneously.
+  return withRecipientLock(userInfo.chatId, () =>
+    sendWhatsAppTemplateInner(
+      whatsAppAPI,
+      userInfo,
+      notificationType,
+      options,
+      templateName,
+      retryNumber
+    )
+  );
+}
+
+async function sendWhatsAppTemplateInner(
+  whatsAppAPI: WhatsAppAPI,
+  userInfo: ExtendedMiniUserInfo,
+  notificationType: NotificationType,
+  options: MessageSendingOptionsInternal,
+  templateName: string = NOTIFICATION_TEMPLATE,
+  retryNumber = 0
+): Promise<boolean> {
   const now = new Date();
   if (
     now.getTime() - userInfo.lastEngagementAt.getTime() <
@@ -533,7 +612,7 @@ export async function sendWhatsAppTemplate(
 
     if (resp.error) {
       const retryFunction = (nextRetryNumber: number) =>
-        sendWhatsAppTemplate(
+        sendWhatsAppTemplateInner(
           whatsAppAPI,
           userInfo,
           notificationType,
@@ -618,7 +697,14 @@ export async function handleWhatsAppAPIErrors(
             event: "/message-fail-too-many-requests-aborted",
             messageApp: "WhatsApp"
           });
-          await logError(
+          // Pair rate limits (131056) and per-user throughput limits (131048) are
+          // expected transient conditions, not faults — log them as warnings so
+          // they don't read as errors in the debug channel. Genuine transient
+          // outages (2, 4, 80007, 130429) stay at error severity.
+          const isExpectedRateLimit =
+            error.errorCode === 131056 || error.errorCode === 131048;
+          const logAbort = isExpectedRateLimit ? logWarning : logError;
+          await logAbort(
             "WhatsApp",
             `WH API error ${String(error.errorCode)} aborted after ${String(MAX_MESSAGE_RETRY)} retries in ${callerFunctionLabel} to ${chatId}`,
             error.rawError ?? undefined
