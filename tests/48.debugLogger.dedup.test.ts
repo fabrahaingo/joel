@@ -64,13 +64,25 @@ describe("debug alert de-duplication", () => {
   });
 
   it("re-alerts after the window elapses, prefixing the suppressed count", async () => {
-    await logError("WhatsApp", "JORFSearch request for people aborted after 5 tries");
-    await logError("WhatsApp", "JORFSearch request for people aborted after 5 tries");
-    await logError("WhatsApp", "JORFSearch request for people aborted after 5 tries");
+    await logError(
+      "WhatsApp",
+      "JORFSearch request for people aborted after 5 tries"
+    );
+    await logError(
+      "WhatsApp",
+      "JORFSearch request for people aborted after 5 tries"
+    );
+    await logError(
+      "WhatsApp",
+      "JORFSearch request for people aborted after 5 tries"
+    );
     expect(post).toHaveBeenCalledTimes(1);
 
     nowMs += 301_000; // just past the 300s window
-    await logError("WhatsApp", "JORFSearch request for people aborted after 5 tries");
+    await logError(
+      "WhatsApp",
+      "JORFSearch request for people aborted after 5 tries"
+    );
     expect(post).toHaveBeenCalledTimes(2);
 
     const secondText = (post.mock.calls[1][1] as { text: string }).text;
