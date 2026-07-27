@@ -36,8 +36,8 @@
     "nodemon": "^3.1.14",
     "p-limit": "^7.3.0",
     "telegraf": "^4.16.3",
-    "tsx": "^4.23.0",
-    "whatsapp-api-js": "^6.2.1"
+    "tsx": "^4.23.1",
+    "whatsapp-api-js": "^6.2.2"
   },
   "overrides": {
     "form-data": "^4.0.4"
