@@ -21,6 +21,8 @@ export const SYNC_RECOVERY_CONFIRM_MS = 10 * 60 * 1000;
 export interface SyncHealth {
   recordFailure: (error: unknown) => Promise<void>;
   recordSuccess: () => Promise<void>;
+  /** False while an outage has been reported and no recovery confirmed yet. */
+  isHealthy: () => boolean;
 }
 
 /** The one sync entry point of a matrix-bot-sdk client. */
@@ -68,6 +70,7 @@ export const createSyncHealth = (
   };
 
   return {
+    isHealthy: () => lastAlertAt == null,
     recordFailure: async (error: unknown) => {
       const at = now();
       failureCount += 1;

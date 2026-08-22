@@ -24,6 +24,12 @@ import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
 import { getCachedStats } from "../commands/stats.ts";
 import { createTtlDedup } from "../utils/webhookDedup.ts";
 import { textFromMessage } from "../utils/whatsAppMessageText.ts";
+import {
+  buildHealthReport,
+  HEALTH_PATH,
+  mongoProbe
+} from "../utils/healthServer.ts";
+import { isBlankEnv } from "../utils/env.utils.ts";
 
 const MAX_AGE_SEC = 5 * 60;
 const DUPLICATE_MESSAGE_TTL_MS = MAX_AGE_SEC * 1000;
@@ -44,9 +50,9 @@ const {
 
 export function getWhatsAppAPI(): WhatsAppAPI {
   if (
-    WHATSAPP_USER_TOKEN === undefined ||
-    WHATSAPP_APP_SECRET === undefined ||
-    WHATSAPP_PHONE_NUMBER === undefined
+    isBlankEnv(WHATSAPP_USER_TOKEN) ||
+    isBlankEnv(WHATSAPP_APP_SECRET) ||
+    isBlankEnv(WHATSAPP_PHONE_NUMBER)
   ) {
     console.log("WhatsApp: env is not set, bot did not start \u{1F6A9}");
     process.exit(0);
@@ -145,6 +151,20 @@ await (async function () {
         }
       })
     );
+
+    // The bot is webhook-driven, so serving this port is itself the proof that
+    // it can still receive: the only dependency left to assert is the database.
+    const startedAt = Date.now();
+    app.get(HEALTH_PATH, (_req, res) => {
+      void (async () => {
+        const report = await buildHealthReport(
+          "WhatsApp",
+          { mongo: mongoProbe },
+          (Date.now() - startedAt) / 1000
+        );
+        res.status(report.statusCode).json(report.body);
+      })();
+    });
 
     const incomingMessageTargets = new Set<string>();
 

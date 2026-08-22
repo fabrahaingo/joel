@@ -30,6 +30,8 @@ import {
   SyncingClient
 } from "../utils/matrixSyncHealth.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
+import { mongoProbe, startHealthServer } from "../utils/healthServer.ts";
+import { healthPort } from "../utils/healthProbe.ts";
 // Persist sync token + crypto state
 import fs from "node:fs";
 import { StoreType } from "@matrix-org/matrix-sdk-crypto-nodejs";
@@ -104,10 +106,8 @@ const client = MATRIX_ENCRYPTION_ENABLED
 
 // The sync loop retries forever and only writes to the SDK logger, so without
 // this an outage is invisible outside stdout.
-attachSyncHealth(
-  client as unknown as SyncingClient,
-  createSyncHealth(matrixApp)
-);
+const syncHealth = createSyncHealth(matrixApp);
+attachSyncHealth(client as unknown as SyncingClient, syncHealth);
 
 AutojoinRoomsMixin.setupOnClient(client);
 AutojoinUpgradedRoomsMixin.setupOnClient(client); // optional but nice to have
@@ -300,6 +300,7 @@ const recentlyJoinedRooms = new Set<string>();
 await (async function () {
   // Register stopper
   let shuttingDown = false;
+  let healthServer: ReturnType<typeof startHealthServer> | undefined;
   try {
     const shutdown = async (signal: string) => {
       if (shuttingDown) return;
@@ -310,6 +311,7 @@ await (async function () {
       try {
         // Stop starting new work
         client.stop(); // sets stopSyncing=true (not async)
+        healthServer?.close();
 
         // Close DB cleanly
         await mongodbDisconnect();
@@ -348,6 +350,19 @@ await (async function () {
         : { tchapClient: client };
 
     startDailyNotificationJobs([matrixApp], messageOptions);
+
+    healthServer = startHealthServer(
+      matrixApp,
+      healthPort("matrix", process.env),
+      {
+        mongo: mongoProbe,
+        sync: () =>
+          syncHealth.isHealthy()
+            ? { ok: true }
+            : { ok: false, detail: "matrix sync outage" }
+      }
+    );
+
     console.log(`${matrixApp}: JOEL started successfully \u{2705}`);
   } catch (error) {
     await logError(matrixApp, "Failed to start app", error);

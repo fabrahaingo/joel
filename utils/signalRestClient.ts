@@ -108,6 +108,11 @@ export class SignalRestClient extends EventEmitter {
     this.wsUrl = `${wsBase}/v1/receive/${phoneNumber}`;
   }
 
+  /** True while the receive WebSocket is open. */
+  get isConnected(): boolean {
+    return this.ws !== null;
+  }
+
   connect(): Promise<void> {
     this.intentionalShutdown = false;
     return new Promise((resolve, reject) => {

@@ -6,10 +6,13 @@ import { SignalSession } from "../entities/SignalSession.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import { logError } from "../utils/debugLogger.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
+import { mongoProbe, startHealthServer } from "../utils/healthServer.ts";
+import { healthPort } from "../utils/healthProbe.ts";
+import { isBlankEnv } from "../utils/env.utils.ts";
 
 const { SIGNAL_PHONE_NUMBER, SIGNAL_API_URL } = process.env;
 
-if (SIGNAL_PHONE_NUMBER === undefined || SIGNAL_API_URL === undefined) {
+if (isBlankEnv(SIGNAL_PHONE_NUMBER) || isBlankEnv(SIGNAL_API_URL)) {
   console.log("Signal: env is not set, bot did not start \u{1F6A9}");
   process.exit(0);
 }
@@ -24,6 +27,7 @@ interface ISignalMessage {
   };
 }
 await (async () => {
+  let healthServer: ReturnType<typeof startHealthServer> | undefined;
   try {
     // Talks to the signal-cli-rest-api service over HTTP (send) + WebSocket
     // (receive). No local signal-cli process.
@@ -40,6 +44,7 @@ await (async () => {
 
       try {
         signalCli.disconnect();
+        healthServer?.close();
 
         // Close DB cleanly
         await mongodbDisconnect();
@@ -96,6 +101,19 @@ await (async () => {
     });
 
     startDailyNotificationJobs(["Signal"], { signalCli: signalCli });
+
+    healthServer = startHealthServer(
+      "Signal",
+      healthPort("signal", process.env),
+      {
+        mongo: mongoProbe,
+        signalSocket: () =>
+          signalCli.isConnected
+            ? { ok: true }
+            : { ok: false, detail: "signal-cli WebSocket disconnected" }
+      }
+    );
+
     console.log(`Signal: JOEL started successfully \u{2705}`);
   } catch (error) {
     await logError("Signal", "Failed to start Signal app", error);

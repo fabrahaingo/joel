@@ -34,3 +34,17 @@ export const missingEnvVars = (
   Object.entries(vars)
     .filter(([, value]) => isBlankEnv(value))
     .map(([name]) => name);
+
+/**
+ * Reads a TCP port from the environment, falling back when the value is
+ * absent, blank or not a port number.
+ */
+export const parsePortEnv = (
+  value: string | undefined,
+  fallback: number
+): number => {
+  if (isBlankEnv(value)) return fallback;
+  const port = Number(value.trim());
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return fallback;
+  return port;
+};

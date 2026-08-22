@@ -34,4 +34,9 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
+# Each bot runs as its own process under concurrently, so the probe checks one
+# port per bot and skips the ones whose environment leaves them switched off.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["node", "dist/scripts/healthcheck.js", "telegram", "whatsapp", "matrix"]
+
 CMD ["npm", "run", "start:prod"]

@@ -308,3 +308,40 @@ describe("SignalRestClient polls", () => {
     client.disconnect();
   });
 });
+
+describe("SignalRestClient.isConnected", () => {
+  it("tracks the receive socket from connect to disconnect", async () => {
+    const client = new SignalRestClient(
+      "http://signal-api:8080",
+      "+33111111111",
+      (url) => new FakeWS(url)
+    );
+
+    expect(client.isConnected).toBe(false);
+
+    const connected = client.connect();
+    FakeWS.last.emit("open");
+    await connected;
+    expect(client.isConnected).toBe(true);
+
+    client.disconnect();
+    expect(client.isConnected).toBe(false);
+  });
+
+  it("reports a dropped socket before the reconnect lands", () => {
+    const client = new SignalRestClient(
+      "http://signal-api:8080",
+      "+33111111111",
+      (url) => new FakeWS(url)
+    );
+    vi.useFakeTimers();
+    void client.connect();
+    FakeWS.last.emit("open");
+    FakeWS.last.emit("close");
+
+    expect(client.isConnected).toBe(false);
+
+    client.disconnect();
+    vi.useRealTimers();
+  });
+});

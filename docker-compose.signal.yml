@@ -33,6 +33,12 @@ services:
       - SIGNAL_API_URL=http://signalapi:8080
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "node", "dist/scripts/healthcheck.js", "signal"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
     depends_on:
       # wait until signal-cli-rest-api is healthy so the bot's first WebSocket
       # connect doesn't race the daemon's startup.

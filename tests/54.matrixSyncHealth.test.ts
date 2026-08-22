@@ -262,3 +262,46 @@ describe("attachSyncHealth", () => {
     expect(logWarningSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("sync health readiness", () => {
+  it("is healthy before any failure", () => {
+    expect(healthWithClock().isHealthy()).toBe(true);
+  });
+
+  it("stays healthy while failures are below the alert threshold", async () => {
+    const health = healthWithClock();
+
+    for (let i = 0; i < SYNC_ALERT_AFTER_FAILURES - 1; i++) {
+      clock += 1000;
+      await health.recordFailure(tokenError());
+    }
+
+    expect(health.isHealthy()).toBe(true);
+  });
+
+  it("turns unhealthy once the outage is reported", async () => {
+    const health = healthWithClock();
+
+    for (let i = 0; i < SYNC_ALERT_AFTER_FAILURES; i++) {
+      clock += 1000;
+      await health.recordFailure(tokenError());
+    }
+
+    expect(health.isHealthy()).toBe(false);
+  });
+
+  it("stays unhealthy until the recovery is confirmed", async () => {
+    const health = healthWithClock();
+
+    for (let i = 0; i < SYNC_ALERT_AFTER_FAILURES; i++) {
+      clock += 1000;
+      await health.recordFailure(tokenError());
+    }
+    await health.recordSuccess();
+    expect(health.isHealthy()).toBe(false);
+
+    clock += SYNC_RECOVERY_CONFIRM_MS;
+    await health.recordSuccess();
+    expect(health.isHealthy()).toBe(true);
+  });
+});

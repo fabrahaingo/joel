@@ -42,4 +42,7 @@ ENV NODE_ENV=production
 # companion signal-cli-rest-api service (see docker-compose.signal.yml), not
 # here. This image is just the Node bot.
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD ["node", "dist/scripts/healthcheck.js", "signal"]
+
 CMD ["npm", "run", "start-si:prod"]
