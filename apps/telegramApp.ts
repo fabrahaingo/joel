@@ -5,9 +5,17 @@ import { mongodbConnect, mongodbDisconnect } from "../db.ts";
 import { TelegramSession } from "../entities/TelegramSession.ts";
 import { startDailyNotificationJobs } from "../notifications/notificationScheduler.ts";
 import { handleIncomingMessage } from "../utils/messageWorkflow.ts";
-import { logError, logTelegramDebugStatus } from "../utils/debugLogger.ts";
+import {
+  logError,
+  logTelegramDebugStatus,
+  logWarning
+} from "../utils/debugLogger.ts";
 import { mongoProbe, startHealthServer } from "../utils/healthServer.ts";
 import { healthPort } from "../utils/healthProbe.ts";
+import {
+  launchWithConflictRetry,
+  pollingProbe
+} from "../utils/telegramLaunch.ts";
 import { isBlankEnv } from "../utils/env.utils.ts";
 
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -34,6 +42,7 @@ await (async () => {
   const bot = new Telegraf(TELEGRAM_BOT_TOKEN);
   // Register stopper
   let shuttingDown = false;
+  let polling = false;
   let healthServer: ReturnType<typeof startHealthServer> | undefined;
   try {
     const shutdown = async (signal: string) => {
@@ -43,8 +52,9 @@ await (async () => {
       console.log(`Telegram: Received ${signal}, shutting down...`);
 
       try {
-        // Stop starting new work
-        bot.stop(); // sets stopSyncing=true (not async)
+        // Stop starting new work. Telegraf throws when asked to stop a bot
+        // that never reached its polling loop.
+        if (polling) bot.stop(); // sets stopSyncing=true (not async)
         healthServer?.close();
 
         // Close DB cleanly
@@ -106,6 +116,7 @@ await (async () => {
       healthPort("telegram", process.env),
       {
         mongo: mongoProbe,
+        polling: pollingProbe(() => polling),
         telegramApi: async () => {
           if (Date.now() - apiCheckedAt < TELEGRAM_API_TTL_MS)
             return apiReachable
@@ -137,8 +148,29 @@ await (async () => {
     );
 
     console.log(`Telegram: JOEL started successfully \u{2705}`);
-    await bot.launch();
+    await launchWithConflictRetry({
+      launch: async () => {
+        polling = true;
+        try {
+          await bot.launch();
+        } finally {
+          polling = false;
+        }
+      },
+      onConflict: (attempt, delayMs) => {
+        void logWarning(
+          "Telegram",
+          `Another instance is polling this bot token (attempt ${String(attempt)}); retrying in ${String(delayMs / 1000)}s`
+        );
+      }
+    });
   } catch (error) {
     await logError("Telegram", "Failed to start app", error);
+    // Exit non-zero so concurrently tears the container down and the restart
+    // policy recovers it, instead of lingering as a process that answers the
+    // Bot API while receiving no update.
+    healthServer?.close();
+    await mongodbDisconnect();
+    process.exit(1);
   }
 })();

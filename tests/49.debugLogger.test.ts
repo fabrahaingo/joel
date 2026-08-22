@@ -15,6 +15,7 @@ vi.mock("axios", () => ({
   isAxiosError: () => false
 }));
 vi.mock("../utils/umami.ts", () => ({ default: { log: umamiLogSpy } }));
+vi.mock("node:os", () => ({ default: { hostname: () => "c0ffee1nstance" } }));
 
 process.env.DEBUG_CHAT_ID = "debug-chat-id";
 process.env.TELEGRAM_DEBUG_BOT_TOKEN = "debug-bot-token";
@@ -37,6 +38,12 @@ describe("logError", () => {
 
     const body = sentTexts().join("\n");
     expect(body.match(/Error: boom/g)).toHaveLength(1);
+  });
+
+  it("names the host the alert came from", async () => {
+    await logError("Telegram", "Something failed");
+
+    expect(sentTexts()[0]).toContain("[Telegram (test) @ c0ffee1nstance]");
   });
 
   it("keeps the header when the runtime produced no stack", async () => {

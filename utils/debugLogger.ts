@@ -1,4 +1,5 @@
 import axios from "axios";
+import os from "node:os";
 import { MessageApp } from "../types.ts";
 import umami from "./umami.ts";
 import { splitText } from "./text.utils.ts";
@@ -222,8 +223,12 @@ const buildLogMessage = (
   const levelEmoji = level === "error" ? "❌" : "⚠️";
   const errorText = formatError(error);
   const processEnv = (process.env.NODE_ENV ?? "").trim();
+  // Every deployment sharing DEBUG_CHAT_ID reports into the same chat, and in
+  // Docker the hostname is the container id: it tells apart two instances of
+  // one bot, which is exactly what a "only one bot instance" conflict is about.
+  const host = os.hostname();
   return [
-    `${levelEmoji} [${messageApp} (${processEnv.length > 0 ? processEnv : "production"})] ${sanitizeSecrets(message)}`,
+    `${levelEmoji} [${messageApp} (${processEnv.length > 0 ? processEnv : "production"}) @ ${host}] ${sanitizeSecrets(message)}`,
     errorText != null ? `Details:\n${sanitizeSecrets(errorText)}` : null
   ]
     .filter((part): part is string => part != null)
