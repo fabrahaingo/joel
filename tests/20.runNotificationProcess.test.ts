@@ -11,6 +11,7 @@ function emptyRange() {
 const h = vi.hoisted(() => ({
   logErrorSpy: vi.fn(() => Promise.resolve()),
   logErrorForAppsSpy: vi.fn(() => Promise.resolve()),
+  logWarningForAppsSpy: vi.fn(() => Promise.resolve()),
   umamiVerifiedSpy: vi.fn(() => Promise.resolve(true)),
   getRecords: vi.fn(() => Promise.resolve(emptyRange())),
   getMeta: vi.fn(() => Promise.resolve(emptyRange())),
@@ -46,7 +47,8 @@ vi.mock("../utils/umami.ts", () => ({
 }));
 vi.mock("../utils/debugLogger.ts", () => ({
   logError: h.logErrorSpy,
-  logErrorForApps: h.logErrorForAppsSpy
+  logErrorForApps: h.logErrorForAppsSpy,
+  logWarningForApps: h.logWarningForAppsSpy
 }));
 vi.mock("../utils/JORFSearch.utils.ts", () => ({
   getJORFRecordsFromDate: h.getRecords,
@@ -214,8 +216,27 @@ describe("runNotificationProcess — full run", () => {
 
   it("warns when the run exceeds the duration threshold", async () => {
     vi.useFakeTimers();
-    // Advance the clock past the 5-minute warning threshold mid-run so the
-    // end-of-run duration check trips the "took too long" warning.
+    // Advance the clock past the warning threshold mid-run so the end-of-run
+    // duration check trips the "took too long" warning.
+    h.getRecords.mockImplementationOnce(() => {
+      vi.advanceTimersByTime(16 * 60 * 1000);
+      return Promise.resolve(emptyRange());
+    });
+    try {
+      await runNotificationProcess(["Telegram"], { telegramBotToken: "TOK" });
+    } finally {
+      vi.useRealTimers();
+    }
+    // A slow run costs no notification, so it is a warning and not an error.
+    expect(h.logWarningForAppsSpy).toHaveBeenCalledWith(
+      ["Telegram"],
+      expect.stringContaining("took too long")
+    );
+    expect(h.logErrorForAppsSpy).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet on a run that is merely slow", async () => {
+    vi.useFakeTimers();
     h.getRecords.mockImplementationOnce(() => {
       vi.advanceTimersByTime(6 * 60 * 1000);
       return Promise.resolve(emptyRange());
@@ -225,10 +246,7 @@ describe("runNotificationProcess — full run", () => {
     } finally {
       vi.useRealTimers();
     }
-    expect(h.logErrorForAppsSpy).toHaveBeenCalledWith(
-      ["Telegram"],
-      expect.stringContaining("took too long")
-    );
+    expect(h.logWarningForAppsSpy).not.toHaveBeenCalled();
   });
 });
 

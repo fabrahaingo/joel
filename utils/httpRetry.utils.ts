@@ -10,12 +10,25 @@ export const BASE_RETRY_DELAY_MS = 1000;
 export const REQUEST_TIMEOUT_MS = 10_000;
 
 /**
+ * A fault the upstream is expected to recover from on its own, whatever status
+ * line carried it. Statuses alone cannot express this: a 4xx normally means
+ * "do not try again", yet some upstreams answer a throttled or half-broken
+ * request with one. Raising this instead makes {@link shouldRetry} retry.
+ */
+export class TransientUpstreamError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "TransientUpstreamError";
+  }
+}
+
+/**
  * A 2xx response whose body is not the expected JSON payload: an HTML login
  * page, an overload notice, or a bare `null`. The status line carries no signal
  * in that case, so the body is the only tell, and the condition is usually
  * transient on the server side.
  */
-export class NonJsonResponseError extends Error {
+export class NonJsonResponseError extends TransientUpstreamError {
   constructor(source: string) {
     super(`${source} answered 2xx with a non-JSON body`);
     this.name = "NonJsonResponseError";
@@ -37,7 +50,7 @@ export function assertJsonPayload<T>(
 }
 
 export function shouldRetry(e: unknown): boolean {
-  if (e instanceof NonJsonResponseError) return true;
+  if (e instanceof TransientUpstreamError) return true;
   if (!isAxiosError(e)) return false;
   const s = e.response?.status;
   return !(s && s >= 400 && s < 500 && s !== 408 && s !== 429);

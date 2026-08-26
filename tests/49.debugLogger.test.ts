@@ -20,7 +20,8 @@ vi.mock("node:os", () => ({ default: { hostname: () => "c0ffee1nstance" } }));
 process.env.DEBUG_CHAT_ID = "debug-chat-id";
 process.env.TELEGRAM_DEBUG_BOT_TOKEN = "debug-bot-token";
 
-const { logError, logErrorForApps } = await import("../utils/debugLogger.ts");
+const { logError, logErrorForApps, logWarningForApps } =
+  await import("../utils/debugLogger.ts");
 
 const sentTexts = () =>
   postSpy.mock.calls.map(
@@ -70,6 +71,25 @@ describe("logErrorForApps", () => {
 
   it("sends nothing when no app is affected", async () => {
     await logErrorForApps([], "nobody cares");
+    expect(postSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe("logWarningForApps", () => {
+  it("sends one warning naming every affected app", async () => {
+    await logWarningForApps(
+      ["Telegram", "WhatsApp"],
+      "Notification process took too long"
+    );
+
+    expect(postSpy).toHaveBeenCalledTimes(1);
+    expect(sentTexts()[0]).toContain("⚠️ [Telegram, WhatsApp");
+    // A warning is not an error: it must not move the per-app error counters.
+    expect(umamiLogSpy).not.toHaveBeenCalled();
+  });
+
+  it("sends nothing when no app is affected", async () => {
+    await logWarningForApps([], "nobody cares");
     expect(postSpy).not.toHaveBeenCalled();
   });
 });

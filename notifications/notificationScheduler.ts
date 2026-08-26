@@ -21,7 +21,7 @@ const RESCHEDULE_RETRY_DELAY_MS = 60 * 60 * 1000;
 
 // A run that never settles would take the whole schedule with it, because the
 // next occurrence is only armed once the current one finishes. Well above any
-// legitimate run (the slow-run warning trips at 5 minutes) and well under the
+// legitimate run (the slow-run warning trips at 15 minutes) and well under the
 // daily cadence, so it only fires on a genuine hang.
 const RUN_WATCHDOG_MS = 6 * 60 * 60 * 1000;
 

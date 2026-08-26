@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse, isAxiosError } from "axios";
 import { MessageApp } from "../types.ts";
 import { dateToString } from "./date.utils.ts";
 import {
@@ -11,6 +11,7 @@ import {
   REQUEST_TIMEOUT_MS,
   RETRY_MAX,
   shouldRetry,
+  TransientUpstreamError,
   waitBeforeRetry
 } from "./httpRetry.utils.ts";
 import umami from "./umami.ts";
@@ -55,11 +56,13 @@ interface CachedToken {
 }
 
 let cachedToken: CachedToken | null = null;
+let inFlightToken: Promise<string> | null = null;
 let datesWithoutJoCache: { days: Set<string>; fetchedAt: number } | null = null;
 
 /** Test seam: drops the token and the no-JO day list. */
 export function resetLegifranceCaches(): void {
   cachedToken = null;
+  inFlightToken = null;
   datesWithoutJoCache = null;
 }
 
@@ -68,15 +71,57 @@ interface TokenResponse {
   expires_in?: number;
 }
 
-async function getAccessToken(): Promise<string> {
-  const now = Date.now();
-  if (
-    cachedToken != null &&
-    now < cachedToken.expiresAt - TOKEN_EXPIRY_MARGIN_MS
-  ) {
-    return cachedToken.value;
-  }
+interface OAuthErrorBody {
+  error?: string;
+  error_description?: string;
+}
 
+/**
+ * OAuth codes that describe the client rather than the moment: the same request
+ * fails identically until someone changes the credentials or the PISTE app
+ * subscription, so retrying only delays the alert. Anything else, a bare 400
+ * included, is read as throttling and retried.
+ */
+const FATAL_OAUTH_ERRORS = new Set([
+  "invalid_client",
+  "invalid_grant",
+  "unauthorized_client",
+  "invalid_scope"
+]);
+
+function readOAuthError(error: unknown): OAuthErrorBody | null {
+  if (!isAxiosError(error)) return null;
+  const data: unknown = error.response?.data;
+  if (data == null || typeof data !== "object") return null;
+  return data;
+}
+
+/**
+ * Turns a token endpoint rejection into an error that says what PISTE answered.
+ * The status alone does not: a 400 is `invalid_client` for dead credentials and
+ * an unlabelled throttle otherwise, and only the body tells the two apart.
+ */
+function describeTokenFailure(error: unknown): Error {
+  const status = isAxiosError(error) ? error.response?.status : undefined;
+  const body = readOAuthError(error);
+  const context = [
+    status != null ? `HTTP ${String(status)}` : null,
+    body?.error,
+    body?.error_description
+  ]
+    .filter((part): part is string => part != null && part.length > 0)
+    .join(" ");
+  const message =
+    context.length > 0
+      ? `Legifrance token endpoint rejected the request (${context})`
+      : "Legifrance token endpoint rejected the request";
+
+  return body?.error != null && FATAL_OAUTH_ERRORS.has(body.error)
+    ? new Error(message, { cause: error })
+    : new TransientUpstreamError(message, { cause: error });
+}
+
+async function requestAccessToken(): Promise<string> {
   const clientId = process.env.LEGIFRANCE_CLIENT_ID;
   const clientSecret = process.env.LEGIFRANCE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
@@ -92,9 +137,15 @@ async function getAccessToken(): Promise<string> {
     scope: "openid"
   });
 
-  const res = await legifranceAxios.post<TokenResponse>(TOKEN_URL, body, {
-    headers: { "Content-Type": "application/x-www-form-urlencoded" }
-  });
+  const requestedAt = Date.now();
+  let res: AxiosResponse<TokenResponse>;
+  try {
+    res = await legifranceAxios.post<TokenResponse>(TOKEN_URL, body, {
+      headers: { "Content-Type": "application/x-www-form-urlencoded" }
+    });
+  } catch (error) {
+    throw describeTokenFailure(error);
+  }
   const data = assertJsonPayload(res.data, "Legifrance token endpoint");
 
   if (!data.access_token) {
@@ -104,31 +155,76 @@ async function getAccessToken(): Promise<string> {
   // expires_in is in seconds; fall back to a short life so a malformed
   // response cannot pin a stale token in memory.
   const lifetimeMs = (data.expires_in ?? 60) * 1000;
-  cachedToken = { value: data.access_token, expiresAt: now + lifetimeMs };
+  cachedToken = {
+    value: data.access_token,
+    expiresAt: requestedAt + lifetimeMs
+  };
   return cachedToken.value;
 }
 
+/**
+ * The bearer for every call, minted at most once at a time: PISTE throttles a
+ * client that opens several token requests at once, and concurrent callers all
+ * want the same token anyway.
+ */
+async function getAccessToken(): Promise<string> {
+  if (
+    cachedToken != null &&
+    Date.now() < cachedToken.expiresAt - TOKEN_EXPIRY_MARGIN_MS
+  ) {
+    return cachedToken.value;
+  }
+
+  inFlightToken ??= requestAccessToken().finally(() => {
+    inFlightToken = null;
+  });
+  return await inFlightToken;
+}
+
+function isUnauthorized(error: unknown): boolean {
+  if (!isAxiosError(error)) return false;
+  const status = error.response?.status;
+  return status === 401 || status === 403;
+}
+
+/**
+ * Sends an authenticated call, and on a rejected bearer mints a fresh one and
+ * sends it once more. A token can be refused before its announced expiry, and
+ * the cached value would otherwise keep every later call failing too. A second
+ * rejection is a real credential or permission problem and propagates.
+ */
+async function legifranceRequest<T>(
+  path: string,
+  send: (token: string) => Promise<AxiosResponse<T>>
+): Promise<T> {
+  let res: AxiosResponse<T>;
+  try {
+    res = await send(await getAccessToken());
+  } catch (error) {
+    if (!isUnauthorized(error)) throw error;
+    cachedToken = null;
+    res = await send(await getAccessToken());
+  }
+  return assertJsonPayload(res.data, `Legifrance ${path}`);
+}
+
 async function legifrancePost<T>(path: string, payload: unknown): Promise<T> {
-  const token = await getAccessToken();
-  const res = await legifranceAxios.post<T>(
-    `${getLegifranceApiUrl()}${path}`,
-    payload,
-    {
+  return await legifranceRequest<T>(path, (token) =>
+    legifranceAxios.post<T>(`${getLegifranceApiUrl()}${path}`, payload, {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
       }
-    }
+    })
   );
-  return assertJsonPayload(res.data, `Legifrance ${path}`);
 }
 
 async function legifranceGet<T>(path: string): Promise<T> {
-  const token = await getAccessToken();
-  const res = await legifranceAxios.get<T>(`${getLegifranceApiUrl()}${path}`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-  return assertJsonPayload(res.data, `Legifrance ${path}`);
+  return await legifranceRequest<T>(path, (token) =>
+    legifranceAxios.get<T>(`${getLegifranceApiUrl()}${path}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+  );
 }
 
 interface DatesWithNoJoResponse {

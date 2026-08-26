@@ -67,6 +67,37 @@ function mockPost(onSummary: () => unknown, expiresIn = 3600) {
   });
 }
 
+/** Calls to the OAuth token endpoint, as opposed to the summary endpoint. */
+function tokenCalls() {
+  return postSpy.mock.calls.filter((c) => String(c[0]).includes("oauth"));
+}
+
+function summaryCalls() {
+  return postSpy.mock.calls.filter((c) => !String(c[0]).includes("oauth"));
+}
+
+/** A rejection shaped like the one axios raises, so `isAxiosError` accepts it. */
+function axiosError(status: number, data?: unknown) {
+  return Object.assign(
+    new Error(`Request failed with status code ${String(status)}`),
+    { isAxiosError: true, response: { status, data } }
+  );
+}
+
+const ONE_TEXT_SUMMARY = {
+  data: {
+    items: [
+      {
+        joCont: {
+          structure: {
+            liens: [{ id: "JORFTEXT000000000001", titre: "Texte" }]
+          }
+        }
+      }
+    ]
+  }
+};
+
 function mockDatesWithoutJo(epochs: number[] = []) {
   getSpy.mockImplementation((url: string) => {
     if (url.includes("datesWithoutJo")) {
@@ -251,6 +282,111 @@ describe("Legifrance access token", () => {
       String(c[0]).includes("oauth")
     );
     expect(tokenCalls).toHaveLength(1);
+  });
+
+  it("mints a single token for callers that start at the same time", async () => {
+    mockDatesWithoutJo();
+    let releaseToken = () => {
+      /* replaced below */
+    };
+    const gate = new Promise<void>((resolve) => {
+      releaseToken = resolve;
+    });
+    postSpy.mockImplementation((url: string) => {
+      if (url.includes("oauth")) return gate.then(() => tokenResponse());
+      return Promise.resolve({ data: { items: [] } });
+    });
+
+    const days = Promise.all([
+      fetchLegifranceMetaDay(DAY, ["Telegram"]),
+      fetchLegifranceMetaDay(new Date(2026, 7, 18), ["Telegram"])
+    ]);
+    releaseToken();
+    await days;
+
+    // PISTE throttles a client that opens several token requests at once.
+    expect(tokenCalls()).toHaveLength(1);
+  });
+
+  it("mints a fresh token and replays a call answered with a 401", async () => {
+    mockDatesWithoutJo();
+    let summaries = 0;
+    postSpy.mockImplementation((url: string) => {
+      if (url.includes("oauth")) return Promise.resolve(tokenResponse());
+      summaries += 1;
+      return summaries === 1
+        ? Promise.reject(axiosError(401))
+        : Promise.resolve(ONE_TEXT_SUMMARY);
+    });
+
+    const result = await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(result?.items.map((i) => i.id)).toEqual(["JORFTEXT000000000001"]);
+    expect(tokenCalls()).toHaveLength(2);
+    expect(logErrorForAppsSpy).not.toHaveBeenCalled();
+  });
+
+  it("gives up when a freshly minted token is refused too", async () => {
+    mockDatesWithoutJo();
+    postSpy.mockImplementation((url: string) =>
+      url.includes("oauth")
+        ? Promise.resolve(tokenResponse())
+        : Promise.reject(axiosError(401))
+    );
+
+    const result = await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(result).toBeNull();
+    // One replay, not a loop.
+    expect(summaryCalls()).toHaveLength(2);
+    expect(logErrorForAppsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails fast and names the reason when the credentials are rejected", async () => {
+    mockDatesWithoutJo();
+    postSpy.mockImplementation((url: string) =>
+      url.includes("oauth")
+        ? Promise.reject(
+            axiosError(400, {
+              error: "invalid_client",
+              error_description: "Invalid client"
+            })
+          )
+        : Promise.resolve({ data: { items: [] } })
+    );
+
+    const result = await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(result).toBeNull();
+    expect(tokenCalls()).toHaveLength(1);
+    expect(logErrorForAppsSpy).toHaveBeenCalledWith(
+      ["Telegram"],
+      expect.stringContaining("Error fetching the Legifrance JO summary"),
+      expect.objectContaining({
+        message: expect.stringContaining("invalid_client") as string
+      })
+    );
+  });
+
+  it("retries a token rejection that carries no OAuth error code", async () => {
+    mockDatesWithoutJo();
+    postSpy.mockImplementation((url: string) =>
+      url.includes("oauth")
+        ? Promise.reject(axiosError(400))
+        : Promise.resolve({ data: { items: [] } })
+    );
+
+    const result = await withFakeTimers(() =>
+      fetchLegifranceMetaDay(DAY, ["Telegram"])
+    );
+
+    expect(result).toBeNull();
+    expect(tokenCalls()).toHaveLength(6); // RETRY_MAX + 1
+    expect(logErrorForAppsSpy).toHaveBeenCalledWith(
+      ["Telegram"],
+      expect.stringContaining("aborted after"),
+      expect.anything()
+    );
   });
 
   it("renews a token that is about to expire", async () => {

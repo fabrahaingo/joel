@@ -259,6 +259,27 @@ export const logError = async (
 };
 
 /**
+ * The {@link logWarning} counterpart of {@link logErrorForApps}: one Telegram
+ * alert naming every affected app, for a condition that is worth watching but
+ * did not cost anyone a notification.
+ */
+export const logWarningForApps = async (
+  messageApps: MessageApp[],
+  message: string,
+  error?: unknown
+): Promise<void> => {
+  if (messageApps.length === 0) return;
+  if (messageApps.length === 1) {
+    await logWarning(messageApps[0], message, error);
+    return;
+  }
+  logToConsole("warning", message, error);
+  await sendTelegramDebugMessage(
+    buildLogMessage("warning", messageApps.join(", "), message, error)
+  );
+};
+
+/**
  * Reports a single failure that affects several apps at once (a shared
  * dependency being down, for instance). Emits one Telegram alert naming every
  * affected app instead of one alert per app: `sendTelegramDebugMessage` sleeps

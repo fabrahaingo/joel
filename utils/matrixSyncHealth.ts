@@ -2,11 +2,16 @@ import { MessageApp } from "../types.ts";
 import { logError, logWarning } from "./debugLogger.ts";
 import { describeMatrixPayload } from "./matrixLogService.ts";
 
-/** Consecutive failed syncs that make an outage worth reporting. */
-export const SYNC_ALERT_AFTER_FAILURES = 5;
+/**
+ * An outage is reported once it has spanned this many consecutive failed syncs
+ * and lasted {@link SYNC_ALERT_AFTER_MS}. Both are required: a homeserver that
+ * answers again within a few minutes needs no one woken up, and a single failed
+ * attempt says nothing about how the next one will go.
+ */
+export const SYNC_ALERT_AFTER_FAILURES = 2;
 
-/** Or, for a slow sync loop, how long the failures may last before reporting. */
-export const SYNC_ALERT_AFTER_MS = 2 * 60 * 1000;
+/** How long the failures must last before the outage is reported. */
+export const SYNC_ALERT_AFTER_MS = 5 * 60 * 1000;
 
 /** Delay before a still-failing sync is reported again. */
 export const SYNC_REALERT_COOLDOWN_MS = 30 * 60 * 1000;
@@ -78,7 +83,7 @@ export const createSyncHealth = (
       recoveringSince = null;
 
       const worthReporting =
-        failureCount >= SYNC_ALERT_AFTER_FAILURES ||
+        failureCount >= SYNC_ALERT_AFTER_FAILURES &&
         at - firstFailureAt >= SYNC_ALERT_AFTER_MS;
       if (!worthReporting) return;
       if (lastAlertAt != null && at - lastAlertAt < SYNC_REALERT_COOLDOWN_MS)
@@ -87,7 +92,7 @@ export const createSyncHealth = (
       lastAlertAt = at;
       await logError(
         messageApp,
-        `Matrix sync failing for ${formatOutage(at - firstFailureAt)} (${String(failureCount)} attempts)`,
+        `Matrix sync failing for ${formatOutage(at - firstFailureAt)} (${String(failureCount)} attempts so far)`,
         describeMatrixPayload(error)
       );
     },
@@ -103,10 +108,14 @@ export const createSyncHealth = (
 
       // Syncs stopped failing at the first success, not at this confirmation.
       const outage = recoveringSince - (firstFailureAt ?? recoveringSince);
+      // The failure alert froze both figures at the moment it was sent, and the
+      // re-alert cooldown usually keeps it from being sent twice, so this is the
+      // only place the whole outage is reported.
+      const attempts = failureCount;
       reset();
       await logWarning(
         messageApp,
-        `Matrix sync recovered after ${formatOutage(outage)}`
+        `Matrix sync recovered after ${formatOutage(outage)} (${String(attempts)} failed attempts)`
       );
     }
   };

@@ -14,7 +14,11 @@ import mongoose, { Types } from "mongoose";
 
 import { ExternalMessageOptions } from "../entities/Session.ts";
 import { refreshTelegramBlockedUsers } from "../entities/TelegramSession.ts";
-import { logError, logErrorForApps } from "../utils/debugLogger.ts";
+import {
+  logError,
+  logErrorForApps,
+  logWarningForApps
+} from "../utils/debugLogger.ts";
 import {
   getJORFMetaRecordsFromDate,
   getJORFRecordsFromDate,
@@ -95,8 +99,10 @@ async function fetchRange<T>(
 }
 
 // Ops latency warning only: the WhatsApp send guard re-checks the 24h window
-// in real time at each send, so a slow run no longer risks 131047 errors.
-const NOTIFICATION_DURATION_BEFORE_WARNING_MS = 5 * 60 * 1000; // 5 minutes
+// in real time at each send, so a slow run does not risk 131047 errors. Runs are
+// daily, so the threshold only has to sit above a legitimately slow backfill and
+// under the scheduler's watchdog.
+const NOTIFICATION_DURATION_BEFORE_WARNING_MS = 15 * 60 * 1000; // 15 minutes
 
 /**
  * How a scheduled cycle ended.
@@ -327,7 +333,7 @@ export async function runNotificationProcess(
     );
 
     if (delay > NOTIFICATION_DURATION_BEFORE_WARNING_MS) {
-      await logErrorForApps(
+      await logWarningForApps(
         targetApps,
         `Notification process took too long: ${formatDuration(delay)}.`
       );
