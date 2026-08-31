@@ -32,7 +32,7 @@
     "express": "^5.2.1",
     "matrix-bot-sdk": "^0.8.0",
     "mongodb": "^7.5.0",
-    "mongoose": "^9.9.2",
+    "mongoose": "^9.9.3",
     "nodemon": "^3.1.14",
     "p-limit": "^7.3.1",
     "telegraf": "^4.16.3",
