@@ -25,22 +25,22 @@
   },
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.19.0",
+    "axios": "^1.20.0",
     "concurrently": "^10.0.5",
-    "dotenv": "^17.4.2",
-    "emoji-regex": "^10.6.0",
+    "dotenv": "^18.0.5",
+    "emoji-regex": "^11.0.0",
     "express": "^5.2.1",
     "matrix-bot-sdk": "^0.8.0",
-    "mongodb": "^7.5.0",
-    "mongoose": "^9.9.2",
-    "nodemon": "^3.1.14",
-    "p-limit": "^7.3.1",
+    "mongodb": "^7.7.0",
+    "mongoose": "^9.10.4",
+    "p-limit": "^7.3.3",
     "telegraf": "^4.16.3",
-    "tsx": "^4.23.12",
-    "whatsapp-api-js": "^6.2.2"
+    "tsx": "^4.23.15",
+    "whatsapp-api-js": "^6.3.0"
   },
   "overrides": {
-    "form-data": "^4.0.4"
+    "form-data": "^4.0.4",
+    "shell-quote": "^1.11.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -48,16 +48,18 @@
     "@telegraf/types": "^9.2.1",
     "@tsconfig/node24": "^24.0.5",
     "@types/express": "^5.0.6",
-    "@vitest/coverage-v8": "^4.1.10",
-    "eslint": "^10.8.1",
+    "@types/semver": "^7.7.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
-    "lefthook": "^2.1.10",
-    "mongodb-memory-server": "^11.2.0",
-    "npm-check-updates": "^23.0.2",
-    "prettier": "^3.9.6",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.67.0",
-    "vitest": "^4.1.10"
+    "lefthook": "^2.1.16",
+    "mongodb-memory-server": "^11.3.0",
+    "npm-check-updates": "^23.1.0",
+    "prettier": "^3.9.9",
+    "semver": "^7.7.2",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
   }
 }

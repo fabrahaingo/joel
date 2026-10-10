@@ -3,7 +3,7 @@ import "dotenv/config";
 import express from "express";
 
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
-import { PostData, ServerMessage } from "whatsapp-api-js/types";
+import { PostData, ServerContacts, ServerMessage } from "whatsapp-api-js/types";
 import type { OnMessageArgs } from "whatsapp-api-js/emitters";
 import { WhatsAppAPIError } from "whatsapp-api-js/errors";
 
@@ -47,6 +47,13 @@ const {
   WHATSAPP_PHONE_NUMBER,
   WHATSAPP_PHONE_ID
 } = process.env;
+
+// Same precedence whatsapp-api-js applies to its deprecated `from`/`phone`
+// webhook fields, so stored chatIds stay stable: phone number first, then
+// the parent BSUID, then the BSUID.
+function chatIdFromContact(contact: ServerContacts): string {
+  return contact.wa_id ?? contact.parent_user_id ?? contact.user_id;
+}
 
 export function getWhatsAppAPI(): WhatsAppAPI {
   if (
@@ -334,8 +341,9 @@ await (async function () {
 
     const handleInboundMessage = async (
       api: WhatsAppAPI,
-      { phoneID, from, message }: OnMessageArgs
+      { phoneID, contact, message }: OnMessageArgs
     ): Promise<void> => {
+      const from = chatIdFromContact(contact);
       // Filter out events from the bot itself
       if (from === WHATSAPP_PHONE_ID) return;
 
@@ -403,7 +411,8 @@ await (async function () {
       //console.log(`Bot ${phoneID} sent to user ${to} ${String(to)}`);
     };
 
-    whatsAppAPI.on.status = async ({ id, phone, status, error }) => {
+    whatsAppAPI.on.status = async ({ id, contact, status, error }) => {
+      const phone = chatIdFromContact(contact);
       // Meta delivers statuses at-least-once: drop redeliveries of the same
       // status/error for the same message before doing any work. Distinct
       // statuses for one id (sent -> delivered -> read) pass through.

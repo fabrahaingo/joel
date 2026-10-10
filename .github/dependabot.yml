@@ -29,6 +29,15 @@ updates:
     # deps, `chore(deps-dev):` for devDependencies. The prefix stays
     # bare (`chore`, no scope) — putting a scope in `prefix` *and*
     # setting `include: scope` produces a doubled `chore(deps)(deps):`.
+    # typescript-eslint peers on `typescript <6.1.0`, so any newer
+    # TypeScript fails `npm ci` with ERESOLVE.
+    # tests/dependencyWorkarounds.test.ts fails once that peer range
+    # widens, signalling this ignore can go.
+    ignore:
+      - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
     commit-message:
       prefix: "chore"
       include: "scope"

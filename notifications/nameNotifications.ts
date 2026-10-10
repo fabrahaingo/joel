@@ -34,7 +34,7 @@ export async function updateFollowedNamesToFollowedPeople(
   userId: Types.ObjectId,
   updatedRecordsMapKeys: string[],
   peopleIdByFollowedNameMap: Map<string, Types.ObjectId>,
-  userFollowingNames: IUser[],
+  userFollowingNames: Pick<IUser, "_id" | "followedPeople">[],
   coverageCursor: Date,
   errorLogSuffix: string,
   messageApp: MessageApp,
@@ -118,7 +118,7 @@ export async function notifyNameMentionUpdates(
     dbFilters = { ...dbFilters, _id: { $in: userIds } };
   }
 
-  const userFollowingNames: IUser[] = await User.find(dbFilters, {
+  const userFollowingNames = await User.find(dbFilters, {
     _id: 1,
     messageApp: 1,
     chatId: 1,

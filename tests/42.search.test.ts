@@ -268,10 +268,9 @@ describe("searchPersonHistory — with records", () => {
 
   it("logs on error", async () => {
     sendSpy.mockRejectedValueOnce(new Error("x"));
-    const person = await People.create({ nom: "Dupont", prenom: "Jean" });
+    await People.create({ nom: "Dupont", prenom: "Jean" });
     const user = await makeUserDoc();
     await user.addFollowedName("Dupont Jean");
-    void person;
     await searchPersonHistory(
       makeSession(await User.findById(user._id)),
       "Historique Jean Dupont"

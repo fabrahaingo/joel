@@ -681,7 +681,7 @@ UserSchema.static(
 
     const now = new Date();
 
-    const user: IUser | null = await this.findOne(
+    const user = await this.findOne(
       { _id: userId },
       { pendingNotifications: 1 }
     ).lean();

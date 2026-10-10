@@ -60,7 +60,7 @@ export async function notifyAlertStringUpdates(
     dbFilters = { ...dbFilters, _id: { $in: userIds } };
   }
 
-  const usersFollowingAlerts: IUser[] = await User.find(dbFilters, {
+  const usersFollowingAlerts = await User.find(dbFilters, {
     _id: 1,
     messageApp: 1,
     chatId: 1,
