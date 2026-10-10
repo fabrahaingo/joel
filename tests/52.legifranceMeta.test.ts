@@ -342,6 +342,25 @@ describe("Legifrance access token", () => {
     expect(logErrorForAppsSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("names what PISTE answered when a freshly minted token is refused", async () => {
+    mockDatesWithoutJo();
+    postSpy.mockImplementation((url: string) =>
+      url.includes("oauth")
+        ? Promise.resolve(tokenResponse())
+        : Promise.reject(axiosError(401, { message: "Subscription not found" }))
+    );
+
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(logErrorForAppsSpy).toHaveBeenCalledWith(
+      ["Telegram"],
+      expect.stringContaining("Error fetching the Legifrance JO summary"),
+      expect.objectContaining({
+        message: expect.stringContaining("Subscription not found") as string
+      })
+    );
+  });
+
   it("fails fast and names the reason when the credentials are rejected", async () => {
     mockDatesWithoutJo();
     postSpy.mockImplementation((url: string) =>
@@ -361,11 +380,48 @@ describe("Legifrance access token", () => {
     expect(tokenCalls()).toHaveLength(1);
     expect(logErrorForAppsSpy).toHaveBeenCalledWith(
       ["Telegram"],
-      expect.stringContaining("Error fetching the Legifrance JO summary"),
+      expect.stringContaining("PISTE rejected the Legifrance credentials"),
       expect.objectContaining({
         message: expect.stringContaining("invalid_client") as string
       })
     );
+  });
+
+  it("reports rejected credentials once for a whole range of days", async () => {
+    mockDatesWithoutJo();
+    postSpy.mockImplementation((url: string) =>
+      url.includes("oauth")
+        ? Promise.reject(axiosError(400, { error: "invalid_client" }))
+        : Promise.resolve({ data: { items: [] } })
+    );
+
+    const results = await Promise.all(
+      [19, 18, 17, 16].map((d) =>
+        fetchLegifranceMetaDay(new Date(2026, 7, d), ["Matrix", "Tchap"])
+      )
+    );
+
+    expect(results).toEqual([null, null, null, null]);
+    expect(logErrorForAppsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports rejected credentials again once a token was minted in between", async () => {
+    mockDatesWithoutJo();
+    let rejectToken = true;
+    postSpy.mockImplementation((url: string) => {
+      if (!url.includes("oauth")) return Promise.resolve(ONE_TEXT_SUMMARY);
+      return rejectToken
+        ? Promise.reject(axiosError(400, { error: "invalid_client" }))
+        : Promise.resolve(tokenResponse(30));
+    });
+
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+    rejectToken = false;
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+    rejectToken = true;
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(logErrorForAppsSpy).toHaveBeenCalledTimes(2);
   });
 
   it("retries a token rejection that carries no OAuth error code", async () => {
