@@ -56,7 +56,7 @@ async function getJORFPromoSearchResult(
   // If ENA, use the associated tag with the year as value.
   if (promo.school === "ENA") {
     return callJORFSearchTag(
-      "eleve_ena" as FunctionTags,
+      FunctionTags["Élève INSP/ENA"],
       messageApp,
       promo.period
     );

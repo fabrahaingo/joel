@@ -200,12 +200,11 @@ describe("importCommand + handleImporterCode", () => {
   });
 
   it("creates the recipient account when none exists (pushes all follows)", async () => {
-    const src = await exportingUser();
+    await exportingUser();
     const session = makeSession(null);
     await startImport(session);
     await handleFollowUpMessage(session, "CODE123");
     expect(String(sendSpy.mock.calls.at(-1)?.[0])).toContain("copiés");
-    void src;
   });
 
   it("errors when several users share the code", async () => {
@@ -225,7 +224,7 @@ describe("importCommand + handleImporterCode", () => {
   });
 
   it("errors when the recipient account cannot be created", async () => {
-    const src = await exportingUser();
+    await exportingUser();
     const session = makeSession(null);
     // createUser leaves session.user null -> the recovery branch.
     (session as { createUser: () => Promise<void> }).createUser = vi.fn(() =>
@@ -236,6 +235,5 @@ describe("importCommand + handleImporterCode", () => {
     expect(String(sendSpy.mock.calls.at(-1)?.[0])).toContain(
       "création du compte"
     );
-    void src;
   });
 });

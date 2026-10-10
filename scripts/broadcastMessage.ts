@@ -36,7 +36,7 @@ export async function broadcastMessage(
       messageApp: { $in: messageApps },
       ...(options?.includeBlockedUsers ? {} : { status: "active" })
     },
-    { _id: 0, chatId: 1, messageApp: 1 }
+    { _id: 0, chatId: 1, messageApp: 1, roomId: 1 }
   ).lean();
 
   let succeeded = 0;

@@ -115,7 +115,7 @@ export async function notifyOrganisationsUpdates(
     dbFilters = { ...dbFilters, _id: { $in: userIds } };
   }
 
-  const usersFollowingOrganisations: IUser[] = await User.find(dbFilters, {
+  const usersFollowingOrganisations = await User.find(dbFilters, {
     _id: 1,
     chatId: 1,
     roomId: 1,

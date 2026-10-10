@@ -103,15 +103,16 @@ export async function notifyFunctionTagsUpdates(
 ) {
   if (updatedRecords.length === 0) return;
 
-  const functionTagValues: string[] = Object.values(FunctionTags);
+  const functionTagValues = new Set<string>(Object.values(FunctionTags));
+  const isFunctionTag = (key: string): key is FunctionTags =>
+    functionTagValues.has(key);
   const updatedTagMap = new Map<FunctionTags, JORFSearchItem[]>();
 
   updatedRecords.forEach((item) => {
     (Object.keys(item) as (keyof JORFSearchItem)[]).forEach((key) => {
-      if (functionTagValues.includes(key)) {
-        const keyFctTag = key as FunctionTags;
-        const currentItems = updatedTagMap.get(keyFctTag) ?? [];
-        updatedTagMap.set(keyFctTag, [...currentItems, item]);
+      if (isFunctionTag(key)) {
+        const currentItems = updatedTagMap.get(key) ?? [];
+        updatedTagMap.set(key, [...currentItems, item]);
       }
     });
   });
@@ -137,7 +138,7 @@ export async function notifyFunctionTagsUpdates(
     dbFilters = { ...dbFilters, _id: { $in: userIds } };
   }
 
-  const usersFollowingTags: IUser[] = await User.find(dbFilters, {
+  const usersFollowingTags = await User.find(dbFilters, {
     _id: 1,
     messageApp: 1,
     chatId: 1,

@@ -9,7 +9,7 @@ import {
 } from "./Session.ts";
 import umami, { UmamiEvent, UmamiLogger } from "../utils/umami.ts";
 import { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
-import { ServerMessageResponse } from "whatsapp-api-js/types";
+import { ClientMessage, ServerMessageResponse } from "whatsapp-api-js/types";
 import {
   ActionButtons,
   ActionList,
@@ -36,6 +36,21 @@ const WHATSAPP_BURST_MODE_DELAY_SECONDS = 0.5; // Minimum delay between messages
 const WHATSAPP_BURST_MODE_THRESHOLD = 10; // Number of messages to send in burst mode, before switching to full cooldown
 
 const MAX_MESSAGE_RETRY = 5;
+
+// `chatId` holds a wa_id phone number or a BSUID ("CC.xxx"). Only the string
+// recipient overload maps either form to the right `phone`/`bsuid` field (via
+// WhatsAppAPI.toRecipient); whatsapp-api-js drops it in v7, which will surface
+// here as a build error.
+function sendToChatId(
+  api: WhatsAppAPI,
+  phoneID: string,
+  chatId: string,
+  message: ClientMessage
+): Promise<ServerMessageResponse> {
+  // eslint-disable-next-line @typescript-eslint/no-deprecated
+  return api.sendMessage(phoneID, chatId, message);
+}
+
 // Cap the exponential backoff so a single send can't hold a dispatch slot for
 // minutes (4^5 = 1024s uncapped). Jitter de-syncs concurrent retries.
 const MAX_BACKOFF_MS = 60_000;
@@ -311,11 +326,12 @@ export async function sendWhatsAppMessage(
         return false;
       }
     }
-    const buttons = keyboardFlat.map(
+    const [firstButton, ...otherButtons] = keyboardFlat.map(
       (u, idx) => new Button(`reply_${String(idx)}`, u.text)
     );
-    // @ts-expect-error TypeScript does not account for the spread operator
-    interactiveKeyboard = new ActionButtons(...buttons);
+    // ActionButtons needs at least one button; an empty keyboard sends plain text.
+    if (keyboardFlat.length > 0)
+      interactiveKeyboard = new ActionButtons(firstButton, ...otherButtons);
   }
 
   let resp: ServerMessageResponse;
@@ -343,20 +359,23 @@ export async function sendWhatsAppMessage(
         // The if/else narrows the ActionList | ActionButtons union so each
         // Interactive() call resolves a concrete constructor overload.
         if (interactiveKeyboard instanceof ActionButtons) {
-          resp = await whatsAppAPI.sendMessage(
+          resp = await sendToChatId(
+            whatsAppAPI,
             WHATSAPP_PHONE_ID,
             userInfo.chatId,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         } else {
-          resp = await whatsAppAPI.sendMessage(
+          resp = await sendToChatId(
+            whatsAppAPI,
             WHATSAPP_PHONE_ID,
             userInfo.chatId,
             new Interactive(interactiveKeyboard, new Body(mArr[i]))
           );
         }
       } else {
-        resp = await whatsAppAPI.sendMessage(
+        resp = await sendToChatId(
+          whatsAppAPI,
           WHATSAPP_PHONE_ID,
           userInfo.chatId,
           new Text(mArr[i])
@@ -405,13 +424,15 @@ export async function sendWhatsAppMessage(
     if (options.separateMenuMessage && interactiveKeyboard != null) {
       // Narrow the union so Interactive() resolves a concrete overload.
       if (interactiveKeyboard instanceof ActionButtons) {
-        resp = await whatsAppAPI.sendMessage(
+        resp = await sendToChatId(
+          whatsAppAPI,
           WHATSAPP_PHONE_ID,
           userInfo.chatId,
           new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
         );
       } else {
-        resp = await whatsAppAPI.sendMessage(
+        resp = await sendToChatId(
+          whatsAppAPI,
           WHATSAPP_PHONE_ID,
           userInfo.chatId,
           new Interactive(interactiveKeyboard, new Body(MAIN_MENU_MESSAGE))
@@ -525,7 +546,8 @@ export async function sendWhatsAppTemplate(
   try {
     const template_message = new Template(templateName, "fr");
 
-    const resp: ServerMessageResponse = await whatsAppAPI.sendMessage(
+    const resp: ServerMessageResponse = await sendToChatId(
+      whatsAppAPI,
       WHATSAPP_PHONE_ID,
       userInfo.chatId,
       template_message

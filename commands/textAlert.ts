@@ -337,7 +337,15 @@ type PublicationPreview = Pick<
 };
 
 function buildPublicationPreview(
-  publication: IPublication
+  publication: Pick<
+    IPublication,
+    | "title"
+    | "date"
+    | "id"
+    | "date_obj"
+    | "normalizedTitle"
+    | "normalizedTitleWords"
+  >
 ): PublicationPreview {
   let normalizedTitle: string;
   let normalizedTitleWords: string[];
@@ -377,7 +385,7 @@ async function searchRecentPublicationsByKeywords(
       };
     }
 
-    const strictPublications: IPublication[] = await Publication.find(filter, {
+    const strictPublications = await Publication.find(filter, {
       title: 1,
       id: 1,
       date: 1,
@@ -403,7 +411,7 @@ async function searchRecentPublicationsByKeywords(
       TEXT_RESULT_SEARCH_LIMIT * TEXT_FUZZY_CANDIDATE_MULTIPLIER,
       TEXT_FUZZY_CANDIDATE_MAX
     );
-    const broadCandidates: IPublication[] = await Publication.find(
+    const broadCandidates = await Publication.find(
       {
         date_obj: { $gte: startDate },
         normalizedTitleWords: { $in: plan.keywords }

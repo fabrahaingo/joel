@@ -109,7 +109,7 @@ export async function runReengagementReminderSweep(
   // Cap sends per run and serve least-recently-reminded first (missing
   // lastReengagementSentAt sorts first), so a large backlog is staggered across
   // daily sweeps instead of blasted at once. Overflow rolls over to the next run.
-  const dueUsers: IUser[] = await User.find(dueFilter, {
+  const dueUsers = await User.find(dueFilter, {
     chatId: 1,
     roomId: 1,
     status: 1,
