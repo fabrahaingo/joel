@@ -12,7 +12,11 @@ vi.mock("../utils/umami.ts", () => ({
   default: { log: vi.fn(), logAsync: vi.fn() }
 }));
 
-import { sendWhatsAppMessage } from "../entities/WhatsAppSession.ts";
+import {
+  sendWhatsAppMessage,
+  WHATSAPP_REENGAGEMENT_MARGIN_MINS,
+  WHATSAPP_SHIFT_STEP_MINS
+} from "../entities/WhatsAppSession.ts";
 import type { ExtendedMiniUserInfo } from "../entities/Session.ts";
 import type { WhatsAppAPI } from "whatsapp-api-js/middleware/express";
 
@@ -33,7 +37,7 @@ describe("sendWhatsAppMessage — re-engagement guard", () => {
     const sendMessage = vi.fn();
     const api = { sendMessage } as unknown as WhatsAppAPI;
 
-    // 24h ago by wall clock -> past the 23h55m cutoff. No windowNow -> real time.
+    // 24h ago by wall clock -> past the 23h58m cutoff. No windowNow -> real time.
     const userInfo = waUser(new Date(Date.now() - 24 * HOUR_MS));
 
     // Must NOT throw: a thrown guard is uncaught through the dispatch Promise.all
@@ -50,9 +54,9 @@ describe("sendWhatsAppMessage — re-engagement guard", () => {
     const sendMessage = vi.fn();
     const api = { sendMessage } as unknown as WhatsAppAPI;
 
-    // Wall clock: 23h58m ago -> past the 23h55m cutoff. Meta would reject this
+    // Wall clock: 23h59m ago -> past the 23h58m cutoff. Meta would reject this
     // send asynchronously with 131047, so the guard must block it.
-    const lastEngagementAt = new Date(Date.now() - (24 * 60 - 2) * MIN_MS);
+    const lastEngagementAt = new Date(Date.now() - (24 * 60 - 1) * MIN_MS);
     // windowNow (run-start snapshot): 23h after engagement -> in window. A slow
     // run makes exactly this divergence; the snapshot must NOT win here.
     const windowNow = new Date(lastEngagementAt.getTime() + 23 * HOUR_MS);
@@ -88,5 +92,29 @@ describe("sendWhatsAppMessage — re-engagement guard", () => {
     expect(sendMessage).toHaveBeenCalledTimes(1);
     // The injected API error is swallowed -> false, never thrown.
     expect(res).toBe(false);
+  });
+
+  it("sends to a user who engaged right after yesterday's run when today's shifted run is a minute late", async () => {
+    const sendMessage = vi
+      .fn()
+      .mockRejectedValue(new Error("stop after guard"));
+    const api = { sendMessage } as unknown as WhatsAppAPI;
+
+    // Engaged 20s after yesterday's send; today's run starts one shift step
+    // earlier and reaches this user 60s after it started.
+    const elapsedMs = 24 * HOUR_MS - WHATSAPP_SHIFT_STEP_MINS * MIN_MS + 80_000;
+    const lastEngagementAt = new Date(Date.now() - elapsedMs);
+
+    await sendWhatsAppMessage(api, waUser(lastEngagementAt), "hi", {
+      hasAccount: true
+    });
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the daily shift step above the cutoff margin", () => {
+    expect(WHATSAPP_SHIFT_STEP_MINS).toBeGreaterThan(
+      WHATSAPP_REENGAGEMENT_MARGIN_MINS
+    );
   });
 });
