@@ -290,9 +290,16 @@ function epochToYMD(epoch: string | number): string | null {
   return `${year}-${month}-${day}`;
 }
 
-function ymdToUtcEpoch(dateYMD: string): number {
-  const [year, month, day] = dateYMD.split("-").map((s) => parseInt(s));
-  return Date.UTC(year, month - 1, day);
+/** A container's `datePubli`: epoch milliseconds at UTC midnight, as a number
+ * or a numeric string, or an ISO timestamp. */
+function publicationDayOf(
+  datePubli: string | number | undefined
+): string | null {
+  if (datePubli == null) return null;
+  if (typeof datePubli === "number" || /^\d+$/.test(datePubli)) {
+    return epochToYMD(datePubli);
+  }
+  return /^\d{4}-\d{2}-\d{2}/.test(datePubli) ? datePubli.slice(0, 10) : null;
 }
 
 /**
@@ -337,7 +344,7 @@ interface Tms {
 
 interface FullConteneur {
   id?: string;
-  datePubli?: string;
+  datePubli?: string | number;
   num?: string;
   structure?: {
     liens?: LienTxt[];
@@ -398,21 +405,44 @@ export async function fetchLegifranceMetaDay(
     const daysWithoutJo = await getDaysWithoutJo();
     if (daysWithoutJo.has(dateYMD)) return emptyResult;
 
+    const [year, month, dayOfMonth] = dateYMD
+      .split("-")
+      .map((part) => parseInt(part));
+    // `start` and `end` bound the publication day, both inclusive. The request
+    // also accepts a `date`, but that is a reference date and filters nothing:
+    // the latest editions come back whatever day it names.
+    const publicationDay = { year, month, dayOfMonth };
     const response = await legifrancePost<GetJosResponse>("/consult/jorfCont", {
-      // Legifrance dates its consultation requests in epoch milliseconds. Pin
-      // them to UTC midnight so the server-local timezone cannot shift the day.
-      date: ymdToUtcEpoch(dateYMD),
+      start: publicationDay,
+      end: publicationDay,
       pageNumber: 1,
       pageSize: CONTAINER_PAGE_SIZE
     });
 
-    const containers = (response.items ?? [])
+    const served = (response.items ?? [])
       .map((item) => item.joCont)
       .filter((cont): cont is FullConteneur => cont != null);
 
-    // The day is neither listed as JO-free nor served with a summary: the
-    // edition is not available, which is a gap rather than an empty day.
-    if (containers.length === 0) return null;
+    // Only an edition dated on `day` may be stamped with it: a summary served
+    // for another day would replay its texts as new on every day of a range.
+    const containers = served.filter(
+      (cont) => publicationDayOf(cont.datePubli) === dateYMD
+    );
+
+    if (containers.length === 0) {
+      if (served.length > 0) {
+        const servedDays = served
+          .map((cont) => publicationDayOf(cont.datePubli) ?? "undated")
+          .join(", ");
+        await logErrorForApps(
+          messageApps,
+          `Legifrance served JO editions of ${servedDays} for ${dateYMD}`
+        );
+      }
+      // The day is neither listed as JO-free nor served with its summary: the
+      // edition is not available, which is a gap rather than an empty day.
+      return null;
+    }
 
     const rawItems = containers.flatMap(collectTextLinks).map((link) => ({
       id: link.id,
