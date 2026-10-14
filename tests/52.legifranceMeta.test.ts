@@ -55,6 +55,12 @@ const DAY = new Date(2026, 7, 19); // 19 August 2026, local midnight
 const DAY_YMD = "2026-08-19";
 const DAY_UTC_EPOCH = Date.UTC(2026, 7, 19);
 
+interface ConsultDate {
+  year: number;
+  month: number;
+  dayOfMonth: number;
+}
+
 function tokenResponse(expiresIn = 3600) {
   return { data: { access_token: "test-token", expires_in: expiresIn } };
 }
@@ -89,6 +95,7 @@ const ONE_TEXT_SUMMARY = {
     items: [
       {
         joCont: {
+          datePubli: DAY_UTC_EPOCH,
           structure: {
             liens: [{ id: "JORFTEXT000000000001", titre: "Texte" }]
           }
@@ -148,6 +155,7 @@ describe("fetchLegifranceMetaDay", () => {
         items: [
           {
             joCont: {
+              datePubli: DAY_UTC_EPOCH,
               id: "JORFCONT000000000001",
               structure: {
                 liens: [{ id: "JORFTEXT000000000001", titre: "Texte racine" }],
@@ -186,6 +194,105 @@ describe("fetchLegifranceMetaDay", () => {
     expect(result?.items.every((i) => i.date === DAY_YMD)).toBe(true);
   });
 
+  it("filters the summary request on the requested day", async () => {
+    mockDatesWithoutJo();
+    mockPost(() => ONE_TEXT_SUMMARY);
+
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    const day = { year: 2026, month: 8, dayOfMonth: 19 };
+    expect(summaryCalls()).toHaveLength(1);
+    const payload = summaryCalls()[0][1] as Record<string, unknown>;
+    expect(payload.start).toEqual(day);
+    expect(payload.end).toEqual(day);
+    expect(payload).not.toHaveProperty("date");
+  });
+
+  it("dates each text from the edition, in epoch or ISO form", async () => {
+    mockDatesWithoutJo();
+    mockPost(() => ({
+      data: {
+        items: [
+          {
+            joCont: {
+              datePubli: String(DAY_UTC_EPOCH),
+              structure: { liens: [{ id: "JORFTEXT000000000001", titre: "A" }] }
+            }
+          },
+          {
+            joCont: {
+              datePubli: `${DAY_YMD}T00:00:00.000+0000`,
+              structure: { liens: [{ id: "JORFTEXT000000000002", titre: "B" }] }
+            }
+          }
+        ]
+      }
+    }));
+
+    const result = await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(result?.items.map((i) => [i.id, i.date])).toEqual([
+      ["JORFTEXT000000000001", DAY_YMD],
+      ["JORFTEXT000000000002", DAY_YMD]
+    ]);
+  });
+
+  it("drops editions published on another day than the one requested", async () => {
+    mockDatesWithoutJo();
+    mockPost(() => ({
+      data: {
+        items: [
+          {
+            joCont: {
+              datePubli: DAY_UTC_EPOCH,
+              structure: { liens: [{ id: "JORFTEXT000000000001", titre: "A" }] }
+            }
+          },
+          {
+            joCont: {
+              datePubli: Date.UTC(2026, 7, 20),
+              structure: { liens: [{ id: "JORFTEXT000000000002", titre: "B" }] }
+            }
+          },
+          {
+            joCont: {
+              structure: { liens: [{ id: "JORFTEXT000000000003", titre: "C" }] }
+            }
+          }
+        ]
+      }
+    }));
+
+    const result = await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(result?.items.map((i) => i.id)).toEqual(["JORFTEXT000000000001"]);
+  });
+
+  it("reports a gap when only editions of other days are served", async () => {
+    mockDatesWithoutJo();
+    mockPost(() => ({
+      data: {
+        items: [
+          {
+            joCont: {
+              datePubli: Date.UTC(2026, 9, 14),
+              structure: { liens: [{ id: "JORFTEXT000000000001", titre: "A" }] }
+            }
+          }
+        ]
+      }
+    }));
+
+    const result = await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(result).toBeNull();
+    expect(logErrorForAppsSpy).toHaveBeenCalledTimes(1);
+    expect(logErrorForAppsSpy).toHaveBeenCalledWith(
+      ["Telegram"],
+      expect.stringContaining("2026-10-14")
+    );
+  });
+
   it("drops texts missing an id or a title and counts them", async () => {
     mockDatesWithoutJo();
     mockPost(() => ({
@@ -193,6 +300,7 @@ describe("fetchLegifranceMetaDay", () => {
         items: [
           {
             joCont: {
+              datePubli: DAY_UTC_EPOCH,
               structure: {
                 liens: [
                   { id: "JORFTEXT000000000001", titre: "Complet" },
@@ -342,6 +450,25 @@ describe("Legifrance access token", () => {
     expect(logErrorForAppsSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("names what PISTE answered when a freshly minted token is refused", async () => {
+    mockDatesWithoutJo();
+    postSpy.mockImplementation((url: string) =>
+      url.includes("oauth")
+        ? Promise.resolve(tokenResponse())
+        : Promise.reject(axiosError(401, { message: "Subscription not found" }))
+    );
+
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(logErrorForAppsSpy).toHaveBeenCalledWith(
+      ["Telegram"],
+      expect.stringContaining("Error fetching the Legifrance JO summary"),
+      expect.objectContaining({
+        message: expect.stringContaining("Subscription not found") as string
+      })
+    );
+  });
+
   it("fails fast and names the reason when the credentials are rejected", async () => {
     mockDatesWithoutJo();
     postSpy.mockImplementation((url: string) =>
@@ -361,11 +488,48 @@ describe("Legifrance access token", () => {
     expect(tokenCalls()).toHaveLength(1);
     expect(logErrorForAppsSpy).toHaveBeenCalledWith(
       ["Telegram"],
-      expect.stringContaining("Error fetching the Legifrance JO summary"),
+      expect.stringContaining("PISTE rejected the Legifrance credentials"),
       expect.objectContaining({
         message: expect.stringContaining("invalid_client") as string
       })
     );
+  });
+
+  it("reports rejected credentials once for a whole range of days", async () => {
+    mockDatesWithoutJo();
+    postSpy.mockImplementation((url: string) =>
+      url.includes("oauth")
+        ? Promise.reject(axiosError(400, { error: "invalid_client" }))
+        : Promise.resolve({ data: { items: [] } })
+    );
+
+    const results = await Promise.all(
+      [19, 18, 17, 16].map((d) =>
+        fetchLegifranceMetaDay(new Date(2026, 7, d), ["Matrix", "Tchap"])
+      )
+    );
+
+    expect(results).toEqual([null, null, null, null]);
+    expect(logErrorForAppsSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports rejected credentials again once a token was minted in between", async () => {
+    mockDatesWithoutJo();
+    let rejectToken = true;
+    postSpy.mockImplementation((url: string) => {
+      if (!url.includes("oauth")) return Promise.resolve(ONE_TEXT_SUMMARY);
+      return rejectToken
+        ? Promise.reject(axiosError(400, { error: "invalid_client" }))
+        : Promise.resolve(tokenResponse(30));
+    });
+
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+    rejectToken = false;
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+    rejectToken = true;
+    await fetchLegifranceMetaDay(DAY, ["Telegram"]);
+
+    expect(logErrorForAppsSpy).toHaveBeenCalledTimes(2);
   });
 
   it("retries a token rejection that carries no OAuth error code", async () => {
@@ -435,6 +599,7 @@ describe("reference resolution against the JO summary", () => {
         items: [
           {
             joCont: {
+              datePubli: DAY_UTC_EPOCH,
               structure: { liens: [{ id: REFERENCE, titre: "Décret" }] }
             }
           }
@@ -454,13 +619,14 @@ describe("reference resolution against the JO summary", () => {
     mockReferenceLookup(["2026-08-19", "2026-08-18"]);
     postSpy.mockImplementation((url: string, payload: unknown) => {
       if (url.includes("oauth")) return Promise.resolve(tokenResponse());
-      const { date } = payload as { date: number };
+      const { start } = payload as { start: ConsultDate };
+      const datePubli = Date.UTC(start.year, start.month - 1, start.dayOfMonth);
       const liens =
-        date === Date.UTC(2026, 7, 18)
+        datePubli === Date.UTC(2026, 7, 18)
           ? [{ id: REFERENCE, titre: "Décret" }]
           : [{ id: "JORFTEXT000000000999", titre: "Autre texte" }];
       return Promise.resolve({
-        data: { items: [{ joCont: { structure: { liens } } }] }
+        data: { items: [{ joCont: { datePubli, structure: { liens } } }] }
       });
     });
 
@@ -480,6 +646,7 @@ describe("reference resolution against the JO summary", () => {
         items: [
           {
             joCont: {
+              datePubli: DAY_UTC_EPOCH,
               structure: {
                 liens: [{ id: "JORFTEXT000000000999", titre: "Autre texte" }]
               }

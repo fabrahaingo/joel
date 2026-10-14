@@ -28,6 +28,10 @@ const TOKEN_EXPIRY_MARGIN_MS = 60_000;
 
 const DATES_WITHOUT_JO_TTL_MS = 24 * 60 * 60 * 1000;
 
+/** Rejected credentials fail every day of a range identically: alert once per
+ * window rather than once per day and app. */
+const CREDENTIAL_ALERT_INTERVAL_MS = 60 * 60 * 1000;
+
 /** The JO summary nests sections a handful of levels deep; the cap is a guard
  * against a malformed cyclic payload, not a real structural limit. */
 const MAX_SECTION_DEPTH = 16;
@@ -58,12 +62,26 @@ interface CachedToken {
 let cachedToken: CachedToken | null = null;
 let inFlightToken: Promise<string> | null = null;
 let datesWithoutJoCache: { days: Set<string>; fetchedAt: number } | null = null;
+let credentialAlertSentAt: number | null = null;
 
-/** Test seam: drops the token and the no-JO day list. */
+/** Test seam: drops the token, the no-JO day list and the alert throttle. */
 export function resetLegifranceCaches(): void {
   cachedToken = null;
   inFlightToken = null;
   datesWithoutJoCache = null;
+  credentialAlertSentAt = null;
+}
+
+/**
+ * PISTE refuses the configured client: missing, revoked or rotated
+ * credentials, or a lapsed Legifrance API subscription on the PISTE app. Only
+ * an operator can fix it, so it is never retried.
+ */
+export class LegifranceCredentialError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "LegifranceCredentialError";
+  }
 }
 
 interface TokenResponse {
@@ -117,7 +135,7 @@ function describeTokenFailure(error: unknown): Error {
       : "Legifrance token endpoint rejected the request";
 
   return body?.error != null && FATAL_OAUTH_ERRORS.has(body.error)
-    ? new Error(message, { cause: error })
+    ? new LegifranceCredentialError(message, { cause: error })
     : new TransientUpstreamError(message, { cause: error });
 }
 
@@ -125,7 +143,7 @@ async function requestAccessToken(): Promise<string> {
   const clientId = process.env.LEGIFRANCE_CLIENT_ID;
   const clientSecret = process.env.LEGIFRANCE_CLIENT_SECRET;
   if (!clientId || !clientSecret) {
-    throw new Error(
+    throw new LegifranceCredentialError(
       "Legifrance credentials are missing: set LEGIFRANCE_CLIENT_ID and LEGIFRANCE_CLIENT_SECRET"
     );
   }
@@ -159,6 +177,7 @@ async function requestAccessToken(): Promise<string> {
     value: data.access_token,
     expiresAt: requestedAt + lifetimeMs
   };
+  credentialAlertSentAt = null;
   return cachedToken.value;
 }
 
@@ -188,6 +207,29 @@ function isUnauthorized(error: unknown): boolean {
 }
 
 /**
+ * Names what PISTE answered when it refuses a freshly minted bearer: the bare
+ * axios message carries the status only, and the body or `WWW-Authenticate`
+ * header is what tells a missing API subscription from a gateway fault.
+ */
+function describeBearerRefusal(path: string, error: unknown): Error {
+  const response = isAxiosError(error) ? error.response : undefined;
+  const body: unknown = response?.data;
+  const headers = response?.headers as Record<string, unknown> | undefined;
+  const challenge = headers?.["www-authenticate"];
+  const context = [
+    response?.status != null ? `HTTP ${String(response.status)}` : null,
+    typeof challenge === "string" ? challenge : null,
+    body == null ? null : typeof body === "string" ? body : JSON.stringify(body)
+  ]
+    .filter((part): part is string => part != null && part.length > 0)
+    .join(" ");
+  return new Error(
+    `Legifrance ${path} refused a freshly minted token (${context})`,
+    { cause: error }
+  );
+}
+
+/**
  * Sends an authenticated call, and on a rejected bearer mints a fresh one and
  * sends it once more. A token can be refused before its announced expiry, and
  * the cached value would otherwise keep every later call failing too. A second
@@ -203,7 +245,12 @@ async function legifranceRequest<T>(
   } catch (error) {
     if (!isUnauthorized(error)) throw error;
     cachedToken = null;
-    res = await send(await getAccessToken());
+    try {
+      res = await send(await getAccessToken());
+    } catch (retryError) {
+      if (!isUnauthorized(retryError)) throw retryError;
+      throw describeBearerRefusal(path, retryError);
+    }
   }
   return assertJsonPayload(res.data, `Legifrance ${path}`);
 }
@@ -243,9 +290,16 @@ function epochToYMD(epoch: string | number): string | null {
   return `${year}-${month}-${day}`;
 }
 
-function ymdToUtcEpoch(dateYMD: string): number {
-  const [year, month, day] = dateYMD.split("-").map((s) => parseInt(s));
-  return Date.UTC(year, month - 1, day);
+/** A container's `datePubli`: epoch milliseconds at UTC midnight, as a number
+ * or a numeric string, or an ISO timestamp. */
+function publicationDayOf(
+  datePubli: string | number | undefined
+): string | null {
+  if (datePubli == null) return null;
+  if (typeof datePubli === "number" || /^\d+$/.test(datePubli)) {
+    return epochToYMD(datePubli);
+  }
+  return /^\d{4}-\d{2}-\d{2}/.test(datePubli) ? datePubli.slice(0, 10) : null;
 }
 
 /**
@@ -290,7 +344,7 @@ interface Tms {
 
 interface FullConteneur {
   id?: string;
-  datePubli?: string;
+  datePubli?: string | number;
   num?: string;
   structure?: {
     liens?: LienTxt[];
@@ -351,21 +405,44 @@ export async function fetchLegifranceMetaDay(
     const daysWithoutJo = await getDaysWithoutJo();
     if (daysWithoutJo.has(dateYMD)) return emptyResult;
 
+    const [year, month, dayOfMonth] = dateYMD
+      .split("-")
+      .map((part) => parseInt(part));
+    // `start` and `end` bound the publication day, both inclusive. The request
+    // also accepts a `date`, but that is a reference date and filters nothing:
+    // the latest editions come back whatever day it names.
+    const publicationDay = { year, month, dayOfMonth };
     const response = await legifrancePost<GetJosResponse>("/consult/jorfCont", {
-      // Legifrance dates its consultation requests in epoch milliseconds. Pin
-      // them to UTC midnight so the server-local timezone cannot shift the day.
-      date: ymdToUtcEpoch(dateYMD),
+      start: publicationDay,
+      end: publicationDay,
       pageNumber: 1,
       pageSize: CONTAINER_PAGE_SIZE
     });
 
-    const containers = (response.items ?? [])
+    const served = (response.items ?? [])
       .map((item) => item.joCont)
       .filter((cont): cont is FullConteneur => cont != null);
 
-    // The day is neither listed as JO-free nor served with a summary: the
-    // edition is not available, which is a gap rather than an empty day.
-    if (containers.length === 0) return null;
+    // Only an edition dated on `day` may be stamped with it: a summary served
+    // for another day would replay its texts as new on every day of a range.
+    const containers = served.filter(
+      (cont) => publicationDayOf(cont.datePubli) === dateYMD
+    );
+
+    if (containers.length === 0) {
+      if (served.length > 0) {
+        const servedDays = served
+          .map((cont) => publicationDayOf(cont.datePubli) ?? "undated")
+          .join(", ");
+        await logErrorForApps(
+          messageApps,
+          `Legifrance served JO editions of ${servedDays} for ${dateYMD}`
+        );
+      }
+      // The day is neither listed as JO-free nor served with its summary: the
+      // edition is not available, which is a gap rather than an empty day.
+      return null;
+    }
 
     const rawItems = containers.flatMap(collectTextLinks).map((link) => ({
       id: link.id,
@@ -397,6 +474,24 @@ export async function fetchLegifranceMetaDay(
       messageApp: messageApps[0],
       payload: { meta: true }
     });
+
+    if (error instanceof LegifranceCredentialError) {
+      const now = Date.now();
+      if (
+        credentialAlertSentAt != null &&
+        now - credentialAlertSentAt < CREDENTIAL_ALERT_INTERVAL_MS
+      ) {
+        return null;
+      }
+      credentialAlertSentAt = now;
+      await logErrorForApps(
+        messageApps,
+        "PISTE rejected the Legifrance credentials: check LEGIFRANCE_CLIENT_ID / LEGIFRANCE_CLIENT_SECRET and the app's Legifrance API subscription on piste.gouv.fr. Further days failing on this are not reported for the next hour.",
+        error
+      );
+      return null;
+    }
+
     await logErrorForApps(
       messageApps,
       shouldRetry(error)

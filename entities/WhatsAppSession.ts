@@ -25,7 +25,7 @@ import { markdown2WHMarkdown, splitText } from "../utils/text.utils.ts";
 import { deleteUserAndCleanup } from "../utils/userDeletion.utils.ts";
 import { Keyboard, KEYBOARD_KEYS, KeyboardKey } from "./Keyboard.ts";
 import { MAIN_MENU_MESSAGE } from "../commands/default.ts";
-import { logError } from "../utils/debugLogger.ts";
+import { logError, logWarning } from "../utils/debugLogger.ts";
 import { timeDaysBetweenDates } from "../utils/date.utils.ts";
 
 export const WHATSAPP_MESSAGE_CHAR_LIMIT = 900;
@@ -63,24 +63,23 @@ export const WHATSAPP_API_VERSION = "v24.0";
 // Safety buffer before the real 24h limit. The send guard in
 // sendWhatsAppMessage evaluates real time immediately before each send, so the
 // margin only needs to cover a single message's API latency (guard check ->
-// Meta delivery), not the whole run length. 5 min is generous for that.
-export const WHATSAPP_REENGAGEMENT_MARGIN_MINS = 5; // 5 mins
+// Meta delivery), not the whole run length.
+export const WHATSAPP_REENGAGEMENT_MARGIN_MINS = 2; // 2 mins
 
 // Per-day advance applied by the daily scheduler to keep a user who interacted
 // yesterday inside their 24h window today (see notificationScheduler.ts). Kept
-// separate from the cutoff margin above so each can be tuned independently:
-// historically both were the same constant, which is why margin == step ==
-// process-latency all read as "5 min". Keep >= margin so the chained window
-// never closes before the next run.
+// separate from the cutoff margin above so each can be tuned independently.
+// Must exceed margin + run latency: a user who engaged right after yesterday's
+// send is reached one step earlier today, with (step - margin) left for the run
+// to reach them before the send guard skips them.
 export const WHATSAPP_SHIFT_STEP_MINS = 5; // 5 mins
 
 // 24h - MARGIN_MINS
 export const WHATSAPP_REENGAGEMENT_TIMEOUT_WITH_MARGIN_MS =
   1000 * 60 * (24 * 60 - WHATSAPP_REENGAGEMENT_MARGIN_MINS);
 
-// 24 h + 5*MARGIN_MINS (for near-miss calculations)
-export const WHATSAPP_NEAR_MISS_WINDOW_MS =
-  1000 * 60 * (24 * 60 + 5 * WHATSAPP_REENGAGEMENT_MARGIN_MINS);
+// 24h + 25 mins (for near-miss calculations)
+export const WHATSAPP_NEAR_MISS_WINDOW_MS = 1000 * 60 * (24 * 60 + 25);
 
 // Weekly re-engagement reminder for users with pending notifications.
 // Resend the template at most once per interval, capped per pending cycle.
@@ -279,9 +278,9 @@ export async function sendWhatsAppMessage(
       options.windowNow == null
         ? ""
         : ` (run windowNow snapshot was ${options.windowNow.toISOString()})`;
-    await logError(
+    await logWarning(
       "WhatsApp",
-      `Skipped free message to WH user ${userInfo.chatId} at time ${now.toISOString()}${windowNowInfo}, as his lastEngagement is ${userInfo.lastEngagementAt.toISOString()} (margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS)}mins). User picked up by re-engagement next run/sweep.`
+      `Skipped free message to WH user ${userInfo.chatId} at time ${now.toISOString()}${windowNowInfo}, as their lastEngagement is ${userInfo.lastEngagementAt.toISOString()} (margin is ${String(WHATSAPP_REENGAGEMENT_MARGIN_MINS)}mins). User picked up by re-engagement next run/sweep.`
     );
     return false;
   }

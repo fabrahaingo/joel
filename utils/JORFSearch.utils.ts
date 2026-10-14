@@ -352,13 +352,20 @@ export async function getJORFMetaRecordsFromDate(
     });
   }
 
-  allItems.sort(
+  // A text belongs to a single edition: keep its earliest sighting so an
+  // overlap between days can never notify it twice.
+  const byId = new Map<string, JORFSearchPublication>();
+  for (const item of allItems) {
+    const seen = byId.get(item.id);
+    if (seen == null || item.date < seen.date) byId.set(item.id, item);
+  }
+  const items = [...byId.values()].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   );
 
-  await saveMetaPublications(allItems, messageApps);
+  await saveMetaPublications(items, messageApps);
 
-  return { items: allItems, requestedDays: days.length, failedDates };
+  return { items, requestedDays: days.length, failedDates };
 }
 
 export async function callJORFSearchTag(

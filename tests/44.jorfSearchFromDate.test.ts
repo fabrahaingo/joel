@@ -66,14 +66,15 @@ function dmy(d: Date): string {
   return `${dd}-${mm}-${String(d.getFullYear())}`;
 }
 
-/** A Legifrance JO summary holding one text per requested day. */
-function jorfContResponse(textId: string) {
+/** A Legifrance JO summary holding one text, published on `datePubli`. */
+function jorfContResponse(textId: string, datePubli: number) {
   return {
     data: {
       items: [
         {
           joCont: {
             id: "JORFCONT000000000001",
+            datePubli,
             structure: {
               liens: [{ id: textId, titre: "Titre de test" }]
             }
@@ -95,8 +96,12 @@ function mockLegifrance(onSummary: (epochMs: number) => unknown) {
         data: { access_token: "test-token", expires_in: 3600 }
       });
     }
-    const { date } = payload as { date: number };
-    return Promise.resolve(onSummary(date));
+    const { start } = payload as {
+      start: { year: number; month: number; dayOfMonth: number };
+    };
+    return Promise.resolve(
+      onSummary(Date.UTC(start.year, start.month - 1, start.dayOfMonth))
+    );
   });
 }
 
@@ -277,7 +282,9 @@ describe("getJORFRecordsFromDate", () => {
 describe("getJORFMetaRecordsFromDate", () => {
   it("aggregates meta publications across a multi-day range and persists them", async () => {
     getSpy.mockImplementation(mockDatesWithoutJo());
-    mockLegifrance((epochMs) => jorfContResponse("JORFTEXT" + String(epochMs)));
+    mockLegifrance((epochMs) =>
+      jorfContResponse("JORFTEXT" + String(epochMs), epochMs)
+    );
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -306,6 +313,22 @@ describe("getJORFMetaRecordsFromDate", () => {
     ).toBe(3);
     // Persisted to the in-memory DB (saveMetaPublications upserts).
     expect(umamiLogAsyncSpy).toHaveBeenCalled();
+  });
+
+  it("lists a text once when several days of the range carry it", async () => {
+    getSpy.mockImplementation(mockDatesWithoutJo());
+    mockLegifrance((epochMs) =>
+      jorfContResponse("JORFTEXT000054979812", epochMs)
+    );
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 6);
+
+    const { items } = await getJORFMetaRecordsFromDate(startDate, ["Telegram"]);
+
+    expect(items.map((i) => i.id)).toEqual(["JORFTEXT000054979812"]);
   });
 
   it("reports a failed day instead of throwing", async () => {
