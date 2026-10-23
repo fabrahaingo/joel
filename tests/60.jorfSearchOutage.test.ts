@@ -156,7 +156,7 @@ describe("JORFSearch outage", () => {
       searchOrganisationWikidataId("Conseil d'Etat", "Telegram")
     );
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ unavailable: "Wikidata" });
     expect(jorfSearchHealth.isHealthy()).toBe(true);
     expect(getSpy).toHaveBeenCalledTimes(RETRY_MAX + 1);
     expect(alertTexts()[0]).toContain(

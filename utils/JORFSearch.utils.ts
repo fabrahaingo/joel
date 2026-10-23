@@ -483,6 +483,11 @@ export async function callJORFSearchOrganisation(
   });
 }
 
+/** An organisation lookup that could not be answered, naming the culprit. */
+export interface UpstreamUnavailable {
+  unavailable: "JORFSearch" | "Wikidata";
+}
+
 interface WikiDataAPIResponse {
   success: number;
   search: {
@@ -495,7 +500,7 @@ export async function searchOrganisationWikidataId(
   org_name: string,
   messageApp: MessageApp,
   options?: JORFSearchRequestOptions
-): Promise<{ nom: string; wikidataId: WikidataId }[] | null> {
+): Promise<{ nom: string; wikidataId: WikidataId }[] | UpstreamUnavailable> {
   if (org_name.length == 0) throw new Error("Empty org_name");
 
   umami.log({
@@ -536,13 +541,13 @@ export async function searchOrganisationWikidataId(
         })
   });
 
-  if (wikidataIds_raw === null) return null;
+  if (wikidataIds_raw === null) return { unavailable: "Wikidata" };
   if (wikidataIds_raw.length == 0) return []; // prevents unnecessary jorf event
 
   const jorfUrl = encodeURI(
     `https://jorfsearch.steinertriples.ch/wikidata/contains?ids[]=${wikidataIds_raw.map((o) => o.id).join("&ids[]=")}`
   );
-  return await requestWithRetry({
+  const organisations = await requestWithRetry({
     kind: "wikidata",
     messageApps: [messageApp],
     errorLabel: `Error in searchOrganisationWikidataId when fetching url ${jorfUrl} with search term ${org_name}`,
@@ -558,6 +563,7 @@ export async function searchOrganisationWikidataId(
           }));
         })
   });
+  return organisations ?? { unavailable: "JORFSearch" };
 }
 
 /**

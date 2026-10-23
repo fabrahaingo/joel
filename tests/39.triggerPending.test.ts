@@ -119,11 +119,15 @@ describe("triggerPendingNotifications", () => {
         items_nb: 1
       }
     ]);
-    await triggerPendingNotifications(
-      makeSession(await User.findById(user._id))
-    );
+    const session = makeSession(await User.findById(user._id));
+    await triggerPendingNotifications(session);
 
-    expect(callRefSpy).toHaveBeenCalledWith("R1", "Telegram");
+    const [reference, messageApp, options] = callRefSpy.mock
+      .calls[0] as unknown as [string, string, { onRetry: () => void }];
+    expect([reference, messageApp]).toEqual(["R1", "Telegram"]);
+    // A slow reference lookup keeps the typing indicator up.
+    options.onRetry();
+    expect(session.sendTypingAction).toHaveBeenCalled();
     expect(notifyAllSpy).toHaveBeenCalled();
     // Scoped to the triggering user and forced past the WH window: this is an
     // on-demand delivery, not a broadcast.

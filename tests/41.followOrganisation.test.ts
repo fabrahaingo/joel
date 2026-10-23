@@ -25,7 +25,10 @@ import {
 import { handleFollowUpMessage } from "../entities/FollowUpManager.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import type { ISession, IUser } from "../types.ts";
-import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
+import {
+  JORFSEARCH_UNAVAILABLE_TEXT,
+  WIKIDATA_UNAVAILABLE_TEXT
+} from "../utils/jorfSearchHealth.ts";
 
 const sendSpy = vi.fn(() => Promise.resolve(true));
 const makeSession = (
@@ -92,7 +95,7 @@ describe("searchOrganisation + search follow-up", () => {
   });
 
   it("reports a JORFSearch error", async () => {
-    searchOrgSpy.mockResolvedValue(null);
+    searchOrgSpy.mockResolvedValue({ unavailable: "JORFSearch" });
     const session = makeSession(await makeUserDoc());
     await searchOrganisation(session);
     sendSpy.mockClear();
@@ -276,8 +279,17 @@ describe("followOrganisationsFromWikidataIdStr", () => {
     );
   });
 
+  it("names Wikidata when it is the one down", async () => {
+    searchOrgSpy.mockResolvedValue({ unavailable: "Wikidata" });
+    const session = makeSession(await makeUserDoc());
+    await followOrganisationsFromWikidataIdStr(session, "SuivreO Q9");
+    expect(String(sendSpy.mock.calls.at(-1)?.[0])).toContain(
+      WIKIDATA_UNAVAILABLE_TEXT
+    );
+  });
+
   it("reports a JORFSearch error during id resolution", async () => {
-    searchOrgSpy.mockResolvedValue(null);
+    searchOrgSpy.mockResolvedValue({ unavailable: "JORFSearch" });
     const session = makeSession(await makeUserDoc());
     await followOrganisationsFromWikidataIdStr(session, "SuivreO Q9");
     expect(String(sendSpy.mock.calls.at(-1)?.[0])).toContain(

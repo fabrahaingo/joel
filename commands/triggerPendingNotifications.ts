@@ -5,7 +5,10 @@ import { notifyAllFollows } from "../notifications/runNotificationProcess.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import pLimit from "p-limit";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
-import { callJORFSearchReference } from "../utils/JORFSearch.utils.ts";
+import {
+  callJORFSearchReference,
+  keepTypingWhileRetrying
+} from "../utils/JORFSearch.utils.ts";
 import User from "../models/User.ts";
 import { Publication } from "../models/Publication.ts";
 
@@ -85,7 +88,11 @@ export const triggerPendingNotifications = async (
     await Promise.all(
       uniqueReferences.map((ref) =>
         limit(async () => {
-          const res = await callJORFSearchReference(ref, session.messageApp);
+          const res = await callJORFSearchReference(
+            ref,
+            session.messageApp,
+            keepTypingWhileRetrying(session)
+          );
           if (res == null) {
             await logError(
               session.messageApp,

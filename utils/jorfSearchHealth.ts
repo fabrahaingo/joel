@@ -9,6 +9,10 @@ export const JORFSEARCH_REALERT_COOLDOWN_MS = 30 * 60 * 1000;
 export const JORFSEARCH_UNAVAILABLE_TEXT =
   "JORFSearch, le service externe sur lequel JOEL s'appuie pour les recherches, est momentanément indisponible. Veuillez réessayer dans quelques minutes.";
 
+/** Shown to users when Wikidata could not resolve an organisation name. */
+export const WIKIDATA_UNAVAILABLE_TEXT =
+  "Wikidata, le service externe sur lequel JOEL s'appuie pour identifier les organisations, est momentanément indisponible. Veuillez réessayer dans quelques minutes.";
+
 export interface JORFSearchHealth {
   /** Records a request that ran out of attempts against JORFSearch. */
   recordFailure: (

@@ -5,9 +5,18 @@ import { parseIntAnswers } from "../utils/text.utils.ts";
 import {
   getJORFSearchLinkOrganisation,
   keepTypingWhileRetrying,
-  searchOrganisationWikidataId
+  searchOrganisationWikidataId,
+  UpstreamUnavailable
 } from "../utils/JORFSearch.utils.ts";
-import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
+import {
+  JORFSEARCH_UNAVAILABLE_TEXT,
+  WIKIDATA_UNAVAILABLE_TEXT
+} from "../utils/jorfSearchHealth.ts";
+
+const unavailableText = ({ unavailable }: UpstreamUnavailable): string =>
+  unavailable === "Wikidata"
+    ? WIKIDATA_UNAVAILABLE_TEXT
+    : JORFSEARCH_UNAVAILABLE_TEXT;
 import {
   cloneKeyboard,
   Keyboard,
@@ -106,8 +115,8 @@ async function processOrganisationSearch(
     session.messageApp,
     keepTypingWhileRetrying(session)
   );
-  if (orgResults == null) {
-    await session.sendMessage(JORFSEARCH_UNAVAILABLE_TEXT);
+  if ("unavailable" in orgResults) {
+    await session.sendMessage(unavailableText(orgResults));
     return;
   }
 
@@ -342,8 +351,8 @@ export const followOrganisationsFromWikidataIdStr = async (
           keepTypingWhileRetrying(session)
         );
 
-        if (orgInfoFromJORF == null) {
-          await session.sendMessage(JORFSEARCH_UNAVAILABLE_TEXT);
+        if ("unavailable" in orgInfoFromJORF) {
+          await session.sendMessage(unavailableText(orgInfoFromJORF));
           return;
         }
 
