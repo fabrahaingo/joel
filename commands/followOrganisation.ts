@@ -4,8 +4,10 @@ import { IOrganisation, ISession, WikidataId } from "../types.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import {
   getJORFSearchLinkOrganisation,
+  keepTypingWhileRetrying,
   searchOrganisationWikidataId
 } from "../utils/JORFSearch.utils.ts";
+import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
 import {
   cloneKeyboard,
   Keyboard,
@@ -101,12 +103,11 @@ async function processOrganisationSearch(
 
   const orgResults = await searchOrganisationWikidataId(
     orgName,
-    session.messageApp
+    session.messageApp,
+    keepTypingWhileRetrying(session)
   );
   if (orgResults == null) {
-    await session.sendMessage(
-      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
-    );
+    await session.sendMessage(JORFSEARCH_UNAVAILABLE_TEXT);
     return;
   }
 
@@ -337,13 +338,12 @@ export const followOrganisationsFromWikidataIdStr = async (
       } else {
         const orgInfoFromJORF = await searchOrganisationWikidataId(
           id,
-          session.messageApp
+          session.messageApp,
+          keepTypingWhileRetrying(session)
         );
 
         if (orgInfoFromJORF == null) {
-          await session.sendMessage(
-            "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
-          );
+          await session.sendMessage(JORFSEARCH_UNAVAILABLE_TEXT);
           return;
         }
 

@@ -25,6 +25,7 @@ import {
 import { handleFollowUpMessage } from "../entities/FollowUpManager.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import type { ISession, IUser } from "../types.ts";
+import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
 
 const sendSpy = vi.fn(() => Promise.resolve(true));
 const makeSession = (
@@ -96,7 +97,9 @@ describe("searchOrganisation + search follow-up", () => {
     await searchOrganisation(session);
     sendSpy.mockClear();
     await handleFollowUpMessage(session, "Conseil");
-    expect(String(sendSpy.mock.calls[0][0])).toContain("erreur JORFSearch");
+    expect(String(sendSpy.mock.calls[0][0])).toContain(
+      JORFSEARCH_UNAVAILABLE_TEXT
+    );
   });
 
   it("reports no result", async () => {
@@ -278,7 +281,7 @@ describe("followOrganisationsFromWikidataIdStr", () => {
     const session = makeSession(await makeUserDoc());
     await followOrganisationsFromWikidataIdStr(session, "SuivreO Q9");
     expect(String(sendSpy.mock.calls.at(-1)?.[0])).toContain(
-      "erreur JORFSearch"
+      JORFSEARCH_UNAVAILABLE_TEXT
     );
   });
 

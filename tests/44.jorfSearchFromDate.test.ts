@@ -32,7 +32,8 @@ vi.mock("../utils/umami.ts", () => ({
 vi.mock("../utils/debugLogger.ts", () => ({
   logError: vi.fn(() => Promise.resolve()),
   logWarning: vi.fn(() => Promise.resolve()),
-  logErrorForApps: vi.fn(() => Promise.resolve())
+  logErrorForApps: vi.fn(() => Promise.resolve()),
+  logWarningForApps: vi.fn(() => Promise.resolve())
 }));
 
 import {
@@ -40,6 +41,7 @@ import {
   getJORFMetaRecordsFromDate
 } from "../utils/JORFSearch.utils.ts";
 import { resetLegifranceCaches } from "../utils/legifrance.utils.ts";
+import { resetJORFSearchHealth } from "../utils/jorfSearchHealth.ts";
 
 // Build a valid raw JORFSearch "people" record for a given source_date (YMD).
 function rawItem(source_date: string) {
@@ -131,6 +133,7 @@ beforeEach(async () => {
   await mongoose.connection.db.dropDatabase();
   vi.clearAllMocks();
   resetLegifranceCaches();
+  resetJORFSearchHealth();
   process.env.LEGIFRANCE_CLIENT_ID = "test-id";
   process.env.LEGIFRANCE_CLIENT_SECRET = "test-secret";
 });
@@ -258,11 +261,11 @@ describe("getJORFRecordsFromDate", () => {
     );
 
     expect(result.items).toEqual([]);
-    // Every day is reported missing, but only the days probed before the
-    // breaker tripped burned their retries.
+    // Every day is reported missing. The first day burns its retries and opens
+    // the outage, the next probes get one attempt each until the breaker trips.
     expect(result.failedDates).toHaveLength(6);
     expect(getSpy).toHaveBeenCalledTimes(
-      FAILED_CHUNKS_BEFORE_ABANDON * (RETRY_MAX + 1)
+      RETRY_MAX + 1 + (FAILED_CHUNKS_BEFORE_ABANDON - 1)
     );
   });
 

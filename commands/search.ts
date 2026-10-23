@@ -1,8 +1,10 @@
 import { formatSearchResult } from "../utils/formatSearchResult.ts";
 import {
   callJORFSearchPeople,
-  cleanPeopleName
+  cleanPeopleName,
+  keepTypingWhileRetrying
 } from "../utils/JORFSearch.utils.ts";
+import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
 import { IPeople, ISession } from "../types.ts";
 import { Types } from "mongoose";
 import User from "../models/User.ts";
@@ -136,7 +138,11 @@ export async function searchPersonHistory(
 
     let JORFRes_data: JORFSearchItem[] | null = [];
     if (!noSearch)
-      JORFRes_data = await callJORFSearchPeople(personName, session.messageApp);
+      JORFRes_data = await callJORFSearchPeople(
+        personName,
+        session.messageApp,
+        keepTypingWhileRetrying(session)
+      );
     const nbRecords = JORFRes_data?.length ?? 0;
 
     if (nbRecords == 0 || JORFRes_data == null) {
@@ -162,8 +168,7 @@ export async function searchPersonHistory(
 
       let text: string;
       if (JORFRes_data == null) {
-        text =
-          "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement:\n\nVous pouvez utiliser le bouton ci-dessous pour forcer un suivi manuel.";
+        text = `${JORFSEARCH_UNAVAILABLE_TEXT}\n\nVous pouvez utiliser le bouton ci-dessous pour forcer un suivi manuel.`;
       } else {
         text = `*${personName}* est introuvable au JO !\n\nAssurez vous d'avoir bien tapé le prénom et le nom correctement !\\splitSi votre saisie est correcte, il est possible que la personne ne soit pas encore apparue au JO.\n\nUtilisez le bouton ci-dessous pour forcer le suivi sur les nominations à venir.`;
       }
@@ -345,7 +350,11 @@ export const followCommand = async (
 
     const personName = msgSplit.slice(1).join(" ");
 
-    const JORFRes = await callJORFSearchPeople(personName, session.messageApp);
+    const JORFRes = await callJORFSearchPeople(
+      personName,
+      session.messageApp,
+      keepTypingWhileRetrying(session)
+    );
     if (JORFRes == null || JORFRes.length == 0) {
       // redirect to manual follow
       await searchPersonHistory(
@@ -405,11 +414,13 @@ export const manualFollowCommand = async (
   const prenomNom = personNameSplit.join(" ");
   const nomPrenom = `${personNameSplit.slice(1).join(" ")} ${personNameSplit[0]}`;
 
-  const JORFResult = await callJORFSearchPeople(prenomNom, session.messageApp);
+  const JORFResult = await callJORFSearchPeople(
+    prenomNom,
+    session.messageApp,
+    keepTypingWhileRetrying(session)
+  );
   if (JORFResult == null) {
-    await session.sendMessage(
-      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
-    );
+    await session.sendMessage(JORFSEARCH_UNAVAILABLE_TEXT);
     return;
   }
   if (JORFResult.length > 0) {

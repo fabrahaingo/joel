@@ -74,3 +74,13 @@ export function formatDuration(ms: number): string {
     .map(([key, val]) => `${String(val)} ${key}${val !== 1 ? "s" : ""}`)
     .join(", ");
 }
+
+/** Compact elapsed time rounded to the second, e.g. "6m0s" or "42s". */
+export function formatShortDuration(ms: number): string {
+  const totalSeconds = Math.round(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return minutes > 0
+    ? `${String(minutes)}m${String(seconds)}s`
+    : `${String(seconds)}s`;
+}

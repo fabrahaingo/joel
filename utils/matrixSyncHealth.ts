@@ -1,6 +1,7 @@
 import { MessageApp } from "../types.ts";
 import { logError, logWarning } from "./debugLogger.ts";
 import { describeMatrixPayload } from "./matrixLogService.ts";
+import { formatShortDuration } from "./date.utils.ts";
 
 /**
  * An outage is reported once it has spanned this many consecutive failed syncs
@@ -38,15 +39,6 @@ export interface SyncingClient {
 interface SyncHealthOptions {
   now?: () => number;
 }
-
-const formatOutage = (ms: number): string => {
-  const totalSeconds = Math.round(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return minutes > 0
-    ? `${String(minutes)}m${String(seconds)}s`
-    : `${String(seconds)}s`;
-};
 
 /**
  * Tracks whether the Matrix sync loop is alive.
@@ -92,7 +84,7 @@ export const createSyncHealth = (
       lastAlertAt = at;
       await logError(
         messageApp,
-        `Matrix sync failing for ${formatOutage(at - firstFailureAt)} (${String(failureCount)} attempts so far)`,
+        `Matrix sync failing for ${formatShortDuration(at - firstFailureAt)} (${String(failureCount)} attempts so far)`,
         describeMatrixPayload(error)
       );
     },
@@ -115,7 +107,7 @@ export const createSyncHealth = (
       reset();
       await logWarning(
         messageApp,
-        `Matrix sync recovered after ${formatOutage(outage)} (${String(attempts)} failed attempts)`
+        `Matrix sync recovered after ${formatShortDuration(outage)} (${String(attempts)} failed attempts)`
       );
     }
   };

@@ -37,6 +37,7 @@ import { handleFollowUpMessage } from "../entities/FollowUpManager.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import type { ISession, IUser } from "../types.ts";
 import type { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
 
 const sendSpy = vi.fn(() => Promise.resolve(true));
 const makeSession = (
@@ -150,7 +151,9 @@ describe("promo follow-up", () => {
     const session = makeSession(await makeUserDoc());
     await startPromo(session);
     await handleFollowUpMessage(session, "2022-2023"); // ENA
-    expect(String(sendSpy.mock.calls[0][0])).toContain("erreur JORFSearch");
+    expect(String(sendSpy.mock.calls[0][0])).toContain(
+      JORFSEARCH_UNAVAILABLE_TEXT
+    );
   });
 
   it("logs when a promo has no result", async () => {
@@ -257,7 +260,9 @@ describe("handleReferenceAnswer", () => {
     refSpy.mockResolvedValue(null);
     const session = makeSession(await makeUserDoc());
     await handleReferenceAnswer(session, "JORFTEXT000001");
-    expect(String(sendSpy.mock.calls[0][0])).toContain("erreur JORFSearch");
+    expect(String(sendSpy.mock.calls[0][0])).toContain(
+      JORFSEARCH_UNAVAILABLE_TEXT
+    );
   });
 
   it("logs when the text is not in the db and lists nominations", async () => {
