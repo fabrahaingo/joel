@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { type AxiosError } from "axios";
 import os from "node:os";
 import { MessageApp } from "../types.ts";
 import umami from "./umami.ts";
@@ -96,8 +96,40 @@ console.info = (...args: unknown[]) => {
   _consoleInfo(...args.map(sanitizeArg));
 };
 
+const describeRequestHost = (
+  url: string | undefined,
+  baseURL: string | undefined
+): string | null => {
+  if (url == null) return null;
+  try {
+    return new URL(url, baseURL).host;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * One line per HTTP failure: an axios stack only lists the library's own
+ * frames. The request path is left out because it carries the user's search
+ * terms, so only the method and host identify the upstream.
+ */
+const formatAxiosError = (error: AxiosError): string => {
+  const header = `AxiosError${error.code != null ? ` ${error.code}` : ""}: ${error.message}`;
+  const host = describeRequestHost(error.config?.url, error.config?.baseURL);
+  const method = error.config?.method?.toUpperCase();
+  const status = error.response?.status;
+  const context = [
+    host != null
+      ? [method, host].filter((part) => part != null).join(" ")
+      : null,
+    status != null ? `HTTP ${String(status)}` : null
+  ].filter((part): part is string => part != null);
+  return context.length > 0 ? `${header} (${context.join(", ")})` : header;
+};
+
 const formatError = (error: unknown): string | null => {
   if (error == null) return null;
+  if (axios.isAxiosError(error)) return formatAxiosError(error);
   if (error instanceof Error) {
     const header = `${error.name}: ${error.message}`;
     // V8 stacks already start with "Name: message"; only prepend the header when

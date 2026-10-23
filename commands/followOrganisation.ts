@@ -4,8 +4,19 @@ import { IOrganisation, ISession, WikidataId } from "../types.ts";
 import { parseIntAnswers } from "../utils/text.utils.ts";
 import {
   getJORFSearchLinkOrganisation,
-  searchOrganisationWikidataId
+  keepTypingWhileRetrying,
+  searchOrganisationWikidataId,
+  UpstreamUnavailable
 } from "../utils/JORFSearch.utils.ts";
+import {
+  JORFSEARCH_UNAVAILABLE_TEXT,
+  WIKIDATA_UNAVAILABLE_TEXT
+} from "../utils/jorfSearchHealth.ts";
+
+const unavailableText = ({ unavailable }: UpstreamUnavailable): string =>
+  unavailable === "Wikidata"
+    ? WIKIDATA_UNAVAILABLE_TEXT
+    : JORFSEARCH_UNAVAILABLE_TEXT;
 import {
   cloneKeyboard,
   Keyboard,
@@ -101,12 +112,11 @@ async function processOrganisationSearch(
 
   const orgResults = await searchOrganisationWikidataId(
     orgName,
-    session.messageApp
+    session.messageApp,
+    keepTypingWhileRetrying(session)
   );
-  if (orgResults == null) {
-    await session.sendMessage(
-      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
-    );
+  if ("unavailable" in orgResults) {
+    await session.sendMessage(unavailableText(orgResults));
     return;
   }
 
@@ -337,13 +347,12 @@ export const followOrganisationsFromWikidataIdStr = async (
       } else {
         const orgInfoFromJORF = await searchOrganisationWikidataId(
           id,
-          session.messageApp
+          session.messageApp,
+          keepTypingWhileRetrying(session)
         );
 
-        if (orgInfoFromJORF == null) {
-          await session.sendMessage(
-            "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
-          );
+        if ("unavailable" in orgInfoFromJORF) {
+          await session.sendMessage(unavailableText(orgInfoFromJORF));
           return;
         }
 

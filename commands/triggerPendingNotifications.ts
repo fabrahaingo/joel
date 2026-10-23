@@ -5,14 +5,23 @@ import { notifyAllFollows } from "../notifications/runNotificationProcess.ts";
 import { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
 import pLimit from "p-limit";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
-import { callJORFSearchReference } from "../utils/JORFSearch.utils.ts";
+import {
+  callJORFSearchReference,
+  keepTypingWhileRetrying
+} from "../utils/JORFSearch.utils.ts";
 import User from "../models/User.ts";
 import { Publication } from "../models/Publication.ts";
+import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
 
 // Pending refs are re-fetched from JORFSearch on re-engagement. A pending pile
 // can hold hundreds of refs, so fetch a few in parallel rather than serially.
-// callJORFSearchReference already retries with backoff on transient failures.
+// callJORFSearchReference already retries with backoff on transient failures,
+// and reports the failure itself.
 const FETCH_CONCURRENCY = 4;
+
+const PENDING_KEPT_TEXT = `${JORFSEARCH_UNAVAILABLE_TEXT}
+
+Vos notifications en attente sont conservées et vous seront envoyées à votre prochain message.`;
 
 export const triggerPendingNotifications = async (
   session: ISession
@@ -82,21 +91,32 @@ export const triggerPendingNotifications = async (
     // The same reference can appear in several pending batches; fetch it once.
     const uniqueReferences = [...new Set(source_id_items)];
 
+    // Delivering a partial pile and then clearing it would lose the items of
+    // the refs that failed, so one failure keeps the whole pile for later and
+    // skips the refs not fetched yet.
+    const failedReferences: JORFReference[] = [];
     await Promise.all(
       uniqueReferences.map((ref) =>
         limit(async () => {
-          const res = await callJORFSearchReference(ref, session.messageApp);
+          if (failedReferences.length > 0) return;
+          const res = await callJORFSearchReference(
+            ref,
+            session.messageApp,
+            keepTypingWhileRetrying(session)
+          );
           if (res == null) {
-            await logError(
-              session.messageApp,
-              `Error in triggerPendingNotifications fetching item for ref ${ref}`
-            );
+            failedReferences.push(ref);
             return;
           }
           itemsOut.set(ref, res);
         })
       )
     );
+
+    if (failedReferences.length > 0) {
+      await session.sendMessage(PENDING_KEPT_TEXT);
+      return;
+    }
 
     const candidateJORFPublications: JORFSearchPublication[] =
       await Publication.find({ id: { $in: source_id_publications } });

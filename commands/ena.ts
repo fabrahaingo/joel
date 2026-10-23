@@ -16,7 +16,12 @@ import {
 import { FunctionTags } from "../entities/FunctionTags.ts";
 import { Keyboard, KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import { askFollowUpQuestion } from "../entities/FollowUpManager.ts";
-import { extractJORFTextId } from "../utils/JORFSearch.utils.ts";
+import {
+  extractJORFTextId,
+  JORFSearchRequestOptions,
+  keepTypingWhileRetrying
+} from "../utils/JORFSearch.utils.ts";
+import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
 import { askSearchQuestion } from "./search.ts";
 import { JORFSearchPublication } from "../entities/JORFSearchResponseMeta.ts";
 import { Publication } from "../models/Publication.ts";
@@ -51,20 +56,22 @@ function findENAINSPPromo(input: string): Promo_ENA_INSP | null {
 
 async function getJORFPromoSearchResult(
   promo: Promo_ENA_INSP,
-  messageApp: MessageApp
+  messageApp: MessageApp,
+  options?: JORFSearchRequestOptions
 ): Promise<JORFSearchItem[] | null> {
   // If ENA, use the associated tag with the year as value.
   if (promo.school === "ENA") {
     return callJORFSearchTag(
       FunctionTags["Élève INSP/ENA"],
       messageApp,
-      promo.period
+      promo.period,
+      options
     );
   }
 
   // Otherwise (INSP), rely on the associated organisation, filtered to the year.
   return (
-    (await callJORFSearchOrganisation(inspId, messageApp))?.filter(
+    (await callJORFSearchOrganisation(inspId, messageApp, options))?.filter(
       (publication) => publication.eleve_ena === promo.period
     ) ?? null
   );
@@ -151,12 +158,11 @@ async function handlePromoAnswer(
 
   const promoJORFList = await getJORFPromoSearchResult(
     promoInfo,
-    session.messageApp
+    session.messageApp,
+    keepTypingWhileRetrying(session)
   );
   if (promoJORFList == null) {
-    await session.sendMessage(
-      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
-    );
+    await session.sendMessage(JORFSEARCH_UNAVAILABLE_TEXT);
     return true;
   }
   if (promoJORFList.length === 0) {
@@ -359,13 +365,12 @@ export async function handleReferenceAnswer(
 
   const JORFResult = await callJORFSearchReference(
     reference,
-    session.messageApp
+    session.messageApp,
+    keepTypingWhileRetrying(session)
   );
   await new Promise((resolve) => setTimeout(resolve, 2 * 1000)); // Wait 2s for the reference name to be checked/added in the db
   if (JORFResult == null) {
-    await session.sendMessage(
-      "Une erreur JORFSearch indépendante de JOEL est survenue. Veuillez réessayer ultérieurement."
-    );
+    await session.sendMessage(JORFSEARCH_UNAVAILABLE_TEXT);
     return true;
   }
 

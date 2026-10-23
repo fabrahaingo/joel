@@ -30,6 +30,7 @@ import { handleFollowUpMessage } from "../entities/FollowUpManager.ts";
 import { KEYBOARD_KEYS } from "../entities/Keyboard.ts";
 import type { ISession, IUser } from "../types.ts";
 import type { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
 
 const sendSpy = vi.fn(() => Promise.resolve(true));
 const makeSession = (
@@ -170,7 +171,7 @@ describe("searchPersonHistory — no records", () => {
     callPeopleSpy.mockResolvedValue(null);
     await searchPersonHistory(makeSession(null), "Historique Jean Dupont");
     expect(String(sendSpy.mock.calls.at(-1)?.[0])).toContain(
-      "erreur JORFSearch"
+      JORFSEARCH_UNAVAILABLE_TEXT
     );
   });
 
@@ -325,7 +326,9 @@ describe("manualFollowCommand", () => {
   it("reports a JORF outage", async () => {
     callPeopleSpy.mockResolvedValue(null);
     await manualFollowCommand(makeSession(null), "SuivreN Jean Dupont");
-    expect(String(sendSpy.mock.calls[0][0])).toContain("erreur JORFSearch");
+    expect(String(sendSpy.mock.calls[0][0])).toContain(
+      JORFSEARCH_UNAVAILABLE_TEXT
+    );
   });
 
   it("upgrades to a strong follow when the person exists at the JO", async () => {
