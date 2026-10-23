@@ -25,6 +25,7 @@ import { Publication } from "../models/Publication.ts";
 import { triggerPendingNotifications } from "../commands/triggerPendingNotifications.ts";
 import type { ISession, IUser } from "../types.ts";
 import type { JORFSearchItem } from "../entities/JORFSearchResponse.ts";
+import { JORFSEARCH_UNAVAILABLE_TEXT } from "../utils/jorfSearchHealth.ts";
 
 const sendSpy = vi.fn(() => Promise.resolve(true));
 const makeSession = (user: IUser | null): ISession =>
@@ -196,23 +197,49 @@ describe("triggerPendingNotifications", () => {
     expect(callRefSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("logs when a ref fetch returns nothing", async () => {
-    callRefSpy.mockResolvedValue(null);
+  it("keeps the pile and tells the user when a ref cannot be fetched", async () => {
+    callRefSpy.mockImplementation((ref: string) =>
+      Promise.resolve(ref === "R2" ? null : [item()])
+    );
     const user = await userWithPending([
       {
         notificationType: "function",
-        source_ids: ["R1"],
+        source_ids: ["R1", "R2"],
         insertDate: new Date(),
-        items_nb: 1
+        items_nb: 2
       }
     ]);
     await triggerPendingNotifications(
       makeSession(await User.findById(user._id))
     );
-    expect(logErrorSpy).toHaveBeenCalledWith(
-      "Telegram",
-      expect.stringContaining("fetching item")
+
+    expect(notifyAllSpy).not.toHaveBeenCalled();
+    expect(String(sendSpy.mock.calls.at(-1)?.[0])).toContain(
+      JORFSEARCH_UNAVAILABLE_TEXT
     );
+    const after = await User.findById(user._id);
+    expect(after?.pendingNotifications).toHaveLength(1);
+    // callJORFSearchReference reports the failure; one alert per ref is noise.
+    expect(logErrorSpy).not.toHaveBeenCalled();
+  });
+
+  it("stops fetching once a ref has failed", async () => {
+    callRefSpy.mockResolvedValue(null);
+    const user = await userWithPending([
+      {
+        notificationType: "function",
+        source_ids: ["R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8"],
+        insertDate: new Date(),
+        items_nb: 8
+      }
+    ]);
+    await triggerPendingNotifications(
+      makeSession(await User.findById(user._id))
+    );
+
+    // Only the first concurrent batch (FETCH_CONCURRENCY = 4) was in flight
+    // when the failure landed.
+    expect(callRefSpy).toHaveBeenCalledTimes(4);
   });
 
   it("logs on an unexpected error", async () => {
